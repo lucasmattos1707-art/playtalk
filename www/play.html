@@ -4274,6 +4274,23 @@
       color: rgba(230, 255, 223, 0.8);
     }
 
+    .medal-transition-modal__continue {
+      min-width: min(220px, 78vw);
+      min-height: 54px;
+      padding: 0 28px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #7fdd58 0%, #b8ef88 100%);
+      color: #11300d;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(18px, 3vw, 22px);
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      box-shadow: 0 18px 38px rgba(56, 120, 32, 0.28);
+      cursor: pointer;
+    }
+
     .game-options-modal__item:active {
       transform: scale(0.995);
     }
@@ -10813,6 +10830,7 @@
           </article>
         </div>
       </div>
+      <button class="medal-transition-modal__continue" id="medalTransitionContinueBtn" type="button">Continuar</button>
     </div>
   </section>
   <section class="robotcheck" id="robotcheck" aria-label="Robot check">
@@ -12242,6 +12260,7 @@
         medalTransitionToImage: document.getElementById('medalTransitionToImage'),
         medalTransitionToLabel: document.getElementById('medalTransitionToLabel'),
         medalTransitionToRange: document.getElementById('medalTransitionToRange'),
+        medalTransitionContinueBtn: document.getElementById('medalTransitionContinueBtn'),
         welcomeTrainingModes: document.getElementById('welcomeTrainingModes'),
         welcomeCopy: document.getElementById('welcomeCopy'),
         welcomeStartBtn: document.getElementById('welcomeStartBtn'),
@@ -17342,7 +17361,8 @@
         }
       }
 
-      function closeUserMedalTransitionModal() {
+      function closeUserMedalTransitionModal(options = {}) {
+        const resumeGame = Boolean(options.resumeGame);
         if (state.ui.medalTransitionTimer) {
           window.clearTimeout(state.ui.medalTransitionTimer);
           state.ui.medalTransitionTimer = 0;
@@ -17351,31 +17371,18 @@
         if (!els.medalTransitionModal) return;
         els.medalTransitionModal.classList.remove('is-visible');
         els.medalTransitionModal.setAttribute('aria-hidden', 'true');
-        if (state.ui.medalTransitionPausedGame && state.game.active) {
+        if (resumeGame && state.ui.medalTransitionPausedGame && state.game.active) {
           state.ui.medalTransitionPausedGame = false;
-          state.game.paused = false;
-          syncLevelTextModeControls();
+          resumeFlashcardsGameFromWelcome();
           updateSpeakingStarMicSealProgress();
-        } else {
-          state.ui.medalTransitionPausedGame = false;
+          return;
         }
+        state.ui.medalTransitionPausedGame = false;
       }
 
       function pauseGameForUserMedalTransition() {
-        if (!state.game.active || state.game.paused) return;
-        commitCurrentCardTrainingTime();
-        state.game.listening = false;
-        cleanupGameRecognition();
-        stopActiveAudio();
-        clearTypingPromptLoop();
-        clearTypingSkipAutomation();
-        clearStageTutorialReminder();
-        hideGameStageTutorial({ resume: false });
-        clearStageTwoHintTimer();
-        clearFirstStageMicHint({ clearStatus: true });
-        clearStageHintLoop({ clearStatus: true });
-        closeGameReportMenu();
-        state.game.paused = true;
+        if (!state.game.active) return;
+        pauseFlashcardsGameToWelcome();
         state.ui.medalTransitionPausedGame = true;
       }
 
@@ -17457,19 +17464,20 @@
         }
         els.medalTransitionTrack.style.transition = 'none';
         els.medalTransitionTrack.style.transform = isAdvancing ? 'translate3d(0%, 0, 0)' : 'translate3d(-50%, 0, 0)';
-        els.medalTransitionModal.classList.add('is-visible');
-        els.medalTransitionModal.setAttribute('aria-hidden', 'false');
-        playUserMedalTransitionAudio();
-        window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(() => {
-            if (!els.medalTransitionTrack) return;
-            els.medalTransitionTrack.style.transition = 'transform 880ms cubic-bezier(0.22, 0.9, 0.2, 1)';
-            els.medalTransitionTrack.style.transform = isAdvancing ? 'translate3d(-50%, 0, 0)' : 'translate3d(0%, 0, 0)';
-          });
-        });
         state.ui.medalTransitionTimer = window.setTimeout(() => {
-          closeUserMedalTransitionModal();
-        }, 2000);
+          state.ui.medalTransitionTimer = 0;
+          if (!els.medalTransitionModal || !els.medalTransitionTrack) return;
+          els.medalTransitionModal.classList.add('is-visible');
+          els.medalTransitionModal.setAttribute('aria-hidden', 'false');
+          playUserMedalTransitionAudio();
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+              if (!els.medalTransitionTrack) return;
+              els.medalTransitionTrack.style.transition = 'transform 880ms cubic-bezier(0.22, 0.9, 0.2, 1)';
+              els.medalTransitionTrack.style.transform = isAdvancing ? 'translate3d(-50%, 0, 0)' : 'translate3d(0%, 0, 0)';
+            });
+          });
+        }, 1);
       }
 
       function syncUserMedalUi(options = {}) {
@@ -27220,6 +27228,11 @@
             return;
           }
           beginGame();
+        });
+        els.medalTransitionContinueBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeUserMedalTransitionModal({ resumeGame: true });
         });
         els.gameOptionsModal?.addEventListener('click', (event) => {
           if (event.target === els.gameOptionsModal) {
