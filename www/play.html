@@ -3218,6 +3218,7 @@
     }
 
     .game-mic-next-seal-progress__label {
+      display: none;
       position: fixed;
       left: 50%;
       bottom: 14px;
@@ -3238,6 +3239,7 @@
     }
 
     .game-mic-next-seal-progress__edge {
+      display: none;
       position: fixed;
       bottom: 14px;
       margin: 0;
@@ -15131,9 +15133,10 @@
         }
       }
 
-      function syncWelcomeLevelProgress() {
+      function syncWelcomeLevelProgress(options = {}) {
         if (!els.welcomeLevelProgressBar) return;
         if (!state.entry.sessionResolved) return;
+        const allowMedalTransition = options.allowMedalTransition !== false;
         const xpProgress = reconcileEnergyLevelProgress({ animate: Boolean(state.entry.welcomeVisible) });
         const displayLevel = Math.max(USER_LEVEL_MIN, Math.min(ENERGY_XP_LEVEL_MAX, Math.round(Number(xpProgress.level) || USER_LEVEL_MIN)));
         const deckLevel = currentUserLevel();
@@ -15161,7 +15164,7 @@
           const xpTarget = nextRequired > 0 ? nextRequired : currentXp;
           els.welcomeXpLine.textContent = `XP | ${currentXp} DE ${xpTarget}`;
         }
-        syncUserMedalUi({ allowTransition: true });
+        syncUserMedalUi({ allowTransition: allowMedalTransition });
         if (els.welcomeLevelProgressCopy) {
           els.welcomeLevelProgressCopy.textContent = '';
         }
@@ -17378,7 +17381,10 @@
 
       function applyUserLevelState(nextLevel, options = {}) {
         const previousLevel = currentUserLevel();
+        const previousMedal = resolveUserMedalByLevel(previousLevel);
         const normalizedLevel = normalizeUserLevel(nextLevel);
+        const nextMedal = resolveUserMedalByLevel(normalizedLevel);
+        const medalChanged = Number(nextMedal?.index || 0) !== Number(previousMedal?.index || 0);
         state.userLevel = normalizedLevel;
         if (state.user) state.user.level = normalizedLevel;
         if (Object.prototype.hasOwnProperty.call(options, 'updatedAt')) {
@@ -17387,10 +17393,13 @@
         if (options.syncNavigator !== false) {
           syncGameLevelNavigator();
         }
-        if (options.allowTransition && state.entry.sessionResolved) {
-          syncWelcomeLevelProgress();
+        if (state.entry.sessionResolved) {
+          syncWelcomeLevelProgress({ allowMedalTransition: false });
         } else {
           syncUserMedalUi();
+        }
+        if (options.allowTransition && state.ui.userMedalReady && medalChanged) {
+          openUserMedalTransitionModal(previousMedal, nextMedal);
         }
         if (options.refreshGameHud !== false) {
           updateSpeakingStarMicSealProgress();
@@ -17402,7 +17411,8 @@
         return {
           previousLevel,
           level: normalizedLevel,
-          changed
+          changed,
+          medalChanged
         };
       }
 
@@ -17459,7 +17469,7 @@
         });
         state.ui.medalTransitionTimer = window.setTimeout(() => {
           closeUserMedalTransitionModal();
-        }, 2200);
+        }, 2000);
       }
 
       function syncUserMedalUi(options = {}) {
@@ -21426,8 +21436,6 @@
           || !els.gameMicNextSealMetric
           || !els.gameMicNextSealProgress
           || !els.gameMicNextSealProgressFill
-          || !els.gameCurrentMedalStartLevel
-          || !els.gameCurrentMedalEndLevel
         ) return;
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
         const isMissionMetricPhase = phaseKey === 'first-star'
@@ -21442,9 +21450,6 @@
           }
           els.gameMicCurrentSealMetric.hidden = true;
           els.gameMicNextSealMetric.hidden = true;
-          if (els.gameCurrentFluencyLabel) {
-            els.gameCurrentFluencyLabel.hidden = true;
-          }
           const gameProgressBar = els.gameMicNextSealProgressFill?.parentElement;
           if (gameProgressBar) {
             gameProgressBar.style.display = 'none';
@@ -21471,12 +21476,6 @@
           state.entry.gameMicProgressAnimationFrame = 0;
         }
         state.entry.gameMicAnimatedProgress = targetProgress;
-        els.gameCurrentMedalStartLevel.textContent = `Nivel ${Math.max(1, Number(medal?.minLevel) || 1)}`;
-        els.gameCurrentMedalEndLevel.textContent = `Nivel ${Math.max(1, Number(medal?.maxLevel) || 1)}`;
-        if (els.gameCurrentFluencyLabel) {
-          els.gameCurrentFluencyLabel.textContent = safeText(medal?.label) || 'Selo';
-          els.gameCurrentFluencyLabel.hidden = false;
-        }
         renderMetricValue(els.gameMicNextSealProgress, {
           icon: 'level',
           text: `${Math.max(1, normalizeUserLevel(currentUserLevel()))}`
@@ -21485,7 +21484,7 @@
         if (gameProgressBar) {
           gameProgressBar.setAttribute(
             'aria-label',
-            `${safeText(medal?.label) || 'Selo atual'}: ${Math.round(targetProgress)}% da faixa ${Math.max(1, Number(medal?.minLevel) || 1)}-${Math.max(1, Number(medal?.maxLevel) || 1)}`
+            `${safeText(medal?.label) || 'Selo atual'}: ${Math.round(targetProgress)}%`
           );
         }
         els.gameMicCurrentSealMetric.hidden = true;
