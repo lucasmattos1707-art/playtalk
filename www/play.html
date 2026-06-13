@@ -751,15 +751,15 @@
 
     .welcome-gate__avatar-seal {
       position: absolute;
-      right: clamp(6px, 1.4vw, 12px);
-      bottom: clamp(4px, 1.2vw, 10px);
-      width: clamp(72px, 14.4vw, 96px);
-      height: clamp(72px, 14.4vw, 96px);
+      right: clamp(-2px, 0.4vw, 6px);
+      bottom: clamp(-2px, 0.4vw, 6px);
+      width: clamp(88px, 16vw, 114px);
+      height: clamp(88px, 16vw, 114px);
       object-fit: contain;
       z-index: 3;
       filter:
-        drop-shadow(0 0 8px rgba(73, 219, 255, 0.62))
-        drop-shadow(0 0 14px rgba(44, 140, 255, 0.44));
+        drop-shadow(0 0 10px rgba(135, 214, 103, 0.38))
+        drop-shadow(0 0 18px rgba(54, 112, 40, 0.24));
       pointer-events: none;
     }
 
@@ -831,10 +831,10 @@
       position: absolute;
       inset: 0 auto 0 0;
       width: var(--welcome-level-progress-pct);
-      background: linear-gradient(90deg, #00cbff 0%, #38f4ff 100%);
+      background: linear-gradient(90deg, #4f9d33 0%, #79ca57 52%, #a1e174 100%);
       border-radius: inherit;
       transition: width 260ms ease;
-      box-shadow: 0 0 14px rgba(30, 220, 255, 0.48);
+      box-shadow: 0 0 14px rgba(117, 213, 94, 0.34);
     }
 
     .welcome-gate__level-inner {
@@ -4149,6 +4149,109 @@
       display: grid;
       gap: 8px;
       transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    }
+
+    .medal-transition-modal {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: clamp(24px, 4vw, 44px);
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
+      z-index: 1600;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 280ms ease, visibility 0ms linear 280ms;
+    }
+
+    .medal-transition-modal::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top, rgba(120, 220, 120, 0.12), transparent 42%),
+        var(--playtalk-global-bg-overlay);
+    }
+
+    .medal-transition-modal.is-visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition-delay: 0ms;
+    }
+
+    .medal-transition-modal__content {
+      position: relative;
+      width: min(540px, 100%);
+      display: grid;
+      gap: 18px;
+      justify-items: center;
+      text-align: center;
+      z-index: 1;
+    }
+
+    .medal-transition-modal__eyebrow {
+      margin: 0;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(18px, 3vw, 26px);
+      font-weight: 900;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #efffe7;
+      text-shadow: 0 0 18px rgba(98, 195, 82, 0.22);
+    }
+
+    .medal-transition-modal__viewport {
+      width: min(420px, 100%);
+      overflow: hidden;
+      border-radius: 34px;
+    }
+
+    .medal-transition-modal__track {
+      display: flex;
+      width: 200%;
+      will-change: transform;
+      transition: transform 880ms cubic-bezier(0.22, 0.9, 0.2, 1);
+    }
+
+    .medal-transition-modal__slide {
+      width: 50%;
+      flex: 0 0 50%;
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+      padding: clamp(18px, 3vw, 24px);
+      background: linear-gradient(180deg, rgba(4, 16, 33, 0.7), rgba(5, 18, 37, 0.38));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+    }
+
+    .medal-transition-modal__slide img {
+      width: min(220px, 62vw);
+      height: min(220px, 62vw);
+      object-fit: contain;
+      filter: drop-shadow(0 0 24px rgba(151, 223, 121, 0.24));
+    }
+
+    .medal-transition-modal__label {
+      margin: 0;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(20px, 4vw, 32px);
+      font-weight: 900;
+      line-height: 1.04;
+      text-transform: uppercase;
+      color: #ffffff;
+    }
+
+    .medal-transition-modal__range {
+      margin: 0;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(13px, 2.6vw, 18px);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(230, 255, 223, 0.8);
     }
 
     .game-options-modal__item:active {
@@ -10484,7 +10587,7 @@
             <div class="welcome-gate__avatar-row">
               <div class="welcome-gate__avatar">
                 <img id="welcomeAvatarPreview" src="/Avatar/profile-neon-blue.svg" alt="Avatar do usuario">
-                <img class="welcome-gate__avatar-seal" id="welcomeAvatarSeal" src="medalhas/white.png" alt="Selo atual">
+                <img class="welcome-gate__avatar-seal" id="welcomeAvatarSeal" src="/medals/user-level/medal-1.png" alt="Selo atual">
               </div>
               <p class="welcome-gate__xp-line" id="welcomeXpLine">XP | 0 DE 50</p>
             </div>
@@ -10692,6 +10795,25 @@
         <button class="game-options-modal__continue" id="gameOptionsContinueBtn" type="button">Continuar</button>
       </div>
     </div>
+    <section class="medal-transition-modal" id="medalTransitionModal" aria-hidden="true">
+      <div class="medal-transition-modal__content">
+        <p class="medal-transition-modal__eyebrow" id="medalTransitionEyebrow">Novo selo</p>
+        <div class="medal-transition-modal__viewport">
+          <div class="medal-transition-modal__track" id="medalTransitionTrack">
+            <article class="medal-transition-modal__slide">
+              <img id="medalTransitionFromImage" src="/medals/user-level/medal-1.png" alt="Selo anterior">
+              <p class="medal-transition-modal__label" id="medalTransitionFromLabel">Selo 1</p>
+              <p class="medal-transition-modal__range" id="medalTransitionFromRange">Niveis 1-10</p>
+            </article>
+            <article class="medal-transition-modal__slide">
+              <img id="medalTransitionToImage" src="/medals/user-level/medal-1.png" alt="Novo selo">
+              <p class="medal-transition-modal__label" id="medalTransitionToLabel">Selo 1</p>
+              <p class="medal-transition-modal__range" id="medalTransitionToRange">Niveis 1-10</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
   </section>
   <section class="robotcheck" id="robotcheck" aria-label="Robot check">
     <div class="robotcheck__touch" aria-label="Teste de som do Fluent LevelUp">
@@ -11249,9 +11371,13 @@
       const ENABLE_STAGE_TUTORIALS = false;
       const STAGE_TWO_HINT_DELAY_MS = 2000;
       const STAGE_TWO_HINT_VISIBLE_MS = 3000;
-      const GAME_OPTION_SLIDES = ['difficulty', 'speed', 'accent', 'fourthStageTyping'];
+      const USER_MEDAL_AUDIO_PATH = '/audio/nextseal.mp3';
+      const USER_MEDAL_COUNT = 12;
+      const USER_MEDAL_LEVEL_GROUP_SIZE = 10;
+      const USER_MEDAL_MAX_LEVEL = USER_MEDAL_COUNT * USER_MEDAL_LEVEL_GROUP_SIZE;
+      const GAME_OPTION_SLIDES = ['accent', 'fourthStageTyping'];
       const GAME_OPTION_VALUE_MAP = {
-        difficulty: ['automatic', 'manual'],
+        difficulty: ['automatic'],
         speed: ['0.70', '0.80', '0.90', '1.00'],
         accent: ['mix_100_0', 'mix_90_10', 'mix_80_20', 'mix_70_30', 'mix_60_40', 'mix_50_50', 'mix_40_60', 'mix_30_70', 'mix_20_80', 'mix_10_90', 'mix_0_100'],
         fourthStageTyping: ['off', 'on']
@@ -11966,6 +12092,11 @@
           welcomeLevelProgressPercent: 0,
           welcomeLevelDisplayPercent: null,
           welcomeLevelAnimationFrame: 0,
+          userMedalIndex: 1,
+          userMedalProgressPercent: 0,
+          userMedalReady: false,
+          medalTransitionTimer: 0,
+          medalTransitionAudio: null,
           gameStageTutorialVisible: false,
           gameStageTutorialKind: '',
           gameStageTutorialDismissHandler: null,
@@ -12099,6 +12230,15 @@
         welcomeLevelOrbit: document.getElementById('welcomeLevelOrbit'),
         welcomeLevelProgressBar: document.getElementById('welcomeLevelProgressBar'),
         welcomeLevelProgressCopy: document.getElementById('welcomeLevelProgressCopy'),
+        medalTransitionModal: document.getElementById('medalTransitionModal'),
+        medalTransitionEyebrow: document.getElementById('medalTransitionEyebrow'),
+        medalTransitionTrack: document.getElementById('medalTransitionTrack'),
+        medalTransitionFromImage: document.getElementById('medalTransitionFromImage'),
+        medalTransitionFromLabel: document.getElementById('medalTransitionFromLabel'),
+        medalTransitionFromRange: document.getElementById('medalTransitionFromRange'),
+        medalTransitionToImage: document.getElementById('medalTransitionToImage'),
+        medalTransitionToLabel: document.getElementById('medalTransitionToLabel'),
+        medalTransitionToRange: document.getElementById('medalTransitionToRange'),
         welcomeTrainingModes: document.getElementById('welcomeTrainingModes'),
         welcomeCopy: document.getElementById('welcomeCopy'),
         welcomeStartBtn: document.getElementById('welcomeStartBtn'),
@@ -12311,7 +12451,7 @@
 
       function availableDifficultyValues() {
         const values = Array.isArray(GAME_OPTION_VALUE_MAP.difficulty) ? GAME_OPTION_VALUE_MAP.difficulty : [];
-        return values.length ? values : ['automatic', 'manual'];
+        return values.length ? values : ['automatic'];
       }
 
       function defaultDifficultyValue() {
@@ -12334,7 +12474,7 @@
         if (selectedGameLevel() > state.entry.sequenceContinuousMaxLevel) {
           state.ui.welcomeSelectedLevel = state.entry.sequenceContinuousMaxLevel;
         }
-        GAME_OPTION_VALUE_MAP.difficulty = ['automatic', 'manual'];
+        GAME_OPTION_VALUE_MAP.difficulty = ['automatic'];
         state.options.difficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
       }
 
@@ -13132,6 +13272,12 @@
         const status = raw?.status === 'ready' ? 'ready' : 'memorizing';
         const phaseIndex = migrateReviewPhase(raw?.phaseIndex, raw, false, status === 'ready');
         const targetPhaseIndex = migrateReviewPhase(raw?.targetPhaseIndex, raw, true, true);
+        const rawSealImage = safeText(raw?.sealImage || raw?.seal_image);
+        const sealPhase = phaseFromSealImage(rawSealImage) || (
+          status === 'memorizing'
+            ? Math.max(1, Math.min(REVIEW_PHASE_MAX, Number(targetPhaseIndex) || Number(phaseIndex) || 1))
+            : Math.max(1, Math.min(REVIEW_PHASE_MAX, Number(phaseIndex) || Number(targetPhaseIndex) || 1))
+        );
         return createProgressRecord(cardId, {
           phaseIndex,
           targetPhaseIndex,
@@ -13142,7 +13288,8 @@
           memorizingDurationMs: Number.isFinite(Number(raw?.memorizingDurationMs)) ? Number(raw.memorizingDurationMs) : (REVIEW_PHASES[targetPhaseIndex]?.durationMs || REVIEW_PHASES[1].durationMs),
           availableAt: Number.isFinite(Number(raw?.availableAt)) ? Number(raw.availableAt) : getNowMs(),
           returnedAt: Number.isFinite(Number(raw?.returnedAt)) ? Number(raw.returnedAt) : 0,
-          createdAt: Number.isFinite(Number(raw?.createdAt)) ? Number(raw.createdAt) : getNowMs()
+          createdAt: Number.isFinite(Number(raw?.createdAt)) ? Number(raw.createdAt) : getNowMs(),
+          sealImage: phaseMeta(sealPhase).sealPath
         });
       }
 
@@ -13685,16 +13832,7 @@
           const avatar = safeText(state.user?.avatarImage);
           els.welcomeAvatarPreview.src = avatar || '/Avatar/profile-neon-blue.svg';
         }
-        if (els.welcomeAvatarSeal) {
-          const userSealScore = Math.max(0, Math.min(100, Number(state.user?.fluencyPlanScore) || 0));
-          const userSeal = resolveDailyPlanSealByScore(userSealScore);
-          const sealSrc = safeText(userSeal?.sealImage) || 'medalhas/white.png';
-          els.welcomeAvatarSeal.src = sealSrc.startsWith('/') ? sealSrc : `/${sealSrc}`;
-          els.welcomeAvatarSeal.alt = safeText(userSeal?.label)
-            ? `Selo atual: ${userSeal.label}`
-            : 'Selo atual';
-          els.welcomeAvatarSeal.style.display = 'block';
-        }
+        syncUserMedalUi();
       }
 
       function stopWelcomeHeadingRotation() {
@@ -15022,13 +15160,7 @@
           const xpTarget = nextRequired > 0 ? nextRequired : currentXp;
           els.welcomeXpLine.textContent = `XP | ${currentXp} DE ${xpTarget}`;
         }
-        els.welcomeLevelProgressBar.style.setProperty('--welcome-level-progress-pct', `${percent.toFixed(2)}%`);
-        if (els.welcomeLevelOrbit) {
-          els.welcomeLevelOrbit.setAttribute(
-            'aria-label',
-            `Progresso para o proximo nivel: ${Math.round(percent)}%.`
-          );
-        }
+        syncUserMedalUi({ allowTransition: true });
         if (els.welcomeLevelProgressCopy) {
           els.welcomeLevelProgressCopy.textContent = '';
         }
@@ -16490,6 +16622,7 @@
 
       async function handleLoggedOutState(message) {
         clearGameStatusRankTimer();
+        closeUserMedalTransitionModal();
         if (state.game.active) {
           await exitGame();
         }
@@ -17139,6 +17272,175 @@
         return 'Comece agora: seu progresso sobe rapido.';
       }
 
+      const USER_MEDAL_LEVELS = Object.freeze(Array.from({ length: USER_MEDAL_COUNT }, (_entry, index) => {
+        const medalIndex = index + 1;
+        const minLevel = (index * USER_MEDAL_LEVEL_GROUP_SIZE) + 1;
+        const maxLevel = Math.min(USER_MEDAL_MAX_LEVEL, minLevel + USER_MEDAL_LEVEL_GROUP_SIZE - 1);
+        return {
+          key: `medal-${medalIndex}`,
+          index: medalIndex,
+          label: `Selo ${medalIndex}`,
+          minLevel,
+          maxLevel,
+          image: `/medals/user-level/medal-${medalIndex}.png`
+        };
+      }));
+
+      function clampUserMedalSourceLevel(level = currentUserLevel()) {
+        const numeric = Number(level);
+        if (!Number.isFinite(numeric)) return 1;
+        return Math.max(1, Math.min(USER_MEDAL_MAX_LEVEL, Math.round(numeric)));
+      }
+
+      function resolveUserMedalByLevel(level = currentUserLevel()) {
+        const safeLevel = clampUserMedalSourceLevel(level);
+        const match = USER_MEDAL_LEVELS.find((entry) => safeLevel >= entry.minLevel && safeLevel <= entry.maxLevel);
+        return match || USER_MEDAL_LEVELS[USER_MEDAL_LEVELS.length - 1];
+      }
+
+      function computeUserMedalProgressPercent(level = currentUserLevel()) {
+        const medal = resolveUserMedalByLevel(level);
+        if (!medal) return 0;
+        const safeLevel = clampUserMedalSourceLevel(level);
+        if (medal.index >= USER_MEDAL_COUNT && safeLevel >= USER_MEDAL_MAX_LEVEL) return 100;
+        const span = Math.max(1, medal.maxLevel - medal.minLevel);
+        const progress = span <= 0
+          ? 100
+          : ((safeLevel - medal.minLevel) / span) * 100;
+        return Math.max(0, Math.min(100, progress));
+      }
+
+      function stopUserMedalTransitionAudio() {
+        const current = state.ui.medalTransitionAudio;
+        if (!current) return;
+        try {
+          current.pause();
+          current.currentTime = 0;
+        } catch (_error) {
+          // ignore
+        }
+        state.ui.medalTransitionAudio = null;
+      }
+
+      function playUserMedalTransitionAudio() {
+        stopUserMedalTransitionAudio();
+        try {
+          const audio = new Audio(USER_MEDAL_AUDIO_PATH);
+          audio.preload = 'auto';
+          state.ui.medalTransitionAudio = audio;
+          const clearCurrent = () => {
+            if (state.ui.medalTransitionAudio === audio) {
+              state.ui.medalTransitionAudio = null;
+            }
+          };
+          audio.addEventListener('ended', clearCurrent, { once: true });
+          audio.addEventListener('error', clearCurrent, { once: true });
+          audio.play().catch(clearCurrent);
+        } catch (_error) {
+          state.ui.medalTransitionAudio = null;
+        }
+      }
+
+      function closeUserMedalTransitionModal() {
+        if (state.ui.medalTransitionTimer) {
+          window.clearTimeout(state.ui.medalTransitionTimer);
+          state.ui.medalTransitionTimer = 0;
+        }
+        stopUserMedalTransitionAudio();
+        if (!els.medalTransitionModal) return;
+        els.medalTransitionModal.classList.remove('is-visible');
+        els.medalTransitionModal.setAttribute('aria-hidden', 'true');
+      }
+
+      function setUserMedalTransitionContent(nodeImage, nodeLabel, nodeRange, medal, altPrefix) {
+        if (nodeImage) {
+          nodeImage.src = safeText(medal?.image) || '/medals/user-level/medal-1.png';
+          nodeImage.alt = `${altPrefix} ${safeText(medal?.label) || 'Selo'}`.trim();
+        }
+        if (nodeLabel) {
+          nodeLabel.textContent = safeText(medal?.label) || 'Selo';
+        }
+        if (nodeRange) {
+          nodeRange.textContent = `Niveis ${Math.max(1, Number(medal?.minLevel) || 1)}-${Math.max(1, Number(medal?.maxLevel) || 1)}`;
+        }
+      }
+
+      function openUserMedalTransitionModal(fromMedal, toMedal) {
+        if (!els.medalTransitionModal || !els.medalTransitionTrack || !fromMedal || !toMedal) return;
+        closeUserMedalTransitionModal();
+        const isAdvancing = Number(toMedal.index) >= Number(fromMedal.index);
+        const leftMedal = isAdvancing ? fromMedal : toMedal;
+        const rightMedal = isAdvancing ? toMedal : fromMedal;
+        setUserMedalTransitionContent(
+          els.medalTransitionFromImage,
+          els.medalTransitionFromLabel,
+          els.medalTransitionFromRange,
+          leftMedal,
+          isAdvancing ? 'Selo anterior:' : 'Novo selo:'
+        );
+        setUserMedalTransitionContent(
+          els.medalTransitionToImage,
+          els.medalTransitionToLabel,
+          els.medalTransitionToRange,
+          rightMedal,
+          isAdvancing ? 'Novo selo:' : 'Selo anterior:'
+        );
+        if (els.medalTransitionEyebrow) {
+          els.medalTransitionEyebrow.textContent = isAdvancing ? 'SELO EVOLUINDO' : 'SELO REBAIXADO';
+        }
+        els.medalTransitionTrack.style.transition = 'none';
+        els.medalTransitionTrack.style.transform = isAdvancing ? 'translate3d(0%, 0, 0)' : 'translate3d(-50%, 0, 0)';
+        els.medalTransitionModal.classList.add('is-visible');
+        els.medalTransitionModal.setAttribute('aria-hidden', 'false');
+        playUserMedalTransitionAudio();
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            if (!els.medalTransitionTrack) return;
+            els.medalTransitionTrack.style.transition = 'transform 880ms cubic-bezier(0.22, 0.9, 0.2, 1)';
+            els.medalTransitionTrack.style.transform = isAdvancing ? 'translate3d(-50%, 0, 0)' : 'translate3d(0%, 0, 0)';
+          });
+        });
+        state.ui.medalTransitionTimer = window.setTimeout(() => {
+          closeUserMedalTransitionModal();
+        }, 2200);
+      }
+
+      function syncUserMedalUi(options = {}) {
+        const allowTransition = Boolean(options.allowTransition);
+        const level = clampUserMedalSourceLevel(currentUserLevel());
+        const medal = resolveUserMedalByLevel(level);
+        const progressPercent = computeUserMedalProgressPercent(level);
+        const previousIndex = Math.max(1, Number(state.ui.userMedalIndex) || 1);
+        if (els.welcomeAvatarSeal) {
+          const sealSrc = safeText(medal?.image) || '/medals/user-level/medal-1.png';
+          els.welcomeAvatarSeal.src = sealSrc;
+          els.welcomeAvatarSeal.alt = safeText(medal?.label)
+            ? `Selo atual: ${medal.label}`
+            : 'Selo atual';
+          els.welcomeAvatarSeal.style.display = 'block';
+        }
+        if (els.welcomeLevelProgressBar) {
+          els.welcomeLevelProgressBar.style.setProperty('--welcome-level-progress-pct', `${progressPercent.toFixed(2)}%`);
+        }
+        if (els.welcomeLevelOrbit) {
+          const nextMedal = USER_MEDAL_LEVELS[Math.min(USER_MEDAL_LEVELS.length - 1, medal.index)] || medal;
+          els.welcomeLevelOrbit.setAttribute(
+            'aria-label',
+            medal.index >= USER_MEDAL_COUNT
+              ? `Selo ${medal.index} completo.`
+              : `Progresso para ${safeText(nextMedal?.label) || 'proximo selo'}: ${Math.round(progressPercent)}%.`
+          );
+        }
+        if (allowTransition && state.ui.userMedalReady && medal.index !== previousIndex) {
+          const previousMedal = USER_MEDAL_LEVELS[Math.max(0, previousIndex - 1)] || medal;
+          openUserMedalTransitionModal(previousMedal, medal);
+        }
+        state.ui.userMedalIndex = medal.index;
+        state.ui.userMedalProgressPercent = progressPercent;
+        state.ui.userMedalReady = true;
+        return medal;
+      }
+
       const DAILY_PLAN_FLUENCY_SEALS = [
         { key: 'white', label: 'White', minCards: 0, sealImage: 'medalhas/white.png' },
         { key: 'vidro', label: 'Vidro', minCards: 5, sealImage: 'medalhas/vidro.png' },
@@ -17455,19 +17757,7 @@
           els.dailyPlanCurrentSealImage.style.opacity = '1';
           els.dailyPlanCurrentSealImage.style.filter = 'none';
         }
-        if (els.welcomeAvatarSeal) {
-          const fallbackUserSealProgress = Math.max(0, Number(state.user?.fluencyPlanScore) || 0);
-          const welcomeSealProgress = (!isNoPlanMode && totalSealProgress <= 0 && fallbackUserSealProgress > 0)
-            ? fallbackUserSealProgress
-            : totalSealProgress;
-          const welcomeSeal = resolveDailyPlanSealByScore(welcomeSealProgress);
-          const sealSrc = safeText(welcomeSeal?.sealImage) || 'medalhas/white.png';
-          els.welcomeAvatarSeal.src = sealSrc.startsWith('/') ? sealSrc : `/${sealSrc}`;
-          els.welcomeAvatarSeal.alt = safeText(welcomeSeal?.label)
-            ? `Selo atual: ${welcomeSeal.label}`
-            : 'Selo atual';
-          els.welcomeAvatarSeal.style.display = isNoPlanMode ? 'none' : 'block';
-        }
+        syncUserMedalUi();
         if (els.dailyPlanSealProgressValue) {
           const messages = buildDailyPlanRotatingMessages(mission, missionView);
           const safeIndex = Math.max(0, Math.min(messages.length - 1, Number(state.entry.dailyPlanSealSwapMode) || 0));
@@ -17569,28 +17859,8 @@
 
       function gameOptionSlideMeta() {
         return {
-          difficulty: {
-            label: '1/4',
-            name: 'Dificuldade',
-            desc: 'Automatico segue o nivel do usuario. Manual usa seletor por nivel.',
-            values: {
-              automatic: { label: 'Automatico', desc: 'Usa sempre o mesmo nivel mostrado no welcome-gate.' },
-              manual: { label: 'Manual', desc: 'Permite escolher o nivel no seletor.' }
-            }
-          },
-          speed: {
-            label: '2/4',
-            name: 'Velocidade',
-            desc: 'Controla a velocidade da fala dos áudios.',
-            values: {
-              '0.70': { label: '0.70x', desc: 'Mais calma para treinar detalhes.' },
-              '0.80': { label: '0.80x', desc: 'Leve redução na velocidade.' },
-              '0.90': { label: '0.90x', desc: 'Equilíbrio recomendado para jogo.' },
-              '1.00': { label: '1.00x', desc: 'Velocidade natural.' }
-            }
-          },
           accent: {
-            label: '3/4',
+            label: '1/2',
             name: 'Sotaque',
             desc: 'Cada toque muda 10% entre Americano e Britânico.',
             values: Object.fromEntries((GAME_OPTION_VALUE_MAP.accent || []).map((value) => {
@@ -17601,7 +17871,7 @@
             }))
           },
           fourthStageTyping: {
-            label: '4/4',
+            label: '2/2',
             name: 'Digitação',
             desc: 'Troca entre blocos e teclado de 9 letras.',
             values: {
