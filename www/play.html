@@ -4798,6 +4798,47 @@
       gap: 12px;
     }
 
+    .albums-player-popover-card {
+      width: min(560px, calc(100% - 24px));
+    }
+
+    .albums-player-options {
+      display: grid;
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .albums-player-option {
+      width: 100%;
+      border: 1px solid rgba(125, 203, 255, 0.2);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      text-align: left;
+      padding: 18px 18px 16px;
+      display: grid;
+      gap: 6px;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    .albums-player-option:hover,
+    .albums-player-option:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(125, 203, 255, 0.42);
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .albums-player-option__title {
+      font: 800 20px/1.1 "Exo 2", "Segoe UI", sans-serif;
+      color: #f1f8ff;
+    }
+
+    .albums-player-option__copy {
+      font: 500 14px/1.4 "Open Sans", "Segoe UI", sans-serif;
+      color: rgba(223, 239, 255, 0.84);
+    }
+
     .watch-decks {
       display: grid;
       gap: 14px;
@@ -4908,6 +4949,22 @@
 
     .watch.is-visible { display: flex; }
 
+    .watch.is-albums-mode {
+      padding: 0;
+      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
+      backdrop-filter: none;
+    }
+
+    .watch.is-albums-mode::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top, rgba(55, 190, 255, 0.18), transparent 34%),
+        var(--playtalk-global-bg-overlay);
+      pointer-events: none;
+    }
+
     .watch-shell {
       width: min(1180px, 90vw);
       max-height: 90vh;
@@ -4919,6 +4976,17 @@
       background: transparent;
       border: 0;
       box-shadow: none;
+    }
+
+    .watch.is-albums-mode .watch-shell {
+      position: relative;
+      z-index: 1;
+      width: min(100vw, 1200px);
+      max-height: 100vh;
+      height: 100vh;
+      padding: clamp(18px, 3vw, 34px);
+      gap: 10px;
+      overflow: hidden;
     }
 
     .watch-head {
@@ -4945,6 +5013,13 @@
       align-items: stretch;
     }
 
+    .watch.is-albums-mode .watch-card__layout {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      align-content: center;
+      gap: 18px;
+    }
+
     .watch-card__visual,
     .watch-card__content {
       min-height: 100%;
@@ -4965,11 +5040,22 @@
       margin: auto;
     }
 
+    .watch.is-albums-mode .watch-card__visual {
+      width: min(82vw, 52vh);
+      max-width: 520px;
+      aspect-ratio: 1 / 1;
+    }
+
     .watch-card__visual img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       clip-path: inset(8% 8% 8% 8% round 22px);
+    }
+
+    .watch.is-albums-mode .watch-card__visual img {
+      object-fit: contain;
+      clip-path: none;
     }
 
     .watch-card__fallback {
@@ -4996,6 +5082,15 @@
       text-align: center;
     }
 
+    .watch.is-albums-mode .watch-card__content {
+      width: min(92vw, 640px);
+      min-height: 0;
+      padding: 0 8px;
+      gap: 12px;
+      align-content: start;
+      justify-items: center;
+    }
+
     .watch-word {
       margin: 0;
       font-size: clamp(30px, 5vw, 56px);
@@ -5004,12 +5099,26 @@
       text-transform: capitalize;
     }
 
+    .watch.is-albums-mode .watch-word {
+      max-width: min(92vw, 540px);
+      font-size: clamp(28px, 5vw, 48px);
+      line-height: 1.05;
+      white-space: pre-line;
+      text-wrap: balance;
+    }
+
     .watch-subword {
       margin: 0;
       color: #e8ff61;
       font-size: clamp(18px, 2.6vw, 30px);
       line-height: 1.3;
       min-height: 32px;
+    }
+
+    .watch.is-albums-mode .watch-subword,
+    .watch.is-albums-mode .watch-stars,
+    .watch.is-albums-mode .watch-footer {
+      display: none;
     }
 
     .watch-stars {
@@ -10344,6 +10453,34 @@
       gap: 8px;
     }
 
+    .albums-modal__deck-audio-btn {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #7dd4ff;
+      display: inline-grid;
+      place-items: center;
+      cursor: pointer;
+      transition: transform 140ms ease, filter 140ms ease;
+    }
+
+    .albums-modal__deck-audio-btn:hover,
+    .albums-modal__deck-audio-btn:focus-visible {
+      transform: scale(1.06);
+      filter: brightness(1.15);
+    }
+
+    .albums-modal__deck-audio-btn svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+      filter:
+        drop-shadow(0 0 8px rgba(93, 204, 255, 0.68))
+        drop-shadow(0 0 18px rgba(93, 204, 255, 0.24));
+    }
+
     .albums-modal__deck-value-coins {
       width: 24px;
       height: 24px;
@@ -11147,6 +11284,34 @@
         </section>
         <div class="actions">
           <button class="btn btn-primary" id="startWatchBtn" type="button">ComeÃ§ar</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="game" id="albumsPlayerPopover" aria-modal="true" role="dialog">
+      <div class="panel game-shell albums-player-popover-card">
+        <div class="game-head">
+          <div>
+            <h2>Assistir Álbuns</h2>
+            <p>Escolha quais cards quer reproduzir em tela cheia.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-close" id="closeAlbumsPlayerPopoverBtn" type="button" aria-label="Fechar">&times;</button>
+          </div>
+        </div>
+        <div class="albums-player-options" id="albumsPlayerOptions">
+          <button class="albums-player-option" type="button" data-albums-player-scope="mine">
+            <span class="albums-player-option__title">My cards</span>
+            <span class="albums-player-option__copy">Exibe somente os cards do usuário em ordem aleatória.</span>
+          </button>
+          <button class="albums-player-option" type="button" data-albums-player-scope="all">
+            <span class="albums-player-option__title">All cards</span>
+            <span class="albums-player-option__copy">Exibe todos os cards do jogo de forma aleatória.</span>
+          </button>
+          <button class="albums-player-option" type="button" data-albums-player-scope="level">
+            <span class="albums-player-option__title">My level cards</span>
+            <span class="albums-player-option__copy">Exibe a janela real do seu nível, como o jogo provavelmente vai sortear.</span>
+          </button>
         </div>
       </div>
     </section>
@@ -12015,9 +12180,11 @@
         },
         watch: {
           active: false,
+          mode: 'default',
           scope: 'all',
           gapMs: 3000,
           music: 'on',
+          returnToAlbums: false,
           selectedSources: [],
           queue: [],
           sourceCards: [],
@@ -12387,6 +12554,9 @@
           gameSetupCountCopy: document.getElementById('gameSetupCountCopy'),
           startTutorialBtn: document.getElementById('startTutorialBtn'),
           watchPopover: document.getElementById('watchPopover'),
+          albumsPlayerPopover: document.getElementById('albumsPlayerPopover'),
+          closeAlbumsPlayerPopoverBtn: document.getElementById('closeAlbumsPlayerPopoverBtn'),
+          albumsPlayerOptions: document.getElementById('albumsPlayerOptions'),
         closeWatchPopoverBtn: document.getElementById('closeWatchPopoverBtn'),
         startWatchBtn: document.getElementById('startWatchBtn'),
         watchGapSelect: document.getElementById('watchGapSelect'),
@@ -18099,6 +18269,9 @@
           <p class="albums-modal__deck-value">
             <span class="albums-modal__deck-value-label">VALOR DO DECK</span>
             <span class="albums-modal__deck-value-number-row">
+              <button class="albums-modal__deck-audio-btn" type="button" data-albums-player-open aria-label="Reproduzir cards do álbum">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.36a1 1 0 0 0 0-1.72l-10-6.36A1 1 0 0 0 8 5.14Z"/></svg>
+              </button>
               <img class="albums-modal__deck-value-coins" src="/SVG/codex-icons/post-results/coins.svg" alt="">
               <span class="albums-modal__deck-value-number">${escapeHtml(totalCoins.toLocaleString('pt-BR'))}</span>
             </span>
@@ -25200,6 +25373,18 @@
         return undefined;
       }
 
+      function openAlbumsPlayerPopover() {
+        if (!els.albumsPlayerPopover) return;
+        els.albumsPlayerPopover.classList.add('is-visible');
+        window.requestAnimationFrame(() => els.albumsPlayerPopover.classList.add('is-active'));
+      }
+
+      function closeAlbumsPlayerPopover() {
+        if (!els.albumsPlayerPopover) return;
+        els.albumsPlayerPopover.classList.remove('is-active');
+        els.albumsPlayerPopover.classList.remove('is-visible');
+      }
+
       function syncWatchControls() {
         const settings = readWatchSettings();
         state.watch.gapMs = settings.gapMs;
@@ -25220,6 +25405,100 @@
           unique.push({ ...card });
         });
         return unique;
+      }
+
+      function buildAlbumsLevelWindowCards() {
+        const level = currentUserLevel();
+        const allPlayableCards = state.allCards.filter(isCardPlayableInLevelMode);
+        const bounds = resolveDeckLevelBounds(level);
+        const windowCards = allPlayableCards.filter((card) => {
+          const deckLevel = cardDeckLevel(card);
+          return Number.isInteger(deckLevel) && deckLevel >= bounds.minLevel && deckLevel <= bounds.maxLevel;
+        });
+        return applyDeckCardsLimit(windowCards.length ? windowCards : allPlayableCards, level);
+      }
+
+      function buildAlbumsPreviewSourceCards(scope = 'mine') {
+        const normalizedScope = safeText(scope).toLowerCase();
+        let sourceCards = [];
+        if (normalizedScope === 'all') {
+          sourceCards = uniqueCardsById(state.allCards.filter((card) => (
+            hasCoreFlashcardText(card)
+            && hasPlayableFlashcardImage(card)
+          )));
+        } else if (normalizedScope === 'level') {
+          sourceCards = uniqueCardsById(buildAlbumsLevelWindowCards());
+        } else {
+          sourceCards = uniqueCardsById(userProgressCards().map((card) => ({ ...card })));
+        }
+        return sourceCards.filter((card) => (
+          hasCoreFlashcardText(card)
+          && hasPlayableFlashcardImage(card)
+          && Boolean(resolveCardAudioUrl(card))
+        ));
+      }
+
+      function formatAlbumsPlayerWord(text, maxCharsPerLine = 16, maxLines = 3) {
+        const normalized = safeText(text).replace(/\s+/g, ' ').trim();
+        if (!normalized) return 'Flashcard';
+        const words = normalized.split(' ');
+        const lines = [];
+        let currentLine = '';
+        const pushLine = (line) => {
+          if (!line) return;
+          if (lines.length < maxLines) {
+            lines.push(line);
+          }
+        };
+        words.forEach((word) => {
+          const safeWord = safeText(word);
+          if (!safeWord) return;
+          if (safeWord.length > maxCharsPerLine) {
+            if (currentLine) {
+              pushLine(currentLine);
+              currentLine = '';
+            }
+            for (let index = 0; index < safeWord.length; index += maxCharsPerLine) {
+              pushLine(safeWord.slice(index, index + maxCharsPerLine));
+              if (lines.length >= maxLines) break;
+            }
+            return;
+          }
+          const candidate = currentLine ? `${currentLine} ${safeWord}` : safeWord;
+          if (candidate.length <= maxCharsPerLine) {
+            currentLine = candidate;
+            return;
+          }
+          pushLine(currentLine);
+          currentLine = safeWord;
+        });
+        if (currentLine && lines.length < maxLines) {
+          pushLine(currentLine);
+        }
+        const truncated = lines.slice(0, maxLines);
+        if (lines.length > maxLines || (words.length && truncated.join(' ') !== normalized)) {
+          const lastIndex = truncated.length - 1;
+          if (lastIndex >= 0) {
+            const base = truncated[lastIndex].slice(0, Math.max(0, maxCharsPerLine - 1)).trimEnd();
+            truncated[lastIndex] = `${base}…`;
+          }
+        }
+        return truncated.join('\n');
+      }
+
+      function waitForWatchVisualReady() {
+        const image = els.watchVisual?.querySelector('img');
+        if (!image) return Promise.resolve();
+        if (image.complete && Number(image.naturalWidth) > 0) return Promise.resolve();
+        return new Promise((resolve) => {
+          const done = () => {
+            image.removeEventListener('load', done);
+            image.removeEventListener('error', done);
+            resolve();
+          };
+          image.addEventListener('load', done, { once: true });
+          image.addEventListener('error', done, { once: true });
+        });
       }
 
       function buildWatchSourceCards() {
@@ -25357,10 +25636,18 @@
           ? `<img src="${escapeHtml(card.imageUrl)}" alt="${escapeHtml(card.english || card.portuguese || card.deckTitle)}">`
           : `<div class="watch-card__fallback">${escapeHtml(card?.deckTitle || 'Flashcards')}</div>`;
         els.watchVisual.innerHTML = imageMarkup;
-        els.watchWord.textContent = card?.english || card?.portuguese || 'Preparando...';
-        els.watchSubword.textContent = card?.portuguese || '';
-        els.watchSubword.style.display = card?.portuguese ? '' : 'none';
-        renderWatchStars();
+        const albumsMode = state.watch.mode === 'albums';
+        if (albumsMode) {
+          els.watchWord.textContent = formatAlbumsPlayerWord(card?.english || card?.portuguese || card?.deckTitle || 'Preparando...');
+          els.watchSubword.textContent = '';
+          els.watchSubword.style.display = 'none';
+          els.watchStars.innerHTML = '';
+        } else {
+          els.watchWord.textContent = card?.english || card?.portuguese || 'Preparando...';
+          els.watchSubword.textContent = card?.portuguese || '';
+          els.watchSubword.style.display = card?.portuguese ? '' : 'none';
+          renderWatchStars();
+        }
       }
 
       function openWatchPopover() {
@@ -25377,6 +25664,15 @@
         if (!state.game.active && !state.watch.active) {
           document.body.classList.remove('game-open');
         }
+      }
+
+      function restoreAlbumsModalAfterWatch() {
+        if (!state.watch.returnToAlbums || !els.albumsModal) return;
+        state.watch.returnToAlbums = false;
+        state.ui.albumsOpen = true;
+        els.albumsModal.classList.add('is-visible');
+        els.albumsModal.setAttribute('aria-hidden', 'false');
+        renderAlbumsSection();
       }
 
       function openGameSetup() {
@@ -25636,6 +25932,17 @@
             // ignore
           }
         }
+        if (state.watch.mode === 'albums') {
+          await waitForWatchVisualReady();
+          if (!state.watch.active) return;
+          await playWatchAudio(card, 1);
+          if (!state.watch.active) return;
+          stopWatchTimer();
+          state.watch.timer = window.setTimeout(() => {
+            runWatchCycle();
+          }, 3000);
+          return;
+        }
         await playWatchAudio(card, 0.75);
         if (!state.watch.active) return;
         await wait(3000);
@@ -25650,6 +25957,7 @@
 
       function stopWatch() {
         state.watch.active = false;
+        state.watch.mode = 'default';
         state.watch.currentCardId = null;
         state.watch.queue = [];
         state.watch.sourceCards = [];
@@ -25657,6 +25965,7 @@
         stopWatchVoice();
         stopWatchMusic();
         els.watch.classList.remove('is-visible');
+        els.watch.classList.remove('is-albums-mode');
         closeWatchPopover();
         if ('mediaSession' in navigator) {
           try {
@@ -25665,6 +25974,7 @@
             // ignore
           }
         }
+        restoreAlbumsModalAfterWatch();
         if (!state.game.active) {
           document.body.classList.remove('game-open');
         }
@@ -25674,6 +25984,8 @@
         if (options.useDefaults) {
           applyDefaultWatchSettings();
         }
+        state.watch.mode = 'default';
+        state.watch.returnToAlbums = false;
         state.watch.gapMs = Number(els.watchGapSelect.value) || 3000;
         state.watch.scope = els.watchScopeSelect.value === 'mine' ? 'mine' : 'all';
         state.watch.music = els.watchMusicSelect.value === 'off' ? 'off' : 'on';
@@ -25687,6 +25999,28 @@
         state.watch.active = true;
         closeWatchPopover();
         els.watch.classList.add('is-visible');
+        els.watch.classList.remove('is-albums-mode');
+        document.body.classList.add('game-open');
+        runWatchCycle();
+      }
+
+      function startAlbumsPreview(scope = 'mine') {
+        const sourceCards = buildAlbumsPreviewSourceCards(scope);
+        if (!sourceCards.length) {
+          window.alert('Nenhum flashcard com áudio foi encontrado para essa opção.');
+          return;
+        }
+        state.watch.mode = 'albums';
+        state.watch.returnToAlbums = true;
+        state.watch.scope = 'albums';
+        state.watch.music = 'off';
+        state.watch.gapMs = 3000;
+        state.watch.sourceCards = sourceCards;
+        state.watch.queue = buildWatchQueue(sourceCards);
+        state.watch.active = true;
+        closeAlbumsPlayerPopover();
+        closeAlbumsModal();
+        els.watch.classList.add('is-visible', 'is-albums-mode');
         document.body.classList.add('game-open');
         runWatchCycle();
       }
@@ -27174,9 +27508,27 @@
         els.watchFlashcardsBtn?.addEventListener('click', openWatchPopover);
         els.closeWatchPopoverBtn?.addEventListener('click', closeWatchPopover);
         els.startWatchBtn?.addEventListener('click', startWatch);
+        els.closeAlbumsPlayerPopoverBtn?.addEventListener('click', closeAlbumsPlayerPopover);
+        els.albumsPlayerPopover?.addEventListener('click', (event) => {
+          if (event.target === els.albumsPlayerPopover) {
+            closeAlbumsPlayerPopover();
+          }
+        });
+        els.albumsPlayerOptions?.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-albums-player-scope]');
+          if (!button) return;
+          startAlbumsPreview(button.getAttribute('data-albums-player-scope') || 'mine');
+        });
         els.watchScopeSelect?.addEventListener('change', (event) => {
           state.watch.scope = event.target.value === 'mine' ? 'mine' : 'all';
           renderWatchDeckPicker();
+        });
+        els.albumsFlashcardsStack?.addEventListener('click', (event) => {
+          const trigger = event.target.closest('[data-albums-player-open]');
+          if (!trigger) return;
+          event.preventDefault();
+          event.stopPropagation();
+          openAlbumsPlayerPopover();
         });
         els.watchDeckGrid?.addEventListener('click', (event) => {
           const toggle = event.target.closest('[data-watch-source]');
@@ -27415,6 +27767,11 @@
           closePremiumGate();
         });
         window.addEventListener('keydown', (event) => {
+          if (els.albumsPlayerPopover?.classList.contains('is-visible') && event.key === 'Escape') {
+            event.preventDefault();
+            closeAlbumsPlayerPopover();
+            return;
+          }
           if (state.ui.albumsOpen) {
             if (event.key === 'Escape') {
               event.preventDefault();
