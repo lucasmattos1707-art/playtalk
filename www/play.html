@@ -794,8 +794,9 @@
 
     .welcome-gate__level-orbit {
       --welcome-level-progress-pct: 0%;
-      width: 100%;
-      max-width: 100%;
+      width: min(360px, calc(100vw - 48px));
+      max-width: calc(100vw - 48px);
+      min-width: 0;
       position: relative;
       display: grid;
       place-items: center;
@@ -815,8 +816,11 @@
       position: relative;
       order: 1;
       width: 100%;
-      max-width: 360px;
+      max-width: 100%;
+      min-width: 0;
       height: 12px;
+      margin-inline: auto;
+      box-sizing: border-box;
       border-radius: 999px;
       background: linear-gradient(180deg, rgba(2, 10, 24, 0.98), rgba(3, 15, 37, 0.98));
       overflow: hidden;
@@ -4177,12 +4181,12 @@
       display: grid;
       place-items: center;
       padding: clamp(24px, 4vw, 44px);
-      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
+      background: rgba(3, 10, 25, 0.92);
       z-index: 4200;
       opacity: 0;
       visibility: hidden;
-      pointer-events: none;
-      transition: opacity 280ms ease, visibility 0ms linear 280ms;
+      pointer-events: auto;
+      transition: opacity 140ms ease, visibility 0ms linear 140ms;
     }
 
     .medal-transition-modal::before {
@@ -4190,8 +4194,8 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(circle at top, rgba(120, 220, 120, 0.12), transparent 42%),
-        var(--playtalk-global-bg-overlay);
+        radial-gradient(circle at center, rgba(144, 255, 172, 0.12), transparent 38%),
+        rgba(2, 8, 20, 0.58);
     }
 
     .medal-transition-modal.is-visible {
@@ -4203,92 +4207,66 @@
 
     .medal-transition-modal__content {
       position: relative;
-      width: min(540px, 100%);
+      width: min(360px, 82vw);
       display: grid;
-      gap: 18px;
+      gap: 0;
       justify-items: center;
       text-align: center;
       z-index: 1;
     }
 
     .medal-transition-modal__eyebrow {
-      margin: 0;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(18px, 3vw, 26px);
-      font-weight: 900;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: #efffe7;
-      text-shadow: 0 0 18px rgba(98, 195, 82, 0.22);
+      display: none;
     }
 
     .medal-transition-modal__viewport {
-      width: min(420px, 100%);
+      width: min(280px, 72vw);
       overflow: hidden;
-      border-radius: 34px;
+      border-radius: 999px;
     }
 
     .medal-transition-modal__track {
       display: flex;
       width: 200%;
       will-change: transform;
-      transition: transform 880ms cubic-bezier(0.22, 0.9, 0.2, 1);
+      transition: transform 520ms cubic-bezier(0.22, 0.9, 0.2, 1);
     }
 
     .medal-transition-modal__slide {
       width: 50%;
       flex: 0 0 50%;
       display: grid;
-      gap: 14px;
-      justify-items: center;
-      padding: clamp(18px, 3vw, 24px);
-      background: linear-gradient(180deg, rgba(4, 16, 33, 0.7), rgba(5, 18, 37, 0.38));
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(12px);
+      place-items: center;
+      padding: 0;
     }
 
     .medal-transition-modal__slide img {
-      width: min(220px, 62vw);
-      height: min(220px, 62vw);
+      width: min(220px, 58vw);
+      height: min(220px, 58vw);
       object-fit: contain;
-      filter: drop-shadow(0 0 24px rgba(151, 223, 121, 0.24));
+      filter:
+        drop-shadow(0 0 18px rgba(164, 255, 171, 0.42))
+        drop-shadow(0 0 36px rgba(109, 203, 255, 0.18));
     }
 
     .medal-transition-modal__label {
-      margin: 0;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(20px, 4vw, 32px);
-      font-weight: 900;
-      line-height: 1.04;
-      text-transform: uppercase;
-      color: #ffffff;
+      display: none;
     }
 
     .medal-transition-modal__range {
-      margin: 0;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(13px, 2.6vw, 18px);
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: rgba(230, 255, 223, 0.8);
+      display: none;
     }
 
     .medal-transition-modal__continue {
-      min-width: min(220px, 78vw);
-      min-height: 54px;
-      padding: 0 28px;
-      border: 0;
-      border-radius: 999px;
-      background: linear-gradient(135deg, #7fdd58 0%, #b8ef88 100%);
-      color: #11300d;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: clamp(18px, 3vw, 22px);
-      font-weight: 900;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      box-shadow: 0 18px 38px rgba(56, 120, 32, 0.28);
-      cursor: pointer;
+      display: none;
+    }
+
+    .game.is-medal-transition-active .game-stage-tutorial,
+    .game.is-medal-transition-active .game-shell {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 120ms ease, visibility 0ms linear 120ms;
     }
 
     .game-options-modal__item:active {
@@ -10815,22 +10793,16 @@
   </section>
   <section class="medal-transition-modal" id="medalTransitionModal" aria-hidden="true">
     <div class="medal-transition-modal__content">
-      <p class="medal-transition-modal__eyebrow" id="medalTransitionEyebrow">Novo selo</p>
       <div class="medal-transition-modal__viewport">
         <div class="medal-transition-modal__track" id="medalTransitionTrack">
           <article class="medal-transition-modal__slide">
             <img id="medalTransitionFromImage" src="/medals/user-level/medal-1.png" alt="Selo anterior">
-            <p class="medal-transition-modal__label" id="medalTransitionFromLabel">Selo 1</p>
-            <p class="medal-transition-modal__range" id="medalTransitionFromRange">Niveis 1-10</p>
           </article>
           <article class="medal-transition-modal__slide">
             <img id="medalTransitionToImage" src="/medals/user-level/medal-1.png" alt="Novo selo">
-            <p class="medal-transition-modal__label" id="medalTransitionToLabel">Selo 1</p>
-            <p class="medal-transition-modal__range" id="medalTransitionToRange">Niveis 1-10</p>
           </article>
         </div>
       </div>
-      <button class="medal-transition-modal__continue" id="medalTransitionContinueBtn" type="button">Continuar</button>
     </div>
   </section>
   <section class="robotcheck" id="robotcheck" aria-label="Robot check">
@@ -11392,6 +11364,7 @@
       const STAGE_TWO_HINT_DELAY_MS = 2000;
       const STAGE_TWO_HINT_VISIBLE_MS = 3000;
       const USER_MEDAL_AUDIO_PATH = '/audio/nextseal.mp3';
+      const USER_MEDAL_TRANSITION_TOTAL_MS = 1500;
       const USER_MEDAL_COUNT = 12;
       const USER_MEDAL_LEVEL_GROUP_SIZE = 10;
       const USER_MEDAL_MAX_LEVEL = USER_MEDAL_COUNT * USER_MEDAL_LEVEL_GROUP_SIZE;
@@ -17361,29 +17334,52 @@
         }
       }
 
-      function closeUserMedalTransitionModal(options = {}) {
-        const resumeGame = Boolean(options.resumeGame);
+      function closeUserMedalTransitionModal() {
         if (state.ui.medalTransitionTimer) {
           window.clearTimeout(state.ui.medalTransitionTimer);
           state.ui.medalTransitionTimer = 0;
         }
         stopUserMedalTransitionAudio();
-        if (!els.medalTransitionModal) return;
-        els.medalTransitionModal.classList.remove('is-visible');
-        els.medalTransitionModal.setAttribute('aria-hidden', 'true');
-        if (resumeGame && state.ui.medalTransitionPausedGame && state.game.active) {
-          state.ui.medalTransitionPausedGame = false;
-          resumeFlashcardsGameFromWelcome();
-          updateSpeakingStarMicSealProgress();
-          return;
+        if (els.medalTransitionModal) {
+          els.medalTransitionModal.classList.remove('is-visible');
+          els.medalTransitionModal.setAttribute('aria-hidden', 'true');
         }
+        els.game?.classList.remove('is-medal-transition-active');
         state.ui.medalTransitionPausedGame = false;
       }
 
-      function pauseGameForUserMedalTransition() {
-        if (!state.game.active) return;
-        pauseFlashcardsGameToWelcome();
-        state.ui.medalTransitionPausedGame = true;
+      function isRememberPhaseKey(phaseKey = '') {
+        return phaseKey === 'third-star' || phaseKey === 'fifth-star';
+      }
+
+      function currentGameVisualImageElement() {
+        return els.gameVisual?.querySelector('img:not(.game-card__seal):not(.game-card__phase-flag)') || null;
+      }
+
+      function isCurrentGameVisualImageReady(entry, stageConfig) {
+        const phaseKey = safeText(stageConfig?.key || '');
+        if (!isRememberPhaseKey(phaseKey)) return false;
+        if (!entry || safeText(state.game.currentId) !== safeText(entry.id)) return false;
+        const image = currentGameVisualImageElement();
+        return Boolean(image && image.complete && Number(image.naturalWidth) > 0);
+      }
+
+      function scheduleRememberButtonRevealOnImageReady(stageConfig, entry) {
+        const phaseKey = safeText(stageConfig?.key || '');
+        if (!isRememberPhaseKey(phaseKey) || !entry) return;
+        const image = currentGameVisualImageElement();
+        if (!image || (image.complete && Number(image.naturalWidth) > 0)) return;
+        const entryId = safeText(entry.id);
+        const handleImageReady = () => {
+          image.removeEventListener('load', handleImageReady);
+          image.removeEventListener('error', handleImageReady);
+          if (!state.game.active || safeText(state.game.currentId) !== entryId) return;
+          const currentEntry = state.game.entries.get(entryId);
+          if (!currentEntry) return;
+          renderGameTouchButton(resolveGameStageConfig(currentEntry), currentEntry);
+        };
+        image.addEventListener('load', handleImageReady, { once: true });
+        image.addEventListener('error', handleImageReady, { once: true });
       }
 
       function applyUserLevelState(nextLevel, options = {}) {
@@ -17440,7 +17436,7 @@
         if (!els.medalTransitionModal || !els.medalTransitionTrack || !fromMedal || !toMedal) return;
         closeUserMedalTransitionModal();
         if (state.game.active) {
-          pauseGameForUserMedalTransition();
+          els.game?.classList.add('is-medal-transition-active');
         }
         const isAdvancing = Number(toMedal.index) >= Number(fromMedal.index);
         const leftMedal = isAdvancing ? fromMedal : toMedal;
@@ -17459,25 +17455,21 @@
           rightMedal,
           isAdvancing ? 'Novo selo:' : 'Selo anterior:'
         );
-        if (els.medalTransitionEyebrow) {
-          els.medalTransitionEyebrow.textContent = isAdvancing ? 'SELO EVOLUINDO' : 'SELO REBAIXADO';
-        }
         els.medalTransitionTrack.style.transition = 'none';
         els.medalTransitionTrack.style.transform = isAdvancing ? 'translate3d(0%, 0, 0)' : 'translate3d(-50%, 0, 0)';
-        state.ui.medalTransitionTimer = window.setTimeout(() => {
-          state.ui.medalTransitionTimer = 0;
-          if (!els.medalTransitionModal || !els.medalTransitionTrack) return;
-          els.medalTransitionModal.classList.add('is-visible');
-          els.medalTransitionModal.setAttribute('aria-hidden', 'false');
-          playUserMedalTransitionAudio();
+        els.medalTransitionModal.classList.add('is-visible');
+        els.medalTransitionModal.setAttribute('aria-hidden', 'false');
+        playUserMedalTransitionAudio();
+        window.requestAnimationFrame(() => {
           window.requestAnimationFrame(() => {
-            window.requestAnimationFrame(() => {
-              if (!els.medalTransitionTrack) return;
-              els.medalTransitionTrack.style.transition = 'transform 880ms cubic-bezier(0.22, 0.9, 0.2, 1)';
-              els.medalTransitionTrack.style.transform = isAdvancing ? 'translate3d(-50%, 0, 0)' : 'translate3d(0%, 0, 0)';
-            });
+            if (!els.medalTransitionTrack) return;
+            els.medalTransitionTrack.style.transition = 'transform 520ms cubic-bezier(0.22, 0.9, 0.2, 1)';
+            els.medalTransitionTrack.style.transform = isAdvancing ? 'translate3d(-50%, 0, 0)' : 'translate3d(0%, 0, 0)';
           });
-        }, 1);
+        });
+        state.ui.medalTransitionTimer = window.setTimeout(() => {
+          closeUserMedalTransitionModal();
+        }, USER_MEDAL_TRANSITION_TOTAL_MS);
       }
 
       function syncUserMedalUi(options = {}) {
@@ -21357,11 +21349,14 @@
 
       function renderGameTouchButton(stageConfig, entry) {
         const stageNumber = resolveEntryStageNumber(entry);
+        const phaseKey = safeText(stageConfig?.key || '');
         const useBooksMic = (!isLevelAudioModeActive() || isLevelTextModeActive()) && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5);
         const useStagePlay = stageNumber === 2 || stageNumber === 4;
         const rememberCardId = safeText(entry?.id);
         const rememberBlockedForCard = Boolean(rememberCardId) && state.game.rememberHiddenCardId === rememberCardId;
-        const canShowRemember = (stageNumber === 3 || stageNumber === 5) && !rememberBlockedForCard;
+        const canShowRemember = isRememberPhaseKey(phaseKey)
+          && !rememberBlockedForCard
+          && isCurrentGameVisualImageReady(entry, stageConfig);
         const showMissionHud = stageNumber >= 1 && stageNumber <= 5;
         els.gameTouchBtn.parentElement.hidden = !showMissionHud;
         els.gameTouchBtn.className = 'game-touch';
@@ -21417,6 +21412,7 @@
           els.gameRememberBtn.disabled = !canShowRemember || !state.game.active || state.game.paused;
           els.gameRememberBtn.classList.remove('is-mic-hidden');
         }
+        scheduleRememberButtonRevealOnImageReady(stageConfig, entry);
         updateSpeakingStarMicSealProgress();
         syncLevelTextModeControls();
       }
