@@ -3738,6 +3738,41 @@
       opacity: 0;
     }
 
+    #gameStarsWrap,
+    #gameCard,
+    #gameStatusSlot,
+    #gameChipRow,
+    #gameControlsProxy,
+    #gameFooterSlot,
+    #gameResultsScreen,
+    #gameStageTutorial {
+      transition:
+        opacity 180ms ease,
+        transform 180ms ease,
+        filter 180ms ease;
+      will-change: opacity, transform;
+    }
+
+    .game.is-event-modal-exiting #gameStarsWrap,
+    .game.is-event-modal-exiting #gameChipRow,
+    .game.is-event-modal-exiting #gameStatusSlot,
+    .game.is-event-modal-exiting #gameFooterSlot,
+    .game.is-event-modal-exiting #gameResultsScreen {
+      opacity: 0;
+      transform: translate3d(0, -18px, 0);
+      pointer-events: none;
+      filter: blur(4px);
+    }
+
+    .game.is-event-modal-exiting #gameCard,
+    .game.is-event-modal-exiting #gameControlsProxy,
+    .game.is-event-modal-exiting #gameStageTutorial {
+      opacity: 0;
+      transform: translate3d(0, 18px, 0) scale(0.985);
+      pointer-events: none;
+      filter: blur(6px);
+    }
+
     .game.is-level-switching #gameHeadCopy,
     .game.is-level-switching #gameCard,
     .game.is-level-switching #gameStatusSlot,
@@ -10991,30 +11026,6 @@
       </div>
     </div>
   </section>
-  <section class="medal-transition-modal" id="medalTransitionModal" aria-hidden="true">
-    <div class="medal-transition-modal__content">
-      <p class="medal-transition-modal__eyebrow" id="medalTransitionEyebrow">Mudança de nível</p>
-      <h2 class="medal-transition-modal__title" id="medalTransitionTitle">Seu nível mudou</h2>
-      <p class="medal-transition-modal__copy" id="medalTransitionCopy">O jogo está pausado por um instante para mostrar a atualização.</p>
-      <div class="medal-transition-modal__viewport">
-        <div class="medal-transition-modal__track" id="medalTransitionTrack">
-          <article class="medal-transition-modal__slide">
-            <img id="medalTransitionFromImage" src="/medals/user-level/medal-1.png" alt="Selo anterior">
-            <p class="medal-transition-modal__level" id="medalTransitionFromLevel">Nível 1</p>
-            <p class="medal-transition-modal__label" id="medalTransitionFromLabel">Anterior</p>
-            <p class="medal-transition-modal__range" id="medalTransitionFromRange">Níveis 1-10</p>
-          </article>
-          <article class="medal-transition-modal__slide is-current">
-            <img id="medalTransitionToImage" src="/medals/user-level/medal-1.png" alt="Novo selo">
-            <p class="medal-transition-modal__level" id="medalTransitionToLevel">Nível 2</p>
-            <p class="medal-transition-modal__label" id="medalTransitionToLabel">Atual</p>
-            <p class="medal-transition-modal__range" id="medalTransitionToRange">Níveis 1-10</p>
-          </article>
-        </div>
-      </div>
-      <button class="medal-transition-modal__continue" id="medalTransitionContinueBtn" type="button" hidden>Continuar</button>
-    </div>
-  </section>
   <section class="robotcheck" id="robotcheck" aria-label="Robot check">
     <div class="robotcheck__touch" aria-label="Teste de som do Fluent LevelUp">
       <main class="soundcheck-shell">
@@ -11149,6 +11160,30 @@
     <section class="game" id="game" aria-modal="true" role="dialog">
       <div class="game-stage-tutorial" id="gameStageTutorial" aria-hidden="true">
         <img class="game-stage-tutorial__image" id="gameStageTutorialImage" alt="Tutorial da etapa">
+      </div>
+      <div class="medal-transition-modal" id="medalTransitionModal" aria-hidden="true">
+        <div class="medal-transition-modal__content">
+          <p class="medal-transition-modal__eyebrow" id="medalTransitionEyebrow">Mudança de nível</p>
+          <h2 class="medal-transition-modal__title" id="medalTransitionTitle">Seu nível mudou</h2>
+          <p class="medal-transition-modal__copy" id="medalTransitionCopy">O jogo está pausado por um instante para mostrar a atualização.</p>
+          <div class="medal-transition-modal__viewport">
+            <div class="medal-transition-modal__track" id="medalTransitionTrack">
+              <article class="medal-transition-modal__slide">
+                <img id="medalTransitionFromImage" src="/medals/user-level/medal-1.png" alt="Selo anterior">
+                <p class="medal-transition-modal__level" id="medalTransitionFromLevel">Nível 1</p>
+                <p class="medal-transition-modal__label" id="medalTransitionFromLabel">Anterior</p>
+                <p class="medal-transition-modal__range" id="medalTransitionFromRange">Níveis 1-10</p>
+              </article>
+              <article class="medal-transition-modal__slide is-current">
+                <img id="medalTransitionToImage" src="/medals/user-level/medal-1.png" alt="Novo selo">
+                <p class="medal-transition-modal__level" id="medalTransitionToLevel">Nível 2</p>
+                <p class="medal-transition-modal__label" id="medalTransitionToLabel">Atual</p>
+                <p class="medal-transition-modal__range" id="medalTransitionToRange">Níveis 1-10</p>
+              </article>
+            </div>
+          </div>
+          <button class="medal-transition-modal__continue" id="medalTransitionContinueBtn" type="button" hidden>Continuar</button>
+        </div>
       </div>
       <div class="panel game-shell">
         <div class="game-head">
@@ -12330,6 +12365,7 @@
           userMedalReady: false,
           gameEventModalOpen: false,
           gameEventModalWaiters: [],
+          pendingGameEventModal: null,
           medalTransitionPausedGame: false,
           medalTransitionTimer: 0,
           medalTransitionAudio: null,
@@ -17607,6 +17643,47 @@
         });
       }
 
+      function queuePendingGameEventModal(payload) {
+        if (!payload || typeof payload !== 'object') return;
+        state.ui.pendingGameEventModal = payload;
+      }
+
+      function clearPendingGameEventModal() {
+        state.ui.pendingGameEventModal = null;
+      }
+
+      function hasPendingGameEventModal() {
+        return Boolean(state.ui.pendingGameEventModal && typeof state.ui.pendingGameEventModal === 'object');
+      }
+
+      async function animateGameEventModalEntry() {
+        if (!state.game.active || !els.game) return;
+        els.game.classList.add('is-event-modal-exiting');
+        await wait(180);
+      }
+
+      function resetGameEventModalEntry() {
+        els.game?.classList.remove('is-event-modal-exiting');
+      }
+
+      async function presentPendingGameEventModalIfNeeded() {
+        if (!hasPendingGameEventModal()) return false;
+        const pending = state.ui.pendingGameEventModal;
+        clearPendingGameEventModal();
+        if (pending?.kind === 'level-change') {
+          await animateGameEventModalEntry();
+          await openUserMedalTransitionModal(
+            pending.previousLevel,
+            pending.nextLevel,
+            pending.fromMedal,
+            pending.toMedal,
+            pending.options || {}
+          );
+          return true;
+        }
+        return false;
+      }
+
       function closeUserMedalTransitionModal(options = {}) {
         if (state.ui.medalTransitionTimer) {
           window.clearTimeout(state.ui.medalTransitionTimer);
@@ -17625,6 +17702,9 @@
           if (options.resumeIdlePause !== false) {
             scheduleGameIdleAutoPause();
           }
+        }
+        if (options.preserveGameEventExit !== true) {
+          resetGameEventModalEntry();
         }
         resolveGameEventModalWaiters();
       }
@@ -17683,7 +17763,18 @@
           syncUserMedalUi();
         }
         if (options.allowTransition && state.ui.userMedalReady && medalChanged) {
-          void openUserMedalTransitionModal(previousLevel, normalizedLevel, previousMedal, nextMedal);
+          if (state.game.active) {
+            queuePendingGameEventModal({
+              kind: 'level-change',
+              previousLevel,
+              nextLevel: normalizedLevel,
+              fromMedal: previousMedal,
+              toMedal: nextMedal,
+              options: {}
+            });
+          } else {
+            void openUserMedalTransitionModal(previousLevel, normalizedLevel, previousMedal, nextMedal);
+          }
         }
         if (options.refreshGameHud !== false) {
           updateSpeakingStarMicSealProgress();
@@ -17718,7 +17809,7 @@
 
       function openUserMedalTransitionModal(previousLevel, nextLevel, fromMedal, toMedal, options = {}) {
         if (!els.medalTransitionModal || !fromMedal || !toMedal) return Promise.resolve();
-        closeUserMedalTransitionModal();
+        closeUserMedalTransitionModal({ preserveGameEventExit: true, resumeIdlePause: false });
         const autoCloseMs = Math.max(0, Number(options.autoCloseMs) || USER_MEDAL_TRANSITION_TOTAL_MS);
         cleanupGameRecognition();
         stopActiveAudio();
@@ -17809,7 +17900,19 @@
         }
         if (allowTransition && state.ui.userMedalReady && medal.index !== previousIndex) {
           const previousMedal = USER_MEDAL_LEVELS[Math.max(0, previousIndex - 1)] || medal;
-          void openUserMedalTransitionModal(Math.max(1, Number(previousMedal?.minLevel) || level), level, previousMedal, medal);
+          const previousLevel = Math.max(1, Number(previousMedal?.minLevel) || level);
+          if (state.game.active) {
+            queuePendingGameEventModal({
+              kind: 'level-change',
+              previousLevel,
+              nextLevel: level,
+              fromMedal: previousMedal,
+              toMedal: medal,
+              options: {}
+            });
+          } else {
+            void openUserMedalTransitionModal(previousLevel, level, previousMedal, medal);
+          }
         }
         state.ui.userMedalIndex = medal.index;
         state.ui.userMedalProgressPercent = progressPercent;
@@ -26166,6 +26269,7 @@
 
       async function advanceToNextCard() {
         if (!state.game.active) return;
+        await presentPendingGameEventModalIfNeeded();
         await waitForGameEventModalClear();
         if (!state.game.active || state.game.paused) return;
         cleanupGameRecognition();
@@ -26182,6 +26286,7 @@
           } else {
             state.game.currentId = null;
             renderCurrentCard();
+            resetGameEventModalEntry();
             return;
           }
         }
@@ -26189,6 +26294,7 @@
         if (!state.game.queue.length) {
           state.game.currentId = null;
           renderCurrentCard();
+          resetGameEventModalEntry();
           return;
         }
 
@@ -26215,6 +26321,7 @@
         renderCurrentCard();
         if (useCardSlideAnimation) {
           els.gameCard.classList.remove('is-transitioning');
+          resetGameEventModalEntry();
           playStatusCueAudio(NEXT_CARD_WOOSH_AUDIO_PATH);
           els.gameCard.classList.add('is-sliding-next');
           if (!state.game.tutorial.active) {
@@ -26222,6 +26329,8 @@
           }
           await wait(320);
           els.gameCard.classList.remove('is-sliding-next');
+        } else {
+          resetGameEventModalEntry();
         }
         state.game.transitioning = false;
         scheduleGameIdleAutoPause();
