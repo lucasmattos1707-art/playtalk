@@ -4912,7 +4912,7 @@
       flex: 1 1 auto;
     }
 
-    .game-touch.is-busy:not(.game-touch--books-mic) {
+    .game-touch.is-busy:not(.game-touch--books-mic):not(.game-touch--stage-play) {
       display: inline-flex;
       width: 68px;
       min-width: 68px;
@@ -7333,7 +7333,7 @@
     }
 
     .game[data-phase-key="first-star"] .first-star-seals:not([hidden]) {
-      display: block;
+      display: none;
     }
 
     .first-star-seal {
@@ -7801,7 +7801,7 @@
     }
 
     .game[data-phase-key="second-star"] #gameVisual {
-      transform: translateY(-40px) !important;
+      transform: none !important;
     }
 
     .game[data-phase-key="second-star"] #gameVisual > img:not(.game-card__seal),
@@ -7853,7 +7853,7 @@
       max-height: 270px;
       min-width: 270px;
       min-height: 270px;
-      transform: translateY(-40px) !important;
+      transform: none !important;
       margin: 0 auto;
       align-self: center;
       justify-self: center;
@@ -7892,16 +7892,13 @@
       text-align: center;
     }
 
-    .game[data-phase-key="second-star"] .flashcards-typing__display--visual {
-      top: calc(50% - 70px);
-    }
-
+    .game[data-phase-key="second-star"] .flashcards-typing__display--visual,
     .game[data-phase-key="fourth-star"] .flashcards-typing__display--visual {
-      top: calc(50% - 50px);
+      top: 50%;
     }
 
     .game[data-phase-key="second-star"] .flashcards-typing__display--visual.is-second-star-translation {
-      top: calc(50% - 40px);
+      top: 50%;
       width: min(88%, 280px);
       transform: translate(-50%, -50%);
       z-index: 4;
@@ -8017,9 +8014,9 @@
     .game[data-phase-key="fourth-star"] .textscreen {
       flex: 0 0 45% !important;
       height: 45% !important;
-      align-items: flex-start;
-      justify-content: flex-start;
-      padding: 6px 0 0;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
       overflow: visible;
     }
 
@@ -8042,7 +8039,8 @@
     .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
       align-items: center;
       justify-content: center;
-      height: 100%;
+      height: auto;
+      min-height: min(44vh, 320px);
     }
 
     .game[data-phase-key="second-star"] .textscreen .keyboardscreen-host,
@@ -8609,6 +8607,15 @@
       transform: translateX(-50%);
     }
 
+    .game[data-phase-key="first-star"] .game-controls-proxy:not(.is-hidden),
+    .game[data-phase-key="third-star"] .game-controls-proxy:not(.is-hidden),
+    .game[data-phase-key="fifth-star"] .game-controls-proxy:not(.is-hidden) {
+      width: min(220px, calc(100vw - 24px));
+      grid-template-columns: 1fr;
+      row-gap: 10px;
+      bottom: max(34px, env(safe-area-inset-bottom));
+    }
+
     .game[data-phase-key="second-star"] .game-controls-proxy .game-language-btn,
     .game[data-phase-key="fourth-star"] .game-controls-proxy .game-language-btn,
     .game[data-phase-key="second-star"] .game-controls-proxy .game-advance-btn,
@@ -8686,6 +8693,10 @@
       display: none !important;
     }
 
+    .game-remember-btn.is-disabled-by-product {
+      display: none !important;
+    }
+
     .game-remember-btn.is-mic-hidden {
       opacity: 0;
       visibility: hidden;
@@ -8699,27 +8710,28 @@
     }
 
     .game-touch.game-touch--books-mic {
-      width: clamp(67px, 14.4vw, 77px);
-      height: clamp(67px, 14.4vw, 77px);
-      min-width: clamp(67px, 14.4vw, 77px);
-      min-height: clamp(67px, 14.4vw, 77px);
+      width: auto;
+      height: auto;
+      min-width: 0;
+      min-height: 0;
       padding: 0;
       flex: 0 0 auto;
-      border-radius: 999px;
-      border: 2px solid rgba(89, 149, 255, 0.78);
-      background: radial-gradient(circle at 32% 28%, rgba(74, 121, 255, 0.24), rgba(6, 17, 44, 0.9) 72%);
+      border-radius: 0;
+      border: 0;
+      background: transparent;
       color: #ffffff;
-      box-shadow:
-        0 0 18px rgba(59, 108, 255, 0.58),
-        0 0 42px rgba(28, 64, 182, 0.34),
-        inset 0 0 18px rgba(73, 129, 255, 0.14),
-        0 14px 28px rgba(0, 0, 0, 0.4);
+      box-shadow: none;
       position: relative;
-      overflow: hidden;
+      overflow: visible;
       backdrop-filter: none;
       font-size: 0;
       line-height: 0;
-      transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, opacity 180ms ease;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: transform 180ms ease, opacity 180ms ease;
     }
 
     .game[data-phase-key="first-star"] .game-touch.game-touch--books-mic,
@@ -8728,19 +8740,37 @@
     .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic,
     .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play,
     .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic {
-      width: clamp(80px, 17.28vw, 92px);
-      height: clamp(80px, 17.28vw, 92px);
-      min-width: clamp(80px, 17.28vw, 92px);
-      min-height: clamp(80px, 17.28vw, 92px);
-      border: 0;
-      border-radius: 0;
-      background: transparent;
-      box-shadow: none;
-      overflow: visible;
       color: #d7ffe8;
       display: inline-flex !important;
+    }
+
+    .game-touch__books-mic-circle {
+      width: clamp(80px, 17.28vw, 92px);
+      height: clamp(80px, 17.28vw, 92px);
+      border-radius: 999px;
+      border: 2px solid rgba(89, 149, 255, 0.82);
+      background: radial-gradient(circle at 32% 28%, rgba(91, 148, 255, 0.78), rgba(11, 44, 128, 0.98) 74%);
+      box-shadow:
+        0 0 20px rgba(59, 108, 255, 0.46),
+        0 0 42px rgba(28, 64, 182, 0.28),
+        inset 0 0 18px rgba(214, 234, 255, 0.16),
+        0 14px 28px rgba(0, 0, 0, 0.34);
+      display: inline-flex;
       align-items: center;
       justify-content: center;
+      transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, opacity 180ms ease;
+    }
+
+    .game-touch__label {
+      display: block;
+      margin: 0;
+      color: rgba(226, 241, 255, 0.92);
+      font: 800 13px/1 "Exo 2", "Open Sans", Arial, sans-serif;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      text-align: center;
+      text-shadow: 0 4px 14px rgba(0, 0, 0, 0.34);
+      white-space: nowrap;
     }
 
     .game-touch.game-touch--books-mic:disabled {
@@ -8757,13 +8787,6 @@
     }
 
     .game-touch.game-touch--books-mic.is-busy {
-      background: radial-gradient(circle at 32% 28%, rgba(118, 255, 187, 0.44), rgba(2, 24, 16, 0.94) 72%);
-      border-color: rgba(207, 255, 228, 0.98);
-      box-shadow:
-        0 0 24px rgba(72, 255, 159, 0.9),
-        0 0 54px rgba(72, 255, 159, 0.42),
-        inset 0 0 20px rgba(72, 255, 159, 0.22),
-        0 18px 34px rgba(0, 0, 0, 0.44);
       color: #ffffff;
     }
 
@@ -8773,10 +8796,17 @@
     .game[data-phase-key="third-star"] .game-touch.game-touch--books-mic.is-busy,
     .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play.is-busy,
     .game[data-phase-key="fifth-star"] .game-touch.game-touch--books-mic.is-busy {
-      background: transparent;
-      border-color: transparent;
-      box-shadow: none;
       color: #53ff8c;
+    }
+
+    .game-touch.game-touch--books-mic.is-busy .game-touch__books-mic-circle {
+      border-color: rgba(170, 255, 198, 0.98);
+      background: radial-gradient(circle at 32% 28%, rgba(102, 255, 158, 0.92), rgba(9, 126, 58, 0.98) 74%);
+      box-shadow:
+        0 0 24px rgba(72, 255, 159, 0.82),
+        0 0 54px rgba(72, 255, 159, 0.38),
+        inset 0 0 20px rgba(199, 255, 221, 0.22),
+        0 18px 34px rgba(0, 0, 0, 0.42);
     }
 
     .game-touch.game-touch--books-mic.is-busy .game-touch__books-mic-icon {
@@ -8831,6 +8861,14 @@
     .game[data-phase-key="second-star"] .game-touch.game-touch--stage-play .game-touch__books-mic-icon,
     .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play .game-touch__books-mic-icon {
       display: none !important;
+    }
+
+    .game[data-phase-key="second-star"] .game-touch.game-touch--stage-play.is-busy,
+    .game[data-phase-key="fourth-star"] .game-touch.game-touch--stage-play.is-busy {
+      background: transparent;
+      color: transparent;
+      box-shadow: none;
+      border: 0;
     }
 
     .game-touch__swap {
@@ -11673,6 +11711,7 @@
       const ENGLISH_ICON_PATH = '/SVG/codex-icons/ingles-modo-3.svg';
       const GAME_TOUCH_ICON_STORAGE_KEY = 'playtalk-game-touch-icon-v1';
       const GAME_TOUCH_ICON_MARKUP = '<svg class="game-touch__books-mic-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>';
+      const GAME_TOUCH_BOOKS_MIC_MARKUP = `<span class="game-touch__books-mic-circle">${GAME_TOUCH_ICON_MARKUP}</span><span class="game-touch__label">Microfone</span>`;
       const GAME_PLAY_ICON_MARKUP = '<svg class="game-touch__books-mic-icon game-touch__play-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 5.4v13.2L18.2 12 7 5.4Z"/></svg>';
       const PORTUGUESE_ICON_PATH = '/SVG/codex-icons/%C3%ADcones%20modo%203/portugues.svg';
       const DOUBLE_PLAY_NEON_ICON_PATH = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%237be9ff' d='M4.5 6.35v11.3L13 12 4.5 6.35Zm8.65 0v11.3L21.65 12 13.15 6.35Z'/%3E%3C/svg%3E";
@@ -22308,13 +22347,6 @@
         const phaseKey = safeText(stageConfig?.key || '');
         const useBooksMic = (!isLevelAudioModeActive() || isLevelTextModeActive()) && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5);
         const useStagePlay = stageNumber === 2 || stageNumber === 4;
-        const rememberCardId = safeText(entry?.id);
-        const rememberBlockedForCard = Boolean(rememberCardId) && state.game.rememberHiddenCardId === rememberCardId;
-        const rememberReadyForCard = Boolean(rememberCardId) && state.game.rememberReadyEntryKey === `${rememberCardId}:${phaseKey}`;
-        const canShowRemember = isRememberPhaseKey(phaseKey)
-          && rememberReadyForCard
-          && !rememberBlockedForCard
-          && isCurrentGameVisualImageReady(entry, stageConfig);
         const showMissionHud = stageNumber >= 1 && stageNumber <= 5;
         els.gameTouchBtn.parentElement.hidden = !showMissionHud;
         els.gameTouchBtn.className = 'game-touch';
@@ -22341,9 +22373,10 @@
         els.gameTouchBtn.parentElement.hidden = false;
         if (useStagePlay) {
           els.gameTouchBtn.classList.add('is-hidden');
+          els.gameTouchBtn.classList.add('game-touch--stage-play');
           if (els.gameRememberBtn) {
             els.gameRememberBtn.hidden = true;
-            els.gameRememberBtn.classList.add('is-mic-hidden');
+            els.gameRememberBtn.classList.add('is-mic-hidden', 'is-disabled-by-product');
           }
           if (els.gameControlsProxy) {
             els.gameControlsProxy.hidden = false;
@@ -22357,20 +22390,22 @@
           els.gameTouchBtn.classList.add('is-hidden');
           if (els.gameRememberBtn) {
             els.gameRememberBtn.hidden = true;
-            els.gameRememberBtn.classList.add('is-mic-hidden');
+            els.gameRememberBtn.classList.add('is-mic-hidden', 'is-disabled-by-product');
           }
           updateSpeakingStarMicSealProgress();
           syncLevelTextModeControls();
           return;
         }
-        els.gameTouchBtn.classList.add('game-touch--stealth');
-        els.gameTouchBtn.setAttribute('aria-label', 'Toque na tela para falar');
+        els.gameTouchBtn.classList.add('game-touch--books-mic');
+        els.gameTouchBtn.innerHTML = GAME_TOUCH_BOOKS_MIC_MARKUP;
+        els.gameTouchBtn.setAttribute('aria-label', stageNumber === 1
+          ? 'Microfone liberado depois do audio'
+          : 'Ativar microfone');
         if (els.gameRememberBtn) {
-          els.gameRememberBtn.hidden = !canShowRemember;
-          els.gameRememberBtn.disabled = !canShowRemember || !state.game.active || state.game.paused;
-          els.gameRememberBtn.classList.remove('is-mic-hidden');
+          els.gameRememberBtn.hidden = true;
+          els.gameRememberBtn.disabled = true;
+          els.gameRememberBtn.classList.add('is-mic-hidden', 'is-disabled-by-product');
         }
-        scheduleRememberButtonRevealOnImageReady(stageConfig, entry);
         updateSpeakingStarMicSealProgress();
         syncLevelTextModeControls();
       }
@@ -22592,7 +22627,7 @@
 
       function renderFirstStarSeals(entry = null) {
         if (!els.firstStarSeals || !els.firstStarListenBtn || !els.firstStarJumpBtn) return;
-        const visible = isFirstStarEntry(entry);
+        const visible = false;
         els.firstStarSeals.hidden = !visible;
         els.firstStarSeals.setAttribute('aria-hidden', visible ? 'false' : 'true');
         els.firstStarSeals.classList.toggle('is-mic-live', visible && state.game.listening);
@@ -22613,11 +22648,14 @@
           if (!el) return;
           el.style.setProperty(property, value, 'important');
         };
+        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        const centerTypingLayout = phaseKey === 'second-star' || phaseKey === 'fourth-star';
         if (els.gameStatusSlot) {
           forceStyle(els.gameStatusSlot, 'position', 'fixed');
           forceStyle(els.gameStatusSlot, 'left', '0');
           forceStyle(els.gameStatusSlot, 'right', '0');
-          forceStyle(els.gameStatusSlot, 'bottom', '0');
+          forceStyle(els.gameStatusSlot, 'top', centerTypingLayout ? '50%' : 'auto');
+          forceStyle(els.gameStatusSlot, 'bottom', centerTypingLayout ? 'auto' : '0');
           forceStyle(els.gameStatusSlot, 'width', '100%');
           forceStyle(els.gameStatusSlot, 'max-width', '100%');
           forceStyle(els.gameStatusSlot, 'margin', '0');
@@ -22627,6 +22665,10 @@
           forceStyle(els.gameStatusSlot, 'box-shadow', 'none');
           forceStyle(els.gameStatusSlot, 'opacity', '1');
           forceStyle(els.gameStatusSlot, 'pointer-events', 'auto');
+          forceStyle(els.gameStatusSlot, 'transform', centerTypingLayout ? 'translateY(-50%)' : 'none');
+          forceStyle(els.gameStatusSlot, 'display', centerTypingLayout ? 'flex' : 'block');
+          forceStyle(els.gameStatusSlot, 'align-items', centerTypingLayout ? 'center' : 'stretch');
+          forceStyle(els.gameStatusSlot, 'justify-content', centerTypingLayout ? 'center' : 'flex-start');
         }
         if (els.gameFooterSlot) {
           forceStyle(els.gameFooterSlot, 'position', 'fixed');
@@ -25757,6 +25799,8 @@
           return;
         }
         const stageConfig = resolveGameStageConfig(entry);
+        els.game.dataset.phaseKey = stageConfig.key || '';
+        enforceBottomInfoContainersLayout();
         if (stageConfig.key === 'second-star' && isTypingStage(entry)) {
           setSecondStarVisualPhase('input');
         } else {
@@ -25780,7 +25824,6 @@
         if (typingStage) {
           entry.typingMistakes = 0;
         }
-        els.game.dataset.phaseKey = stageConfig.key || '';
         const stagePrimeKey = `${entry.id}:${stageConfig.key || ''}`;
         if (stageConfig.key !== 'first-star') {
           state.game.firstStarAudioPlayingEntryKey = '';
