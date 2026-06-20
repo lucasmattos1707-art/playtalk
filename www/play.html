@@ -11904,6 +11904,8 @@
       const ON_TABLE_MAX_CARDS = 12;
       const ON_TABLE_BASE_MAX = 5;
       const ON_TABLE_REVIEW_MAX = 7;
+      const CURRENT_LEVEL_PRIORITY_CARD_COUNT = 5;
+      const CURRENT_LEVEL_PRIORITY_WINDOW_ABOVE = 2;
       const FLASHCARD_SESSION_TICK_INTERVAL_MS = 60000;
       const FLASHCARD_SESSION_STAGE_PLAY_TICK_INTERVAL_MS = 8000;
       const FLASHCARD_SESSION_TICK_LOOP_INTERVAL_MS = 1000;
@@ -12214,6 +12216,10 @@
           selectedCount: null,
           pendingRewardSeal: null,
           pendingRewardSealTimer: 0,
+          currentLevelPriorityLevel: 0,
+          currentLevelPriorityIds: [],
+          currentLevelPriorityPendingIds: [],
+          currentLevelPriorityClearQueued: false,
           skipAutoAudioOnce: false,
           transitioning: false,
           sessionStartedAt: 0,
@@ -13093,7 +13099,9 @@
           stage: Math.max(1, Math.min(4, Number.parseInt(raw?.stage, 10) || 1)),
           missesWithoutStars: Math.max(0, Number.parseInt(raw?.missesWithoutStars, 10) || 0),
           typingMistakes: Math.max(0, Number.parseInt(raw?.typingMistakes, 10) || 0),
-          pool: raw?.pool === 'review' ? 'review' : 'base'
+          pool: raw?.pool === 'review'
+            ? 'review'
+            : (raw?.pool === 'priority' ? 'priority' : 'base')
         };
       }
 
@@ -17780,6 +17788,13 @@
           updateSpeakingStarMicSealProgress();
         }
         const changed = normalizedLevel !== previousLevel;
+        if (changed && state.game.active && !isLevelModeActive() && !isTrainingMode()) {
+          if (normalizedLevel > previousLevel) {
+            enqueueCurrentLevelPriorityCards(normalizedLevel);
+          } else {
+            state.game.currentLevelPriorityClearQueued = true;
+          }
+        }
         if (changed && options.scheduleRefresh) {
           scheduleLevelSyncRefresh({ delayMs: Math.max(0, Number(options.delayMs) || 0) });
         }
@@ -18856,6 +18871,29 @@
         return Math.min(ON_TABLE_MAX_CARDS, normalizedBaseCount + REVIEW_SLOT_LIMIT);
       }
 
+      function activeCurrentLevelPriorityIds() {
+        return Array.isArray(state.game.currentLevelPriorityIds)
+          ? state.game.currentLevelPriorityIds.filter((id) => {
+            const normalizedId = safeText(id);
+            return normalizedId && state.game.entries.has(normalizedId);
+          })
+          : [];
+      }
+
+      function pendingCurrentLevelPriorityIds() {
+        return Array.isArray(state.game.currentLevelPriorityPendingIds)
+          ? state.game.currentLevelPriorityPendingIds.filter((id) => safeText(id))
+          : [];
+      }
+
+      function currentLevelPriorityDisplayCount() {
+        return activeCurrentLevelPriorityIds().length;
+      }
+
+      function currentGameDisplayTargetCount() {
+        return currentGameActiveCardCap() + currentLevelPriorityDisplayCount();
+      }
+
       function shouldUseTimedGameCardRelease() {
         return state.game.active && !state.game.levelMode && !state.game.training.active;
       }
@@ -19455,6 +19493,76 @@
           total += 1;
         });
         return total;
+      }
+
+      function buildCurrentLevelPrioritySourceCards(level = currentUserLevel()) {
+        const targetLevel = normalizeUserLevel(level);
+        const maxLevel = Math.min(maxSelectableGameLevel(), targetLevel + CURRENT_LEVEL_PRIORITY_WINDOW_ABOVE);
+        const activeIds = new Set(Array.from(state.game.entries.keys()).map((id) => safeText(id)).filter(Boolean));
+        return uniqueCardsById(state.allCards.filter((card) => {
+          const cardId = safeText(card?.id);
+          const deckLevel = cardDeckLevel(card);
+          if (!cardId || activeIds.has(cardId)) return false;
+          if (state.userCards.has(cardId) || isCardHiddenForUser(cardId)) return false;
+          if (!hasCoreFlashcardText(card) || !hasPlayableFlashcardImage(card) || !isCardEligibleForGame(card)) return false;
+          if (!isCardEligibleForSelectedDifficulty(card)) return false;
+          if (!isAdminUser() && !isEarlyFlashcardLengthEligible(card)) return false;
+          return Number.isInteger(deckLevel) && deckLevel >= targetLevel && deckLevel <= maxLevel;
+        }));
+      }
+
+      function clearCurrentLevelPriorityCards(options = {}) {
+        const ids = activeCurrentLevelPriorityIds();
+        if (ids.length) {
+          const idSet = new Set(ids);
+          ids.forEach((id) => {
+            if (state.game.currentId === id) {
+              commitCurrentCardTrainingTime();
+              state.game.currentId = null;
+            }
+            state.game.entries.delete(id);
+          });
+          state.game.queue = state.game.queue.filter((id) => !idSet.has(safeText(id)));
+        }
+        state.game.currentLevelPriorityIds = [];
+        state.game.currentLevelPriorityPendingIds = [];
+        state.game.currentLevelPriorityLevel = 0;
+        state.game.currentLevelPriorityClearQueued = false;
+        if (options.refreshHud !== false) {
+          updateGameChips();
+        }
+      }
+
+      function enqueueCurrentLevelPriorityCards(level = currentUserLevel()) {
+        const targetLevel = normalizeUserLevel(level);
+        const sourceCards = shuffle(buildCurrentLevelPrioritySourceCards(targetLevel)).slice(0, CURRENT_LEVEL_PRIORITY_CARD_COUNT);
+        clearCurrentLevelPriorityCards({ refreshHud: false });
+        if (!sourceCards.length) {
+          updateGameChips();
+          return 0;
+        }
+        const newIds = [];
+        sourceCards.forEach((card) => {
+          const entry = createGameEntry(card, 'priority');
+          state.game.entries.set(entry.id, entry);
+          newIds.push(entry.id);
+        });
+        state.game.currentLevelPriorityLevel = targetLevel;
+        state.game.currentLevelPriorityIds = newIds.slice();
+        state.game.currentLevelPriorityPendingIds = newIds.slice();
+        state.game.queue = [...newIds, ...state.game.queue.filter((id) => !newIds.includes(id))];
+        updateGameChips();
+        return newIds.length;
+      }
+
+      function markCurrentLevelPriorityResolved(entry, evaluatedStage = entry?.stage) {
+        if (!entry || safeText(entry.pool) !== 'priority' || Number(evaluatedStage) !== 1) return;
+        const entryId = safeText(entry.id);
+        if (!entryId) return;
+        const pending = pendingCurrentLevelPriorityIds().filter((id) => id !== entryId);
+        state.game.currentLevelPriorityPendingIds = pending;
+        entry.pool = 'base';
+        updateGameChips();
       }
 
       function buildLevelModeSourceCards(level = selectedGameLevel()) {
@@ -23282,7 +23390,7 @@
           ownedLabel.textContent = 'Readings';
         }
         const activeCount = state.game.entries.size || 0;
-        const targetCount = state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT;
+        const targetCount = currentGameDisplayTargetCount();
         const currentLevelProgress = Math.max(0, Number(state.ui.levelModeProgress?.[selectedGameLevel()]) || 0);
         els.gameHeaderCopy.textContent = isLevelModeActive()
           ? (
@@ -25581,6 +25689,7 @@
       }
 
       function removeGameEntry(cardId) {
+        const normalizedCardId = safeText(cardId);
         if (state.game.currentId === cardId) {
           commitCurrentCardTrainingTime();
         }
@@ -25588,6 +25697,13 @@
         state.game.queue = state.game.queue.filter(id => id !== cardId);
         if (state.game.currentId === cardId) {
           state.game.currentId = null;
+        }
+        if (normalizedCardId) {
+          state.game.currentLevelPriorityIds = activeCurrentLevelPriorityIds().filter((id) => id !== normalizedCardId);
+          state.game.currentLevelPriorityPendingIds = pendingCurrentLevelPriorityIds().filter((id) => id !== normalizedCardId);
+          if (!state.game.currentLevelPriorityIds.length) {
+            state.game.currentLevelPriorityLevel = 0;
+          }
         }
         persistGameSessionLocally();
         updateSpeakingStarMicSealProgress();
@@ -26339,6 +26455,7 @@
       function seedLevelModeEntries() {
         clearLevelSwitchTimer();
         resetTimedGameCardRelease({ seedInitialCard: false });
+        clearCurrentLevelPriorityCards({ refreshHud: false });
         state.game.entries.clear();
         state.game.queue = [];
         resetGameOrderedPoolCursor();
@@ -26628,6 +26745,7 @@
         state.game.fifthStarHintDismissed = false;
         clearPendingRewardSeal();
         resetTutorialRuntime({ preserveCompletion: true });
+        clearCurrentLevelPriorityCards({ refreshHud: false });
         state.game.entries.clear();
         state.game.queue = [];
         resetGameOrderedPoolCursor();
@@ -26779,6 +26897,7 @@
         state.game.levelTypingMode = false;
         state.game.levelTextHitStreak = 0;
         resetScaleBatchProgress();
+        clearCurrentLevelPriorityCards({ refreshHud: false });
         state.game.entries.clear();
         state.game.queue = [];
         resetGameOrderedPoolCursor();
@@ -27082,6 +27201,7 @@
         if (evaluatedStage === 3) {
           state.game.skipAutoAudioOnce = true;
         }
+        markCurrentLevelPriorityResolved(entry, evaluatedStage);
         const skipPromptAudio = Boolean(entry._skipStageTwoResponseAudio || entry._skipRewardStagePromptAudio);
         entry._skipStageTwoResponseAudio = false;
         entry._skipRewardStagePromptAudio = false;
@@ -27095,6 +27215,9 @@
           : entry._removeAfterReward || entry._requeueAfterReward
             ? rewardAdvanceDelayMs
             : (evaluatedStage === 3 ? 120 : 1200));
+        if (state.game.currentLevelPriorityClearQueued) {
+          clearCurrentLevelPriorityCards();
+        }
         if (entry._redirectToUsername) {
           entry._redirectToUsername = false;
           entry._removeAfterReward = false;
