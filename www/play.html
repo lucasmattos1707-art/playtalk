@@ -13407,6 +13407,16 @@
         });
       }
 
+      function incrementWinsSequenceForStarGain() {
+        const winsSequence = updateWinsSequence((Number(state.stats?.winsSequence) || 0) + 1);
+        queueWinsSequenceModalIfNeeded(winsSequence);
+        return winsSequence;
+      }
+
+      function resetWinsSequenceForCardLoss() {
+        return updateWinsSequence(0);
+      }
+
       function triggerFlashcardsEnergyDepletionExit(stats) {
         if (!window.PlaytalkEnergy?.buildEnergyStatus || !window.PlaytalkEnergy?.triggerEnergyDepletionExit) {
           return false;
@@ -27286,7 +27296,7 @@
           clearStageHintLoop({ clearStatus: true });
           clearFirstStageMicHint({ clearStatus: true });
           clearStageTwoHintTimer();
-          updateWinsSequence(0);
+          resetWinsSequenceForCardLoss();
           entry.stars = Math.max(0, (Number(entry.stars) || 0) - 1);
           entry.stage = Math.min(entry.stars + 1, GAME_STAR_TARGET);
           entry.missesWithoutStars = 0;
@@ -27320,15 +27330,12 @@
           clearFirstStageMicHint({ clearStatus: true });
           clearStageTwoHintTimer();
           if (isHit) {
-            const winsSequence = updateWinsSequence((Number(state.stats?.winsSequence) || 0) + 1);
-            queueWinsSequenceModalIfNeeded(winsSequence);
             state.game.training.hitStreak = Math.max(0, Number(state.game.training.hitStreak) || 0) + 1;
             state.game.training.totalHits = Math.max(0, Number(state.game.training.totalHits) || 0) + 1;
             entry.typingMistakes = 0;
             setGameStatus('', 'hit');
             playSuccessAudio();
           } else {
-            updateWinsSequence(0);
             state.game.training.hitStreak = 0;
             entry.typingMistakes = 0;
             setGameStatus('', 'miss');
@@ -27356,8 +27363,6 @@
           entry.typingMistakes = 0;
           const scaleModeActive = isLevelScaleModeActive();
           if (isHit) {
-            const winsSequence = updateWinsSequence((Number(state.stats?.winsSequence) || 0) + 1);
-            queueWinsSequenceModalIfNeeded(winsSequence);
             if (isLevelTextModeActive()) {
               state.game.levelTextHitStreak = Math.max(0, Number(state.game.levelTextHitStreak) || 0) + 1;
             }
@@ -27384,7 +27389,6 @@
               entry._removeAfterReward = true;
             }
           } else {
-            updateWinsSequence(0);
             if (isLevelTextModeActive()) {
               state.game.levelTextHitStreak = 0;
             }
@@ -27423,8 +27427,6 @@
         }
 
         if (isHit) {
-          const winsSequence = updateWinsSequence((Number(state.stats?.winsSequence) || 0) + 1);
-          queueWinsSequenceModalIfNeeded(winsSequence);
           if (isSpeakingStarStage) {
             setSpeakingVisualTone('');
             setSpeakingKeepColor(true);
@@ -27440,6 +27442,7 @@
         clearStageHintLoop({ clearStatus: true });
           }
           entry.stars += 1;
+          incrementWinsSequenceForStarGain();
           entry.stage = Math.min(entry.stars + 1, GAME_STAR_TARGET);
           entry.missesWithoutStars = 0;
           entry.typingMistakes = 0;
@@ -27505,7 +27508,6 @@
           }
           scheduleFlashcardCloudSync(250);
         } else {
-          updateWinsSequence(0);
           if (isSpeakingStarStage) {
             setSpeakingKeepColor(false);
             setSpeakingVisualTone('miss');
@@ -27518,6 +27520,7 @@
             const starsBeforeMiss = entry.stars;
             entry.stars = 0;
             entry.stage = 1;
+            resetWinsSequenceForCardLoss();
             entry.missesWithoutStars = 0;
             entry.typingMistakes = 0;
             updateSpeakingStarMicSealProgress();
@@ -27529,6 +27532,7 @@
             entry.missesWithoutStars += 1;
             const missLimit = evaluatedStage === 1 ? 1 : 3;
             if (entry.missesWithoutStars >= missLimit) {
+              resetWinsSequenceForCardLoss();
               setGameStatus('', 'miss');
               if (evaluatedStage === 1) {
                 entry.missesWithoutStars = 0;
