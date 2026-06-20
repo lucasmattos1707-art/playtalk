@@ -4358,8 +4358,73 @@
       display: none !important;
     }
 
+    .sequence-streak-modal {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: radial-gradient(circle at center, rgba(99, 210, 255, 0.12), transparent 42%), rgba(3, 10, 25, 0.72);
+      z-index: 4190;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 180ms ease, visibility 0ms linear 180ms;
+    }
+
+    .sequence-streak-modal.is-visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition-delay: 0ms;
+    }
+
+    .sequence-streak-modal.is-closing {
+      opacity: 0;
+    }
+
+    .sequence-streak-modal__content {
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      text-align: center;
+      transform: translateY(18px) scale(0.96);
+      opacity: 0;
+      transition: transform 260ms cubic-bezier(0.2, 0.88, 0.24, 1), opacity 260ms ease;
+    }
+
+    .sequence-streak-modal.is-visible .sequence-streak-modal__content {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    .sequence-streak-modal__eyebrow {
+      margin: 0;
+      font: 800 13px/1 "Open Sans", Arial, sans-serif;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: rgba(184, 234, 255, 0.88);
+    }
+
+    .sequence-streak-modal__value {
+      margin: 0;
+      font: 800 clamp(66px, 18vw, 116px)/0.9 "Exo 2", "Open Sans", Arial, sans-serif;
+      color: #ffffff;
+      text-shadow:
+        0 0 18px rgba(84, 210, 255, 0.34),
+        0 0 42px rgba(84, 210, 255, 0.2);
+    }
+
+    .sequence-streak-modal__copy {
+      margin: 0;
+      font: 700 clamp(18px, 4.8vw, 28px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
+      color: #bdf6ff;
+    }
+
     .game.is-medal-transition-active .game-stage-tutorial,
-    .game.is-medal-transition-active .game-shell {
+    .game.is-medal-transition-active .game-shell,
+    .game.is-sequence-streak-active .game-stage-tutorial,
+    .game.is-sequence-streak-active .game-shell {
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
@@ -11183,6 +11248,13 @@
           <button class="medal-transition-modal__continue" id="medalTransitionContinueBtn" type="button" hidden>Continuar</button>
         </div>
       </div>
+      <div class="sequence-streak-modal" id="sequenceStreakModal" aria-hidden="true">
+        <div class="sequence-streak-modal__content">
+          <p class="sequence-streak-modal__eyebrow">Sequence</p>
+          <p class="sequence-streak-modal__value" id="sequenceStreakValue">5x</p>
+          <p class="sequence-streak-modal__copy" id="sequenceStreakCopy">Keep going</p>
+        </div>
+      </div>
       <div class="panel game-shell">
         <div class="game-head">
           <div id="gameHeadCopy">
@@ -11636,6 +11708,9 @@
       const STAGE_TWO_HINT_VISIBLE_MS = 3000;
       const USER_MEDAL_AUDIO_PATH = '/gamesounds/levelplus.mp3';
       const USER_MEDAL_TRANSITION_TOTAL_MS = 2500;
+      const GAME_SEQUENCE_STREAK_MODAL_TOTAL_MS = 1000;
+      const REMEMBER_BUTTON_ENTRY_DELAY_MS = 420;
+      const GAME_CARD_SLIDE_ENTRY_MS = 320;
       const USER_MEDAL_COUNT = 12;
       const USER_MEDAL_LEVEL_GROUP_SIZE = 10;
       const USER_MEDAL_MAX_LEVEL = USER_MEDAL_COUNT * USER_MEDAL_LEVEL_GROUP_SIZE;
@@ -12090,6 +12165,7 @@
           pronunciationSamples: [],
           pronunciationPercent: 0,
           speedFlashcardsPerHour: 0,
+          winsSequence: 0,
           booksEnergyXpTotal: 0,
           booksEnergyXpDelta: 0,
           coinsTotal: 0,
@@ -12218,6 +12294,8 @@
           currentLevelPriorityIds: [],
           currentLevelPriorityPendingIds: [],
           currentLevelPriorityClearQueued: false,
+          rememberReadyEntryKey: '',
+          rememberRevealTimer: 0,
           skipAutoAudioOnce: false,
           transitioning: false,
           sessionStartedAt: 0,
@@ -12369,7 +12447,7 @@
           userMedalReady: false,
           gameEventModalOpen: false,
           gameEventModalWaiters: [],
-          pendingGameEventModal: null,
+          pendingGameEventModals: [],
           medalTransitionPausedGame: false,
           medalTransitionTimer: 0,
           medalTransitionTimers: [],
@@ -12522,6 +12600,9 @@
         medalTransitionToRange: document.getElementById('medalTransitionToRange'),
         medalTransitionSealName: document.getElementById('medalTransitionSealName'),
         medalTransitionContinueBtn: document.getElementById('medalTransitionContinueBtn'),
+        sequenceStreakModal: document.getElementById('sequenceStreakModal'),
+        sequenceStreakValue: document.getElementById('sequenceStreakValue'),
+        sequenceStreakCopy: document.getElementById('sequenceStreakCopy'),
         welcomeTrainingModes: document.getElementById('welcomeTrainingModes'),
         welcomeCopy: document.getElementById('welcomeCopy'),
         welcomeStartBtn: document.getElementById('welcomeStartBtn'),
@@ -13237,6 +13318,7 @@
             )
           : 0;
         const speedFlashcardsPerHour = Math.max(0, Number(raw?.speedFlashcardsPerHour ?? raw?.speed_flashcards_per_hour) || 0);
+        const winsSequence = Math.max(0, Math.round(Number(raw?.winsSequence ?? raw?.wins_sequence) || 0));
         const booksEnergyXpTotal = Math.max(0, Math.round(Number(raw?.booksEnergyXpTotal ?? raw?.books_energy_xp_total) || 0));
         const booksEnergyXpDelta = Math.max(0, Math.round(Number(raw?.booksEnergyXpDelta ?? raw?.books_energy_xp_delta) || 0));
         const coinsTotal = Math.max(0, Math.round(Number(raw?.coinsTotal ?? raw?.coins_total) || 0));
@@ -13252,6 +13334,7 @@
           pronunciationSamples: normalizedPronunciationSamples,
           pronunciationPercent,
           speedFlashcardsPerHour: Math.round(speedFlashcardsPerHour * 10) / 10,
+          winsSequence,
           booksEnergyXpTotal,
           booksEnergyXpDelta,
           coinsTotal,
@@ -13267,7 +13350,8 @@
           || stats.listenings > 0
           || stats.readings > 0
           || stats.trainingTimeMs > 0
-          || stats.pronunciationSamples.length > 0;
+          || stats.pronunciationSamples.length > 0
+          || stats.winsSequence > 0;
       }
 
       function readUserStatsForUser(userId = state.user?.id) {
@@ -13301,6 +13385,26 @@
         if (!options.skipCloudSync) {
           scheduleFlashcardCloudSync();
         }
+      }
+
+      function normalizeWinsSequenceValue(value) {
+        return Math.max(0, Math.min(9999, Math.round(Number(value) || 0)));
+      }
+
+      function updateWinsSequence(value, options = {}) {
+        const normalized = normalizeWinsSequenceValue(value);
+        state.stats.winsSequence = normalized;
+        saveUserStats({ skipCloudSync: Boolean(options.skipCloudSync) });
+        return normalized;
+      }
+
+      function queueWinsSequenceModalIfNeeded(sequence) {
+        const normalized = normalizeWinsSequenceValue(sequence);
+        if (normalized < 5 || normalized % 5 !== 0) return;
+        queuePendingGameEventModal({
+          kind: 'wins-sequence',
+          sequence: normalized
+        });
       }
 
       function triggerFlashcardsEnergyDepletionExit(stats) {
@@ -17749,15 +17853,21 @@
 
       function queuePendingGameEventModal(payload) {
         if (!payload || typeof payload !== 'object') return;
-        state.ui.pendingGameEventModal = payload;
+        if (!Array.isArray(state.ui.pendingGameEventModals)) {
+          state.ui.pendingGameEventModals = [];
+        }
+        state.ui.pendingGameEventModals.push(payload);
       }
 
       function clearPendingGameEventModal() {
-        state.ui.pendingGameEventModal = null;
+        if (!Array.isArray(state.ui.pendingGameEventModals) || !state.ui.pendingGameEventModals.length) {
+          return null;
+        }
+        return state.ui.pendingGameEventModals.shift() || null;
       }
 
       function hasPendingGameEventModal() {
-        return Boolean(state.ui.pendingGameEventModal && typeof state.ui.pendingGameEventModal === 'object');
+        return Array.isArray(state.ui.pendingGameEventModals) && state.ui.pendingGameEventModals.length > 0;
       }
 
       async function animateGameEventModalEntry() {
@@ -17772,8 +17882,8 @@
 
       async function presentPendingGameEventModalIfNeeded() {
         if (!hasPendingGameEventModal()) return false;
-        const pending = state.ui.pendingGameEventModal;
-        clearPendingGameEventModal();
+        const pending = clearPendingGameEventModal();
+        if (!pending) return false;
         if (pending?.kind === 'level-change') {
           await animateGameEventModalEntry();
           await openUserMedalTransitionModal(
@@ -17783,6 +17893,11 @@
             pending.toMedal,
             pending.options || {}
           );
+          return true;
+        }
+        if (pending?.kind === 'wins-sequence') {
+          await animateGameEventModalEntry();
+          await openSequenceStreakModal(Number(pending.sequence) || 0);
           return true;
         }
         return false;
@@ -17822,6 +17937,69 @@
         resolveGameEventModalWaiters();
       }
 
+      function closeSequenceStreakModal(options = {}) {
+        if (state.ui.medalTransitionTimer) {
+          window.clearTimeout(state.ui.medalTransitionTimer);
+          state.ui.medalTransitionTimer = 0;
+        }
+        clearUserMedalTransitionTimers();
+        if (els.sequenceStreakModal) {
+          els.sequenceStreakModal.classList.remove('is-visible', 'is-closing');
+          els.sequenceStreakModal.setAttribute('aria-hidden', 'true');
+        }
+        els.game?.classList.remove('is-sequence-streak-active');
+        state.ui.gameEventModalOpen = false;
+        if (state.ui.medalTransitionPausedGame) {
+          state.game.paused = false;
+          state.ui.medalTransitionPausedGame = false;
+          if (options.resumeIdlePause !== false) {
+            scheduleGameIdleAutoPause();
+          }
+        }
+        if (options.preserveGameEventExit !== true) {
+          resetGameEventModalEntry();
+        }
+        resolveGameEventModalWaiters();
+      }
+
+      function openSequenceStreakModal(sequence = 0, options = {}) {
+        if (!els.sequenceStreakModal) return Promise.resolve();
+        closeSequenceStreakModal({ preserveGameEventExit: true, resumeIdlePause: false });
+        const autoCloseMs = Math.max(0, Number(options.autoCloseMs) || GAME_SEQUENCE_STREAK_MODAL_TOTAL_MS);
+        const safeSequence = Math.max(0, Math.round(Number(sequence) || 0));
+        cleanupGameRecognition();
+        stopActiveAudio();
+        clearGameLanguageSwapTimer();
+        clearTypingPromptLoop();
+        if (state.game.active && !state.game.paused) {
+          state.game.paused = true;
+          state.ui.medalTransitionPausedGame = true;
+        } else {
+          state.ui.medalTransitionPausedGame = false;
+        }
+        if (state.game.active) {
+          els.game?.classList.add('is-sequence-streak-active');
+        }
+        state.ui.gameEventModalOpen = true;
+        if (els.sequenceStreakValue) {
+          els.sequenceStreakValue.textContent = `${safeSequence}x`;
+        }
+        if (els.sequenceStreakCopy) {
+          els.sequenceStreakCopy.textContent = `Sequence ${safeSequence}x`;
+        }
+        els.sequenceStreakModal.classList.add('is-visible');
+        els.sequenceStreakModal.setAttribute('aria-hidden', 'false');
+        if (autoCloseMs > 0) {
+          queueUserMedalTransitionTimer(() => {
+            els.sequenceStreakModal?.classList.add('is-closing');
+          }, Math.max(0, autoCloseMs - 220));
+          state.ui.medalTransitionTimer = window.setTimeout(() => {
+            closeSequenceStreakModal();
+          }, autoCloseMs);
+        }
+        return waitForGameEventModalClear();
+      }
+
       function isRememberPhaseKey(phaseKey = '') {
         return phaseKey === 'third-star' || phaseKey === 'fifth-star';
       }
@@ -17854,6 +18032,34 @@
         };
         image.addEventListener('load', handleImageReady, { once: true });
         image.addEventListener('error', handleImageReady, { once: true });
+      }
+
+      function clearRememberButtonRevealTimer() {
+        if (state.game.rememberRevealTimer) {
+          window.clearTimeout(state.game.rememberRevealTimer);
+          state.game.rememberRevealTimer = 0;
+        }
+      }
+
+      function scheduleRememberButtonEntrance(stageConfig, entry) {
+        clearRememberButtonRevealTimer();
+        const phaseKey = safeText(stageConfig?.key || '');
+        const entryId = safeText(entry?.id);
+        if (!isRememberPhaseKey(phaseKey) || !entryId) {
+          state.game.rememberReadyEntryKey = '';
+          return;
+        }
+        state.game.rememberReadyEntryKey = '';
+        const entryDelayMs = REMEMBER_BUTTON_ENTRY_DELAY_MS
+          + (state.game.transitioning ? GAME_CARD_SLIDE_ENTRY_MS + 40 : 0);
+        state.game.rememberRevealTimer = window.setTimeout(() => {
+          state.game.rememberRevealTimer = 0;
+          if (!state.game.active || state.game.paused || safeText(state.game.currentId) !== entryId) return;
+          state.game.rememberReadyEntryKey = `${entryId}:${phaseKey}`;
+          const liveEntry = state.game.entries.get(entryId);
+          if (!liveEntry) return;
+          renderGameTouchButton(resolveGameStageConfig(liveEntry), liveEntry);
+        }, entryDelayMs);
       }
 
       function applyUserLevelState(nextLevel, options = {}) {
@@ -22001,7 +22207,9 @@
         const useStagePlay = stageNumber === 2 || stageNumber === 4;
         const rememberCardId = safeText(entry?.id);
         const rememberBlockedForCard = Boolean(rememberCardId) && state.game.rememberHiddenCardId === rememberCardId;
+        const rememberReadyForCard = Boolean(rememberCardId) && state.game.rememberReadyEntryKey === `${rememberCardId}:${phaseKey}`;
         const canShowRemember = isRememberPhaseKey(phaseKey)
+          && rememberReadyForCard
           && !rememberBlockedForCard
           && isCurrentGameVisualImageReady(entry, stageConfig);
         const showMissionHud = stageNumber >= 1 && stageNumber <= 5;
@@ -25379,6 +25587,8 @@
         cleanupGameRecognition();
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) {
+          clearRememberButtonRevealTimer();
+          state.game.rememberReadyEntryKey = '';
           state.game.sessionClockStagePrimeKey = '';
           setStageSpeedLoading(false);
           clearFirstStarAutoPlayRetryTimer();
@@ -25461,6 +25671,7 @@
           || stageConfig.key === 'third-star'
           || stageConfig.key === 'fifth-star';
         const typingStage = isTypingStage(entry);
+        scheduleRememberButtonEntrance(stageConfig, entry);
         clearGameMicUnlockTimer();
         clearFirstStageMicHint({ clearStatus: true });
         if (typingStage) {
@@ -27004,6 +27215,7 @@
         stopActiveAudio();
         clearGameLanguageSwapTimer();
         clearTypingPromptLoop();
+        clearRememberButtonRevealTimer();
         clearTypingSkipAutomation();
         clearStageTutorialReminder();
         hideGameStageTutorial({ resume: false });
@@ -27020,6 +27232,7 @@
         state.game.levelTextMode = false;
         state.game.levelTypingMode = false;
         state.game.levelTextHitStreak = 0;
+        state.game.rememberReadyEntryKey = '';
         resetScaleBatchProgress();
         clearCurrentLevelPriorityCards({ refreshHud: false });
         state.game.entries.clear();
@@ -27073,11 +27286,13 @@
           clearStageHintLoop({ clearStatus: true });
           clearFirstStageMicHint({ clearStatus: true });
           clearStageTwoHintTimer();
+          updateWinsSequence(0);
           entry.stars = Math.max(0, (Number(entry.stars) || 0) - 1);
           entry.stage = Math.min(entry.stars + 1, GAME_STAR_TARGET);
           entry.missesWithoutStars = 0;
           entry.typingMistakes = 0;
           state.game.skipAutoAudioOnce = true;
+          await applyJumpDeckLevelPenalty();
           setGameStatus('', 'live');
           updateSpeakingStarMicSealProgress();
           state.game.queue.push(entry.id);
@@ -27105,12 +27320,15 @@
           clearFirstStageMicHint({ clearStatus: true });
           clearStageTwoHintTimer();
           if (isHit) {
+            const winsSequence = updateWinsSequence((Number(state.stats?.winsSequence) || 0) + 1);
+            queueWinsSequenceModalIfNeeded(winsSequence);
             state.game.training.hitStreak = Math.max(0, Number(state.game.training.hitStreak) || 0) + 1;
             state.game.training.totalHits = Math.max(0, Number(state.game.training.totalHits) || 0) + 1;
             entry.typingMistakes = 0;
             setGameStatus('', 'hit');
             playSuccessAudio();
           } else {
+            updateWinsSequence(0);
             state.game.training.hitStreak = 0;
             entry.typingMistakes = 0;
             setGameStatus('', 'miss');
@@ -27138,6 +27356,8 @@
           entry.typingMistakes = 0;
           const scaleModeActive = isLevelScaleModeActive();
           if (isHit) {
+            const winsSequence = updateWinsSequence((Number(state.stats?.winsSequence) || 0) + 1);
+            queueWinsSequenceModalIfNeeded(winsSequence);
             if (isLevelTextModeActive()) {
               state.game.levelTextHitStreak = Math.max(0, Number(state.game.levelTextHitStreak) || 0) + 1;
             }
@@ -27164,6 +27384,7 @@
               entry._removeAfterReward = true;
             }
           } else {
+            updateWinsSequence(0);
             if (isLevelTextModeActive()) {
               state.game.levelTextHitStreak = 0;
             }
@@ -27202,6 +27423,8 @@
         }
 
         if (isHit) {
+          const winsSequence = updateWinsSequence((Number(state.stats?.winsSequence) || 0) + 1);
+          queueWinsSequenceModalIfNeeded(winsSequence);
           if (isSpeakingStarStage) {
             setSpeakingVisualTone('');
             setSpeakingKeepColor(true);
@@ -27282,6 +27505,7 @@
           }
           scheduleFlashcardCloudSync(250);
         } else {
+          updateWinsSequence(0);
           if (isSpeakingStarStage) {
             setSpeakingKeepColor(false);
             setSpeakingVisualTone('miss');

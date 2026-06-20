@@ -325,6 +325,7 @@ const FLASHCARD_DECK_CARD_LIMIT_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_XP_LEVEL_CURVE_SETTINGS_CACHE_TTL_MS = 30 * 1000;
 const FLASHCARD_SPEED_SAMPLE_STORAGE_LIMIT = 40;
 const FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE = 30;
+const FLASHCARD_SPEED_MIN_PRACTICE_WINDOW_MS = 10000;
 const FLASHCARD_ON_TABLE_MAX_CARDS = 12;
 const AUTO_NO_ENERGY_DISABLE_THRESHOLD = 100;
 const SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS = 45;
@@ -620,6 +621,7 @@ const normalizeFlashcardStatus = (value) => (value === 'ready' ? 'ready' : 'memo
 
 const FLASHCARD_PRONUNCIATION_SAMPLE_LIMIT = 200;
 const USERS_PRONUNCIATION_MIN_PERCENT = 60;
+const normalizeWinsSequence = (value) => Math.max(0, Math.min(9999, Math.round(Number(value) || 0)));
 
 const normalizeFlashcardPronunciationSamples = (value) => {
   const source = Array.isArray(value)
@@ -1747,7 +1749,7 @@ const getFlashcardSpeedPerHourFromSamples = ({
     return Math.max(0, Math.round(fallback * 10) / 10);
   }
 
-  if (count >= 2 && windowMs > 0) {
+  if (count >= 2 && windowMs >= FLASHCARD_SPEED_MIN_PRACTICE_WINDOW_MS) {
     return Math.max(0, Math.round(((chars * 3600000) / windowMs) * 10) / 10);
   }
 
@@ -1775,7 +1777,8 @@ const decorateFlashcardStats = (value, lettersCount = 0) => {
     trainingTimeMs,
     pronunciationSamples,
     pronunciationPercent: getFlashcardPronunciationPercent(pronunciationSamples),
-    speedFlashcardsPerHour: getFlashcardSpeedPerHour(lettersCount, trainingTimeMs)
+    speedFlashcardsPerHour: getFlashcardSpeedPerHour(lettersCount, trainingTimeMs),
+    winsSequence: normalizeWinsSequence(value?.winsSequence ?? value?.wins_sequence)
   };
 };
 
@@ -3635,6 +3638,10 @@ const ensureUserFlashcardSpeedSamplesTable = async () => {
         ADD COLUMN IF NOT EXISTS current_level integer NOT NULL DEFAULT 1
       `);
       await pool.query(`
+        ALTER TABLE public.user_flashcard_speed_samples
+        ADD COLUMN IF NOT EXISTS sample_kind text NOT NULL DEFAULT 'speed'
+      `);
+      await pool.query(`
         CREATE SEQUENCE IF NOT EXISTS public.user_flashcard_speed_samples_seq
       `);
       await pool.query(`
@@ -3671,6 +3678,11 @@ const ensureUserFlashcardSpeedSamplesTable = async () => {
         WHERE u.id = samples.user_id
       `);
       await pool.query(`
+        UPDATE public.user_flashcard_speed_samples
+        SET sample_kind = 'speed'
+        WHERE sample_kind IS NULL OR btrim(sample_kind) = ''
+      `);
+      await pool.query(`
         ALTER TABLE public.user_flashcard_speed_samples
         DROP COLUMN IF EXISTS id,
         DROP COLUMN IF EXISTS raw_chars,
@@ -3685,6 +3697,10 @@ const ensureUserFlashcardSpeedSamplesTable = async () => {
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_flashcard_speed_samples_user_seq_idx
         ON public.user_flashcard_speed_samples (user_id, sample_seq DESC)
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_speed_samples_user_kind_seq_idx
+        ON public.user_flashcard_speed_samples (user_id, sample_kind, sample_seq DESC)
       `);
       return true;
     })().catch((error) => {
@@ -5716,13 +5732,16 @@ async function appendFlashcardSpeedSamples(client, userId, samples = []) {
   const source = Array.isArray(samples) ? samples : [];
   const sanitized = source
     .map((entry) => ({
+      sampleKind: String(entry?.sampleKind || 'speed').trim().toLowerCase() === 'wins-sequence'
+        ? 'wins-sequence'
+        : 'speed',
       sampleValue: Number((Number(entry?.sampleValue) || 0).toFixed(4)),
       practiceMsTotal: Math.max(0, Math.round(Number(entry?.practiceMsTotal) || 0)),
       currentLevel: normalizeUserFlashcardLevel(entry?.currentLevel)
     }))
     .filter((entry) => (
       Number.isFinite(entry.sampleValue)
-      && Math.abs(entry.sampleValue) >= 0.0001
+      && (entry.sampleKind === 'wins-sequence' || Math.abs(entry.sampleValue) >= 0.0001)
       && Number.isFinite(entry.currentLevel)
       && Number.isFinite(entry.practiceMsTotal)
     ));
@@ -5731,13 +5750,14 @@ async function appendFlashcardSpeedSamples(client, userId, samples = []) {
   const values = [];
   const params = [];
   sanitized.forEach((entry, index) => {
-    const offset = index * 4;
-    values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`);
-    params.push(normalizedUserId, entry.sampleValue, entry.practiceMsTotal, entry.currentLevel);
+    const offset = index * 5;
+    values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`);
+    params.push(normalizedUserId, entry.sampleKind, entry.sampleValue, entry.practiceMsTotal, entry.currentLevel);
   });
   await client.query(
     `INSERT INTO public.user_flashcard_speed_samples (
        user_id,
+       sample_kind,
        sample_value,
        practice_ms_total,
        current_level
@@ -5803,6 +5823,7 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
        SELECT sample_value, practice_ms_total
        FROM public.user_flashcard_speed_samples
        WHERE user_id = $1
+         AND sample_kind = 'speed'
        ORDER BY sample_seq DESC, ctid DESC
        LIMIT $2
      ) recent_speed_samples`,
@@ -5962,11 +5983,20 @@ const readFlashcardStateForUser = async (userId) => {
     ),
     pool.query(
       `SELECT
-         COALESCE(SUM(GREATEST(sample_value, 0)), 0)::numeric AS normalized_chars_total,
-         COUNT(*)::int AS sample_count,
-         GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
+         COALESCE(SUM(CASE WHEN sample_kind = 'speed' THEN GREATEST(sample_value, 0) ELSE 0 END), 0)::numeric AS normalized_chars_total,
+         COUNT(*) FILTER (WHERE sample_kind = 'speed')::int AS sample_count,
+         GREATEST(
+           0,
+           COALESCE(MAX(CASE WHEN sample_kind = 'speed' THEN practice_ms_total END), 0)
+           - COALESCE(MIN(CASE WHEN sample_kind = 'speed' THEN practice_ms_total END), 0)
+         )::bigint AS practice_window_ms,
+         COALESCE(MAX(CASE WHEN sample_kind = 'wins-sequence' AND kind_rank = 1 THEN sample_value END), 0)::numeric AS wins_sequence
        FROM (
-         SELECT sample_value, practice_ms_total
+         SELECT
+           sample_kind,
+           sample_value,
+           practice_ms_total,
+           ROW_NUMBER() OVER (PARTITION BY sample_kind ORDER BY sample_seq DESC, ctid DESC) AS kind_rank
          FROM public.user_flashcard_speed_samples
          WHERE user_id = $1
          ORDER BY sample_seq DESC, ctid DESC
@@ -6023,6 +6053,7 @@ const readFlashcardStateForUser = async (userId) => {
         secondStarErrorHeard: flashcardStatsRow.second_star_error_heard
       }, normalizedCharsTotal),
       speedFlashcardsPerHour: resolvedSpeedPerHour,
+      winsSequence: normalizeWinsSequence(speedSamplesResult.rows[0]?.wins_sequence),
       booksEnergyXpTotal: Math.max(0, Number(booksEnergyXpResult.rows[0]?.energy_xp_total) || 0),
       coinsTotal: Math.max(0, Number(coinsResult.rows[0]?.coins_total) || 0)
     },
@@ -6132,6 +6163,15 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
        LIMIT 1`,
       [normalizedUserId]
     );
+    const existingWinsSequenceResult = await client.query(
+      `SELECT sample_value
+       FROM public.user_flashcard_speed_samples
+       WHERE user_id = $1
+         AND sample_kind = 'wins-sequence'
+       ORDER BY sample_seq DESC, ctid DESC
+       LIMIT 1`,
+      [normalizedUserId]
+    );
     const existingProgressResult = await client.query(
       `SELECT card_id, phase_index, target_phase_index, status, seal_image, card_chars
        FROM public.user_flashcard_progress
@@ -6188,6 +6228,8 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       ...nextOnTableByCardId.keys()
     ]);
     const generatedSpeedSamples = [];
+    const existingWinsSequence = normalizeWinsSequence(existingWinsSequenceResult.rows[0]?.sample_value);
+    const nextWinsSequence = normalizeWinsSequence(stats?.winsSequence ?? stats?.wins_sequence);
     speedDeltaCardIds.forEach((cardId) => {
       const previousProgress = existingProgressByCardId.get(cardId) || null;
       const nextProgress = nextProgressByCardId.get(cardId) || null;
@@ -6214,6 +6256,17 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       };
       generatedSpeedSamples.push(speedSample);
     });
+    if (nextWinsSequence !== existingWinsSequence) {
+      generatedSpeedSamples.push({
+        sampleKind: 'wins-sequence',
+        sampleValue: nextWinsSequence,
+        practiceMsTotal: Math.max(
+          0,
+          Math.round(Number(stats?.trainingTimeMs ?? stats?.training_time_ms) || 0)
+        ),
+        currentLevel: persistedUserLevel
+      });
+    }
     const existingCardIds = new Set(existingProgressByCardId.keys());
     const shouldPersistPerformanceStats = progress.length > existingCardIds.size;
     const existingTrainingTimeMs = Math.max(0, Number(existingStatsResult.rows[0]?.training_time_ms) || 0);
@@ -6482,8 +6535,9 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
          SELECT sample_value, practice_ms_total
          FROM public.user_flashcard_speed_samples
          WHERE user_id = $1
-         ORDER BY sample_seq DESC, ctid DESC
-         LIMIT $2
+           AND sample_kind = 'speed'
+          ORDER BY sample_seq DESC, ctid DESC
+          LIMIT $2
        ) recent_speed_samples`,
       [normalizedUserId, FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE]
     );
@@ -15940,11 +15994,11 @@ app.get('/api/users/flashcards', async (req, res) => {
              )::int
            )
          )::int AS pronunciation_percent,
-         CASE
-           WHEN COALESCE(speed_samples.sample_count, 0) >= 2
-             AND COALESCE(speed_samples.practice_window_ms, 0) > 0
-             AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
-             THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(speed_samples.practice_window_ms, 1)::numeric, 1)
+        CASE
+          WHEN COALESCE(speed_samples.sample_count, 0) >= 2
+            AND COALESCE(speed_samples.practice_window_ms, 0) >= ${FLASHCARD_SPEED_MIN_PRACTICE_WINDOW_MS}
+            AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
+            THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(speed_samples.practice_window_ms, 1)::numeric, 1)
            WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
              THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
            ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
@@ -15981,19 +16035,20 @@ app.get('/api/users/flashcards', async (req, res) => {
        LEFT JOIN public.user_flashcard_stats stats
          ON stats.user_id = u.id
        LEFT JOIN (
-         SELECT
-           user_id,
-           COALESCE(SUM(GREATEST(sample_value, 0)), 0)::numeric AS normalized_chars_count,
-           COUNT(*)::int AS sample_count,
-           GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
+          SELECT
+            user_id,
+            COALESCE(SUM(GREATEST(sample_value, 0)), 0)::numeric AS normalized_chars_count,
+            COUNT(*)::int AS sample_count,
+            GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
          FROM (
            SELECT
-             user_id,
-             sample_value,
-             practice_ms_total,
-             ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY sample_seq DESC, ctid DESC) AS row_index
-           FROM public.user_flashcard_speed_samples
-         ) ranked_speed_samples
+              user_id,
+              sample_value,
+              practice_ms_total,
+              ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY sample_seq DESC, ctid DESC) AS row_index
+            FROM public.user_flashcard_speed_samples
+            WHERE sample_kind = 'speed'
+          ) ranked_speed_samples
          WHERE ranked_speed_samples.row_index <= ${FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE}
          GROUP BY user_id
        ) speed_samples
@@ -20056,11 +20111,11 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
              )::int
            )
          )::int AS pronunciation_percent,
-         CASE
-           WHEN COALESCE(speed_samples.sample_count, 0) >= 2
-             AND COALESCE(speed_samples.practice_window_ms, 0) > 0
-             AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
-             THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(speed_samples.practice_window_ms, 1)::numeric, 1)
+        CASE
+          WHEN COALESCE(speed_samples.sample_count, 0) >= 2
+            AND COALESCE(speed_samples.practice_window_ms, 0) >= ${FLASHCARD_SPEED_MIN_PRACTICE_WINDOW_MS}
+            AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
+            THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(speed_samples.practice_window_ms, 1)::numeric, 1)
            WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
              THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
            ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
@@ -20095,11 +20150,11 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
        ) ranking ON ranking.user_id = u.id
        LEFT JOIN public.user_flashcard_stats stats ON stats.user_id = u.id
        LEFT JOIN (
-         SELECT
-           user_id,
-           COALESCE(SUM(GREATEST(sample_value, 0)), 0)::numeric AS normalized_chars_count,
-           COUNT(*)::int AS sample_count,
-           GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
+          SELECT
+            user_id,
+            COALESCE(SUM(GREATEST(sample_value, 0)), 0)::numeric AS normalized_chars_count,
+            COUNT(*)::int AS sample_count,
+            GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
          FROM (
            SELECT
              user_id,
@@ -20107,6 +20162,7 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
              practice_ms_total,
              ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY sample_seq DESC, ctid DESC) AS row_index
            FROM public.user_flashcard_speed_samples
+           WHERE sample_kind = 'speed'
          ) ranked_speed_samples
          WHERE ranked_speed_samples.row_index <= ${FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE}
          GROUP BY user_id
