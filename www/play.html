@@ -22347,6 +22347,7 @@
         const phaseKey = safeText(stageConfig?.key || '');
         const useBooksMic = (!isLevelAudioModeActive() || isLevelTextModeActive()) && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5);
         const useStagePlay = stageNumber === 2 || stageNumber === 4;
+        const micListeningActive = Boolean(state.game.listening);
         const showMissionHud = stageNumber >= 1 && stageNumber <= 5;
         els.gameTouchBtn.parentElement.hidden = !showMissionHud;
         els.gameTouchBtn.className = 'game-touch';
@@ -22382,6 +22383,7 @@
             els.gameControlsProxy.hidden = false;
             els.gameControlsProxy.classList.remove('is-hidden');
           }
+          els.gameTouchBtn.classList.toggle('is-busy', micListeningActive);
           updateSpeakingStarMicSealProgress();
           syncLevelTextModeControls();
           return;
@@ -22401,6 +22403,7 @@
         els.gameTouchBtn.setAttribute('aria-label', stageNumber === 1
           ? 'Microfone liberado depois do audio'
           : 'Ativar microfone');
+        els.gameTouchBtn.classList.toggle('is-busy', micListeningActive);
         if (els.gameRememberBtn) {
           els.gameRememberBtn.hidden = true;
           els.gameRememberBtn.disabled = true;
