@@ -11706,8 +11706,14 @@
       const ENABLE_STAGE_TUTORIALS = false;
       const STAGE_TWO_HINT_DELAY_MS = 2000;
       const STAGE_TWO_HINT_VISIBLE_MS = 3000;
-      const USER_MEDAL_AUDIO_PATH = '/gamesounds/levelplus.mp3';
-      const USER_MEDAL_TRANSITION_TOTAL_MS = 2500;
+      const USER_MEDAL_AUDIO_PATH = '/gamesounds/medal-transition-futuristic.mp3';
+      const USER_MEDAL_TRANSITION_TOTAL_MS = 3000;
+      const USER_MEDAL_TRANSITION_SLIDE_AT_MS = 1000;
+      const USER_MEDAL_TRANSITION_LABEL_AT_MS = 1500;
+      const USER_MEDAL_TRANSITION_SOUND_AT_MS = 2001;
+      const USER_MEDAL_TRANSITION_CLOSE_READY_AT_MS = 2501;
+      const USER_MEDAL_TRANSITION_DISSOLVE_MS = 500;
+      const SEQUENCE_STREAK_AUDIO_PATH = '/gamesounds/sequence-clean.mp3';
       const GAME_SEQUENCE_STREAK_MODAL_TOTAL_MS = 1000;
       const REMEMBER_BUTTON_ENTRY_DELAY_MS = 420;
       const GAME_CARD_SLIDE_ENTRY_MS = 320;
@@ -12452,6 +12458,8 @@
           medalTransitionTimer: 0,
           medalTransitionTimers: [],
           medalTransitionAudio: null,
+          medalTransitionRunToken: null,
+          sequenceStreakAudio: null,
           gameStageTutorialVisible: false,
           gameStageTutorialKind: '',
           gameStageTutorialDismissHandler: null,
@@ -17818,22 +17826,69 @@
         return timerId;
       }
 
-      function playUserMedalTransitionAudio() {
+      function playUserMedalTransitionAudio(options = {}) {
         stopUserMedalTransitionAudio();
         try {
           const audio = new Audio(USER_MEDAL_AUDIO_PATH);
           audio.preload = 'auto';
           state.ui.medalTransitionAudio = audio;
+          let settled = false;
           const clearCurrent = () => {
+            if (settled) return;
+            settled = true;
             if (state.ui.medalTransitionAudio === audio) {
               state.ui.medalTransitionAudio = null;
+            }
+            try {
+              options.onComplete?.();
+            } catch (_error) {
+              // ignore
+            }
+          };
+          audio.addEventListener('ended', clearCurrent, { once: true });
+          audio.addEventListener('error', clearCurrent, { once: true });
+          audio.play().catch(clearCurrent);
+          return audio;
+        } catch (_error) {
+          state.ui.medalTransitionAudio = null;
+          try {
+            options.onComplete?.();
+          } catch (_innerError) {
+            // ignore
+          }
+          return null;
+        }
+      }
+
+      function stopSequenceStreakAudio() {
+        const current = state.ui.sequenceStreakAudio;
+        if (current) {
+          try {
+            current.pause();
+            current.currentTime = 0;
+          } catch (_error) {
+            // ignore
+          }
+        }
+        state.ui.sequenceStreakAudio = null;
+      }
+
+      function playSequenceStreakAudio() {
+        stopSequenceStreakAudio();
+        try {
+          const audio = new Audio(SEQUENCE_STREAK_AUDIO_PATH);
+          audio.preload = 'auto';
+          state.ui.sequenceStreakAudio = audio;
+          const clearCurrent = () => {
+            if (state.ui.sequenceStreakAudio === audio) {
+              state.ui.sequenceStreakAudio = null;
             }
           };
           audio.addEventListener('ended', clearCurrent, { once: true });
           audio.addEventListener('error', clearCurrent, { once: true });
           audio.play().catch(clearCurrent);
         } catch (_error) {
-          state.ui.medalTransitionAudio = null;
+          state.ui.sequenceStreakAudio = null;
         }
       }
 
@@ -17918,6 +17973,7 @@
           window.clearTimeout(state.ui.medalTransitionTimer);
           state.ui.medalTransitionTimer = 0;
         }
+        state.ui.medalTransitionRunToken = null;
         clearUserMedalTransitionTimers();
         stopUserMedalTransitionAudio();
         if (els.medalTransitionModal) {
@@ -17953,6 +18009,7 @@
           state.ui.medalTransitionTimer = 0;
         }
         clearUserMedalTransitionTimers();
+        stopSequenceStreakAudio();
         if (els.sequenceStreakModal) {
           els.sequenceStreakModal.classList.remove('is-visible', 'is-closing');
           els.sequenceStreakModal.setAttribute('aria-hidden', 'true');
@@ -17999,6 +18056,7 @@
         }
         els.sequenceStreakModal.classList.add('is-visible');
         els.sequenceStreakModal.setAttribute('aria-hidden', 'false');
+        playSequenceStreakAudio();
         if (autoCloseMs > 0) {
           queueUserMedalTransitionTimer(() => {
             els.sequenceStreakModal?.classList.add('is-closing');
@@ -18150,6 +18208,10 @@
         const isAdvancing = Number(nextLevel) >= Number(previousLevel);
         const fromLevelLabel = `Nível ${Math.max(1, Number(previousLevel) || 1)}`;
         const toLevelLabel = `Nível ${Math.max(1, Number(nextLevel) || 1)}`;
+        const runToken = Symbol('medal-transition');
+        let minimumCloseReached = false;
+        let soundFinished = false;
+        let closingStarted = false;
         cleanupGameRecognition();
         stopActiveAudio();
         clearGameLanguageSwapTimer();
@@ -18163,6 +18225,7 @@
         if (state.game.active) {
           els.game?.classList.add('is-medal-transition-active');
         }
+        state.ui.medalTransitionRunToken = runToken;
         state.ui.gameEventModalOpen = true;
         if (els.medalTransitionEyebrow) {
           els.medalTransitionEyebrow.textContent = isAdvancing
@@ -18206,23 +18269,53 @@
         if (els.medalTransitionContinueBtn) {
           els.medalTransitionContinueBtn.hidden = autoCloseMs > 0;
         }
+        const beginCloseIfReady = () => {
+          if (closingStarted || state.ui.medalTransitionRunToken !== runToken) return;
+          if (!minimumCloseReached || !soundFinished) return;
+          closingStarted = true;
+          els.medalTransitionModal?.classList.add('is-closing');
+          state.ui.medalTransitionTimer = window.setTimeout(() => {
+            if (state.ui.medalTransitionRunToken !== runToken) return;
+            closeUserMedalTransitionModal();
+          }, USER_MEDAL_TRANSITION_DISSOLVE_MS);
+        };
         if (autoCloseMs > 0) {
           queueUserMedalTransitionTimer(() => {
             els.medalTransitionModal?.classList.add('is-sliding');
-          }, 500);
+          }, USER_MEDAL_TRANSITION_SLIDE_AT_MS);
           queueUserMedalTransitionTimer(() => {
             els.medalTransitionModal?.classList.add('is-label-visible');
-          }, 1000);
+          }, USER_MEDAL_TRANSITION_LABEL_AT_MS);
           queueUserMedalTransitionTimer(() => {
+            if (state.ui.medalTransitionRunToken !== runToken) return;
             els.medalTransitionModal?.classList.add('is-sound-hit');
-            playUserMedalTransitionAudio();
-          }, 1501);
+            playUserMedalTransitionAudio({
+              onComplete: () => {
+                if (state.ui.medalTransitionRunToken !== runToken) return;
+                soundFinished = true;
+                beginCloseIfReady();
+              }
+            });
+          }, USER_MEDAL_TRANSITION_SOUND_AT_MS);
           queueUserMedalTransitionTimer(() => {
-            els.medalTransitionModal?.classList.add('is-closing');
-          }, 2001);
-          state.ui.medalTransitionTimer = window.setTimeout(() => {
-            closeUserMedalTransitionModal();
-          }, autoCloseMs);
+            if (state.ui.medalTransitionRunToken !== runToken) return;
+            if (!state.ui.medalTransitionAudio) {
+              if (state.ui.medalTransitionRunToken !== runToken) return;
+              soundFinished = true;
+              beginCloseIfReady();
+            }
+          }, USER_MEDAL_TRANSITION_SOUND_AT_MS + 80);
+          queueUserMedalTransitionTimer(() => {
+            if (state.ui.medalTransitionRunToken !== runToken) return;
+            minimumCloseReached = true;
+            beginCloseIfReady();
+          }, USER_MEDAL_TRANSITION_CLOSE_READY_AT_MS);
+          queueUserMedalTransitionTimer(() => {
+            if (state.ui.medalTransitionRunToken !== runToken || closingStarted) return;
+            minimumCloseReached = true;
+            soundFinished = true;
+            beginCloseIfReady();
+          }, autoCloseMs + 4000);
         }
         return waitForGameEventModalClear();
       }
