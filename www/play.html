@@ -7952,9 +7952,10 @@
     .game[data-phase-key="fourth-star"] .textscreen {
       flex: 0 0 45% !important;
       height: 45% !important;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
+      align-items: flex-start;
+      justify-content: flex-start;
+      padding: 6px 0 0;
+      overflow: visible;
     }
 
     .game[data-phase-key="second-star"] .textscreen .game-status-wrap,
@@ -7981,13 +7982,16 @@
 
     .game[data-phase-key="second-star"] .textscreen .keyboardscreen-host,
     .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
-      position: fixed;
-      left: 50%;
-      bottom: calc(12vh + 8px);
-      transform: translateX(-50%);
+      position: relative;
+      left: auto;
+      bottom: auto;
+      top: auto;
+      transform: none;
       width: min(433px, calc(100vw - 32px));
       height: auto;
-      padding: 1px;
+      min-height: 0;
+      padding: 1px 0 0;
+      margin: 0 auto;
       z-index: 230;
       pointer-events: auto;
       background: rgba(6, 17, 44, 0.28);
@@ -8005,9 +8009,6 @@
       border-color: transparent;
       box-shadow: none;
       backdrop-filter: none;
-      top: 50%;
-      bottom: auto;
-      transform: translate(-50%, -50%);
     }
 
     .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
@@ -8038,7 +8039,7 @@
 
     .game[data-phase-key="second-star"].is-second-star-reveal-phase .textscreen .keyboardscreen-host {
       opacity: 0;
-      transform: translate(-50%, -50%) scale(0.96);
+      transform: scale(0.96);
       pointer-events: none;
     }
 
@@ -8264,10 +8265,10 @@
       align-content: center;
       justify-content: center;
       gap: 9px;
-      padding: 10px;
-      transform: translateY(-25px);
-      width: 90%;
-      max-width: 90%;
+      padding: 4px 10px 10px;
+      transform: none;
+      width: 100%;
+      max-width: 100%;
       margin-inline: auto;
     }
 
@@ -8282,8 +8283,8 @@
 
     .game[data-phase-key="second-star"] .textscreen .keyboardscreen-host,
     .game[data-phase-key="fourth-star"] .textscreen .keyboardscreen-host {
-      width: 90% !important;
-      max-width: 90% !important;
+      width: min(433px, calc(100vw - 32px)) !important;
+      max-width: calc(100vw - 32px) !important;
       margin-inline: auto !important;
       overflow: visible !important;
     }
@@ -13675,6 +13676,82 @@
         return path;
       }
 
+      function isFetchNetworkError(error) {
+        const rawMessage = error && typeof error.message === 'string' ? error.message.trim() : '';
+        return /failed to fetch|networkerror|load failed|fetch failed/i.test(rawMessage);
+      }
+
+      function currentApiBaseUrl() {
+        try {
+          if (window.PlaytalkApi && typeof window.PlaytalkApi.baseUrl === 'string') {
+            return String(window.PlaytalkApi.baseUrl || '').trim();
+          }
+        } catch (_error) {
+          // ignore
+        }
+        return String(window.PLAYTALK_API_BASE_URL || '').trim();
+      }
+
+      function buildAlternateApiBaseUrl(baseUrl) {
+        try {
+          const parsed = new URL(String(baseUrl || '').trim());
+          const host = String(parsed.hostname || '').toLowerCase();
+          if (host === 'www.fluentlevelup.com') {
+            parsed.hostname = 'fluentlevelup.com';
+            return parsed.origin;
+          }
+          if (host === 'fluentlevelup.com') {
+            parsed.hostname = 'www.fluentlevelup.com';
+            return parsed.origin;
+          }
+        } catch (_error) {
+          // ignore
+        }
+        return '';
+      }
+
+      function describeAuthNetworkFailure(error, endpoint) {
+        const rawMessage = error && typeof error.message === 'string' ? error.message.trim() : '';
+        const baseUrl = currentApiBaseUrl() || 'base-url-indefinida';
+        const targetUrl = `${baseUrl}${endpoint}`;
+        if (isFetchNetworkError(error)) {
+          return `Sem conexão com o servidor de login. Verifique a internet do aparelho ou a URL da API. Tentativa: ${targetUrl}`;
+        }
+        if (/abort|timeout/i.test(rawMessage)) {
+          return `O servidor demorou para responder no login. Tentativa: ${targetUrl}`;
+        }
+        return `${rawMessage || 'Não foi possível autenticar agora.'} Tentativa: ${targetUrl}`;
+      }
+
+      async function postAuthJson(endpoint, payloadBody) {
+        const requestOptions = {
+          method: 'POST',
+          headers: buildAuthHeaders({
+            'Content-Type': 'application/json'
+          }),
+          credentials: 'include',
+          body: JSON.stringify(payloadBody || {})
+        };
+        const primaryUrl = buildApiUrl(endpoint);
+        try {
+          return await fetch(primaryUrl, requestOptions);
+        } catch (primaryError) {
+          if (!isNativeRuntime() || !isFetchNetworkError(primaryError)) {
+            throw primaryError;
+          }
+          const fallbackBase = buildAlternateApiBaseUrl(currentApiBaseUrl());
+          if (!fallbackBase) {
+            throw primaryError;
+          }
+          if (window.PlaytalkApi && typeof window.PlaytalkApi.setBaseUrl === 'function') {
+            window.PlaytalkApi.setBaseUrl(fallbackBase);
+          } else {
+            window.PLAYTALK_API_BASE_URL = fallbackBase;
+          }
+          return fetch(`${fallbackBase}${endpoint}`, requestOptions);
+        }
+      }
+
       function buildAuthHeaders(extraHeaders) {
         if (window.PlaytalkApi && typeof window.PlaytalkApi.authHeaders === 'function') {
           return window.PlaytalkApi.authHeaders(extraHeaders);
@@ -16976,13 +17053,7 @@
 
         try {
           const endpoint = state.authMode === 'register' ? '/register' : '/login';
-          const response = await fetch(buildApiUrl(endpoint), {
-            method: 'POST',
-            headers: buildAuthHeaders({
-              'Content-Type': 'application/json'
-            }),
-            body: JSON.stringify({ username, password })
-          });
+          const response = await postAuthJson(endpoint, { username, password });
           const payload = await response.json().catch(() => ({}));
           if (!response.ok || !payload?.success) {
             throw new Error(payload?.message || 'Nao foi possivel autenticar agora.');
@@ -16998,7 +17069,8 @@
           }
           setAuthStatus(state.authMode === 'register' ? 'Conta criada. Bora jogar.' : 'Entrada liberada.', 'success');
         } catch (error) {
-          setAuthStatus(String(error.message || 'Nao foi possivel autenticar agora.'), 'error');
+          const endpoint = state.authMode === 'register' ? '/register' : '/login';
+          setAuthStatus(describeAuthNetworkFailure(error, endpoint), 'error');
         } finally {
           els.authSubmitBtn.disabled = false;
         }

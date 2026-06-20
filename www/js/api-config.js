@@ -72,6 +72,9 @@
       const parsedUrl = new URL(normalizeBaseUrl(value));
       const hostname = parsedUrl.hostname.toLowerCase();
       const currentHostname = String(window.location?.hostname || '').toLowerCase();
+      if (isNativeRuntime() && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+        return true;
+      }
       return !LEGACY_REMOTE_API_HOSTNAMES.has(hostname)
         && hostname !== currentHostname
         && hostname !== 'localhost'
@@ -110,6 +113,10 @@
     const configuredBaseUrl = readGlobalBaseUrl() || readStoredBaseUrl();
     if (configuredBaseUrl) return configuredBaseUrl;
 
+    if (isNativeRuntime()) {
+      return DEFAULT_REMOTE_API_BASE_URL;
+    }
+
     if (!window.location || !window.location.origin) {
       return DEFAULT_REMOTE_API_BASE_URL;
     }
@@ -118,11 +125,11 @@
     const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
 
     if (protocol === 'file:') {
-      return 'http://localhost:3000';
+      return DEFAULT_REMOTE_API_BASE_URL;
     }
 
     if (isLocalhost && port !== '3000') {
-      return 'http://localhost:3000';
+      return DEFAULT_REMOTE_API_BASE_URL;
     }
 
     return origin;

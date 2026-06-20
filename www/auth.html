@@ -232,16 +232,18 @@
 
       function buildUnexpectedAuthErrorMessage(error, endpoint) {
         var rawMessage = error && typeof error.message === 'string' ? error.message.trim() : '';
+        var baseUrl = currentApiBaseUrl() || 'base-url-indefinida';
+        var targetUrl = baseUrl + endpoint;
         if (!rawMessage) {
-          return 'Erro inesperado ao falar com o servidor. [' + endpoint + ']';
+          return 'Erro inesperado ao falar com o servidor. Tentativa: ' + targetUrl;
         }
         if (/failed to fetch|networkerror|load failed/i.test(rawMessage)) {
-          return 'Sem conexao com o servidor. [' + endpoint + ']';
+          return 'Sem conexao com o servidor. Verifique a internet do aparelho ou a URL da API. Tentativa: ' + targetUrl;
         }
         if (/abort|timeout/i.test(rawMessage)) {
-          return 'Tempo esgotado ao acessar o servidor. [' + endpoint + ']';
+          return 'Tempo esgotado ao acessar o servidor. Tentativa: ' + targetUrl;
         }
-        return rawMessage + ' [' + endpoint + ']';
+        return rawMessage + ' Tentativa: ' + targetUrl;
       }
 
       function setMode(mode) {
