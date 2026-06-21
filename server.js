@@ -64,9 +64,10 @@ const DATABASE_SSL = process.env.DATABASE_SSL
 const JWT_SECRET = process.env.JWT_SECRET;
 const ELEVENLABS_API_KEY = env(process.env.ELEVENLABS_API_KEY);
 const ELEVENLABS_VOICE_ID_HARRY = env(process.env.ELEVENLABS_VOICE_ID_HARRY);
+const ELEVENLABS_VOICE_ID_PORTUGUESE = env(process.env.ELEVENLABS_VOICE_ID_PORTUGUESE) || 'Qrdut83w0Cr152Yb4Xn3';
 const ELEVENLABS_VOICE_ID_BLONDE = env(process.env.ELEVENLABS_VOICE_ID_BLONDE) || 'exsUS4vynmxd379XN4yO';
 const ELEVENLABS_VOICE_ID_PAUL = env(process.env.ELEVENLABS_VOICE_ID_PAUL) || '0igQGE0lbNpTaWsexf1r';
-const ELEVENLABS_VOICE_ID_SAMI = env(process.env.ELEVENLABS_VOICE_ID_SAMI) || '0igQGE0lbNpTaWsexf1r';
+const ELEVENLABS_VOICE_ID_SAMI = env(process.env.ELEVENLABS_VOICE_ID_SAMI) || 'UFDAUkGzdLAEJlINT3Fx';
 const ELEVENLABS_VOICE_ID_CRISTINA = env(process.env.ELEVENLABS_VOICE_ID_CRISTINA) || 'qWWAqFomnJ99VwQLREfT';
 const ELEVENLABS_VOICE_ID_BURT_RAYNALDS = env(process.env.ELEVENLABS_VOICE_ID_BURT_RAYNALDS) || '4YYIPFl9wE5c4L2eu2Gb';
 const ELEVENLABS_MODEL_ID = env(process.env.ELEVENLABS_MODEL_ID) || 'eleven_multilingual_v2';
@@ -6241,7 +6242,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     }
   });
   let progress = Array.from(dedupedProgress.values());
-  const stats = normalizeFlashcardStats(payload?.stats, totalFlashcardLettersFromProgress(progress));
+  let stats = normalizeFlashcardStats(payload?.stats, totalFlashcardLettersFromProgress(progress));
   const gameOptions = normalizeFlashcardGameOptions(payload?.gameOptions);
   const selectedTargetLanguage = normalizeFlashcardTargetLanguage(gameOptions.targetLanguage);
   const hiddenCardIds = hasHiddenCardIdsPayload
@@ -6296,6 +6297,18 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     speedOverrideDelta = Number(currentUserLevelRow?.speed_delta || 0);
     persistedUserLevel = currentPersistedUserLevel;
     persistedUserLevelUpdatedAt = currentLanguageLevel.updatedAt;
+    if (allowProgressReset) {
+      stats = normalizeFlashcardStats({
+        playTimeMs: stats.playTimeMs,
+        speakings: stats.speakings,
+        listenings: stats.listenings,
+        readings: stats.readings,
+        trainingTimeMs: 0,
+        pronunciationSamples: stats.pronunciationSamples,
+        secondStarErrorHeard: stats.secondStarErrorHeard,
+        winsSequence: 0
+      }, 0);
+    }
 
     const existingStatsResult = await client.query(
       `SELECT training_time_ms, speakings, listenings, readings, admin_speed_flashcards_per_hour
@@ -6616,9 +6629,13 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     const requestedCoinsDelta = requestedCoinsDeltaRaw;
     const requestedXpDelta = requestedXpDeltaRaw;
 
-    const requestedUserLevel = Number.isFinite(Number(payload?.userLevel))
-      ? normalizeUserFlashcardLevel(payload.userLevel)
-      : currentPersistedUserLevel;
+    const requestedUserLevel = allowProgressReset
+      ? 1
+      : (
+        Number.isFinite(Number(payload?.userLevel))
+          ? normalizeUserFlashcardLevel(payload.userLevel)
+          : currentPersistedUserLevel
+      );
     await client.query(
       `INSERT INTO public.user_flashcard_language_levels (
          user_id,
@@ -6635,6 +6652,18 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     );
     persistedUserLevel = requestedUserLevel;
     persistedUserLevelUpdatedAt = new Date().toISOString();
+    if (allowProgressReset) {
+      await client.query(
+        `DELETE FROM public.user_flashcard_speed_samples
+         WHERE user_id = $1`,
+        [normalizedUserId]
+      );
+      await client.query(
+        `DELETE FROM public.user_flashcard_session_clock
+         WHERE user_id = $1`,
+        [normalizedUserId]
+      );
+    }
 
     await client.query(
       `INSERT INTO public.user_flashcard_stats (
@@ -6658,20 +6687,22 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
        ON CONFLICT (user_id)
        DO UPDATE SET
          play_time_ms = EXCLUDED.play_time_ms,
-         speakings = GREATEST(public.user_flashcard_stats.speakings, EXCLUDED.speakings),
-         listenings = GREATEST(public.user_flashcard_stats.listenings, EXCLUDED.listenings),
-         readings = GREATEST(public.user_flashcard_stats.readings, EXCLUDED.readings),
+         speakings = CASE WHEN $15::boolean THEN EXCLUDED.speakings ELSE GREATEST(public.user_flashcard_stats.speakings, EXCLUDED.speakings) END,
+         listenings = CASE WHEN $15::boolean THEN EXCLUDED.listenings ELSE GREATEST(public.user_flashcard_stats.listenings, EXCLUDED.listenings) END,
+         readings = CASE WHEN $15::boolean THEN EXCLUDED.readings ELSE GREATEST(public.user_flashcard_stats.readings, EXCLUDED.readings) END,
          game_option_difficulty = EXCLUDED.game_option_difficulty,
          game_option_speed = EXCLUDED.game_option_speed,
          game_option_accent = EXCLUDED.game_option_accent,
          game_option_fourth_stage_typing = EXCLUDED.game_option_fourth_stage_typing,
          game_option_target_language = EXCLUDED.game_option_target_language,
          game_option_native_language = EXCLUDED.game_option_native_language,
-         training_time_ms = GREATEST(public.user_flashcard_stats.training_time_ms, EXCLUDED.training_time_ms),
+         training_time_ms = CASE WHEN $15::boolean THEN EXCLUDED.training_time_ms ELSE GREATEST(public.user_flashcard_stats.training_time_ms, EXCLUDED.training_time_ms) END,
          pronunciation_samples = CASE
-           WHEN $15::boolean THEN EXCLUDED.pronunciation_samples
+           WHEN $16::boolean THEN EXCLUDED.pronunciation_samples
            ELSE public.user_flashcard_stats.pronunciation_samples
          END,
+         speed_level_gain_carry = CASE WHEN $15::boolean THEN 0 ELSE public.user_flashcard_stats.speed_level_gain_carry END,
+         speed_level_practice_carry_ms = CASE WHEN $15::boolean THEN 0 ELSE public.user_flashcard_stats.speed_level_practice_carry_ms END,
          second_star_error_heard = EXCLUDED.second_star_error_heard,
          updated_at = now()`,
       [
@@ -6689,6 +6720,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
         gameOptions.targetLanguage,
         gameOptions.nativeLanguage,
         stats.secondStarErrorHeard,
+        allowProgressReset,
         shouldPersistPerformanceStats
       ]
     );
@@ -6821,10 +6853,12 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     normalizedUserId,
     flashcardProgressRankingScoreTotal(progress)
   );
-  const resolvedSpeedPerHourWithOverride = Math.max(
-    0,
-    Number((resolvedSpeedPerHour + speedOverrideDelta).toFixed(1))
-  );
+  const resolvedSpeedPerHourWithOverride = allowProgressReset
+    ? 0
+    : Math.max(
+      0,
+      Number((resolvedSpeedPerHour + speedOverrideDelta).toFixed(1))
+    );
 
   return {
     progressCount: progress.length,
@@ -22066,7 +22100,7 @@ app.post('/api/tts/elevenlabs', async (req, res) => {
   const normalizedRequestedVoice = requestedVoice.replace(/^elevenlabs:/, '');
   const voiceConfigByKey = {
     harry: { voiceId: ELEVENLABS_VOICE_ID_HARRY, instructionsKey: 'ELEVENLABS_VOICE_ID_HARRY' },
-    portuguese: { voiceId: ELEVENLABS_VOICE_ID_HARRY, instructionsKey: 'ELEVENLABS_VOICE_ID_HARRY' },
+    portuguese: { voiceId: ELEVENLABS_VOICE_ID_PORTUGUESE, instructionsKey: 'ELEVENLABS_VOICE_ID_PORTUGUESE' },
     blonde: { voiceId: ELEVENLABS_VOICE_ID_BLONDE, instructionsKey: 'ELEVENLABS_VOICE_ID_BLONDE' },
     paul: { voiceId: ELEVENLABS_VOICE_ID_PAUL, instructionsKey: 'ELEVENLABS_VOICE_ID_PAUL' },
     sami: { voiceId: ELEVENLABS_VOICE_ID_SAMI, instructionsKey: 'ELEVENLABS_VOICE_ID_SAMI' },
@@ -23931,10 +23965,17 @@ app.post('/api/admin/flashcards/fill-missing-audio', express.json({ limit: '2mb'
   try {
     await requireAdminUserFromRequest(req);
 
-    if (!ELEVENLABS_API_KEY || ELEVENLABS_API_KEY.includes('fake') || !ELEVENLABS_VOICE_ID_HARRY || ELEVENLABS_VOICE_ID_HARRY.includes('fake')) {
+    if (
+      !ELEVENLABS_API_KEY
+      || ELEVENLABS_API_KEY.includes('fake')
+      || !ELEVENLABS_VOICE_ID_HARRY
+      || ELEVENLABS_VOICE_ID_HARRY.includes('fake')
+      || !ELEVENLABS_VOICE_ID_PORTUGUESE
+      || ELEVENLABS_VOICE_ID_PORTUGUESE.includes('fake')
+    ) {
       res.status(503).json({
         error: 'ElevenLabs nao configurado.',
-        instructions: 'Preencha ELEVENLABS_API_KEY e ELEVENLABS_VOICE_ID_HARRY no .env com os valores reais.'
+        instructions: 'Preencha ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID_HARRY e ELEVENLABS_VOICE_ID_PORTUGUESE no .env com os valores reais.'
       });
       return;
     }
@@ -23977,7 +24018,10 @@ app.post('/api/admin/flashcards/fill-missing-audio', express.json({ limit: '2mb'
 
     for (const target of targets) {
       try {
-        const upstreamResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(ELEVENLABS_VOICE_ID_HARRY)}`, {
+        const voiceId = target.languageCode === 'pt'
+          ? ELEVENLABS_VOICE_ID_PORTUGUESE
+          : ELEVENLABS_VOICE_ID_HARRY;
+        const upstreamResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
           method: 'POST',
           headers: {
             Accept: 'audio/mpeg',

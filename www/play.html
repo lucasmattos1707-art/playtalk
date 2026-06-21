@@ -16073,6 +16073,7 @@
 
       async function refreshStagePlaySpeedSnapshot(expectedStagePrimeKey = '') {
         if (!state.user?.id) return;
+        if (state.entry.forceProgressResetPending) return;
         try {
           const payload = await fetchFlashcardCloudState();
           if (expectedStagePrimeKey && state.game.sessionClockStagePrimeKey !== expectedStagePrimeKey) return;
@@ -16140,18 +16141,30 @@
             setStageSpeedLoading(false);
             stopFlashcardSessionTick();
           }
-          if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.trainingTimeMs))) {
+          if (
+            !state.entry.forceProgressResetPending
+            && (normalizedAction === 'out' || normalizedAction === 'tick')
+            && Number.isFinite(Number(payload?.trainingTimeMs))
+          ) {
             state.stats.trainingTimeMs = Math.max(0, Math.round(Number(payload.trainingTimeMs) || 0));
             saveUserStats({ skipCloudSync: true });
             updateSpeakingStarMicSealProgress();
           }
-          if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.speedPerHour))) {
+          if (
+            !state.entry.forceProgressResetPending
+            && (normalizedAction === 'out' || normalizedAction === 'tick')
+            && Number.isFinite(Number(payload?.speedPerHour))
+          ) {
             state.stats.speedFlashcardsPerHour = Math.max(0, Number(Number(payload.speedPerHour).toFixed(1)) || 0);
             saveUserStats({ skipCloudSync: true });
             setStageSpeedLoading(false);
             updateSpeakingStarMicSealProgress();
           }
-          if ((normalizedAction === 'out' || normalizedAction === 'tick') && Number.isFinite(Number(payload?.userLevel))) {
+          if (
+            !state.entry.forceProgressResetPending
+            && (normalizedAction === 'out' || normalizedAction === 'tick')
+            && Number.isFinite(Number(payload?.userLevel))
+          ) {
             applyUserLevelState(payload.userLevel, {
               updatedAt: payload?.userLevelUpdatedAt || state.userLevelUpdatedAt,
               allowTransition: true,
@@ -19134,6 +19147,16 @@
         if (targetLanguageChanged) {
           state.entry.forceProgressResetPending = true;
           state.entry.omitNextUserLevelSync = true;
+          state.game.sessionClockActive = false;
+          state.game.sessionClockStagePrimeKey = '';
+          stopFlashcardSessionTick();
+          state.stats = {
+            ...state.stats,
+            trainingTimeMs: 0,
+            speedFlashcardsPerHour: 0,
+            winsSequence: 0
+          };
+          persistUserStatsLocally();
           state.userCards = new Map();
           state.hiddenCardIds = new Set();
           state.game.persistedOnTable = [];
