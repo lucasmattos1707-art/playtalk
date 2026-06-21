@@ -4211,6 +4211,75 @@
       transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
     }
 
+    .game-options-modal__item--language {
+      gap: 12px;
+    }
+
+    .game-options-modal__copy {
+      margin: 0;
+      color: rgba(223, 236, 255, 0.72);
+      font: 600 13px/1.35 "Open Sans", Arial, sans-serif;
+    }
+
+    .game-options-modal__language-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .game-options-modal__language-btn {
+      appearance: none;
+      border: 1px solid rgba(134, 190, 255, 0.16);
+      border-radius: 20px;
+      background:
+        radial-gradient(circle at top, rgba(111, 214, 255, 0.12), transparent 55%),
+        rgba(9, 23, 49, 0.92);
+      padding: 12px 10px 10px;
+      min-height: 102px;
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      gap: 8px;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 180ms ease, transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .game-options-modal__language-btn:hover {
+      opacity: 0.82;
+      transform: translateY(-1px);
+    }
+
+    .game-options-modal__language-btn.is-selected {
+      opacity: 1;
+      border-color: rgba(126, 224, 255, 0.66);
+      box-shadow: 0 12px 24px rgba(14, 66, 135, 0.3), inset 0 0 0 1px rgba(200, 243, 255, 0.18);
+      background:
+        radial-gradient(circle at top, rgba(111, 214, 255, 0.24), transparent 60%),
+        linear-gradient(180deg, rgba(12, 35, 73, 0.98), rgba(8, 25, 52, 0.98));
+    }
+
+    .game-options-modal__language-btn:active {
+      transform: scale(0.985);
+    }
+
+    .game-options-modal__language-icon {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.18));
+      pointer-events: none;
+    }
+
+    .game-options-modal__language-label {
+      color: #f8fbff;
+      font: 800 12px/1.1 "Open Sans", Arial, sans-serif;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-align: center;
+      pointer-events: none;
+    }
+
     .medal-transition-modal {
       position: fixed;
       inset: 0;
@@ -11760,20 +11829,21 @@
       const USER_MEDAL_LEVEL_GROUP_SIZE = 10;
       const USER_MEDAL_MAX_LEVEL = USER_MEDAL_COUNT * USER_MEDAL_LEVEL_GROUP_SIZE;
       const FLASHCARD_LANGUAGE_OPTIONS = {
-        english: { label: 'Ingles padrao', speechCode: 'en-US' },
-        portuguese: { label: 'Portugues', speechCode: 'pt-BR' },
-        french: { label: 'Frances', speechCode: 'fr-FR' },
-        mandarin: { label: 'Mandarim', speechCode: 'zh-CN' },
-        spanish: { label: 'Espanhol', speechCode: 'es-ES' },
-        german: { label: 'Alemao', speechCode: 'de-DE' }
+        english: { label: 'Ingles', speechCode: 'en-US', iconPath: '/arquivos-codex/icones/ingles.svg' },
+        spanish: { label: 'Espanhol', speechCode: 'es-ES', iconPath: '/arquivos-codex/icones/espanhol.svg' },
+        french: { label: 'Frances', speechCode: 'fr-FR', iconPath: '/arquivos-codex/icones/frances.svg' },
+        german: { label: 'Alemao', speechCode: 'de-DE', iconPath: '/arquivos-codex/icones/alemao.svg' },
+        portuguese: { label: 'Portugues', speechCode: 'pt-BR', iconPath: '/arquivos-codex/icones/brazil.svg' },
+        mandarin: { label: 'Mandarim', speechCode: 'zh-CN', iconPath: '/arquivos-codex/icones/mandarim.svg' }
       };
+      const TARGET_LANGUAGE_DISPLAY_ORDER = ['english', 'spanish', 'french', 'german', 'portuguese', 'mandarin'];
       const GAME_OPTION_VALUE_MAP = {
         difficulty: ['automatic'],
         speed: ['0.70', '0.80', '0.90', '1.00'],
         accent: ['mix_100_0', 'mix_90_10', 'mix_80_20', 'mix_70_30', 'mix_60_40', 'mix_50_50', 'mix_40_60', 'mix_30_70', 'mix_20_80', 'mix_10_90', 'mix_0_100'],
         fourthStageTyping: ['off', 'on'],
         mode: ['training', 'journey'],
-        targetLanguage: ['english', 'portuguese', 'french', 'mandarin', 'spanish', 'german'],
+        targetLanguage: TARGET_LANGUAGE_DISPLAY_ORDER.slice(),
         nativeLanguage: ['portuguese', 'english', 'french', 'mandarin', 'spanish', 'german']
       };
       const DEFAULT_GAME_OPTIONS = {
@@ -19212,10 +19282,42 @@
         return meta[key] || null;
       }
 
+      function renderTargetLanguageGrid() {
+        const currentValue = normalizeGameOptionValue('targetLanguage', state.options?.targetLanguage);
+        const items = TARGET_LANGUAGE_DISPLAY_ORDER.map((value) => {
+          const meta = FLASHCARD_LANGUAGE_OPTIONS[value] || {};
+          const label = safeText(meta.label || value);
+          const iconPath = safeText(meta.iconPath || '');
+          return `
+            <button
+              class="game-options-modal__language-btn${value === currentValue ? ' is-selected' : ''}"
+              type="button"
+              data-game-option-select="targetLanguage"
+              data-game-option-value="${escapeHtml(value)}"
+              aria-pressed="${value === currentValue ? 'true' : 'false'}"
+              aria-label="Selecionar ${escapeHtml(label)}"
+            >
+              <img class="game-options-modal__language-icon" src="${escapeHtml(iconPath)}" alt="">
+              <span class="game-options-modal__language-label">${escapeHtml(label)}</span>
+            </button>
+          `;
+        }).join('');
+        return `
+          <article class="game-options-modal__item game-options-modal__item--language" data-game-option-key="targetLanguage">
+            <h3 class="game-options-modal__name">${gameOptionIconMarkup('targetLanguage')}Idioma</h3>
+            <p class="game-options-modal__copy">Escolha o idioma alvo do jogo.</p>
+            <div class="game-options-modal__language-grid">${items}</div>
+          </article>
+        `;
+      }
+
       function renderGameOptionsModal() {
         if (!els.gameOptionsModal || !els.gameOptionsDeck) return;
         state.options.difficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
         const cards = currentGameOptionSlides().map((key) => {
+          if (key === 'targetLanguage') {
+            return renderTargetLanguageGrid();
+          }
           const meta = gameOptionMetaForKey(key);
           if (!meta) return '';
           const valueKey = normalizeGameOptionValue(key, state.options[key]);
@@ -20428,6 +20530,23 @@
         state.game.currentLevelPriorityClearQueued = false;
         if (options.refreshHud !== false) {
           updateGameChips();
+        }
+      }
+
+      function setGameOptionValue(optionKey, nextValue) {
+        const slideKey = safeText(optionKey);
+        if (!slideKey) return;
+        const normalizedNextValue = normalizeGameOptionValue(slideKey, nextValue);
+        const currentValue = normalizeGameOptionValue(slideKey, state.options?.[slideKey]);
+        if (!normalizedNextValue || normalizedNextValue === currentValue) return;
+        state.options[slideKey] = normalizedNextValue;
+        persistGameOptions();
+        renderGameOptionsModal();
+        if (slideKey === 'targetLanguage' || slideKey === 'nativeLanguage') {
+          applySelectedLanguageProjectionToAllCards();
+        }
+        if (state.game.active && slideKey === 'fourthStageTyping' && state.game.currentId && state.game.entries.has(state.game.currentId)) {
+          renderCurrentCard();
         }
       }
 
@@ -29040,6 +29159,15 @@
           }
         });
         els.gameOptionsDeck?.addEventListener('click', (event) => {
+          const selectButton = event.target.closest('[data-game-option-select]');
+          if (selectButton) {
+            const optionKey = safeText(selectButton.getAttribute('data-game-option-select'));
+            const nextValue = safeText(selectButton.getAttribute('data-game-option-value'));
+            if (optionKey && nextValue) {
+              setGameOptionValue(optionKey, nextValue);
+            }
+            return;
+          }
           const button = event.target.closest('[data-game-option-nav]');
           if (!button) return;
           const optionKey = safeText(button.getAttribute('data-game-option-nav'));
