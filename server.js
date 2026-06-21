@@ -8864,7 +8864,8 @@ async function buildDefaultFlashcardsSequenceState() {
     const source = `allcards/${fileName}`;
     const title = String(row?.title || '').trim() || fileName;
     const deckLevel = Number.parseInt(row?.deck_level, 10);
-    const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+    const repaired = repairPublicDeckPayloadAssets(row?.payload, row);
+    const payload = repaired?.payload && typeof repaired.payload === 'object' ? repaired.payload : {};
     const items = getFlashcardPayloadItems(payload)
       .map((item, index) => normalizeFlashcardsSequenceCard(source, item, index))
       .filter((item) => item.english || item.portuguese);
@@ -24102,6 +24103,7 @@ app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), as
           const audioValueFr = readFlashcardItemAudioFrench(item);
           const audioValueZh = readFlashcardItemAudioMandarin(item);
           const audioValueEs = readFlashcardItemAudioSpanish(item);
+          const audioValueDe = readFlashcardItemAudioGerman(item);
           return {
             ...item,
             imagem: resolvePublishedLevelAssetUrl(imageValue, assetUrlMap),
@@ -24110,7 +24112,8 @@ app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), as
             audio_pt: resolvePublishedLevelAssetUrl(audioValuePt, assetUrlMap),
             audio_fr: resolvePublishedLevelAssetUrl(audioValueFr, assetUrlMap),
             audio_zh: resolvePublishedLevelAssetUrl(audioValueZh, assetUrlMap),
-            audio_es: resolvePublishedLevelAssetUrl(audioValueEs, assetUrlMap)
+            audio_es: resolvePublishedLevelAssetUrl(audioValueEs, assetUrlMap),
+            audio_de: resolvePublishedLevelAssetUrl(audioValueDe, assetUrlMap)
           };
         })
         .filter((item) => item.imagem && readFlashcardItemPortuguese(item) && readFlashcardItemEnglish(item))
