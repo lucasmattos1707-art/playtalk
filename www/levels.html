@@ -36,6 +36,9 @@
     .asset-sync-check--both{background:rgba(111,203,255,.92);color:#073a69;border-color:rgba(111,203,255,.98)}
     .textbtn--pt{color:#ffd84d}
     .textbtn--en{color:#74b7ff}
+    .textbtn--fr{color:#8ef0c2}
+    .textbtn--zh{color:#ff9ecb}
+    .textbtn--es{color:#ffb36b}
     .icon-delete,.icon-play{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border-color:transparent}
     .icon-delete{background:rgba(255,0,0,.08)}
     .icon-delete svg{width:20px;height:20px;fill:#ff4d4f}
@@ -54,6 +57,10 @@
     }
     .char{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
     .popover{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:20px;z-index:50}.popover-card{width:min(420px,100%);background:#111;border:1px solid rgba(255,255,255,.16);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:14px}
+    .language-actions{display:grid;gap:10px}
+    .language-action{justify-content:flex-start;text-align:left;padding:14px 16px;border-radius:16px;background:linear-gradient(180deg,rgba(20,56,120,.92),rgba(9,26,63,.96));border:1px solid rgba(126,181,255,.35);color:#fff}
+    .language-action strong{display:block;font-size:15px}
+    .language-action span{display:block;margin-top:4px;color:rgba(255,255,255,.72);font-size:12px;line-height:1.4}
     #voicePopover #ttsVoiceSelect{background:#082a66;border-color:#0f3f93;color:#eef5ff}
     #voicePopover #ttsVoiceSelect option{background:#082a66;color:#eef5ff}
     .deck-edit-picker-box{padding:10px;background:linear-gradient(180deg,#0a1f4f,#071538);border-color:rgba(100,157,255,.28)}
@@ -195,7 +202,7 @@
       <button id="voiceModeBtn" class="icon-btn tts-btn" type="button" aria-label="Gerar voz" title="Gerar voz"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/gerar%20eleven%20labs.svg" alt=""></button>
       <button id="aiImageBtn" class="icon-btn ai-image-btn icon-btn--light" type="button" aria-label="Gerar imagens IA" title="Gerar imagens IA"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/Gerar%20imagens%20IA.svg" alt=""></button>
       <button id="translateBtn" class="icon-btn" type="button" aria-label="Traduzir PT para EN" title="Traduzir PT para EN"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/traduzir.svg" alt=""></button>
-      <button id="aiTextBtn" class="icon-btn" type="button" aria-label="Gerar frases IA" title="Gerar frases IA"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/gerar%20texto%20ia.svg" alt=""></button>
+      <button id="aiTextBtn" class="icon-btn" type="button" aria-label="Adicionar idiomas" title="Adicionar idiomas"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/gerar%20texto%20ia.svg" alt=""></button>
       <button id="importJsonBtn" class="icon-btn" type="button" aria-label="Importar JSON" title="Importar JSON"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/importar%20json.svg" alt=""></button>
       <button id="exportBtn" class="icon-btn" type="button" aria-label="Exportar JSON" title="Exportar JSON"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/exportar%20json.svg" alt=""></button>
       <button id="exportZipBtn" class="icon-btn" type="button" aria-label="Exportar ZIP" title="Exportar ZIP"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/exportar%20zip.svg" alt=""></button>
@@ -294,8 +301,12 @@
       <div class="field">
         <label for="ttsVoiceSelect">Voz</label>
         <select id="ttsVoiceSelect">
-          <option value="harry">Harry</option>
+          <option value="portuguese">Portugues (Harry)</option>
+          <option value="harry">Harry (Americano)</option>
           <option value="blonde">Blonde (Britanica)</option>
+          <option value="paul">Paul (Frances)</option>
+          <option value="sami">Sami (Mandarim em Pinyin)</option>
+          <option value="cristina">Cristina (Espanhol)</option>
           <option value="marin">Marin</option>
           <option value="cedar">Cedar</option>
           <option value="alloy">Alloy</option>
@@ -339,15 +350,14 @@
   </div>
   <div id="textPopover" class="popover hidden" aria-hidden="true">
     <div class="popover-card" role="dialog" aria-modal="true">
-      <div><div class="mini" id="textPopoverEyebrow">FlashCard com IA</div><h2 id="textPopoverHeading" style="margin:6px 0 0">Gerar frases PT + EN</h2></div>
+      <div><div class="mini" id="textPopoverEyebrow">FlashCard com IA</div><h2 id="textPopoverHeading" style="margin:6px 0 0">Adicionar idiomas</h2></div>
       <div id="flashcardTextFields">
-        <div class="field"><label for="textTopicInput">Tipo de frases / contexto</label><textarea id="textTopicInput" rows="4" placeholder="Ex.: rotina de casa no present simple, frases curtas e naturais para criancas."></textarea></div>
-        <div class="row">
-          <div class="field"><label for="textMinCharsInput">Min caracteres</label><input id="textMinCharsInput" type="number" min="1" max="300" value="12"></div>
-          <div class="field"><label for="textMaxCharsInput">Max caracteres</label><input id="textMaxCharsInput" type="number" min="1" max="300" value="36"></div>
-          <div class="field"><label for="textCountInput">Qtd frases</label><input id="textCountInput" type="number" min="1" max="60" value="8"></div>
+        <div class="language-actions">
+          <button id="addFrenchBtn" class="language-action" type="button"><strong>Adicionar Frances</strong><span>Cria a traducao em frances para os cards selecionados ou para o deck atual.</span></button>
+          <button id="addMandarinBtn" class="language-action" type="button"><strong>Adicionar Mandarim</strong><span>Cria o mandarim em Pinyin com tons para os cards selecionados ou para o deck atual.</span></button>
+          <button id="addSpanishBtn" class="language-action" type="button"><strong>Adicionar Espanhol</strong><span>Cria a traducao em espanhol para os cards selecionados ou para o deck atual.</span></button>
         </div>
-        <div class="mini">Cada item gerado vai preencher os campos Portugues e English dos cards FlashCard.</div>
+        <div class="mini" id="flashcardLanguageHint">As traducoes usam o Portugues como base sem perder o sentido original do English.</div>
       </div>
       <div id="movieTextFields" class="hidden">
         <div class="field"><label for="movieStoryTopicInput">Filme / contexto</label><textarea id="movieStoryTopicInput" rows="4" placeholder="Ex.: passeio em Paris, misterio em um trem, encontro em familia, viagem leve e emocionante."></textarea></div>
@@ -491,7 +501,7 @@
       ];
       const SCENE_CHARACTER_MAP=new Map(SCENE_CHARACTERS.map(char=>[char.id,char]));
       const DATA_MANIFEST_REMOTE_PATH='/api/flashcards/manifest';
-      const $=id=>document.getElementById(id),state={mode:'flashcard',day:'1',title:'',levelKey:'',coverFile:'',coverDataUrl:'',soundFile:'',soundDataUrl:'',flashcardCoverUrl:'',items:[],chars:[],paste:false,testOnline:false,voiceMode:false,imageAiHint:'',sceneCharactersOpen:false,publicDeckFileName:'',publicDeckPath:'',publicDeckSource:'',ttsVoice:'harry',duoaccentBritishPreview:false};
+      const $=id=>document.getElementById(id),state={mode:'flashcard',day:'1',title:'',levelKey:'',coverFile:'',coverDataUrl:'',soundFile:'',soundDataUrl:'',flashcardCoverUrl:'',items:[],chars:[],paste:false,testOnline:false,voiceMode:false,imageAiHint:'',sceneCharactersOpen:false,publicDeckFileName:'',publicDeckPath:'',publicDeckSource:'',ttsVoice:'harry',duoaccentBritishPreview:false,flashcardTextView:'pt'};
       const sceneStoryDraft={selectedIds:[],shares:{},topic:'',lineCount:8};
       const movieStoryDraft={topic:'',itemCount:8};
       const ADMIN_USERNAMES=new Set(['admin','adm','adminst']);
@@ -509,7 +519,7 @@
       const flashcardAssetSyncState=new WeakMap();
       let selectionAnchorKey='';
       const FLASHCARD_ASSET_SYNC_FEEDBACK_MS=10000;
-      const defaultItem=()=>({imageFile:'',imageDataUrl:'',imageRemoteUrl:'',imageVersion:0,imageMuted:false,imageRestoreFx:false,pt:'',en:'',imagePrompt:'',category:'flashcard',tense:'present-simple',sentenceForm:'affirmative',audioFile:'',audioDataUrl:'',audioRemoteUrl:'',audioBlondeFile:'',audioBlondeDataUrl:'',audioBlondeRemoteUrl:'',audioPtFile:'',audioPtDataUrl:'',audioEnFile:'',audioEnDataUrl:'',characterId:''});
+      const defaultItem=()=>({imageFile:'',imageDataUrl:'',imageRemoteUrl:'',imageVersion:0,imageMuted:false,imageRestoreFx:false,pt:'',en:'',fr:'',zh:'',es:'',imagePrompt:'',category:'flashcard',tense:'present-simple',sentenceForm:'affirmative',audioFile:'',audioDataUrl:'',audioRemoteUrl:'',audioBlondeFile:'',audioBlondeDataUrl:'',audioBlondeRemoteUrl:'',audioPtFile:'',audioPtDataUrl:'',audioPtRemoteUrl:'',audioEnFile:'',audioEnDataUrl:'',audioFrFile:'',audioFrDataUrl:'',audioFrRemoteUrl:'',audioZhFile:'',audioZhDataUrl:'',audioZhRemoteUrl:'',audioEsFile:'',audioEsDataUrl:'',audioEsRemoteUrl:'',characterId:''});
       const defaultChar=input=>{const normalizedKey=String(input||'').trim().toLowerCase()==='jessa'?'jessica':String(input||'').trim().toLowerCase();const base=typeof input==='number'?SCENE_CHARACTERS[input]||SCENE_CHARACTERS[0]:SCENE_CHARACTER_MAP.get(normalizedKey)||SCENE_CHARACTERS[0];return{id:base.id,name:base.name,voiceId:base.voiceId,defaultImageFile:base.defaultImageFile,imageFile:'',imageDataUrl:''}};
       const normalizeDayKey=value=>String(value??'').trim();
       const sanitizeDayKey=value=>{
@@ -532,9 +542,22 @@
         if(window.PlaytalkApi&&typeof window.PlaytalkApi.url==='function')return window.PlaytalkApi.url(path);
         return path;
       }
-      function normalizeTtsVoice(value){const normalized=String(value||'').trim().toLowerCase();if(normalized==='harry'||normalized==='blonde')return normalized;return OPENAI_NARRATION_VOICES.includes(normalized)?normalized:'harry'}
-      function voiceProvider(value){const normalized=normalizeTtsVoice(value);return normalized==='harry'||normalized==='blonde'?'elevenlabs':'openai'}
-      function ttsVoiceLabel(value){const normalized=normalizeTtsVoice(value);const pretty=normalized.charAt(0).toUpperCase()+normalized.slice(1);return voiceProvider(normalized)==='elevenlabs'?`ElevenLabs - ${pretty}`:`OpenAI - ${pretty}`}
+      const FLASHCARD_LANGUAGE_ORDER=['pt','en','fr','zh','es'];
+      const FLASHCARD_LANGUAGE_META={
+        pt:{title:'Portugues',className:'textbtn--pt',audioField:'audioPt',jsonTextKey:'nomePortugues',jsonAudioKey:'audio_pt'},
+        en:{title:'English',className:'textbtn--en',audioField:'audio',jsonTextKey:'nomeIngles',jsonAudioKey:'audio'},
+        fr:{title:'Frances',className:'textbtn--fr',audioField:'audioFr',jsonTextKey:'nomeFrances',jsonAudioKey:'audio_fr'},
+        zh:{title:'Mandarim',className:'textbtn--zh',audioField:'audioZh',jsonTextKey:'nomeMandarim',jsonAudioKey:'audio_zh'},
+        es:{title:'Espanhol',className:'textbtn--es',audioField:'audioEs',jsonTextKey:'nomeEspanhol',jsonAudioKey:'audio_es'}
+      };
+      const MULTI_LANGUAGE_TARGETS={
+        french:{key:'fr',label:'Frances',responseKey:'fr'},
+        mandarin:{key:'zh',label:'Mandarim',responseKey:'zh'},
+        spanish:{key:'es',label:'Espanhol',responseKey:'es'}
+      };
+      function normalizeTtsVoice(value){const normalized=String(value||'').trim().toLowerCase();if(['portuguese','harry','blonde','paul','sami','cristina'].includes(normalized))return normalized;return OPENAI_NARRATION_VOICES.includes(normalized)?normalized:'harry'}
+      function voiceProvider(value){const normalized=normalizeTtsVoice(value);return ['portuguese','harry','blonde','paul','sami','cristina'].includes(normalized)?'elevenlabs':'openai'}
+      function ttsVoiceLabel(value){const normalized=normalizeTtsVoice(value);const labels={portuguese:'Portugues (Harry)',harry:'Harry (Americano)',blonde:'Blonde (Britanica)',paul:'Paul (Frances)',sami:'Sami (Mandarim)',cristina:'Cristina (Espanhol)'};const pretty=labels[normalized]||`${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}`;return voiceProvider(normalized)==='elevenlabs'?`ElevenLabs - ${pretty}`:`OpenAI - ${pretty}`}
       function withNoCacheUrl(value){
         const text=safeText(value);
         if(!text)return '';
@@ -581,7 +604,7 @@
         const items=Array.isArray(data?.items)?data.items:[];
         for(let index=0;index<items.length;index+=1){
           const entry=items[index]||{};
-          probeValues.push(entry?.imagem,entry?.audio,entry?.audio2,entry?.image,entry?.audioUrl,entry?.audioUrl2,entry?.audioBritish,entry?.audioBlonde);
+          probeValues.push(entry?.imagem,entry?.audio,entry?.audio2,entry?.audio_pt,entry?.audio_fr,entry?.audio_zh,entry?.audio_es,entry?.image,entry?.audioUrl,entry?.audioUrl2,entry?.audioBritish,entry?.audioBlonde);
         }
         for(const value of probeValues){
           const parsed=parseCloudAssetInfo(value);
@@ -590,6 +613,7 @@
         return '';
       }
       const readDeckEntrySecondaryAudio=entry=>String(entry?.audio2||entry?.audioUrl2||entry?.audioBritish||entry?.audio_blonde||entry?.audioBlonde||'').trim();
+      const readDeckEntryLanguageAudio=(entry,key)=>String(entry?.[FLASHCARD_LANGUAGE_META[key]?.jsonAudioKey||'']||'').trim();
       function flashcardEditorItemFromDeckEntry(entry){
         const secondaryAudio=readDeckEntrySecondaryAudio(entry);
         return normalizeImportedItem({
@@ -605,6 +629,21 @@
           audioBlondeFile:importedFileName(secondaryAudio),
           audioBlondeRemoteUrl:secondaryAudio,
           audioBlondeDataUrl:'',
+          fr:entry?.nomeFrances||entry?.french||entry?.fr||'',
+          zh:entry?.nomeMandarim||entry?.mandarin||entry?.zh||'',
+          es:entry?.nomeEspanhol||entry?.spanish||entry?.es||'',
+          audioPtFile:importedFileName(readDeckEntryLanguageAudio(entry,'pt')),
+          audioPtRemoteUrl:readDeckEntryLanguageAudio(entry,'pt'),
+          audioPtDataUrl:'',
+          audioFrFile:importedFileName(readDeckEntryLanguageAudio(entry,'fr')),
+          audioFrRemoteUrl:readDeckEntryLanguageAudio(entry,'fr'),
+          audioFrDataUrl:'',
+          audioZhFile:importedFileName(readDeckEntryLanguageAudio(entry,'zh')),
+          audioZhRemoteUrl:readDeckEntryLanguageAudio(entry,'zh'),
+          audioZhDataUrl:'',
+          audioEsFile:importedFileName(readDeckEntryLanguageAudio(entry,'es')),
+          audioEsRemoteUrl:readDeckEntryLanguageAudio(entry,'es'),
+          audioEsDataUrl:'',
           tense:entry?.tense||'present-simple',
           sentenceForm:entry?.sentenceForm||'affirmative'
         });
@@ -615,11 +654,22 @@
         const nextImage=item?.imageRemoteUrl||((item?.imageFile||item?.imageDataUrl)?cloud(resolvedDay,PHASE.flashcard,item?.imageFile,'flashcard'):'');
         const nextAudio=item?.audioRemoteUrl||((item?.audioFile||item?.audioDataUrl)?cloud(resolvedDay,PHASE.flashcard,item?.audioFile,'flashcard'):'');
         const nextAudio2=item?.audioBlondeRemoteUrl||((item?.audioBlondeFile||item?.audioBlondeDataUrl)?cloud(resolvedDay,PHASE.flashcard,item?.audioBlondeFile,'flashcard'):'');
+        const nextAudioPt=item?.audioPtRemoteUrl||((item?.audioPtFile||item?.audioPtDataUrl)?cloud(resolvedDay,PHASE.flashcard,item?.audioPtFile,'flashcard'):'');
+        const nextAudioFr=item?.audioFrRemoteUrl||((item?.audioFrFile||item?.audioFrDataUrl)?cloud(resolvedDay,PHASE.flashcard,item?.audioFrFile,'flashcard'):'');
+        const nextAudioZh=item?.audioZhRemoteUrl||((item?.audioZhFile||item?.audioZhDataUrl)?cloud(resolvedDay,PHASE.flashcard,item?.audioZhFile,'flashcard'):'');
+        const nextAudioEs=item?.audioEsRemoteUrl||((item?.audioEsFile||item?.audioEsDataUrl)?cloud(resolvedDay,PHASE.flashcard,item?.audioEsFile,'flashcard'):'');
         deckEntry.imagem=String(nextImage||'').trim();
         deckEntry.audio=String(nextAudio||'').trim();
         deckEntry.audio2=String(nextAudio2||'').trim();
+        deckEntry.audio_pt=String(nextAudioPt||'').trim();
+        deckEntry.audio_fr=String(nextAudioFr||'').trim();
+        deckEntry.audio_zh=String(nextAudioZh||'').trim();
+        deckEntry.audio_es=String(nextAudioEs||'').trim();
         deckEntry.nomePortugues=String(item?.pt||'').trim();
         deckEntry.nomeIngles=String(item?.en||'').trim();
+        deckEntry.nomeFrances=String(item?.fr||'').trim();
+        deckEntry.nomeMandarim=String(item?.zh||'').trim();
+        deckEntry.nomeEspanhol=String(item?.es||'').trim();
         deckEntry.categoria=String(item?.category||'flashcard').trim()||'flashcard';
         deckEntry.tense=String(item?.tense||'present-simple').trim()||'present-simple';
         deckEntry.sentenceForm=String(item?.sentenceForm||'affirmative').trim()||'affirmative';
@@ -897,7 +947,7 @@
       function ensureChars(){state.chars=normalizeSceneChars(state.chars)}
       function getSceneCharacter(characterId){return SCENE_CHARACTER_MAP.get(String(characterId||'').trim().toLowerCase())||null}
       function getItemVoiceId(item){if(state.mode!=='scenes')return'';const character=getSceneCharacter(item?.characterId);return character?.voiceId||''}
-      function languageCodeForKind(kind){return kind==='pt'?'pt':kind==='en'?'en':''}
+      function languageCodeForKind(kind){return kind==='pt'?'pt':kind==='en'?'en':kind==='fr'?'fr':kind==='zh'?'zh':kind==='es'?'es':''}
       function defaultSceneCharacterImageUrl(characterId){const character=getSceneCharacter(characterId);return character?.defaultImageFile?`${DEFAULT_SCENE_CHARACTER_IMAGE_ROOT}/${character.defaultImageFile}`:''}
       function sceneCharacterImageUrl(char){if(!char)return'';if(char.imageDataUrl)return char.imageDataUrl;if(char.imageFile)return remoteOrLocal(cloud(state.day,PHASE.scenes,char.imageFile,'scenes'),char.imageDataUrl);return defaultSceneCharacterImageUrl(char.id)}
       const itemStem=index=>`flashcard-item-${pad(index+1)}`;
@@ -942,6 +992,22 @@
             if(item?.audioBlondeFile||item?.audioBlondeDataUrl){
               if(item?.audioBlondeDataUrl)item.audioBlondeFile=safeFile(`${flashcardAssetStem(itemIndex)}b`,assetExt(item.audioBlondeFile,item.audioBlondeDataUrl,'mp3'),`${itemStem(itemIndex)}b`);
               else item.audioBlondeFile=fileNameOnly(item.audioBlondeFile);
+            }
+            if(item?.audioPtFile||item?.audioPtDataUrl){
+              if(item?.audioPtDataUrl)item.audioPtFile=safeFile(`${flashcardAssetStem(itemIndex)}-pt`,assetExt(item.audioPtFile,item.audioPtDataUrl,'mp3'),`${itemStem(itemIndex)}-pt`);
+              else item.audioPtFile=fileNameOnly(item.audioPtFile);
+            }
+            if(item?.audioFrFile||item?.audioFrDataUrl){
+              if(item?.audioFrDataUrl)item.audioFrFile=safeFile(`${flashcardAssetStem(itemIndex)}-fr`,assetExt(item.audioFrFile,item.audioFrDataUrl,'mp3'),`${itemStem(itemIndex)}-fr`);
+              else item.audioFrFile=fileNameOnly(item.audioFrFile);
+            }
+            if(item?.audioZhFile||item?.audioZhDataUrl){
+              if(item?.audioZhDataUrl)item.audioZhFile=safeFile(`${flashcardAssetStem(itemIndex)}-zh`,assetExt(item.audioZhFile,item.audioZhDataUrl,'mp3'),`${itemStem(itemIndex)}-zh`);
+              else item.audioZhFile=fileNameOnly(item.audioZhFile);
+            }
+            if(item?.audioEsFile||item?.audioEsDataUrl){
+              if(item?.audioEsDataUrl)item.audioEsFile=safeFile(`${flashcardAssetStem(itemIndex)}-es`,assetExt(item.audioEsFile,item.audioEsDataUrl,'mp3'),`${itemStem(itemIndex)}-es`);
+              else item.audioEsFile=fileNameOnly(item.audioEsFile);
             }
           });
           return;
@@ -1002,7 +1068,7 @@
         try{localStorage.removeItem(EDIT_DECK_LEVEL_STORE)}catch{}
         resetPersistedEditDeckLevel();
       }
-      const load=()=>{try{const parsed=JSON.parse(localStorage.getItem(STORE)||'null');if(!parsed)return;Object.assign(state,parsed);state.mode='flashcard';state.voiceMode=false;state.day=sanitizeDayKey(state.day);state.items=Array.isArray(state.items)?state.items.map(i=>({...defaultItem(),...i})):[];state.chars=normalizeSceneChars(Array.isArray(state.chars)?state.chars:[])}catch{}state.mode='flashcard';state.voiceMode=false};
+      const load=()=>{try{const parsed=JSON.parse(localStorage.getItem(STORE)||'null');if(!parsed)return;Object.assign(state,parsed);state.mode='flashcard';state.voiceMode=false;state.day=sanitizeDayKey(state.day);state.flashcardTextView=FLASHCARD_LANGUAGE_ORDER.includes(parsed?.flashcardTextView)?parsed.flashcardTextView:'pt';state.items=Array.isArray(state.items)?state.items.map(i=>({...defaultItem(),...i})):[];state.chars=normalizeSceneChars(Array.isArray(state.chars)?state.chars:[])}catch{}state.mode='flashcard';state.voiceMode=false;state.flashcardTextView=FLASHCARD_LANGUAGE_ORDER.includes(state.flashcardTextView)?state.flashcardTextView:'pt'};
       const stopAudio=()=>{if(!currentAudio)return;currentAudio.audio.pause();currentAudio.audio.currentTime=0;currentAudio.button.classList.remove('has');currentAudio=null};
       const play=(src,btn)=>{if(!src)return;stopAudio();const audio=new Audio(src);currentAudio={audio,button:btn};btn.classList.add('has');audio.addEventListener('ended',stopAudio);audio.addEventListener('error',stopAudio);audio.play().catch(stopAudio)};
       function playUiCue(src){
@@ -1011,8 +1077,18 @@
           cue.play().catch(()=>{});
         }catch{}
       }
-      const audioSrc=(item,kind)=>kind==='single'?(item.audioDataUrl||item.audioRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioFile,'flashcard')):kind==='pt'?(item.audioPtDataUrl||cloud(state.day,phase(),item.audioPtFile,state.mode)):(item.audioEnDataUrl||cloud(state.day,phase(),item.audioEnFile,state.mode));
+      const audioSrc=(item,kind)=>kind==='single'?(item.audioDataUrl||item.audioRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioFile,'flashcard')):kind==='pt'?(item.audioPtDataUrl||item.audioPtRemoteUrl||cloud(state.day,phase(),item.audioPtFile,state.mode)):kind==='fr'?(item.audioFrDataUrl||item.audioFrRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioFrFile,'flashcard')):kind==='zh'?(item.audioZhDataUrl||item.audioZhRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioZhFile,'flashcard')):kind==='es'?(item.audioEsDataUrl||item.audioEsRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioEsFile,'flashcard')):(item.audioEnDataUrl||cloud(state.day,phase(),item.audioEnFile,state.mode));
       const audioSrcBlonde=item=>item?.audioBlondeDataUrl||item?.audioBlondeRemoteUrl||cloud(state.day,PHASE.flashcard,item?.audioBlondeFile,'flashcard');
+      function activeFlashcardLanguage(){return FLASHCARD_LANGUAGE_ORDER.includes(state.flashcardTextView)?state.flashcardTextView:'pt'}
+      function itemTextForLanguage(item,key){if(key==='pt')return String(item?.pt||'').trim();if(key==='en')return String(item?.en||'').trim();if(key==='fr')return String(item?.fr||'').trim();if(key==='zh')return String(item?.zh||'').trim();if(key==='es')return String(item?.es||'').trim();return''}
+      function itemAudioForLanguage(item,key){
+        if(key==='pt')return audioSrc(item,'pt');
+        if(key==='en')return state.duoaccentBritishPreview?(audioSrcBlonde(item)||audioSrc(item,'single')):audioSrc(item,'single');
+        if(key==='fr')return audioSrc(item,'fr');
+        if(key==='zh')return audioSrc(item,'zh');
+        if(key==='es')return audioSrc(item,'es');
+        return '';
+      }
       const preferredSingleAudioSrc=item=>{
         if(state.duoaccentBritishPreview){
           const british=audioSrcBlonde(item);
@@ -1020,10 +1096,10 @@
         }
         return audioSrc(item,'single');
       };
-      const hasGeneratedAudio=(item,kind)=>kind==='single'?Boolean(item?.audioFile||item?.audioDataUrl):kind==='pt'?Boolean(item?.audioPtFile||item?.audioPtDataUrl):Boolean(item?.audioEnFile||item?.audioEnDataUrl);
+      const hasGeneratedAudio=(item,kind)=>kind==='single'?Boolean(item?.audioFile||item?.audioDataUrl||item?.audioRemoteUrl):kind==='pt'?Boolean(item?.audioPtFile||item?.audioPtDataUrl||item?.audioPtRemoteUrl):kind==='fr'?Boolean(item?.audioFrFile||item?.audioFrDataUrl||item?.audioFrRemoteUrl):kind==='zh'?Boolean(item?.audioZhFile||item?.audioZhDataUrl||item?.audioZhRemoteUrl):kind==='es'?Boolean(item?.audioEsFile||item?.audioEsDataUrl||item?.audioEsRemoteUrl):Boolean(item?.audioEnFile||item?.audioEnDataUrl);
       const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
       const watchTrackUrl=fileName=>`${BALANCE_TRACK_ROOT}/${encodeURIComponent(fileName)}`;
-      const preferredItemAudioSrc=item=>state.mode==='flashcard'?preferredSingleAudioSrc(item):(audioSrc(item,'en')||audioSrc(item,'pt'));
+      const preferredItemAudioSrc=item=>state.mode==='flashcard'?(itemAudioForLanguage(item,activeFlashcardLanguage())||preferredSingleAudioSrc(item)):(audioSrc(item,'en')||audioSrc(item,'pt'));
       const remoteOrLocal=(remote,local)=>state.testOnline?(remote||''):(local||remote||'');
       const itemImg=item=>remoteOrLocal(withAssetVersion(item.imageRemoteUrl||cloud(state.day,phase(),item.imageFile,state.mode),item.imageVersion),item.imageDataUrl),charImg=char=>sceneCharacterImageUrl(char),coverImg=()=>state.mode==='flashcard'?flashcardCoverPreview():remoteOrLocal(cloud(state.day,phase(),state.coverFile,state.mode),state.coverDataUrl);
       const asDataUrl=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)}),asText=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsText(file)});
@@ -1797,8 +1873,8 @@
       async function playWatchVoice(session,item,rate){if(!isWatchSessionActive(session))return false;stopWatchVoice();return new Promise(resolve=>{const audio=new Audio(item.audio);watchVoiceAudio=audio;audio.preload='auto';audio.playsInline=true;audio.playbackRate=rate;audio.defaultPlaybackRate=rate;audio.volume=1;const finish=()=>{audio.onended=null;audio.onerror=null;if(watchVoiceAudio===audio)watchVoiceAudio=null;resolve(isWatchSessionActive(session))};audio.onended=finish;audio.onerror=finish;audio.play().catch(error=>{console.error('Erro ao tocar audio do flashcard',error);finish()})})}
       async function playWatchSequence(session,item){renderWatchCard(item,watchEnglishOnly?'English em 1.00x':'Português em 0.75x');updateWatchMediaSession(item);startWatchMusic(session);if(watchEnglishOnly){$('watchCardPt').style.visibility='hidden';$('watchCardEn').style.visibility='visible';if(item.audio){const englishOnlyPass=await playWatchVoice(session,item,1);if(!englishOnlyPass)return false}const waitEnglish=await waitForWatch(session,3000,'Proximo flashcard...');$('watchCardEn').style.visibility='visible';$('watchCardPt').style.visibility='hidden';return waitEnglish}$('watchCardEn').style.visibility='hidden';$('watchCardPt').style.visibility='visible';if(item.audio){const firstPass=await playWatchVoice(session,item,.75);if(!firstPass)return false}const pauseBetween=await waitForWatch(session,1000,'English em 1 segundo...');if(!pauseBetween)return false;$('watchCardPt').style.visibility='hidden';$('watchCardEn').style.visibility='visible';renderWatchCard(item,'English em 1.00x');if(item.audio){const secondPass=await playWatchVoice(session,item,1);if(!secondPass)return false}const waitNext=await waitForWatch(session,3000,'Proximo flashcard...');$('watchCardEn').style.visibility='hidden';$('watchCardPt').style.visibility='visible';return waitNext}
       async function startWatchPlayback(options={}){const settings={gapMs:3000,scope:(options.scope||$('watchScopeSelect').value)==='all'?'all':'mine',music:$('watchMusicSelect').value==='on'?'on':'off'};saveWatchSettings(settings);const prefs=loadWatchViewPrefs();watchTextColor=prefs.textColor||'';watchEnglishOnly=Boolean(prefs.englishOnly);closeWatchPopover();showWatchView();renderWatchCard({pt:'Carregando...',en:'Loading...',deckTitle:'Fluent LevelUp',sourceLabel:settings.scope==='all'?'Todos os flashcards':'Meus flashcards'},'');let items=[];try{items=settings.scope==='all'?await loadAllWatchItems():currentDeckWatchItems()}catch(error){hideWatchView();alert(error.message||'Erro ao preparar os flashcards para reproducao.');return}if(!items.length){hideWatchView();alert(settings.scope==='all'?'Nenhum flashcard com audio foi encontrado na biblioteca.':'Seu deck atual precisa ter flashcards com audio para assistir.');return}const session={id:`watch-${Date.now()}-${Math.random()}`,running:true,items,gapMs:3000,musicEnabled:settings.music==='on',musicQueue:[],currentIndex:-1,controlMode:'none',imageTransform:prefs.imageTransform||{x:0,y:0,scale:1},textTransform:prefs.textTransform||{x:0,y:0,scale:1}};watchRuntime=session;updateWatchTransforms();try{while(isWatchSessionActive(session)){const item=nextWatchItem(session);if(!item)break;const keepGoing=await playWatchSequence(session,item);if(!keepGoing)break}}catch(error){console.error('Erro no modo assistir flashcards',error);if(isWatchSessionActive(session))alert(error.message||'Erro ao assistir flashcards.')}finally{if(isWatchSessionActive(session))stopWatchPlayback()}}
-      function syncAiTextButton(){const supportedMode=state.mode==='flashcard'||state.mode==='scenes'||state.mode==='movies';$('aiTextBtn').classList.toggle('hidden',!supportedMode);setButtonLabel('aiTextBtn',aiTextStatusLabel());$('aiTextBtn').disabled=!supportedMode||aiTextBusy;setButtonLabel('translateBtn',aiTextBusy?'Traduzindo...':'Traduzir PT para EN');$('translateBtn').disabled=aiTextBusy||!state.items.some(item=>String(item?.pt||'').trim()&&!String(item?.en||'').trim())}
-      function openTextPopover(){const sceneMode=state.mode==='scenes',movieMode=state.mode==='movies';$('textPopoverEyebrow').textContent=sceneMode?'Historia com IA':movieMode?'Filme com IA':'FlashCard com IA';$('textPopoverHeading').textContent=sceneMode?'Criar historia para Cenas':movieMode?'Criar sequencia para Filmes':'Gerar frases PT + EN';$('flashcardTextFields').classList.toggle('hidden',sceneMode||movieMode);$('movieTextFields').classList.toggle('hidden',!movieMode);$('sceneTextFields').classList.toggle('hidden',!sceneMode);if(sceneMode)renderSceneStoryEditor();if(movieMode){$('movieStoryTopicInput').value=movieStoryDraft.topic||'';$('movieStoryCountInput').value=movieStoryDraft.itemCount||8}$('textPopover').classList.remove('hidden');$('textPopover').setAttribute('aria-hidden','false')}
+      function syncAiTextButton(){const supportedMode=state.mode==='flashcard'||state.mode==='scenes'||state.mode==='movies';$('aiTextBtn').classList.toggle('hidden',!supportedMode);setButtonLabel('aiTextBtn',state.mode==='flashcard'?'Adicionar idiomas':aiTextStatusLabel());$('aiTextBtn').disabled=!supportedMode||aiTextBusy;setButtonLabel('translateBtn',aiTextBusy?'Traduzindo...':'Traduzir PT para EN');$('translateBtn').disabled=aiTextBusy||!state.items.some(item=>String(item?.pt||'').trim()&&!String(item?.en||'').trim())}
+      function openTextPopover(){const sceneMode=state.mode==='scenes',movieMode=state.mode==='movies',flashcardMode=state.mode==='flashcard';$('textPopoverEyebrow').textContent=sceneMode?'Historia com IA':movieMode?'Filme com IA':'Idiomas com IA';$('textPopoverHeading').textContent=sceneMode?'Criar historia para Cenas':movieMode?'Criar sequencia para Filmes':'Adicionar idiomas';$('flashcardTextFields').classList.toggle('hidden',!flashcardMode);$('movieTextFields').classList.toggle('hidden',!movieMode);$('sceneTextFields').classList.toggle('hidden',!sceneMode);$('textGenerateBtn').classList.toggle('hidden',flashcardMode);if(sceneMode)renderSceneStoryEditor();if(movieMode){$('movieStoryTopicInput').value=movieStoryDraft.topic||'';$('movieStoryCountInput').value=movieStoryDraft.itemCount||8}$('textPopover').classList.remove('hidden');$('textPopover').setAttribute('aria-hidden','false')}
       function sceneStorySelectedIds(){return SCENE_CHARACTERS.filter(char=>sceneStoryDraft.selectedIds.includes(char.id)).map(char=>char.id).slice(0,4)}
       function sceneCharacterIdFromShortcut(line){const match=String(line||'').trim().match(/^#\s*(\d+)\b/i);if(!match)return'';const index=Number.parseInt(match[1],10)-1;return SCENE_CHARACTERS[index]?.id||''}
       function normalizeSceneStoryShares(preferredId=''){const selectedIds=sceneStorySelectedIds();if(!selectedIds.length)return;const current={};selectedIds.forEach(id=>{current[id]=Math.max(0,Math.min(100,Number(sceneStoryDraft.shares?.[id]||0)))});if(selectedIds.length===1){sceneStoryDraft.shares={[selectedIds[0]]:100};return}let lockedId=preferredId&&selectedIds.includes(preferredId)?preferredId:'';let lockedValue=lockedId?Math.max(0,Math.min(100,current[lockedId])):0;if(lockedId)lockedValue=Math.min(100-(selectedIds.length-1),lockedValue);const remainder=100-(lockedId?lockedValue:0);const targets=selectedIds.filter(id=>id!==lockedId);let remaining=remainder;const nextShares={};if(lockedId)nextShares[lockedId]=lockedValue;targets.forEach((id,index)=>{const slotsLeft=targets.length-index;const value=index===targets.length-1?remaining:Math.round(remaining/slotsLeft);nextShares[id]=value;remaining-=value});sceneStoryDraft.shares=nextShares}
@@ -1813,6 +1889,57 @@
       function applyGeneratedFlashcards(items){const normalized=normalizeAiFlashcardItems(items);if(!normalized.length)return 0;const emptyIndexes=[];state.items.forEach((item,index)=>{if(!(item.pt||item.en))emptyIndexes.push(index)});while(emptyIndexes.length<normalized.length){addItem();emptyIndexes.push(state.items.length-1)}normalized.forEach((entry,listIndex)=>{const item=state.items[emptyIndexes[listIndex]];if(!item)return;item.pt=entry.pt;item.en=entry.en;item.category=item.category||'flashcard'});queuePersistCurrentEditorDeck();save();renderAll();return normalized.length}
       async function translatePortugueseBatch(items){const response=await fetch('/api/text/openai/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});let payload=null;try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao traduzir textos.');const translations=Array.isArray(payload?.items)?payload.items.map(item=>({index:Number.parseInt(item?.index,10),en:String(item?.en||'').trim()})).filter(item=>Number.isInteger(item.index)&&item.en):[];if(!translations.length)throw new Error('A OpenAI nao retornou traducoes validas.');return translations}
       function applyTranslations(items){let applied=0;(items||[]).forEach(entry=>{const item=state.items[entry.index];if(!item)return;if(!String(item.pt||'').trim())return;if(String(item.en||'').trim())return;item.en=String(entry.en||'').trim();if(item.en)applied+=1});if(applied)queuePersistCurrentEditorDeck();save();renderAll();return applied}
+      function languageTargetsForAi(){
+        const selected=selectedEntriesInView().filter(entry=>entry?.item&&String(entry?.item?.pt||'').trim());
+        if(selected.length)return selected.map(entry=>({entry,index:Number(entry.itemIndex),item:entry.item,source:entry.source}));
+        return state.items.map((item,index)=>({entry:null,index,item,source:'editor'})).filter(target=>String(target?.item?.pt||'').trim());
+      }
+      async function translateFlashcardLanguageBatch(targetLanguage,targets){
+        const config=MULTI_LANGUAGE_TARGETS[targetLanguage];
+        if(!config)throw new Error('Idioma invalido para traducao.');
+        const normalizedTargets=(targets||[]).map(target=>({target,index:Number(target?.index),pt:String(target?.item?.pt||'').trim(),existingText:itemTextForLanguage(target?.item,config.key)})).filter(target=>Number.isInteger(target.index)&&target.pt&&!target.existingText);
+        if(!normalizedTargets.length)throw new Error(`Nao ha campos em Portugues aguardando ${config.label}.`);
+        const response=await fetch('/api/text/openai/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetLanguage,items:normalizedTargets.map(target=>({index:target.index,pt:target.pt,existingText:target.existingText}))})});
+        let payload=null;try{payload=await response.json()}catch{}
+        if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||`Erro ao traduzir para ${config.label}.`);
+        const items=Array.isArray(payload?.items)?payload.items.map(item=>({index:Number.parseInt(item?.index,10),text:String(item?.[config.responseKey]||'').trim()})).filter(item=>Number.isInteger(item.index)&&item.text):[];
+        if(!items.length)throw new Error(`A OpenAI nao retornou traducoes validas para ${config.label}.`);
+        return items;
+      }
+      function applyLanguageTranslations(targetLanguage,translations){
+        const config=MULTI_LANGUAGE_TARGETS[targetLanguage];
+        if(!config)return 0;
+        let applied=0;
+        (translations||[]).forEach(entry=>{
+          const item=state.items[entry.index];
+          if(!item||!String(item.pt||'').trim()||itemTextForLanguage(item,config.key))return;
+          item[config.key]=String(entry.text||'').trim();
+          if(item[config.key])applied+=1;
+        });
+        if(applied)queuePersistCurrentEditorDeck();
+        save();
+        renderAll();
+        return applied;
+      }
+      async function addLanguageToFlashcards(targetLanguage){
+        const config=MULTI_LANGUAGE_TARGETS[targetLanguage];
+        if(!config)throw new Error('Idioma invalido.');
+        const targets=languageTargetsForAi();
+        if(!targets.length)throw new Error('Selecione ou preencha flashcards com Portugues antes de adicionar idiomas.');
+        aiTextBusy=true;
+        renderAll();
+        try{
+          const translations=await translateFlashcardLanguageBatch(targetLanguage,targets);
+          const applied=applyLanguageTranslations(targetLanguage,translations);
+          if(!applied)throw new Error(`Nenhum campo de ${config.label} precisou ser criado agora.`);
+          closeTextPopover();
+          showFeedbackToast(`${applied} card(s) receberam ${config.label}.`);
+          return applied;
+        }finally{
+          aiTextBusy=false;
+          renderAll();
+        }
+      }
       function updateWatchTransforms(){if(!watchRuntime)return;const media=$('watchCard').querySelector('.watch-card__media'),pt=$('watchCardPt'),en=$('watchCardEn');const imageTransform=watchRuntime.imageTransform||{x:0,y:0,scale:1},textTransform=watchRuntime.textTransform||{x:0,y:0,scale:1};const imageValue=`translate(calc(-50% + ${imageTransform.x}px),${imageTransform.y}px) scale(${imageTransform.scale})`;if(media)media.style.transform=imageValue;const textValue=`translate(${textTransform.x}px,${textTransform.y}px) scale(${textTransform.scale})`;pt.style.transform=textValue;en.style.transform=textValue;saveWatchViewPrefs()}
       function moveWatchByKeyboard(delta){if(!watchRuntime||!watchRuntime.items.length)return;watchRuntime.currentIndex=(watchRuntime.currentIndex+delta+watchRuntime.items.length)%watchRuntime.items.length;stopWatchVoice();const item=watchRuntime.items[watchRuntime.currentIndex];renderWatchCard(item,'Navegacao manual');updateWatchTransforms()}
       function loadWatchBackdropMedia(files){for(const file of Array.from(files||[])){const type=String(file?.type||'').toLowerCase();if(!type.startsWith('image/')&&!type.startsWith('video/'))continue;const url=URL.createObjectURL(file);watchObjectUrlPool.push(url);if(type.startsWith('video/')){watchBackdropVideoUrl=url;watchBackdropImageUrl=''}else{watchBackdropImageUrl=url;watchBackdropVideoUrl=''}return true}return false}
@@ -1858,27 +1985,24 @@
         if(image&&item.imageDataUrl&&item.imageFile){
           files.push({name:item.imageFile,base64:base64FromBytes(bytesFromDataUrl(item.imageDataUrl))});
         }
-        const hasPrimaryAudioUpload=Boolean(audio&&item.audioDataUrl&&item.audioFile);
-        const hasSecondaryAudioUpload=Boolean(audio&&item.audioBlondeDataUrl&&item.audioBlondeFile);
-        if(hasPrimaryAudioUpload){
-          files.push({name:item.audioFile,base64:base64FromBytes(bytesFromDataUrl(item.audioDataUrl))});
-        }
-        if(hasSecondaryAudioUpload){
-          files.push({name:item.audioBlondeFile,base64:base64FromBytes(bytesFromDataUrl(item.audioBlondeDataUrl))});
-        }
+        const audioUploads=audio?[
+          {file:item.audioFile,dataUrl:item.audioDataUrl,assignRemote:url=>item.audioRemoteUrl=url,clearLocal:()=>{if(item.audioRemoteUrl)item.audioDataUrl=''}},
+          {file:item.audioBlondeFile,dataUrl:item.audioBlondeDataUrl,assignRemote:url=>item.audioBlondeRemoteUrl=url,clearLocal:()=>{if(item.audioBlondeRemoteUrl)item.audioBlondeDataUrl=''}},
+          {file:item.audioPtFile,dataUrl:item.audioPtDataUrl,assignRemote:url=>item.audioPtRemoteUrl=url,clearLocal:()=>{if(item.audioPtRemoteUrl)item.audioPtDataUrl=''}},
+          {file:item.audioFrFile,dataUrl:item.audioFrDataUrl,assignRemote:url=>item.audioFrRemoteUrl=url,clearLocal:()=>{if(item.audioFrRemoteUrl)item.audioFrDataUrl=''}},
+          {file:item.audioZhFile,dataUrl:item.audioZhDataUrl,assignRemote:url=>item.audioZhRemoteUrl=url,clearLocal:()=>{if(item.audioZhRemoteUrl)item.audioZhDataUrl=''}},
+          {file:item.audioEsFile,dataUrl:item.audioEsDataUrl,assignRemote:url=>item.audioEsRemoteUrl=url,clearLocal:()=>{if(item.audioEsRemoteUrl)item.audioEsDataUrl=''}}
+        ].filter(entry=>entry.file&&entry.dataUrl):[];
+        audioUploads.forEach(entry=>files.push({name:entry.file,base64:base64FromBytes(bytesFromDataUrl(entry.dataUrl))}));
         if(!files.length)return null;
         try{
           await uploadLevelFilesToR2(files,{day:dayKey,mode:'flashcard'});
           if(image&&item.imageFile)item.imageRemoteUrl=cloud(dayKey,PHASE.flashcard,item.imageFile,'flashcard');
-          if(hasPrimaryAudioUpload){
-            item.audioRemoteUrl=cloud(dayKey,PHASE.flashcard,item.audioFile,'flashcard');
-          }
           if(image&&item.imageRemoteUrl)item.imageDataUrl='';
-          if(hasPrimaryAudioUpload&&item.audioRemoteUrl)item.audioDataUrl='';
-          if(hasSecondaryAudioUpload){
-            item.audioBlondeRemoteUrl=cloud(dayKey,PHASE.flashcard,item.audioBlondeFile,'flashcard');
-            if(item.audioBlondeRemoteUrl)item.audioBlondeDataUrl='';
-          }
+          audioUploads.forEach(entry=>{
+            entry.assignRemote(cloud(dayKey,PHASE.flashcard,entry.file,'flashcard'));
+            entry.clearLocal();
+          });
           if(!isNumericTarget&&typeof target?.onSynced==='function')target.onSynced();
           markFlashcardItemSynced(item,{image,audio});
           if(isNumericTarget)queuePersistCurrentEditorDeck({delay:80});
@@ -1940,7 +2064,7 @@
       function isInteractiveAdminTarget(target){return Boolean(target?.closest('button,input,select,textarea,label,a'))}
       function closeItemAdminPopover(){$('itemAdminPopover').classList.add('hidden');$('itemAdminPopover').setAttribute('aria-hidden','true');adminStudio.activeMenuIndex=null}
       function clearItemImageFields(item){if(!item)return;item.imageFile='';item.imageDataUrl='';item.imageRemoteUrl='';item.imageVersion=0;item.imageMuted=false;item.imageRestoreFx=false}
-      function clearItemAudioFields(item,{muteVisual=true}={}){if(!item)return;item.audioFile='';item.audioDataUrl='';item.audioRemoteUrl='';item.audioBlondeFile='';item.audioBlondeDataUrl='';item.audioBlondeRemoteUrl='';if(muteVisual&&Boolean(item.imageFile||item.imageDataUrl||item.imageRemoteUrl)){item.imageMuted=true;item.imageRestoreFx=false}else{item.imageMuted=false;item.imageRestoreFx=false}}
+      function clearItemAudioFields(item,{muteVisual=true}={}){if(!item)return;item.audioFile='';item.audioDataUrl='';item.audioRemoteUrl='';item.audioBlondeFile='';item.audioBlondeDataUrl='';item.audioBlondeRemoteUrl='';item.audioPtFile='';item.audioPtDataUrl='';item.audioPtRemoteUrl='';item.audioFrFile='';item.audioFrDataUrl='';item.audioFrRemoteUrl='';item.audioZhFile='';item.audioZhDataUrl='';item.audioZhRemoteUrl='';item.audioEsFile='';item.audioEsDataUrl='';item.audioEsRemoteUrl='';if(muteVisual&&Boolean(item.imageFile||item.imageDataUrl||item.imageRemoteUrl)){item.imageMuted=true;item.imageRestoreFx=false}else{item.imageMuted=false;item.imageRestoreFx=false}}
       function deleteItemImage(index){clearVisualClickTimer(index);const item=state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);clearItemImageFields(item);queuePersistCurrentEditorDeck();save();renderAll()}
       function deleteItemAudio(index){const item=state.items[index];if(!item)return;clearFlashcardItemSyncFeedback(item);clearItemAudioFields(item,{muteVisual:true});queuePersistCurrentEditorDeck();save();renderAll()}
       function deckHasDefinedLevel(deck){return normalizeDeckLevelValue(deck?.deckLevel)!==null}
@@ -2112,28 +2236,31 @@
           });
           return out;
         }
+        const flashcardVoiceConfig={
+          portuguese:{kind:'pt',text:item=>String(item?.pt||'').trim(),fileSuffix:'-pt',hasAudio:item=>hasGeneratedAudio(item,'pt')},
+          harry:{kind:'single',text:item=>String(item?.en||item?.pt||'').trim(),fileSuffix:'',hasAudio:item=>hasGeneratedAudio(item,'single')},
+          blonde:{kind:'single-blonde',text:item=>String(item?.en||item?.pt||'').trim(),fileSuffix:'b',hasAudio:item=>Boolean(item?.audioBlondeFile||item?.audioBlondeDataUrl||item?.audioBlondeRemoteUrl)},
+          paul:{kind:'fr',text:item=>String(item?.fr||'').trim(),fileSuffix:'-fr',hasAudio:item=>hasGeneratedAudio(item,'fr')},
+          sami:{kind:'zh',text:item=>String(item?.zh||'').trim(),fileSuffix:'-zh',hasAudio:item=>hasGeneratedAudio(item,'zh')},
+          cristina:{kind:'es',text:item=>String(item?.es||'').trim(),fileSuffix:'-es',hasAudio:item=>hasGeneratedAudio(item,'es')}
+        }[normalizedVoice]||{kind:'single',text:item=>String(item?.en||item?.pt||'').trim(),fileSuffix:'',hasAudio:item=>hasGeneratedAudio(item,'single')};
         const selectedEntries=selectedEntriesInView();
         const sourceEntries=selectedEntries.length
           ? selectedEntries
           : (editCardsState.searchMode
             ? renderableFlashcardEntries().filter(entry=>entry?.source==='search')
             : state.items.map((item,index)=>({item,itemIndex:index,source:'editor'})));
-        if(selectedEntries.length){
-          return sourceEntries
-            .map(entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:String(entry?.item?.en||entry?.item?.pt||'').trim()}))
-            .filter(entry=>entry.text)
-            .filter(entry=>normalizedVoice==='blonde'?!(entry.item?.audioBlondeFile||entry.item?.audioBlondeDataUrl):!hasGeneratedAudio(entry.item,'single'))
-            .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}.mp3`,entry:entry.entry}));
-        }
+        const mapFlashcardTarget=entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:flashcardVoiceConfig.text(entry?.item),kind:flashcardVoiceConfig.kind,fileSuffix:flashcardVoiceConfig.fileSuffix});
+        if(selectedEntries.length)return sourceEntries.map(mapFlashcardTarget).filter(entry=>entry.text&&!flashcardVoiceConfig.hasAudio(entry.item)).map(entry=>({index:entry.index,kind:entry.kind,text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}${entry.fileSuffix}.mp3`,entry:entry.entry}));
         const pendingAudio=sourceEntries
-          .map(entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:String(entry?.item?.en||entry?.item?.pt||'').trim()}))
-          .filter(entry=>entry.text&&entry.item?.imageMuted&&(normalizedVoice==='blonde'?!(entry.item?.audioBlondeFile||entry.item?.audioBlondeDataUrl):!hasGeneratedAudio(entry.item,'single')))
-          .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}.mp3`,entry:entry.entry}));
+          .map(mapFlashcardTarget)
+          .filter(entry=>entry.text&&entry.item?.imageMuted&&!flashcardVoiceConfig.hasAudio(entry.item))
+          .map(entry=>({index:entry.index,kind:entry.kind,text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}${entry.fileSuffix}.mp3`,entry:entry.entry}));
         if(pendingAudio.length)return pendingAudio;
         return sourceEntries
-          .map(entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:String(entry?.item?.en||entry?.item?.pt||'').trim()}))
-          .filter(entry=>entry.text&&(normalizedVoice==='blonde'?!(entry.item?.audioBlondeFile||entry.item?.audioBlondeDataUrl):!hasGeneratedAudio(entry.item,'single')))
-          .map(entry=>({index:entry.index,kind:'single',text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}.mp3`,entry:entry.entry}));
+          .map(mapFlashcardTarget)
+          .filter(entry=>entry.text&&!flashcardVoiceConfig.hasAudio(entry.item))
+          .map(entry=>({index:entry.index,kind:entry.kind,text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}${entry.fileSuffix}.mp3`,entry:entry.entry}));
       }
       async function generateRemainingVoiceAssets(voice){
         const normalizedVoice=normalizeTtsVoice(voice);
@@ -2149,14 +2276,12 @@
         try{
           for(const target of targets){
             try{
-              const fileName=target.kind==='single'
-                ? `${flashcardAssetStem(target.index,target.entry)}${normalizedVoice==='blonde'?'b':''}.mp3`
-                : target.fileName;
+              const fileName=target.fileName;
               const asset=await generateVoiceAsset(target.text,fileName,normalizedVoice);
               const item=target?.entry?.item||state.items[target.index];
               if(!item)continue;
-              if(target.kind==='single'){
-                if(normalizedVoice==='blonde'){
+              if(target.kind==='single'||target.kind==='single-blonde'){
+                if(target.kind==='single-blonde'){
                   item.audioBlondeFile=asset.fileName;
                   item.audioBlondeDataUrl=asset.dataUrl;
                   item.audioBlondeRemoteUrl='';
@@ -2172,6 +2297,19 @@
               }else if(target.kind==='pt'){
                 item.audioPtFile=asset.fileName;
                 item.audioPtDataUrl=asset.dataUrl;
+                item.audioPtRemoteUrl='';
+              }else if(target.kind==='fr'){
+                item.audioFrFile=asset.fileName;
+                item.audioFrDataUrl=asset.dataUrl;
+                item.audioFrRemoteUrl='';
+              }else if(target.kind==='zh'){
+                item.audioZhFile=asset.fileName;
+                item.audioZhDataUrl=asset.dataUrl;
+                item.audioZhRemoteUrl='';
+              }else if(target.kind==='es'){
+                item.audioEsFile=asset.fileName;
+                item.audioEsDataUrl=asset.dataUrl;
+                item.audioEsRemoteUrl='';
               }else{
                 item.audioEnFile=asset.fileName;
                 item.audioEnDataUrl=asset.dataUrl;
@@ -2179,7 +2317,7 @@
               done+=1;
               save();
               renderItems();
-              if(target.kind==='single'){
+              if(target.kind==='single'||target.kind==='single-blonde'||target.kind==='pt'||target.kind==='fr'||target.kind==='zh'||target.kind==='es'){
                 if(target?.entry?.source==='search'){
                   await autoUploadFlashcardAssetsToR2({item,dayKey:target.entry.deckDay,deckPath:target.entry.deckPath,onSynced:()=>syncSearchEntryToDeck(target.entry,{persist:false})},{audio:true});
                   queuePersistDeckByPath(target.entry.deckPath,{delay:80});
@@ -2233,7 +2371,33 @@
       const joinPath=(...parts)=>parts.filter(Boolean).join('/');
       const bundleZipPath=relativePath=>joinPath(zipFolderName(),relativePath);
       function bundleAssetPath(name){return joinPath('all',name)}
-      async function collectBundleFiles(options={}){const publicJsonAssets=Boolean(options.publicJsonAssets);syncAssetFileNames();const files=[];const addTextFile=(name,text)=>files.push({name,bytes:utf8(text)});const addAsset=async(name,localDataUrl,remoteUrl)=>{files.push({name,bytes:await resolveAssetBytes(localDataUrl,remoteUrl)})};let jsonPayload=null;if(state.mode==='flashcard'){validateFlashcard();const items=state.items.filter(item=>item.pt&&item.en).map(item=>({entry:{imagem:item.imageDataUrl?item.imageFile:(item.imageRemoteUrl||item.imageFile||''),nomePortugues:item.pt,nomeIngles:item.en,categoria:item.category||'flashcard',audio:item.audioDataUrl?item.audioFile:(item.audioRemoteUrl||item.audioFile||''),audio2:item.audioBlondeDataUrl?item.audioBlondeFile:(item.audioBlondeRemoteUrl||item.audioBlondeFile||''),tense:item.tense||'present-simple',sentenceForm:item.sentenceForm||'affirmative'},item}));for(const {item} of items){if(item.imageDataUrl)await addAsset(item.imageFile,item.imageDataUrl,item.imageRemoteUrl||cloud(state.day,PHASE.flashcard,item.imageFile));if(item.audioDataUrl)await addAsset(item.audioFile,item.audioDataUrl,item.audioRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioFile));if(item.audioBlondeDataUrl)await addAsset(item.audioBlondeFile,item.audioBlondeDataUrl,item.audioBlondeRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioBlondeFile))}jsonPayload=publicJsonAssets?payload():{title:state.title.trim(),coverImage:flashcardCoverPreview(),items:items.map(item=>item.entry)}}else if(state.mode==='movies'){validateMovie();const entries=[];const coverPath=state.coverFile||'';const soundtrackPath=state.soundFile||'';if(coverPath)await addAsset(coverPath,state.coverDataUrl,cloud(state.day,PHASE.movies,state.coverFile));if(soundtrackPath)await addAsset(soundtrackPath,state.soundDataUrl,cloud(state.day,PHASE.movies,state.soundFile));for(const [index,item] of state.items.filter(item=>item.imageFile&&item.pt&&item.en).entries()){const imagePath=item.imageFile;await addAsset(imagePath,item.imageDataUrl,cloud(state.day,PHASE.movies,item.imageFile));const audioPtPath=item.audioPtFile||'';const audioEnPath=item.audioEnFile||'';if(audioPtPath)await addAsset(audioPtPath,item.audioPtDataUrl,cloud(state.day,PHASE.movies,item.audioPtFile));if(audioEnPath)await addAsset(audioEnPath,item.audioEnDataUrl,cloud(state.day,PHASE.movies,item.audioEnFile));entries.push({id:index+1,image:cloud(state.day,PHASE.movies,item.imageFile),portuguese:item.pt,english:item.en,image_prompt:item.imagePrompt||'',audio_portuguese:audioPtPath?cloud(state.day,PHASE.movies,item.audioPtFile):'',audio_english:audioEnPath?cloud(state.day,PHASE.movies,item.audioEnFile):''})}jsonPayload={soundtrack:soundtrackPath?cloud(state.day,PHASE.movies,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),items:entries,title:state.title.trim(),coverImage:coverPath?cloud(state.day,PHASE.movies,state.coverFile):''}}else{validateMovie();const sceneExport=getSceneExportData();const coverPath=state.coverFile||'';const soundtrackPath=state.soundFile||'';if(coverPath)await addAsset(coverPath,state.coverDataUrl,cloud(state.day,PHASE.scenes,state.coverFile));if(soundtrackPath)await addAsset(soundtrackPath,state.soundDataUrl,cloud(state.day,PHASE.scenes,state.soundFile));for(const char of sceneExport.characterAssets){const imagePath=char.imageFile||'';const imageUrl=char.imageFile?cloud(state.day,PHASE.scenes,char.imageFile):defaultSceneCharacterImageUrl(char.id);if(char.imageFile||char.imageDataUrl)await addAsset(imagePath||fileNameOnly(imageUrl)||`${char.id}.webp`,char.imageDataUrl,cloud(state.day,PHASE.scenes,char.imageFile))}for(const entry of sceneExport.items){const item=entry.item;const audioPtPath=item.audioPtFile||'';const audioEnPath=item.audioEnFile||'';if(audioPtPath)await addAsset(audioPtPath,item.audioPtDataUrl,cloud(state.day,PHASE.scenes,item.audioPtFile));if(audioEnPath)await addAsset(audioEnPath,item.audioEnDataUrl,cloud(state.day,PHASE.scenes,item.audioEnFile))}jsonPayload={soundtrack:soundtrackPath?cloud(state.day,PHASE.scenes,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),characters:sceneExport.characters,items:sceneExport.items.map(({item,...entry})=>entry),title:state.title.trim(),coverImage:coverPath?cloud(state.day,PHASE.scenes,state.coverFile):''}}addTextFile(jsonFileName(),JSON.stringify(jsonPayload,null,2));return files}
+      function flashcardLanguageAudioValue(item,key,dayKey=state.day){
+        if(key==='pt')return item?.audioPtRemoteUrl||((item?.audioPtFile||item?.audioPtDataUrl)?cloud(dayKey,PHASE.flashcard,item?.audioPtFile,'flashcard'):'');
+        if(key==='fr')return item?.audioFrRemoteUrl||((item?.audioFrFile||item?.audioFrDataUrl)?cloud(dayKey,PHASE.flashcard,item?.audioFrFile,'flashcard'):'');
+        if(key==='zh')return item?.audioZhRemoteUrl||((item?.audioZhFile||item?.audioZhDataUrl)?cloud(dayKey,PHASE.flashcard,item?.audioZhFile,'flashcard'):'');
+        if(key==='es')return item?.audioEsRemoteUrl||((item?.audioEsFile||item?.audioEsDataUrl)?cloud(dayKey,PHASE.flashcard,item?.audioEsFile,'flashcard'):'');
+        return '';
+      }
+      function buildFlashcardExportEntry(item,dayKey=state.day){
+        return {
+          imagem:item.imageDataUrl?item.imageFile:(item.imageRemoteUrl||item.imageFile||''),
+          nomePortugues:item.pt,
+          nomeIngles:item.en,
+          nomeFrances:item.fr||'',
+          nomeMandarim:item.zh||'',
+          nomeEspanhol:item.es||'',
+          categoria:item.category||'flashcard',
+          audio:item.audioDataUrl?item.audioFile:(item.audioRemoteUrl||item.audioFile||''),
+          audio2:item.audioBlondeDataUrl?item.audioBlondeFile:(item.audioBlondeRemoteUrl||item.audioBlondeFile||''),
+          audio_pt:flashcardLanguageAudioValue(item,'pt',dayKey),
+          audio_fr:flashcardLanguageAudioValue(item,'fr',dayKey),
+          audio_zh:flashcardLanguageAudioValue(item,'zh',dayKey),
+          audio_es:flashcardLanguageAudioValue(item,'es',dayKey),
+          tense:item.tense||'present-simple',
+          sentenceForm:item.sentenceForm||'affirmative'
+        };
+      }
+      async function collectBundleFiles(options={}){const publicJsonAssets=Boolean(options.publicJsonAssets);syncAssetFileNames();const files=[];const addTextFile=(name,text)=>files.push({name,bytes:utf8(text)});const addAsset=async(name,localDataUrl,remoteUrl)=>{files.push({name,bytes:await resolveAssetBytes(localDataUrl,remoteUrl)})};let jsonPayload=null;if(state.mode==='flashcard'){validateFlashcard();const items=state.items.filter(item=>item.pt&&item.en).map(item=>({entry:buildFlashcardExportEntry(item,state.day),item}));for(const {item} of items){if(item.imageDataUrl)await addAsset(item.imageFile,item.imageDataUrl,item.imageRemoteUrl||cloud(state.day,PHASE.flashcard,item.imageFile));if(item.audioDataUrl)await addAsset(item.audioFile,item.audioDataUrl,item.audioRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioFile));if(item.audioBlondeDataUrl)await addAsset(item.audioBlondeFile,item.audioBlondeDataUrl,item.audioBlondeRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioBlondeFile));if(item.audioPtDataUrl)await addAsset(item.audioPtFile,item.audioPtDataUrl,item.audioPtRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioPtFile));if(item.audioFrDataUrl)await addAsset(item.audioFrFile,item.audioFrDataUrl,item.audioFrRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioFrFile));if(item.audioZhDataUrl)await addAsset(item.audioZhFile,item.audioZhDataUrl,item.audioZhRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioZhFile));if(item.audioEsDataUrl)await addAsset(item.audioEsFile,item.audioEsDataUrl,item.audioEsRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioEsFile))}jsonPayload=publicJsonAssets?payload():{title:state.title.trim(),coverImage:flashcardCoverPreview(),items:items.map(item=>item.entry)}}else if(state.mode==='movies'){validateMovie();const entries=[];const coverPath=state.coverFile||'';const soundtrackPath=state.soundFile||'';if(coverPath)await addAsset(coverPath,state.coverDataUrl,cloud(state.day,PHASE.movies,state.coverFile));if(soundtrackPath)await addAsset(soundtrackPath,state.soundDataUrl,cloud(state.day,PHASE.movies,state.soundFile));for(const [index,item] of state.items.filter(item=>item.imageFile&&item.pt&&item.en).entries()){const imagePath=item.imageFile;await addAsset(imagePath,item.imageDataUrl,cloud(state.day,PHASE.movies,item.imageFile));const audioPtPath=item.audioPtFile||'';const audioEnPath=item.audioEnFile||'';if(audioPtPath)await addAsset(audioPtPath,item.audioPtDataUrl,cloud(state.day,PHASE.movies,item.audioPtFile));if(audioEnPath)await addAsset(audioEnPath,item.audioEnDataUrl,cloud(state.day,PHASE.movies,item.audioEnFile));entries.push({id:index+1,image:cloud(state.day,PHASE.movies,item.imageFile),portuguese:item.pt,english:item.en,image_prompt:item.imagePrompt||'',audio_portuguese:audioPtPath?cloud(state.day,PHASE.movies,item.audioPtFile):'',audio_english:audioEnPath?cloud(state.day,PHASE.movies,item.audioEnFile):''})}jsonPayload={soundtrack:soundtrackPath?cloud(state.day,PHASE.movies,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),items:entries,title:state.title.trim(),coverImage:coverPath?cloud(state.day,PHASE.movies,state.coverFile):''}}else{validateMovie();const sceneExport=getSceneExportData();const coverPath=state.coverFile||'';const soundtrackPath=state.soundFile||'';if(coverPath)await addAsset(coverPath,state.coverDataUrl,cloud(state.day,PHASE.scenes,state.coverFile));if(soundtrackPath)await addAsset(soundtrackPath,state.soundDataUrl,cloud(state.day,PHASE.scenes,state.soundFile));for(const char of sceneExport.characterAssets){const imagePath=char.imageFile||'';const imageUrl=char.imageFile?cloud(state.day,PHASE.scenes,char.imageFile):defaultSceneCharacterImageUrl(char.id);if(char.imageFile||char.imageDataUrl)await addAsset(imagePath||fileNameOnly(imageUrl)||`${char.id}.webp`,char.imageDataUrl,cloud(state.day,PHASE.scenes,char.imageFile))}for(const entry of sceneExport.items){const item=entry.item;const audioPtPath=item.audioPtFile||'';const audioEnPath=item.audioEnFile||'';if(audioPtPath)await addAsset(audioPtPath,item.audioPtDataUrl,cloud(state.day,PHASE.scenes,item.audioPtFile));if(audioEnPath)await addAsset(audioEnPath,item.audioEnDataUrl,cloud(state.day,PHASE.scenes,item.audioEnFile))}jsonPayload={soundtrack:soundtrackPath?cloud(state.day,PHASE.scenes,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),characters:sceneExport.characters,items:sceneExport.items.map(({item,...entry})=>entry),title:state.title.trim(),coverImage:coverPath?cloud(state.day,PHASE.scenes,state.coverFile):''}}addTextFile(jsonFileName(),JSON.stringify(jsonPayload,null,2));return files}
       async function buildZipBundle(options={}){const files=await collectBundleFiles(options),root=zipFolderName();return{zipName:`${root}.zip`,blob:buildZipBlob(files.map(file=>({path:bundleZipPath(file.name),bytes:file.bytes}))),files}}
       async function downloadBundleZip(){zipBusy=true;renderAll();try{const bundle=await buildZipBundle();triggerDownload(bundle.blob,bundle.zipName)}finally{zipBusy=false;renderAll()}}
       function itemImagePrompt(item,index){const pt=String(item?.pt||'').trim(),en=String(item?.en||'').trim(),visual=String(item?.imagePrompt||'').trim(),base=`Create a photorealistic image for a language-learning app. Show adult people only when people are needed. The image must represent the sentence directly and literally: "${en||pt}"${pt&&en?` (${pt} in Portuguese)`:''}. ${visual?`Use this visual direction: ${visual}.`:''} Real-life scene, realistic textures, photographic detail, believable materials, natural lighting, no children, no text, no letters, no captions.`;if(state.mode==='movies')return `${base} Cinematic photography, expressive action, consistent framing, folder ${sanitizeDayKey(state.day)}${state.title?`, title "${state.title}"`:''}.${imagePromptAssist()}`;return `${base} Square composition, simple background, direct and easy to understand at a glance.${imagePromptAssist()}`}
@@ -2367,13 +2531,13 @@
       function audioBatchOrder(){if(state.mode==='flashcard')return[];const kinds=[];if(audioBatchTargets.pt)kinds.push('pt');if(audioBatchTargets.en)kinds.push('en');const targets=[];state.items.forEach((item,index)=>{kinds.forEach(kind=>{const filled=kind==='pt'?item.audioPtFile||item.audioPtDataUrl:item.audioEnFile||item.audioEnDataUrl;if(!filled)targets.push({index,kind})})});return targets}
       async function importAudioBatch(files){const targets=audioBatchOrder();if(!targets.length){alert('Nao existem slots de audio vazios para preencher.');return}let used=0;for(let i=0;i<files.length&&used<targets.length;i+=1){const target=targets[used],data=await prepAudio(files[i],`${itemStem(target.index)}-${target.kind}`),item=state.items[target.index];if(!item)continue;if(target.kind==='pt'){item.audioPtFile=data.fileName;item.audioPtDataUrl=data.dataUrl}else{item.audioEnFile=data.fileName;item.audioEnDataUrl=data.dataUrl}used+=1}save();renderItems();alert(`${used} audio(s) importado(s) em sequencia.`)}
       function detectModeFromJson(data){if(Array.isArray(data))return'flashcard';if(data&&typeof data==='object'){if(Array.isArray(data.characters))return'scenes';if(Array.isArray(data.items)&&data.items.every(entry=>entry&&typeof entry==='object'&&('imagem' in entry||'nomePortugues' in entry||'nomeIngles' in entry)))return'flashcard';if(Array.isArray(data.items))return'movies'}throw new Error('JSON nao reconhecido para este editor.')}
-      function importJsonPayload(data){state.mode=detectModeFromJson(data);state.items=[];state.chars=[];state.flashcardCoverUrl='';const importedAssets=[];const rememberDay=value=>{const parsed=parseCloudAssetInfo(value);if(parsed?.day)importedAssets.push(parsed);return parsed};if(state.mode==='flashcard'){const flashcardItems=Array.isArray(data)?data:(Array.isArray(data?.items)?data.items:[]);state.title=Array.isArray(data)?'':String(data?.title||'').trim();state.flashcardCoverUrl=Array.isArray(data)?'':String(data?.coverImage||'').trim();state.items=flashcardItems.map(entry=>{const secondaryAudio=readDeckEntrySecondaryAudio(entry);rememberDay(entry.imagem);rememberDay(entry.audio);rememberDay(secondaryAudio);return normalizeImportedItem({imageFile:importedFileName(entry.imagem),imageRemoteUrl:String(entry?.imagem||'').trim(),pt:entry.nomePortugues||'',en:entry.nomeIngles||'',category:entry.categoria||'flashcard',audioFile:importedFileName(entry.audio),audioRemoteUrl:String(entry?.audio||'').trim(),audioBlondeFile:importedFileName(secondaryAudio),audioBlondeRemoteUrl:secondaryAudio,tense:entry.tense||'present-simple',sentenceForm:entry.sentenceForm||'affirmative'})})}else{state.title=data.title||'';state.levelKey=data.level||defaultLevelKey();rememberDay(data.coverImage);rememberDay(data.soundtrack);state.coverFile=importedFileName(data.coverImage);state.coverDataUrl='';state.soundFile=importedFileName(data.soundtrack);state.soundDataUrl='';if(state.mode==='movies'){state.items=data.items.map(entry=>{rememberDay(entry.image);rememberDay(entry.audio_portuguese);rememberDay(entry.audio_english);return normalizeImportedItem({imageFile:importedFileName(entry.image),pt:entry.portuguese||'',en:entry.english||'',imagePrompt:entry.image_prompt||entry.imagePrompt||'',audioPtFile:importedFileName(entry.audio_portuguese),audioEnFile:importedFileName(entry.audio_english)})})}else{state.chars=normalizeSceneChars(Array.isArray(data.characters)?data.characters.map(char=>{rememberDay(char.image);return{id:char.id||'',name:char.name||'',voiceId:char.voiceId||'',imageFile:importedFileName(char.image),imageDataUrl:''}}):[]);state.items=data.items.map(entry=>{rememberDay(entry.audio_portuguese);rememberDay(entry.audio_english);return normalizeImportedItem({pt:entry.portuguese||'',en:entry.english||'',characterId:entry.character||'',audioPtFile:importedFileName(entry.audio_portuguese),audioEnFile:importedFileName(entry.audio_english)})})}}const expectedPhaseCode=PHASE_CODE[state.mode]||PHASE_CODE.flashcard;const detectedDay=(importedAssets.find(asset=>asset.phaseCode===expectedPhaseCode&&asset.day)||importedAssets.find(asset=>asset.day))?.day;if(detectedDay)state.day=sanitizeDayKey(detectedDay);save();renderAll()}
+      function importJsonPayload(data){state.mode=detectModeFromJson(data);state.items=[];state.chars=[];state.flashcardCoverUrl='';const importedAssets=[];const rememberDay=value=>{const parsed=parseCloudAssetInfo(value);if(parsed?.day)importedAssets.push(parsed);return parsed};if(state.mode==='flashcard'){const flashcardItems=Array.isArray(data)?data:(Array.isArray(data?.items)?data.items:[]);state.title=Array.isArray(data)?'':String(data?.title||'').trim();state.flashcardCoverUrl=Array.isArray(data)?'':String(data?.coverImage||'').trim();state.items=flashcardItems.map(entry=>{const secondaryAudio=readDeckEntrySecondaryAudio(entry);const audioPt=readDeckEntryLanguageAudio(entry,'pt');const audioFr=readDeckEntryLanguageAudio(entry,'fr');const audioZh=readDeckEntryLanguageAudio(entry,'zh');const audioEs=readDeckEntryLanguageAudio(entry,'es');rememberDay(entry.imagem);rememberDay(entry.audio);rememberDay(secondaryAudio);rememberDay(audioPt);rememberDay(audioFr);rememberDay(audioZh);rememberDay(audioEs);return normalizeImportedItem({imageFile:importedFileName(entry.imagem),imageRemoteUrl:String(entry?.imagem||'').trim(),pt:entry.nomePortugues||'',en:entry.nomeIngles||'',fr:entry.nomeFrances||entry.fr||'',zh:entry.nomeMandarim||entry.zh||'',es:entry.nomeEspanhol||entry.es||'',category:entry.categoria||'flashcard',audioFile:importedFileName(entry.audio),audioRemoteUrl:String(entry?.audio||'').trim(),audioBlondeFile:importedFileName(secondaryAudio),audioBlondeRemoteUrl:secondaryAudio,audioPtFile:importedFileName(audioPt),audioPtRemoteUrl:audioPt,audioFrFile:importedFileName(audioFr),audioFrRemoteUrl:audioFr,audioZhFile:importedFileName(audioZh),audioZhRemoteUrl:audioZh,audioEsFile:importedFileName(audioEs),audioEsRemoteUrl:audioEs,tense:entry.tense||'present-simple',sentenceForm:entry.sentenceForm||'affirmative'})})}else{state.title=data.title||'';state.levelKey=data.level||defaultLevelKey();rememberDay(data.coverImage);rememberDay(data.soundtrack);state.coverFile=importedFileName(data.coverImage);state.coverDataUrl='';state.soundFile=importedFileName(data.soundtrack);state.soundDataUrl='';if(state.mode==='movies'){state.items=data.items.map(entry=>{rememberDay(entry.image);rememberDay(entry.audio_portuguese);rememberDay(entry.audio_english);return normalizeImportedItem({imageFile:importedFileName(entry.image),pt:entry.portuguese||'',en:entry.english||'',imagePrompt:entry.image_prompt||entry.imagePrompt||'',audioPtFile:importedFileName(entry.audio_portuguese),audioEnFile:importedFileName(entry.audio_english)})})}else{state.chars=normalizeSceneChars(Array.isArray(data.characters)?data.characters.map(char=>{rememberDay(char.image);return{id:char.id||'',name:char.name||'',voiceId:char.voiceId||'',imageFile:importedFileName(char.image),imageDataUrl:''}}):[]);state.items=data.items.map(entry=>{rememberDay(entry.audio_portuguese);rememberDay(entry.audio_english);return normalizeImportedItem({pt:entry.portuguese||'',en:entry.english||'',characterId:entry.character||'',audioPtFile:importedFileName(entry.audio_portuguese),audioEnFile:importedFileName(entry.audio_english)})})}}const expectedPhaseCode=PHASE_CODE[state.mode]||PHASE_CODE.flashcard;const detectedDay=(importedAssets.find(asset=>asset.phaseCode===expectedPhaseCode&&asset.day)||importedAssets.find(asset=>asset.day))?.day;if(detectedDay)state.day=sanitizeDayKey(detectedDay);save();renderAll()}
       async function generateVoiceAsset(text,fileName,voice='harry'){const cleanText=String(text||'').trim();if(!cleanText)throw new Error('Preencha o texto antes de gerar voz.');const cleanVoice=normalizeTtsVoice(voice);const provider=voiceProvider(cleanVoice);const response=provider==='elevenlabs'?await fetch('/api/tts/elevenlabs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:cleanText,fileName,voice:cleanVoice})}):await fetch('/api/tts/openai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:cleanText,fileName,voice:cleanVoice})});let payload=null;if(!response.ok){try{payload=await response.json()}catch{}throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao gerar voz.')}const blob=await response.blob();return{fileName,dataUrl:await asDataUrl(blob)}}
       function syncVoicePopover(){const select=$('ttsVoiceSelect');if(select)select.value=normalizeTtsVoice(state.ttsVoice);const label=ttsVoiceLabel(state.ttsVoice);const providerLabel=voiceProvider(state.ttsVoice)==='elevenlabs'?'ElevenLabs':'OpenAI';setButtonLabel('addBtn',elevenBusy?`Gerando audio com ${providerLabel}... (${label})`:label);const currentLabel=$('openAiVoiceCurrentLabel');if(currentLabel)currentLabel.textContent=`Voz atual: ${label}`}
       function openVoicePopover(){state.ttsVoice=normalizeTtsVoice(state.ttsVoice);const select=$('ttsVoiceSelect');if(select)select.value=state.ttsVoice;$('voicePopover').classList.remove('hidden');$('voicePopover').setAttribute('aria-hidden','false');syncVoicePopover()}
       function closeVoicePopover(){$('voicePopover').classList.add('hidden');$('voicePopover').setAttribute('aria-hidden','true')}
-      function updateTop(){state.mode='flashcard';state.testOnline=false;state.voiceMode=false;$('hint').textContent='';syncVoicePopover();$('addBtn').disabled=elevenBusy||r2UploadBusy;document.querySelectorAll('.movieOnly').forEach(n=>n.classList.add('hidden'));document.querySelectorAll('.flashcardOnly').forEach(n=>n.classList.remove('hidden'));$('charactersWrap').classList.add('hidden');syncAudioPopover();syncAiButton();syncAiTextButton();syncZipButton()}
-      function textBtn(title,value,onClick){const b=document.createElement('button');b.type='button';b.className=`textbtn ${title==='Portugues'?'textbtn--pt':'textbtn--en'}`;b.textContent=value||'Clique para preencher';b.onclick=onClick;return b}
+      function updateTop(){state.mode='flashcard';state.testOnline=false;state.voiceMode=false;$('hint').textContent=`Idioma visivel: ${FLASHCARD_LANGUAGE_META[activeFlashcardLanguage()]?.title||'Portugues'} | atalhos 1-5`;syncVoicePopover();$('addBtn').disabled=elevenBusy||r2UploadBusy;document.querySelectorAll('.movieOnly').forEach(n=>n.classList.add('hidden'));document.querySelectorAll('.flashcardOnly').forEach(n=>n.classList.remove('hidden'));$('charactersWrap').classList.add('hidden');syncAudioPopover();syncAiButton();syncAiTextButton();syncZipButton()}
+      function textBtn(title,value,onClick,className='textbtn--en'){const b=document.createElement('button');b.type='button';b.className=`textbtn ${className}`;b.textContent=value||`Clique para preencher ${title}`;b.onclick=onClick;return b}
       function cameraIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l1.4 2H20a2 2 0 0 1 2 2v8a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8a2 2 0 0 1 2-2h3.6L9 4Zm3 4.5A4.5 4.5 0 1 0 16.5 13 4.5 4.5 0 0 0 12 8.5Zm0 2A2.5 2.5 0 1 1 9.5 13 2.5 2.5 0 0 1 12 10.5Z"/></svg>'}
       function audioControl(icon,labelText,has,onClick,onDelete,voiceTarget=false){const wrap=document.createElement('div');wrap.className='audio';if(voiceTarget&&state.voiceMode)wrap.classList.add('voice-target');const btn=document.createElement('button');btn.type='button';btn.className=has?'has ready':'';btn.innerHTML=`<img src="${icon}" alt="">`;const text=document.createElement('div');text.className='mini';text.textContent=has?'Ok':`${labelText} vazio`;let timer=null,held=false;btn.onpointerdown=()=>{held=false;if(!has||state.voiceMode)return;timer=setTimeout(()=>{held=true;onDelete()},2000)};['pointerup','pointerleave','pointercancel'].forEach(name=>btn.addEventListener(name,()=>{if(timer)clearTimeout(timer);timer=null}));btn.onclick=()=>{if(held){held=false;return}onClick(btn)};wrap.append(btn,text);return wrap}
       function renderChars(){const host=$('characters');host.innerHTML='';if(state.mode!=='scenes')return;ensureChars();state.chars.forEach((char,index)=>{const card=document.createElement('div');card.className='char';const pic=document.createElement('div');pic.className='charpic';pic.style.backgroundImage=charImg(char)?`url("${charImg(char)}")`:'';pic.textContent=charImg(char)?'':'Sem imagem';const id=document.createElement('div');id.className='field';id.innerHTML=`<label>ID</label><input type="text" value="${char.id||''}" readonly>`;const name=document.createElement('div');name.className='field';name.innerHTML=`<label>Nome</label><input type="text" value="${char.name||''}" readonly>`;const voice=document.createElement('div');voice.className='field';voice.innerHTML=`<label>ElevenLabs</label><input type="text" value="${char.voiceId||''}" readonly>`;const row=document.createElement('div');row.className='row';const imgBtn=document.createElement('button');imgBtn.type='button';imgBtn.textContent='Imagem';imgBtn.onclick=()=>{pendingImage={type:'char',index};$('singleImageInput').click()};const locked=isAiLocked('char',index),aiBtn=document.createElement('button');aiBtn.type='button';aiBtn.textContent=locked?'Gerando...':'IA';aiBtn.disabled=locked;aiBtn.onclick=async()=>{try{await generateCharImage(index)}catch(error){alert(error.message||'Erro ao gerar imagem.')}};row.append(imgBtn,aiBtn);card.append(pic,id,name,voice,row);host.appendChild(card)})}
@@ -2498,24 +2662,18 @@
           }
 
           card.appendChild(visual);
-          card.appendChild(textBtn('Portugues',item.pt,()=>{
-            const v=prompt(`Portugues do item ${sourceIndex+1}`,item.pt);
+          const languageKey=activeFlashcardLanguage();
+          const languageMeta=FLASHCARD_LANGUAGE_META[languageKey]||FLASHCARD_LANGUAGE_META.pt;
+          card.appendChild(textBtn(languageMeta.title,itemTextForLanguage(item,languageKey),()=>{
+            const currentValue=itemTextForLanguage(item,languageKey);
+            const v=prompt(`${languageMeta.title} do item ${sourceIndex+1}`,currentValue);
             if(v===null)return;
-            item.pt=v.trim();
+            item[languageKey]=v.trim();
             if(entry.source==='search')syncSearchEntryToDeck(entry);
             else queuePersistCurrentEditorDeck();
             save();
             renderItems();
-          }));
-          card.appendChild(textBtn('English',item.en,()=>{
-            const v=prompt(`English do item ${sourceIndex+1}`,item.en);
-            if(v===null)return;
-            item.en=v.trim();
-            if(entry.source==='search')syncSearchEntryToDeck(entry);
-            else queuePersistCurrentEditorDeck();
-            save();
-            renderItems();
-          }));
+          },languageMeta.className));
           card.dataset.source=entry.source;
           card.dataset.index=String(sourceIndex);
           card.dataset.itemIndex=String(sourceIndex);
@@ -2528,7 +2686,7 @@
       function validateFlashcard(){if(state.mode!=='flashcard')return;if(!state.title.trim())throw new Error('Preencha o nome do deck antes de exportar.');if(!flashcardCoverPreview())throw new Error('Preencha o link publico da capa do deck antes de exportar.');if(!state.items.some(item=>item.pt&&item.en))throw new Error('Adicione pelo menos um flashcard com portugues e english antes de exportar.')}
       function validateMovie(){if(state.mode==='flashcard')return;if(!state.title.trim())throw new Error('Preencha o titulo antes de exportar.');if(!state.coverFile)throw new Error('Envie a capa antes de exportar.');if(!state.items.length)throw new Error('Adicione pelo menos um item antes de exportar.')}
       function getSceneExportData(){ensureChars();const itemEntries=state.items.filter(i=>i.pt&&i.en&&i.characterId).map((i,n)=>({id:n+1,character:i.characterId,portuguese:i.pt,english:i.en,audio_portuguese:i.audioPtFile?cloud(state.day,PHASE.scenes,i.audioPtFile):'',audio_english:i.audioEnFile?cloud(state.day,PHASE.scenes,i.audioEnFile):'',item:i}));const usedIds=new Set(itemEntries.map(entry=>entry.character));const characters=state.chars.filter(char=>{const id=String(char?.id||'').trim();const name=String(char?.name||'').trim();return id&&name&&usedIds.has(id)}).map(char=>({id:char.id.trim(),name:char.name.trim(),voiceId:char.voiceId||getSceneCharacter(char.id)?.voiceId||'',image:char.imageFile?cloud(state.day,PHASE.scenes,char.imageFile):defaultSceneCharacterImageUrl(char.id),char}));const validIds=new Set(characters.map(char=>char.id));return{characters:characters.map(({char,...entry})=>entry),items:itemEntries.filter(entry=>validIds.has(entry.character)).map(({item,...entry})=>entry),characterAssets:characters.map(entry=>entry.char)}}
-      function payload(){if(state.mode==='flashcard'){validateFlashcard();return{title:state.title.trim(),coverImage:flashcardCoverPreview(),items:state.items.filter(i=>i.pt&&i.en).map(i=>({imagem:i.imageRemoteUrl||cloud(state.day,PHASE.flashcard,i.imageFile)||'',nomePortugues:i.pt,nomeIngles:i.en,categoria:i.category||'flashcard',audio:i.audioRemoteUrl||((i.audioFile||i.audioDataUrl)?cloud(state.day,PHASE.flashcard,i.audioFile):''),audio2:i.audioBlondeRemoteUrl||((i.audioBlondeFile||i.audioBlondeDataUrl)?cloud(state.day,PHASE.flashcard,i.audioBlondeFile):''),tense:i.tense||'present-simple',sentenceForm:i.sentenceForm||'affirmative'}))}}validateMovie();if(state.mode==='movies')return{soundtrack:state.soundFile?cloud(state.day,PHASE.movies,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),items:state.items.filter(i=>i.imageFile&&i.pt&&i.en).map((i,n)=>({id:n+1,image:cloud(state.day,PHASE.movies,i.imageFile),portuguese:i.pt,english:i.en,image_prompt:i.imagePrompt||'',audio_portuguese:i.audioPtFile?cloud(state.day,PHASE.movies,i.audioPtFile):'',audio_english:i.audioEnFile?cloud(state.day,PHASE.movies,i.audioEnFile):''})),title:state.title.trim(),coverImage:state.coverFile?cloud(state.day,PHASE.movies,state.coverFile):''};const sceneExport=getSceneExportData();return{soundtrack:state.soundFile?cloud(state.day,PHASE.scenes,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),characters:sceneExport.characters,items:sceneExport.items,title:state.title.trim(),coverImage:state.coverFile?cloud(state.day,PHASE.scenes,state.coverFile):''}}
+      function payload(){if(state.mode==='flashcard'){validateFlashcard();return{title:state.title.trim(),coverImage:flashcardCoverPreview(),items:state.items.filter(i=>i.pt&&i.en).map(i=>buildFlashcardExportEntry(i,state.day))}}validateMovie();if(state.mode==='movies')return{soundtrack:state.soundFile?cloud(state.day,PHASE.movies,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),items:state.items.filter(i=>i.imageFile&&i.pt&&i.en).map((i,n)=>({id:n+1,image:cloud(state.day,PHASE.movies,i.imageFile),portuguese:i.pt,english:i.en,image_prompt:i.imagePrompt||'',audio_portuguese:i.audioPtFile?cloud(state.day,PHASE.movies,i.audioPtFile):'',audio_english:i.audioEnFile?cloud(state.day,PHASE.movies,i.audioEnFile):''})),title:state.title.trim(),coverImage:state.coverFile?cloud(state.day,PHASE.movies,state.coverFile):''};const sceneExport=getSceneExportData();return{soundtrack:state.soundFile?cloud(state.day,PHASE.scenes,state.soundFile):'',level:state.levelKey.trim()||defaultLevelKey(),characters:sceneExport.characters,items:sceneExport.items,title:state.title.trim(),coverImage:state.coverFile?cloud(state.day,PHASE.scenes,state.coverFile):''}}
       const downloadJson=()=>{const blob=new Blob([JSON.stringify(payload(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=jsonFileName();document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)};
       $('newBtn').onclick=async()=>{
         if(!confirm('Apagar os itens e comecar uma grade nova?'))return;
@@ -2594,6 +2752,9 @@
       $('aiImageBtn').onclick=()=>{openAiImageGenerationFlow().catch(error=>alert(error?.message||'Erro ao gerar imagem.'))};
       $('translateBtn').onclick=async()=>{if(aiTextBusy)return;const targets=state.items.map((item,index)=>({index,pt:String(item?.pt||'').trim(),en:String(item?.en||'').trim()})).filter(item=>item.pt&&!item.en);if(!targets.length){alert('Nao ha campos em portugues aguardando traducao para ingles.');return}aiTextBusy=true;renderAll();try{const translations=await translatePortugueseBatch(targets);const applied=applyTranslations(translations);alert(`${applied} traducao(oes) aplicada(s) no campo English.`)}catch(error){alert(error.message||'Erro ao traduzir textos.')}finally{aiTextBusy=false;renderAll()}};
       $('aiTextBtn').onclick=()=>{if(state.mode!=='flashcard'&&state.mode!=='scenes'&&state.mode!=='movies')return;openTextPopover()};
+      $('addFrenchBtn').onclick=()=>addLanguageToFlashcards('french').catch(error=>alert(error.message||'Erro ao adicionar Frances.'));
+      $('addMandarinBtn').onclick=()=>addLanguageToFlashcards('mandarin').catch(error=>alert(error.message||'Erro ao adicionar Mandarim.'));
+      $('addSpanishBtn').onclick=()=>addLanguageToFlashcards('spanish').catch(error=>alert(error.message||'Erro ao adicionar Espanhol.'));
       $('importJsonBtn').onclick=()=>$('jsonInput').click();
       $('exportBtn').onclick=()=>{if(!adminStudio.enabled){alert('Entre com um usuario administrador para enviar decks JSON ao Fluent LevelUp.');return}openJsonBatchPublishPopover()};
       $('exportZipBtn').onclick=()=>{downloadBundleZip().catch(error=>alert(error.message||'Erro ao exportar ZIP.'))};
@@ -2798,7 +2959,7 @@
       $('itemAdminDeleteAudioBtn').onclick=()=>{if(Number.isInteger(adminStudio.activeMenuIndex)){deleteItemAudio(adminStudio.activeMenuIndex);closeItemAdminPopover()}};
       $('itemAdminDeleteItemBtn').onclick=()=>{if(Number.isInteger(adminStudio.activeMenuIndex))deleteItemContainer(adminStudio.activeMenuIndex)};
       $('itemAdminCloseBtn').onclick=()=>closeItemAdminPopover();
-      $('textGenerateBtn').onclick=async()=>{if(aiTextBusy)return;if(state.mode==='scenes'){const topic=$('sceneStoryTopicInput').value.trim();const minChars=parseInt($('sceneStoryMinCharsInput').value,10)||0;const maxChars=parseInt($('sceneStoryMaxCharsInput').value,10)||0;const lineCount=parseInt($('sceneStoryLineCountInput').value,10)||0;sceneStoryDraft.topic=topic;sceneStoryDraft.lineCount=lineCount;if(!lineCount||lineCount<1||lineCount>80)return alert('Defina entre 1 e 80 falas para a historia.');if(!topic)return alert('Descreva o tema da historia primeiro.');if(minChars<1||maxChars<minChars)return alert('A faixa de caracteres das falas esta invalida.');const selectedIds=sceneStorySelectedIds();if(!selectedIds.length||selectedIds.length>4)return alert('Escolha entre 1 e 4 personagens.');if(lineCount<selectedIds.length)return alert('A historia precisa ter pelo menos uma fala para cada personagem selecionado.');normalizeSceneStoryShares();const characters=sceneStoryCharacterPlan(lineCount);aiTextBusy=true;renderAll();try{const items=await generateSceneStoryBatch({topic,minChars,maxChars,lineCount,characters});const applied=applySceneStory(items);closeTextPopover();alert(`${applied} fala(s) gerada(s) para a historia.`)}catch(error){alert(error.message||'Erro ao gerar historia.')}finally{aiTextBusy=false;renderAll()}return}if(state.mode==='movies'){const topic=$('movieStoryTopicInput').value.trim(),minChars=parseInt($('movieStoryMinCharsInput').value,10)||0,maxChars=parseInt($('movieStoryMaxCharsInput').value,10)||0,itemCount=parseInt($('movieStoryCountInput').value,10)||0;movieStoryDraft.topic=topic;movieStoryDraft.itemCount=itemCount;if(!topic)return alert('Descreva o contexto do filme primeiro.');if(minChars<1||maxChars<minChars)return alert('A faixa de caracteres esta invalida.');if(itemCount<1||itemCount>60)return alert('Defina entre 1 e 60 containers para o filme.');aiTextBusy=true;renderAll();try{const movie=await generateMovieStoryBatch({topic,minChars,maxChars,itemCount});if(!movie.title||!movie.items.length)throw new Error('A IA nao retornou um filme valido.');const applied=applyMovieStory(movie);closeTextPopover();alert(`${applied} container(s) criados para o filme.`)}catch(error){alert(error.message||'Erro ao gerar filme.')}finally{aiTextBusy=false;renderAll()}return}const topic=$('textTopicInput').value.trim(),minChars=parseInt($('textMinCharsInput').value,10)||0,maxChars=parseInt($('textMaxCharsInput').value,10)||0,count=parseInt($('textCountInput').value,10)||0;if(!topic)return alert('Descreva o tipo de frases primeiro.');if(minChars<1||maxChars<minChars)return alert('A faixa de caracteres esta invalida.');if(count<1||count>60)return alert('A quantidade deve ficar entre 1 e 60.');aiTextBusy=true;renderAll();try{const items=await generateFlashcardTextBatch({topic,minChars,maxChars,count});const applied=applyGeneratedFlashcards(items);closeTextPopover();alert(`${applied} frase(s) gerada(s) e preenchida(s).`)}catch(error){alert(error.message||'Erro ao gerar frases.')}finally{aiTextBusy=false;renderAll()}};
+      $('textGenerateBtn').onclick=async()=>{if(aiTextBusy)return;if(state.mode==='flashcard'){closeTextPopover();return}if(state.mode==='scenes'){const topic=$('sceneStoryTopicInput').value.trim();const minChars=parseInt($('sceneStoryMinCharsInput').value,10)||0;const maxChars=parseInt($('sceneStoryMaxCharsInput').value,10)||0;const lineCount=parseInt($('sceneStoryLineCountInput').value,10)||0;sceneStoryDraft.topic=topic;sceneStoryDraft.lineCount=lineCount;if(!lineCount||lineCount<1||lineCount>80)return alert('Defina entre 1 e 80 falas para a historia.');if(!topic)return alert('Descreva o tema da historia primeiro.');if(minChars<1||maxChars<minChars)return alert('A faixa de caracteres das falas esta invalida.');const selectedIds=sceneStorySelectedIds();if(!selectedIds.length||selectedIds.length>4)return alert('Escolha entre 1 e 4 personagens.');if(lineCount<selectedIds.length)return alert('A historia precisa ter pelo menos uma fala para cada personagem selecionado.');normalizeSceneStoryShares();const characters=sceneStoryCharacterPlan(lineCount);aiTextBusy=true;renderAll();try{const items=await generateSceneStoryBatch({topic,minChars,maxChars,lineCount,characters});const applied=applySceneStory(items);closeTextPopover();alert(`${applied} fala(s) gerada(s) para a historia.`)}catch(error){alert(error.message||'Erro ao gerar historia.')}finally{aiTextBusy=false;renderAll()}return}if(state.mode==='movies'){const topic=$('movieStoryTopicInput').value.trim(),minChars=parseInt($('movieStoryMinCharsInput').value,10)||0,maxChars=parseInt($('movieStoryMaxCharsInput').value,10)||0,itemCount=parseInt($('movieStoryCountInput').value,10)||0;movieStoryDraft.topic=topic;movieStoryDraft.itemCount=itemCount;if(!topic)return alert('Descreva o contexto do filme primeiro.');if(minChars<1||maxChars<minChars)return alert('A faixa de caracteres esta invalida.');if(itemCount<1||itemCount>60)return alert('Defina entre 1 e 60 containers para o filme.');aiTextBusy=true;renderAll();try{const movie=await generateMovieStoryBatch({topic,minChars,maxChars,itemCount});if(!movie.title||!movie.items.length)throw new Error('A IA nao retornou um filme valido.');const applied=applyMovieStory(movie);closeTextPopover();alert(`${applied} container(s) criados para o filme.`)}catch(error){alert(error.message||'Erro ao gerar filme.')}finally{aiTextBusy=false;renderAll()}return}};
       $('audioBatchConfirmBtn').onclick=()=>{if(!audioBatchTargets.pt&&!audioBatchTargets.en)return alert('Selecione Portugues, English ou os dois.');$('audioBatchInput').click()};
       $('audioPopover').onclick=e=>{if(e.target===e.currentTarget)closeAudioPopover()};
       $('voicePopover').onclick=e=>{if(e.target===e.currentTarget)closeVoicePopover()};
@@ -2842,6 +3003,15 @@
           persistDirtyDecksNow({fallbackCurrentDeck:true}).catch(error=>showFeedbackToast(error?.message||'Nao foi possivel salvar os decks no Postgres.'));
           return;
         }
+        if(state.mode==='flashcard'&&!watchRuntime&&['1','2','3','4','5'].includes(key)){
+          e.preventDefault();
+          const nextLanguage=FLASHCARD_LANGUAGE_ORDER[Number(key)-1]||'pt';
+          state.flashcardTextView=nextLanguage;
+          save();
+          renderItems();
+          showFeedbackToast(`${FLASHCARD_LANGUAGE_META[nextLanguage]?.title||'Idioma'} ativo.`);
+          return;
+        }
         if(isAdminStudioEnabled()&&key==='d'&&!watchRuntime){
           e.preventDefault();
           if(adminStudio.selected.size<2){
@@ -2861,17 +3031,17 @@
           }
           return;
         }
-        if(key==='3'){
+        if(key==='b'){
           e.preventDefault();
           state.duoaccentBritishPreview=!state.duoaccentBritishPreview;
           document.body.classList.toggle('duoaccent-british',state.duoaccentBritishPreview);
-          showFeedbackToast(state.duoaccentBritishPreview?'Duoaccent 3 ativo: preview britanico (Blonde).':'Duoaccent 3 desativado: preview americano.');
+          showFeedbackToast(state.duoaccentBritishPreview?'Preview britanico ativo (Blonde).':'Preview britanico desativado.');
           save();
           return;
         }
         if(key==='o'){e.preventDefault();$('watchFontInput').click();return}
         if(key==='z'){e.preventDefault();$('watchTextColorInput').click();return}
-        if(key==='1'){e.preventDefault();startWatchPlayback({scope:'mine'});return}
+        if(key==='6'){e.preventDefault();startWatchPlayback({scope:'mine'});return}
         if(key==='u'){e.preventDefault();$('watchMediaInput').click();return}
         if(key==='escape'){if(watchRuntime){e.preventDefault();stopWatchPlayback()}return}
         if(overlayOpen&&!watchRuntime){e.preventDefault();return}

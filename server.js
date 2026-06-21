@@ -65,6 +65,9 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const ELEVENLABS_API_KEY = env(process.env.ELEVENLABS_API_KEY);
 const ELEVENLABS_VOICE_ID_HARRY = env(process.env.ELEVENLABS_VOICE_ID_HARRY);
 const ELEVENLABS_VOICE_ID_BLONDE = env(process.env.ELEVENLABS_VOICE_ID_BLONDE) || 'exsUS4vynmxd379XN4yO';
+const ELEVENLABS_VOICE_ID_PAUL = env(process.env.ELEVENLABS_VOICE_ID_PAUL) || '0igQGE0lbNpTaWsexf1r';
+const ELEVENLABS_VOICE_ID_SAMI = env(process.env.ELEVENLABS_VOICE_ID_SAMI) || '0igQGE0lbNpTaWsexf1r';
+const ELEVENLABS_VOICE_ID_CRISTINA = env(process.env.ELEVENLABS_VOICE_ID_CRISTINA) || 'qWWAqFomnJ99VwQLREfT';
 const ELEVENLABS_VOICE_ID_BURT_RAYNALDS = env(process.env.ELEVENLABS_VOICE_ID_BURT_RAYNALDS) || '4YYIPFl9wE5c4L2eu2Gb';
 const ELEVENLABS_MODEL_ID = env(process.env.ELEVENLABS_MODEL_ID) || 'eleven_multilingual_v2';
 const OPENAI_API_KEY = env(process.env.OPENAI_API_KEY);
@@ -21809,14 +21812,19 @@ app.post('/api/tts/elevenlabs', async (req, res) => {
   const requestedVoice = typeof req.body?.voice === 'string' ? req.body.voice.trim().toLowerCase() : '';
   const requestedLanguageCode = typeof req.body?.languageCode === 'string' ? req.body.languageCode.trim().toLowerCase() : '';
   const languageCode = /^[a-z]{2}$/.test(requestedLanguageCode) ? requestedLanguageCode : '';
-  const voiceId = requestedVoiceId
-    || (requestedVoice === 'harry' || requestedVoice === 'elevenlabs:harry'
-      ? ELEVENLABS_VOICE_ID_HARRY
-      : requestedVoice === 'blonde' || requestedVoice === 'elevenlabs:blonde'
-        ? ELEVENLABS_VOICE_ID_BLONDE
-      : requestedVoice === 'burt-raynalds' || requestedVoice === 'burt' || requestedVoice === 'elevenlabs:burt-raynalds' || requestedVoice === 'elevenlabs:burt'
-        ? ELEVENLABS_VOICE_ID_BURT_RAYNALDS
-        : ELEVENLABS_VOICE_ID_HARRY);
+  const normalizedRequestedVoice = requestedVoice.replace(/^elevenlabs:/, '');
+  const voiceConfigByKey = {
+    harry: { voiceId: ELEVENLABS_VOICE_ID_HARRY, instructionsKey: 'ELEVENLABS_VOICE_ID_HARRY' },
+    portuguese: { voiceId: ELEVENLABS_VOICE_ID_HARRY, instructionsKey: 'ELEVENLABS_VOICE_ID_HARRY' },
+    blonde: { voiceId: ELEVENLABS_VOICE_ID_BLONDE, instructionsKey: 'ELEVENLABS_VOICE_ID_BLONDE' },
+    paul: { voiceId: ELEVENLABS_VOICE_ID_PAUL, instructionsKey: 'ELEVENLABS_VOICE_ID_PAUL' },
+    sami: { voiceId: ELEVENLABS_VOICE_ID_SAMI, instructionsKey: 'ELEVENLABS_VOICE_ID_SAMI' },
+    cristina: { voiceId: ELEVENLABS_VOICE_ID_CRISTINA, instructionsKey: 'ELEVENLABS_VOICE_ID_CRISTINA' },
+    'burt-raynalds': { voiceId: ELEVENLABS_VOICE_ID_BURT_RAYNALDS, instructionsKey: 'ELEVENLABS_VOICE_ID_BURT_RAYNALDS' },
+    burt: { voiceId: ELEVENLABS_VOICE_ID_BURT_RAYNALDS, instructionsKey: 'ELEVENLABS_VOICE_ID_BURT_RAYNALDS' }
+  };
+  const requestedVoiceConfig = voiceConfigByKey[normalizedRequestedVoice] || voiceConfigByKey.harry;
+  const voiceId = requestedVoiceId || requestedVoiceConfig.voiceId;
 
   if (!text) {
     res.status(400).json({ error: 'Texto vazio para gerar voz.' });
@@ -21826,7 +21834,7 @@ app.post('/api/tts/elevenlabs', async (req, res) => {
   if (!ELEVENLABS_API_KEY || ELEVENLABS_API_KEY.includes('fake') || !voiceId || voiceId.includes('fake')) {
     res.status(503).json({
       error: 'ElevenLabs nao configurado.',
-      instructions: 'Preencha ELEVENLABS_API_KEY e ELEVENLABS_VOICE_ID_HARRY no .env com os valores reais.'
+      instructions: `Preencha ELEVENLABS_API_KEY e ${requestedVoiceConfig.instructionsKey} no .env com os valores reais.`
     });
     return;
   }
@@ -22721,17 +22729,67 @@ app.post('/api/text/openai/movies', async (req, res) => {
 
 app.post('/api/text/openai/translate', async (req, res) => {
   const items = Array.isArray(req.body?.items) ? req.body.items : [];
+  const rawTargetLanguage = typeof req.body?.targetLanguage === 'string'
+    ? req.body.targetLanguage.trim().toLowerCase()
+    : 'english';
+  const translationTargets = {
+    english: {
+      outputKey: 'en',
+      errorLabel: 'ingles',
+      noItemsError: 'Nao ha textos em portugues aguardando traducao para ingles.',
+      systemPrompt: [
+        'You translate Brazilian Portuguese learning content into natural, modern, useful English.',
+        'Preserve meaning, but prefer real everyday English over literal awkward translations.'
+      ]
+    },
+    french: {
+      outputKey: 'fr',
+      errorLabel: 'frances',
+      noItemsError: 'Nao ha textos em portugues aguardando traducao para frances.',
+      systemPrompt: [
+        'You translate Brazilian Portuguese learning content into natural, modern, useful French.',
+        'Preserve meaning, but prefer everyday French over overly literal translations.'
+      ]
+    },
+    mandarin: {
+      outputKey: 'zh',
+      errorLabel: 'mandarim',
+      noItemsError: 'Nao ha textos em portugues aguardando traducao para mandarim.',
+      systemPrompt: [
+        'You translate Brazilian Portuguese learning content into natural, modern, useful Mandarin Chinese.',
+        'Return Mandarin only as Hanyu Pinyin with tone marks.',
+        'Do not return Chinese characters, Hanzi, or English explanations.',
+        'Preserve meaning, but prefer natural everyday Mandarin over literal awkward translations.'
+      ]
+    },
+    spanish: {
+      outputKey: 'es',
+      errorLabel: 'espanhol',
+      noItemsError: 'Nao ha textos em portugues aguardando traducao para espanhol.',
+      systemPrompt: [
+        'You translate Brazilian Portuguese learning content into natural, modern, useful Spanish.',
+        'Preserve meaning, but prefer everyday Spanish over overly literal translations.'
+      ]
+    }
+  };
+  const targetConfig = translationTargets[rawTargetLanguage] || translationTargets.english;
 
   const normalizedItems = items
     .map(item => ({
       index: Number.isInteger(item?.index) ? item.index : Number.parseInt(item?.index, 10),
       pt: typeof item?.pt === 'string' ? item.pt.trim() : '',
-      en: typeof item?.en === 'string' ? item.en.trim() : ''
+      existingText: typeof item?.existingText === 'string'
+        ? item.existingText.trim()
+        : typeof item?.[targetConfig.outputKey] === 'string'
+          ? item[targetConfig.outputKey].trim()
+          : typeof item?.en === 'string'
+            ? item.en.trim()
+            : ''
     }))
-    .filter(item => Number.isInteger(item.index) && item.pt && !item.en);
+    .filter(item => Number.isInteger(item.index) && item.pt && !item.existingText);
 
   if (!normalizedItems.length) {
-    res.status(400).json({ error: 'Nao ha textos em portugues aguardando traducao.' });
+    res.status(400).json({ error: targetConfig.noItemsError });
     return;
   }
 
@@ -22749,14 +22807,13 @@ app.post('/api/text/openai/translate', async (req, res) => {
   }
 
   const prompt = [
-    'You translate Brazilian Portuguese learning content into natural, modern, useful English.',
+    ...targetConfig.systemPrompt,
     'Return only valid JSON.',
-    'Preserve meaning, but prefer real everyday English over literal awkward translations.',
     'Keep the tone child-safe and practical for a language-learning app.',
     'Do not invent extra context.',
-    'Do not translate items that already have English text.',
+    `Do not translate items that already have ${targetConfig.errorLabel} text.`,
     'Output JSON with this exact shape:',
-    '{"items":[{"index":0,"en":"..."}]}',
+    `{"items":[{"index":0,"${targetConfig.outputKey}":"..."}]}`,
     'Translate these Portuguese items:',
     JSON.stringify(normalizedItems.map(item => ({ index: item.index, pt: item.pt })))
   ].join('\n');
@@ -22811,19 +22868,27 @@ app.post('/api/text/openai/translate', async (req, res) => {
       ? parsed.items
         .map(item => ({
           index: Number.isInteger(item?.index) ? item.index : Number.parseInt(item?.index, 10),
-          en: typeof item?.en === 'string' ? item.en.trim() : ''
+          text: typeof item?.[targetConfig.outputKey] === 'string'
+            ? item[targetConfig.outputKey].trim()
+            : ''
         }))
-        .filter(item => Number.isInteger(item.index) && item.en)
+        .filter(item => Number.isInteger(item.index) && item.text)
+        .map(item => ({
+          index: item.index,
+          [targetConfig.outputKey]: item.text
+        }))
       : [];
 
     if (!translatedItems.length) {
-      res.status(502).json({ error: 'Nenhuma traducao valida foi retornada pela OpenAI.' });
+      res.status(502).json({ error: `Nenhuma traducao valida em ${targetConfig.errorLabel} foi retornada pela OpenAI.` });
       return;
     }
 
     res.json({
       success: true,
       items: translatedItems,
+      targetLanguage: rawTargetLanguage,
+      outputKey: targetConfig.outputKey,
       usage: payload?.usage || null,
       model: OPENAI_TEXT_MODEL
     });
