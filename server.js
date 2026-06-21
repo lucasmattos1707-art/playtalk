@@ -7288,6 +7288,40 @@ function extractResponseText(payload) {
   return chunks.join('\n').trim();
 }
 
+function stripJsonCodeFence(text) {
+  const trimmed = String(text || '').trim();
+  if (!trimmed) return '';
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return fenced ? fenced[1].trim() : trimmed;
+}
+
+function parseModelJsonResponse(text) {
+  const candidates = [];
+  const raw = String(text || '').trim();
+  if (!raw) return null;
+  candidates.push(raw);
+
+  const unfenced = stripJsonCodeFence(raw);
+  if (unfenced && unfenced !== raw) candidates.push(unfenced);
+
+  const firstBrace = unfenced.indexOf('{');
+  const lastBrace = unfenced.lastIndexOf('}');
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    const sliced = unfenced.slice(firstBrace, lastBrace + 1).trim();
+    if (sliced && !candidates.includes(sliced)) candidates.push(sliced);
+  }
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch (_error) {
+      // Try the next candidate.
+    }
+  }
+
+  return null;
+}
+
 function parseBase64DataUrl(dataUrl) {
   const match = String(dataUrl || '').match(/^data:([^;,]+)?(?:;[^,]+)?;base64,(.+)$/i);
   if (!match) {
@@ -22409,10 +22443,8 @@ app.post('/api/text/openai/flashcards', async (req, res) => {
       return;
     }
 
-    let parsed = null;
-    try {
-      parsed = JSON.parse(outputText);
-    } catch (_error) {
+    const parsed = parseModelJsonResponse(outputText);
+    if (!parsed) {
       res.status(502).json({
         error: 'A OpenAI retornou um formato inesperado.',
         details: outputText.slice(0, 500)
@@ -22549,10 +22581,8 @@ app.post('/api/text/openai/scenes', async (req, res) => {
       return;
     }
 
-    let parsed = null;
-    try {
-      parsed = JSON.parse(outputText);
-    } catch (_error) {
+    const parsed = parseModelJsonResponse(outputText);
+    if (!parsed) {
       res.status(502).json({
         error: 'A OpenAI retornou um formato inesperado.',
         details: outputText.slice(0, 500)
@@ -22678,10 +22708,8 @@ app.post('/api/text/openai/movies', async (req, res) => {
       return;
     }
 
-    let parsed = null;
-    try {
-      parsed = JSON.parse(outputText);
-    } catch (_error) {
+    const parsed = parseModelJsonResponse(outputText);
+    if (!parsed) {
       res.status(502).json({
         error: 'A OpenAI retornou um formato inesperado.',
         details: outputText.slice(0, 500)
@@ -22856,10 +22884,8 @@ app.post('/api/text/openai/translate', async (req, res) => {
       return;
     }
 
-    let parsed = null;
-    try {
-      parsed = JSON.parse(outputText);
-    } catch (_error) {
+    const parsed = parseModelJsonResponse(outputText);
+    if (!parsed) {
       res.status(502).json({
         error: 'A OpenAI retornou um formato inesperado.',
         details: outputText.slice(0, 500)
