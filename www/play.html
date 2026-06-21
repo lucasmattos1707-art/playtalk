@@ -12341,6 +12341,7 @@
           reportAudio: null,
           preloadImages: new Map(),
           preloadAudios: new Map(),
+          pendingEnsureAudioKeys: new Set(),
           contextLimit: DEFAULT_GAME_CONTEXT_LIMIT,
           selectedCount: null,
           pendingRewardSeal: null,
@@ -13037,6 +13038,124 @@
               primary: safeText(card?.sourceAudioEnglish || card?.audioUrl || ''),
               british: safeText(card?.sourceAudioEnglishBritish || card?.audioUrlBritish || '')
             };
+        }
+      }
+
+      function buildCardEnsureAudioKey(card, language = currentTargetLanguage()) {
+        const source = safeText(card?.source);
+        const sourceIndex = Number.parseInt(card?.sourceIndex, 10);
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        if (!source || !Number.isInteger(sourceIndex) || sourceIndex < 0 || !normalizedLanguage) return '';
+        return `${source}#${sourceIndex}#${normalizedLanguage}`;
+      }
+
+      function cardHasSourceAudioForLanguage(card, language = currentTargetLanguage()) {
+        const targetAudio = resolveSourceLanguageAudio(card, language);
+        return Boolean(safeText(targetAudio?.primary || targetAudio?.british || ''));
+      }
+
+      function applyEnsuredCardLanguagePayload(payload = {}) {
+        const source = safeText(payload?.source);
+        const sourceIndex = Number.parseInt(payload?.sourceIndex, 10);
+        const targetLanguage = normalizeGameOptionValue('targetLanguage', payload?.targetLanguage);
+        if (!source || !Number.isInteger(sourceIndex) || sourceIndex < 0 || !targetLanguage) return false;
+        const ensuredText = safeText(payload?.text);
+        const ensuredAudioUrl = safeText(payload?.audioUrl);
+        let changed = false;
+        state.allCards = state.allCards.map((card) => {
+          if (safeText(card?.source) !== source || Number.parseInt(card?.sourceIndex, 10) !== sourceIndex) {
+            return card;
+          }
+          const next = { ...card };
+          switch (targetLanguage) {
+            case 'portuguese':
+              if (ensuredText) next.sourcePortuguese = ensuredText;
+              if (ensuredAudioUrl) next.sourceAudioPortuguese = ensuredAudioUrl;
+              break;
+            case 'french':
+              if (ensuredText) next.sourceFrench = ensuredText;
+              if (ensuredAudioUrl) next.sourceAudioFrench = ensuredAudioUrl;
+              break;
+            case 'mandarin':
+              if (ensuredText) next.sourceMandarin = ensuredText;
+              if (ensuredAudioUrl) next.sourceAudioMandarin = ensuredAudioUrl;
+              break;
+            case 'spanish':
+              if (ensuredText) next.sourceSpanish = ensuredText;
+              if (ensuredAudioUrl) next.sourceAudioSpanish = ensuredAudioUrl;
+              break;
+            default:
+              if (ensuredText) next.sourceEnglish = ensuredText;
+              if (ensuredAudioUrl) next.sourceAudioEnglish = ensuredAudioUrl;
+              break;
+          }
+          changed = true;
+          return projectFlashcardLanguageFields(next);
+        });
+        return changed;
+      }
+
+      async function ensureUpcomingGameCardAudio(cards = []) {
+        const targetLanguage = currentTargetLanguage();
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
+        const candidates = Array.isArray(cards) ? cards : [];
+        const unique = [];
+        const seen = new Set();
+        candidates.forEach((card) => {
+          const key = buildCardEnsureAudioKey(card, normalizedLanguage);
+          if (!key || seen.has(key) || state.game.pendingEnsureAudioKeys.has(key)) return;
+          if (cardHasSourceAudioForLanguage(card, normalizedLanguage)) return;
+          seen.add(key);
+          unique.push({
+            key,
+            source: safeText(card?.source),
+            sourceIndex: Number.parseInt(card?.sourceIndex, 10)
+          });
+        });
+        if (!unique.length) return;
+
+        unique.forEach((entry) => state.game.pendingEnsureAudioKeys.add(entry.key));
+        try {
+          const response = await fetch('/api/flashcards/ensure-audio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              targetLanguage: normalizedLanguage,
+              cards: unique.map((entry) => ({
+                source: entry.source,
+                sourceIndex: entry.sourceIndex
+              }))
+            })
+          });
+          let payload = null;
+          try {
+            payload = await response.json();
+          } catch (_error) {
+            payload = null;
+          }
+          if (!response.ok) {
+            throw new Error(payload?.instructions || payload?.details || payload?.error || 'Falha ao preparar audio do flashcard.');
+          }
+          const ensuredCards = Array.isArray(payload?.cards) ? payload.cards : [];
+          let anyChanged = false;
+          ensuredCards.forEach((entry) => {
+            anyChanged = applyEnsuredCardLanguagePayload(entry) || anyChanged;
+          });
+          if (anyChanged) {
+            ensuredCards.forEach((entry) => {
+              const refreshedCard = state.allCards.find((card) => (
+                safeText(card?.source) === safeText(entry?.source)
+                && Number.parseInt(card?.sourceIndex, 10) === Number.parseInt(entry?.sourceIndex, 10)
+              ));
+              if (refreshedCard) {
+                preloadCardAudio(refreshedCard);
+              }
+            });
+          }
+        } catch (_error) {
+          // keep gameplay flowing even if on-demand generation fails
+        } finally {
+          unique.forEach((entry) => state.game.pendingEnsureAudioKeys.delete(entry.key));
         }
       }
 
@@ -23979,6 +24098,7 @@
         const upcomingCount = phaseKey === 'first-star'
           ? FIRST_STAGE_AUDIO_PRELOAD_COUNT
           : GAME_UPCOMING_PRELOAD_COUNT;
+        const audioEnsureUpcomingCount = Math.min(2, Math.max(0, upcomingCount));
         if (phaseKey === 'first-star') {
           maintainFirstStageAudioBuffer();
         }
@@ -23995,6 +24115,7 @@
                 cards.push(nextCard);
               }
             });
+          ensureUpcomingGameCardAudio(cards.slice(0, 1 + audioEnsureUpcomingCount)).catch(() => {});
           cards.forEach((card) => {
             preloadCardAudio(card);
           });
@@ -24012,6 +24133,7 @@
               cards.push(nextCard);
             }
           });
+        ensureUpcomingGameCardAudio(cards.slice(0, 1 + audioEnsureUpcomingCount)).catch(() => {});
         cards.forEach((card) => {
           preloadCardImage(card);
           preloadCardAudio(card);

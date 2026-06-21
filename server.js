@@ -70,6 +70,7 @@ const ELEVENLABS_VOICE_ID_PAUL = env(process.env.ELEVENLABS_VOICE_ID_PAUL) || '0
 const ELEVENLABS_VOICE_ID_SAMI = env(process.env.ELEVENLABS_VOICE_ID_SAMI) || 'UFDAUkGzdLAEJlINT3Fx';
 const ELEVENLABS_VOICE_ID_CRISTINA = env(process.env.ELEVENLABS_VOICE_ID_CRISTINA) || 'qWWAqFomnJ99VwQLREfT';
 const ELEVENLABS_VOICE_ID_BURT_RAYNALDS = env(process.env.ELEVENLABS_VOICE_ID_BURT_RAYNALDS) || '4YYIPFl9wE5c4L2eu2Gb';
+const flashcardEnsureAudioLocks = new Map();
 const ELEVENLABS_MODEL_ID = env(process.env.ELEVENLABS_MODEL_ID) || 'eleven_multilingual_v2';
 const OPENAI_API_KEY = env(process.env.OPENAI_API_KEY);
 const OPENAI_IMAGE_MODEL = env(process.env.OPENAI_IMAGE_MODEL) || 'gpt-image-1-mini';
@@ -11025,6 +11026,18 @@ function setFlashcardItemPortuguese(item, value) {
   setPreferredFlashcardField(item, ['nomePortugues', 'portuguese', 'translation'], value);
 }
 
+function setFlashcardItemFrench(item, value) {
+  setPreferredFlashcardField(item, ['nomeFrances', 'french', 'fr'], value);
+}
+
+function setFlashcardItemMandarin(item, value) {
+  setPreferredFlashcardField(item, ['nomeMandarim', 'mandarin', 'pinyin', 'pinyinComTons', 'Pinyin com tons'], value);
+}
+
+function setFlashcardItemSpanish(item, value) {
+  setPreferredFlashcardField(item, ['nomeEspanhol', 'spanish', 'es'], value);
+}
+
 function setFlashcardItemImage(item, value) {
   setPreferredFlashcardField(item, ['imagem', 'image'], value);
 }
@@ -11035,6 +11048,317 @@ function setFlashcardItemAudio(item, value) {
 
 function setFlashcardItemAudio2(item, value) {
   setPreferredFlashcardField(item, ['audio2', 'audioUrl2', 'audioBritish', 'audio_blonde', 'audioBlonde'], value);
+}
+
+function readFlashcardItemFrench(item) {
+  return typeof item?.nomeFrances === 'string'
+    ? item.nomeFrances.trim()
+    : typeof item?.french === 'string'
+      ? item.french.trim()
+      : typeof item?.fr === 'string'
+        ? item.fr.trim()
+        : '';
+}
+
+function readFlashcardItemMandarin(item) {
+  return typeof item?.nomeMandarim === 'string'
+    ? item.nomeMandarim.trim()
+    : typeof item?.mandarin === 'string'
+      ? item.mandarin.trim()
+      : typeof item?.pinyin === 'string'
+        ? item.pinyin.trim()
+        : typeof item?.pinyinComTons === 'string'
+          ? item.pinyinComTons.trim()
+          : typeof item?.['Pinyin com tons'] === 'string'
+            ? item['Pinyin com tons'].trim()
+            : '';
+}
+
+function readFlashcardItemSpanish(item) {
+  return typeof item?.nomeEspanhol === 'string'
+    ? item.nomeEspanhol.trim()
+    : typeof item?.spanish === 'string'
+      ? item.spanish.trim()
+      : typeof item?.es === 'string'
+        ? item.es.trim()
+        : '';
+}
+
+function readFlashcardItemAudioPortuguese(item) {
+  return typeof item?.audio_pt === 'string'
+    ? item.audio_pt.trim()
+    : typeof item?.audioPortuguese === 'string'
+      ? item.audioPortuguese.trim()
+      : typeof item?.audioPortugues === 'string'
+        ? item.audioPortugues.trim()
+        : '';
+}
+
+function readFlashcardItemAudioFrench(item) {
+  return typeof item?.audio_fr === 'string'
+    ? item.audio_fr.trim()
+    : typeof item?.audioFrench === 'string'
+      ? item.audioFrench.trim()
+      : typeof item?.audioFrances === 'string'
+        ? item.audioFrances.trim()
+        : '';
+}
+
+function readFlashcardItemAudioMandarin(item) {
+  return typeof item?.audio_zh === 'string'
+    ? item.audio_zh.trim()
+    : typeof item?.audioMandarin === 'string'
+      ? item.audioMandarin.trim()
+      : typeof item?.audioPinyin === 'string'
+        ? item.audioPinyin.trim()
+        : '';
+}
+
+function readFlashcardItemAudioSpanish(item) {
+  return typeof item?.audio_es === 'string'
+    ? item.audio_es.trim()
+    : typeof item?.audioSpanish === 'string'
+      ? item.audioSpanish.trim()
+      : typeof item?.audioEspanhol === 'string'
+        ? item.audioEspanhol.trim()
+        : '';
+}
+
+function setFlashcardItemAudioPortuguese(item, value) {
+  setPreferredFlashcardField(item, ['audio_pt', 'audioPortuguese', 'audioPortugues'], value);
+}
+
+function setFlashcardItemAudioFrench(item, value) {
+  setPreferredFlashcardField(item, ['audio_fr', 'audioFrench', 'audioFrances'], value);
+}
+
+function setFlashcardItemAudioMandarin(item, value) {
+  setPreferredFlashcardField(item, ['audio_zh', 'audioMandarin', 'audioPinyin'], value);
+}
+
+function setFlashcardItemAudioSpanish(item, value) {
+  setPreferredFlashcardField(item, ['audio_es', 'audioSpanish', 'audioEspanhol'], value);
+}
+
+function listFlashcardAudioVariants() {
+  return [
+    { key: 'english', read: readFlashcardItemAudio, set: setFlashcardItemAudio, suffix: '' },
+    { key: 'british', read: readFlashcardItemAudio2, set: setFlashcardItemAudio2, suffix: 'b' },
+    { key: 'portuguese', read: readFlashcardItemAudioPortuguese, set: setFlashcardItemAudioPortuguese, suffix: '-pt' },
+    { key: 'french', read: readFlashcardItemAudioFrench, set: setFlashcardItemAudioFrench, suffix: '-fr' },
+    { key: 'mandarin', read: readFlashcardItemAudioMandarin, set: setFlashcardItemAudioMandarin, suffix: '-zh' },
+    { key: 'spanish', read: readFlashcardItemAudioSpanish, set: setFlashcardItemAudioSpanish, suffix: '-es' }
+  ];
+}
+
+function normalizeFlashcardEnsureLanguage(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'portuguese' || normalized === 'pt') return 'portuguese';
+  if (normalized === 'french' || normalized === 'fr') return 'french';
+  if (normalized === 'mandarin' || normalized === 'zh') return 'mandarin';
+  if (normalized === 'spanish' || normalized === 'es') return 'spanish';
+  return 'english';
+}
+
+function getFlashcardEnsureLanguageConfig(language) {
+  switch (normalizeFlashcardEnsureLanguage(language)) {
+    case 'portuguese':
+      return {
+        language: 'portuguese',
+        languageCode: 'pt',
+        outputKey: 'pt',
+        voiceId: ELEVENLABS_VOICE_ID_PORTUGUESE,
+        voiceEnvKey: 'ELEVENLABS_VOICE_ID_PORTUGUESE',
+        readText: readFlashcardItemPortuguese,
+        setText: setFlashcardItemPortuguese,
+        readAudio: readFlashcardItemAudioPortuguese,
+        setAudio: setFlashcardItemAudioPortuguese,
+        audioSuffix: '-pt',
+        errorLabel: 'portugues',
+        translationPrompt: [
+          'You translate language-learning content into natural Brazilian Portuguese.',
+          'Preserve the original meaning closely and prefer clear everyday Portuguese.'
+        ]
+      };
+    case 'french':
+      return {
+        language: 'french',
+        languageCode: 'fr',
+        outputKey: 'fr',
+        voiceId: ELEVENLABS_VOICE_ID_PAUL,
+        voiceEnvKey: 'ELEVENLABS_VOICE_ID_PAUL',
+        readText: readFlashcardItemFrench,
+        setText: setFlashcardItemFrench,
+        readAudio: readFlashcardItemAudioFrench,
+        setAudio: setFlashcardItemAudioFrench,
+        audioSuffix: '-fr',
+        errorLabel: 'frances',
+        translationPrompt: [
+          'You translate language-learning content into natural, modern, useful French.',
+          'Preserve the original meaning closely and prefer everyday French over literal awkward translations.'
+        ]
+      };
+    case 'mandarin':
+      return {
+        language: 'mandarin',
+        languageCode: 'zh',
+        outputKey: 'zh',
+        voiceId: ELEVENLABS_VOICE_ID_SAMI,
+        voiceEnvKey: 'ELEVENLABS_VOICE_ID_SAMI',
+        readText: readFlashcardItemMandarin,
+        setText: setFlashcardItemMandarin,
+        readAudio: readFlashcardItemAudioMandarin,
+        setAudio: setFlashcardItemAudioMandarin,
+        audioSuffix: '-zh',
+        errorLabel: 'mandarim',
+        translationPrompt: [
+          'You translate language-learning content into natural, modern, useful Mandarin Chinese.',
+          'Return Mandarin only as Hanyu Pinyin with tone marks.',
+          'Do not return Chinese characters, Hanzi, or English explanations.',
+          'Preserve the original meaning closely and prefer natural everyday Mandarin over literal awkward translations.'
+        ]
+      };
+    case 'spanish':
+      return {
+        language: 'spanish',
+        languageCode: 'es',
+        outputKey: 'es',
+        voiceId: ELEVENLABS_VOICE_ID_CRISTINA,
+        voiceEnvKey: 'ELEVENLABS_VOICE_ID_CRISTINA',
+        readText: readFlashcardItemSpanish,
+        setText: setFlashcardItemSpanish,
+        readAudio: readFlashcardItemAudioSpanish,
+        setAudio: setFlashcardItemAudioSpanish,
+        audioSuffix: '-es',
+        errorLabel: 'espanhol',
+        translationPrompt: [
+          'You translate language-learning content into natural, modern, useful Spanish.',
+          'Preserve the original meaning closely and prefer everyday Spanish over literal awkward translations.'
+        ]
+      };
+    default:
+      return {
+        language: 'english',
+        languageCode: 'en',
+        outputKey: 'en',
+        voiceId: ELEVENLABS_VOICE_ID_HARRY,
+        voiceEnvKey: 'ELEVENLABS_VOICE_ID_HARRY',
+        readText: readFlashcardItemEnglish,
+        setText: setFlashcardItemEnglish,
+        readAudio: readFlashcardItemAudio,
+        setAudio: setFlashcardItemAudio,
+        audioSuffix: '',
+        errorLabel: 'ingles',
+        translationPrompt: [
+          'You translate Brazilian Portuguese learning content into natural, modern, useful English.',
+          'Preserve the original meaning closely and prefer real everyday English over literal awkward translations.'
+        ]
+      };
+  }
+}
+
+function ensureSentenceFinalPeriod(value) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  if (/[.!?…。．]\s*$/u.test(text)) {
+    return text.replace(/[!?…。．]+\s*$/u, '.');
+  }
+  return `${text}.`;
+}
+
+function buildPublishedFlashcardAudioUrl(sourceInfo, payload, sourceIndex, suffix = '', extension = '.mp3') {
+  const remoteDeck = buildFlashcardsRemoteDeckInfo(payload, sourceInfo?.fileName || 'deck.json');
+  const safeExtension = String(extension || '.mp3').startsWith('.')
+    ? String(extension || '.mp3')
+    : `.${String(extension || 'mp3')}`;
+  const objectKey = `${remoteDeck.audioFolder}/${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, sourceIndex)}${suffix}${safeExtension}`;
+  return buildFlashcardsR2PublicUrl(objectKey);
+}
+
+async function generateElevenLabsAudioBuffer({ text, voiceId, languageCode = '' }) {
+  const upstreamResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'audio/mpeg',
+      'Content-Type': 'application/json',
+      'xi-api-key': ELEVENLABS_API_KEY
+    },
+    body: JSON.stringify({
+      text,
+      model_id: ELEVENLABS_MODEL_ID,
+      ...(languageCode ? { language_code: languageCode } : {}),
+      output_format: 'mp3_44100_128'
+    })
+  });
+
+  if (!upstreamResponse.ok) {
+    const errorText = await upstreamResponse.text();
+    throw new Error(errorText.slice(0, 500) || 'Falha ao gerar audio na ElevenLabs.');
+  }
+
+  return Buffer.from(await upstreamResponse.arrayBuffer());
+}
+
+async function runFlashcardEnsureAudioLock(lockKey, task) {
+  const previous = flashcardEnsureAudioLocks.get(lockKey) || Promise.resolve();
+  let release;
+  const next = new Promise((resolve) => {
+    release = resolve;
+  });
+  flashcardEnsureAudioLocks.set(lockKey, previous.then(() => next));
+  await previous;
+  try {
+    return await task();
+  } finally {
+    release();
+    if (flashcardEnsureAudioLocks.get(lockKey) === next) {
+      flashcardEnsureAudioLocks.delete(lockKey);
+    }
+  }
+}
+
+async function translateFlashcardItemsForLanguage(targetLanguage, targets, options = {}) {
+  const config = getFlashcardEnsureLanguageConfig(targetLanguage);
+  const normalizedTargets = Array.isArray(targets)
+    ? targets
+      .map((item) => ({
+        index: Number.isInteger(item?.index) ? item.index : Number.parseInt(item?.index, 10),
+        pt: typeof item?.pt === 'string' ? item.pt.trim() : '',
+        en: typeof item?.en === 'string' ? item.en.trim() : ''
+      }))
+      .filter((item) => Number.isInteger(item.index) && item.pt)
+    : [];
+
+  if (!normalizedTargets.length) {
+    return [];
+  }
+
+  const prompt = [
+    ...config.translationPrompt,
+    'Return only valid JSON.',
+    'Keep the tone child-safe, practical, and faithful to the original flashcard meaning.',
+    'Use the Portuguese text as the main source and the English text only as extra disambiguation when it exists.',
+    'Every translated sentence must always end with a final period.',
+    'Do not add numbering, markdown, notes, or explanations.',
+    'Output JSON with this exact shape:',
+    `{"items":[{"index":0,"${config.outputKey}":"..."}]}`,
+    'Translate these items:',
+    JSON.stringify(normalizedTargets)
+  ].join('\n');
+
+  const { parsed } = await requestOpenAiJsonPayload(prompt, {
+    model: options.model || OPENAI_TRANSLATE_MODEL,
+    maxOutputTokens: options.maxOutputTokens || 1200
+  });
+
+  return Array.isArray(parsed?.items)
+    ? parsed.items
+      .map((item) => ({
+        index: Number.isInteger(item?.index) ? item.index : Number.parseInt(item?.index, 10),
+        text: ensureSentenceFinalPeriod(item?.[config.outputKey])
+      }))
+      .filter((item) => Number.isInteger(item.index) && item.text)
+    : [];
 }
 
 function normalizePublicDeckAssetUrl(rawValue, options = {}) {
@@ -11132,19 +11456,14 @@ function repairPublicDeckPayloadAssets(payload, deckRow) {
       changed = true;
     }
 
-    const currentAudio = readFlashcardItemAudio(item);
-    const nextAudio = normalizePublicDeckAssetUrl(currentAudio, { dayKey, kind: 'audio', remoteDeck });
-    if (nextAudio && nextAudio !== currentAudio) {
-      setFlashcardItemAudio(item, nextAudio);
-      changed = true;
-    }
-
-    const currentAudio2 = readFlashcardItemAudio2(item);
-    const nextAudio2 = normalizePublicDeckAssetUrl(currentAudio2, { dayKey, kind: 'audio', remoteDeck });
-    if (nextAudio2 && nextAudio2 !== currentAudio2) {
-      setFlashcardItemAudio2(item, nextAudio2);
-      changed = true;
-    }
+    listFlashcardAudioVariants().forEach((variant) => {
+      const currentAudio = variant.read(item);
+      const nextAudio = normalizePublicDeckAssetUrl(currentAudio, { dayKey, kind: 'audio', remoteDeck });
+      if (nextAudio && nextAudio !== currentAudio) {
+        variant.set(item, nextAudio);
+        changed = true;
+      }
+    });
   }
 
   if (typeof sourcePayload.coverImage === 'string') {
@@ -11382,8 +11701,10 @@ async function publishFlashcardDeckToR2FromSource(sourceInfo, payload) {
     const item = items[index];
     const nextItem = JSON.parse(JSON.stringify(item || {}));
     const imageValue = readFlashcardItemImage(item);
-    const audioValue = readFlashcardItemAudio(item);
-    const audioValue2 = readFlashcardItemAudio2(item);
+    const audioVariants = listFlashcardAudioVariants().map((variant) => ({
+      ...variant,
+      value: variant.read(item)
+    }));
 
     if (imageValue) {
       if (isFlashcardPlaceholderImageValue(imageValue)) {
@@ -11400,26 +11721,15 @@ async function publishFlashcardDeckToR2FromSource(sourceInfo, payload) {
       }
     }
 
-    if (audioValue) {
-      const audioAsset = await readFlashcardAssetBuffer(audioValue);
-      if (audioAsset?.buffer?.length) {
-        const audioExtension = path.extname(String(audioValue || '')).toLowerCase() || '.mp3';
-        const audioFileName = `${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${audioExtension}`;
-        const audioObjectKey = `${remoteDeck.audioFolder}/${audioFileName}`;
-        await putR2Object(audioObjectKey, audioAsset.buffer, audioAsset.contentType || contentTypeFromObjectKey(audioObjectKey));
-        setFlashcardItemAudio(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey));
-      }
-    }
-
-    if (audioValue2) {
-      const audioAsset2 = await readFlashcardAssetBuffer(audioValue2);
-      if (audioAsset2?.buffer?.length) {
-        const audioExtension2 = path.extname(String(audioValue2 || '')).toLowerCase() || '.mp3';
-        const audioFileName2 = `${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}b${audioExtension2}`;
-        const audioObjectKey2 = `${remoteDeck.audioFolder}/${audioFileName2}`;
-        await putR2Object(audioObjectKey2, audioAsset2.buffer, audioAsset2.contentType || contentTypeFromObjectKey(audioObjectKey2));
-        setFlashcardItemAudio2(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey2));
-      }
+    for (const variant of audioVariants) {
+      if (!variant.value) continue;
+      const audioAsset = await readFlashcardAssetBuffer(variant.value);
+      if (!audioAsset?.buffer?.length) continue;
+      const audioExtension = path.extname(String(variant.value || '')).toLowerCase() || '.mp3';
+      const audioFileName = `${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${variant.suffix}${audioExtension}`;
+      const audioObjectKey = `${remoteDeck.audioFolder}/${audioFileName}`;
+      await putR2Object(audioObjectKey, audioAsset.buffer, audioAsset.contentType || contentTypeFromObjectKey(audioObjectKey));
+      variant.set(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey));
     }
 
     publishedPayload.items.push(nextItem);
@@ -11490,8 +11800,10 @@ async function publishFlashcardEditorBundle({
   const processedItems = await Promise.all(items.map(async (item, index) => {
     const nextItem = JSON.parse(JSON.stringify(item || {}));
     const imageValue = readFlashcardItemImage(item);
-    const audioValue = readFlashcardItemAudio(item);
-    const audioValue2 = readFlashcardItemAudio2(item);
+    const audioVariants = listFlashcardAudioVariants().map((variant) => ({
+      ...variant,
+      value: variant.read(item)
+    }));
     let uploaded = 0;
     let skipped = 0;
     const tasks = [];
@@ -11523,13 +11835,14 @@ async function publishFlashcardEditorBundle({
       })());
     }
 
-    if (audioValue) {
+    audioVariants.forEach((variant) => {
+      if (!variant.value) return;
       tasks.push((async () => {
-        const audioFileName = path.posix.basename(String(audioValue || '').trim());
+        const audioFileName = path.posix.basename(String(variant.value || '').trim());
         const audioUpload = uploadedByName.get(audioFileName);
         if (audioUpload?.buffer?.length) {
           const audioExtension = path.extname(audioFileName).toLowerCase() || '.mp3';
-          const audioObjectKey = `${remoteDeck.audioFolder}/${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${audioExtension}`;
+          const audioObjectKey = `${remoteDeck.audioFolder}/${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}${variant.suffix}${audioExtension}`;
           const uploadResult = await putR2ObjectIfChanged(
             audioObjectKey,
             audioUpload.buffer,
@@ -11537,37 +11850,14 @@ async function publishFlashcardEditorBundle({
           );
           if (uploadResult.uploaded) uploaded += 1;
           else skipped += 1;
-          setFlashcardItemAudio(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey));
+          variant.set(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey));
           return;
         }
-        if (typeof audioValue === 'string' && audioValue.trim()) {
-          setFlashcardItemAudio(nextItem, audioValue.trim());
+        if (typeof variant.value === 'string' && variant.value.trim()) {
+          variant.set(nextItem, variant.value.trim());
         }
       })());
-    }
-
-    if (audioValue2) {
-      tasks.push((async () => {
-        const audioFileName2 = path.posix.basename(String(audioValue2 || '').trim());
-        const audioUpload2 = uploadedByName.get(audioFileName2);
-        if (audioUpload2?.buffer?.length) {
-          const audioExtension2 = path.extname(audioFileName2).toLowerCase() || '.mp3';
-          const audioObjectKey2 = `${remoteDeck.audioFolder}/${normalizeFlashcardsItemFileStem(remoteDeck.deckFolder, index)}b${audioExtension2}`;
-          const uploadResult2 = await putR2ObjectIfChanged(
-            audioObjectKey2,
-            audioUpload2.buffer,
-            audioUpload2.contentType || contentTypeFromObjectKey(audioObjectKey2)
-          );
-          if (uploadResult2.uploaded) uploaded += 1;
-          else skipped += 1;
-          setFlashcardItemAudio2(nextItem, buildFlashcardsR2PublicUrl(audioObjectKey2));
-          return;
-        }
-        if (typeof audioValue2 === 'string' && audioValue2.trim()) {
-          setFlashcardItemAudio2(nextItem, audioValue2.trim());
-        }
-      })());
-    }
+    });
 
     await Promise.all(tasks);
     return { index, nextItem, uploaded, skipped };
@@ -23092,6 +23382,7 @@ app.post('/api/text/openai/translate', async (req, res) => {
     'Return only valid JSON.',
     'Keep the tone child-safe and practical for a language-learning app.',
     'Do not invent extra context.',
+    'Every translated sentence must always end with a final period.',
     `Do not translate items that already have ${targetConfig.errorLabel} text.`,
     'Output JSON with this exact shape:',
     `{"items":[{"index":0,"${targetConfig.outputKey}":"..."}]}`,
@@ -23148,7 +23439,7 @@ app.post('/api/text/openai/translate', async (req, res) => {
         .map(item => ({
           index: Number.isInteger(item?.index) ? item.index : Number.parseInt(item?.index, 10),
           text: typeof item?.[targetConfig.outputKey] === 'string'
-            ? item[targetConfig.outputKey].trim()
+            ? ensureSentenceFinalPeriod(item[targetConfig.outputKey])
             : ''
         }))
         .filter(item => Number.isInteger(item.index) && item.text)
@@ -23274,6 +23565,238 @@ app.post('/api/r2/upload-level-files', express.json({ limit: '100mb' }), async (
   }
 });
 
+app.post('/api/flashcards/ensure-audio', express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser) {
+      res.status(401).json({ error: 'Sessao expirada.' });
+      return;
+    }
+
+    const targetLanguage = normalizeFlashcardEnsureLanguage(req.body?.targetLanguage);
+    const config = getFlashcardEnsureLanguageConfig(targetLanguage);
+    if (!ELEVENLABS_API_KEY || ELEVENLABS_API_KEY.includes('fake') || !config.voiceId || config.voiceId.includes('fake')) {
+      res.status(503).json({
+        error: 'ElevenLabs nao configurado.',
+        instructions: `Preencha ELEVENLABS_API_KEY e ${config.voiceEnvKey} no .env com os valores reais.`
+      });
+      return;
+    }
+
+    const rawCards = Array.isArray(req.body?.cards) ? req.body.cards : [];
+    const requestedCards = rawCards
+      .map((card) => {
+        const source = typeof card?.source === 'string' ? card.source.trim() : '';
+        const sourceIndex = Number.parseInt(card?.sourceIndex, 10);
+        if (!source || !Number.isInteger(sourceIndex) || sourceIndex < 0) return null;
+        return { source, sourceIndex };
+      })
+      .filter(Boolean);
+
+    if (!requestedCards.length) {
+      res.status(400).json({ error: 'Nenhum flashcard valido foi enviado para garantir audio.' });
+      return;
+    }
+
+    if (requestedCards.length > 12) {
+      res.status(400).json({ error: 'Quantidade invalida. Garanta no maximo 12 itens por vez.' });
+      return;
+    }
+
+    const dedupedCards = Array.from(
+      new Map(requestedCards.map((card) => [`${card.source}#${card.sourceIndex}`, card])).values()
+    );
+    const cardsBySource = new Map();
+    for (const card of dedupedCards) {
+      const sourceInfo = resolveAdminFlashcardSourceInfo(card.source);
+      const group = cardsBySource.get(sourceInfo.relativeJsonPath) || [];
+      group.push({ ...card, sourceInfo });
+      cardsBySource.set(sourceInfo.relativeJsonPath, group);
+    }
+
+    const ensuredCards = [];
+    const failed = [];
+    const publishedDecksMap = new Map();
+
+    for (const [relativeJsonPath, groupCards] of cardsBySource.entries()) {
+      const sourceInfo = groupCards[0]?.sourceInfo;
+      if (!sourceInfo) continue;
+      const lockKey = `ensure-audio:${relativeJsonPath}:${config.language}`;
+
+      const result = await runFlashcardEnsureAudioLock(lockKey, async () => {
+        const sourceMap = await loadEditableFlashcardSources(groupCards);
+        const sourceEntry = sourceMap.get(sourceInfo.relativeJsonPath);
+        const localEnsuredCards = [];
+        const localFailed = [];
+        let changed = false;
+
+        if (!sourceEntry) {
+          groupCards.forEach((card) => {
+            localFailed.push({
+              source: card.source,
+              sourceIndex: card.sourceIndex,
+              message: 'Deck de origem nao encontrado.'
+            });
+          });
+          return { ensuredCards: localEnsuredCards, failed: localFailed, publishedDecks: [] };
+        }
+
+        const translationTargets = [];
+        for (const card of groupCards) {
+          const item = sourceEntry.items?.[card.sourceIndex];
+          if (!item) {
+            localFailed.push({
+              source: card.source,
+              sourceIndex: card.sourceIndex,
+              message: 'Flashcard nao encontrado.'
+            });
+            continue;
+          }
+
+          const existingText = config.readText(item);
+          if (existingText) {
+            const normalizedText = ensureSentenceFinalPeriod(existingText);
+            if (normalizedText !== existingText) {
+              config.setText(item, normalizedText);
+              changed = true;
+            }
+            continue;
+          }
+
+          const basePortuguese = readFlashcardItemPortuguese(item);
+          const baseEnglish = readFlashcardItemEnglish(item);
+          if (!basePortuguese) {
+            localFailed.push({
+              source: card.source,
+              sourceIndex: card.sourceIndex,
+              message: `Nao ha texto base em portugues para traduzir para ${config.errorLabel}.`
+            });
+            continue;
+          }
+
+          translationTargets.push({
+            index: card.sourceIndex,
+            pt: ensureSentenceFinalPeriod(basePortuguese),
+            en: baseEnglish
+          });
+        }
+
+        if (translationTargets.length) {
+          const translatedItems = await translateFlashcardItemsForLanguage(config.language, translationTargets, {
+            model: OPENAI_TRANSLATE_MODEL,
+            maxOutputTokens: 1200
+          });
+          const translatedByIndex = new Map(translatedItems.map((item) => [item.index, item.text]));
+
+          for (const target of translationTargets) {
+            const translatedText = translatedByIndex.get(target.index);
+            if (!translatedText) {
+              localFailed.push({
+                source: sourceInfo.relativeJsonPath,
+                sourceIndex: target.index,
+                message: `A OpenAI nao retornou traducao valida em ${config.errorLabel}.`
+              });
+              continue;
+            }
+            const item = sourceEntry.items?.[target.index];
+            if (!item) continue;
+            config.setText(item, translatedText);
+            changed = true;
+          }
+        }
+
+        for (const card of groupCards) {
+          const alreadyFailed = localFailed.some((entry) => entry.source === card.source && entry.sourceIndex === card.sourceIndex);
+          if (alreadyFailed) continue;
+
+          const item = sourceEntry.items?.[card.sourceIndex];
+          if (!item) continue;
+
+          const finalText = ensureSentenceFinalPeriod(config.readText(item));
+          if (!finalText) {
+            localFailed.push({
+              source: card.source,
+              sourceIndex: card.sourceIndex,
+              message: `Nao ha traducao disponivel em ${config.errorLabel} para gerar o audio.`
+            });
+            continue;
+          }
+          if (finalText !== config.readText(item)) {
+            config.setText(item, finalText);
+            changed = true;
+          }
+
+          const existingAudio = config.readAudio(item);
+          if (!existingAudio) {
+            const audioBuffer = await generateElevenLabsAudioBuffer({
+              text: finalText,
+              voiceId: config.voiceId,
+              languageCode: config.languageCode
+            });
+            const assetRelativePath = buildAdminFlashcardAssetRelativePath(sourceInfo, card.sourceIndex, `audio-${config.languageCode}`, 'mp3');
+            await writeMirroredFile(assetRelativePath, audioBuffer);
+            config.setAudio(item, buildPublicAssetUrl(assetRelativePath));
+            changed = true;
+          }
+        }
+
+        let publishedDecks = [];
+        if (changed) {
+          await persistEditableFlashcardSources(sourceMap);
+          publishedDecks = await publishFlashcardSourcesToR2([sourceInfo]);
+        }
+
+        for (const card of groupCards) {
+          const alreadyFailed = localFailed.some((entry) => entry.source === card.source && entry.sourceIndex === card.sourceIndex);
+          if (alreadyFailed) continue;
+          const item = sourceEntry.items?.[card.sourceIndex];
+          if (!item) continue;
+          const audioValue = config.readAudio(item);
+          const textValue = ensureSentenceFinalPeriod(config.readText(item));
+          if (!audioValue || !textValue) continue;
+          localEnsuredCards.push({
+            source: card.source,
+            sourceIndex: card.sourceIndex,
+            targetLanguage: config.language,
+            text: textValue,
+            audioUrl: buildPublishedFlashcardAudioUrl(sourceInfo, sourceEntry.payload, card.sourceIndex, config.audioSuffix, '.mp3')
+          });
+        }
+
+        return {
+          ensuredCards: localEnsuredCards,
+          failed: localFailed,
+          publishedDecks
+        };
+      });
+
+      result.ensuredCards.forEach((entry) => ensuredCards.push(entry));
+      result.failed.forEach((entry) => failed.push(entry));
+      (Array.isArray(result.publishedDecks) ? result.publishedDecks : []).forEach((deck) => {
+        if (deck?.source) {
+          publishedDecksMap.set(deck.source, deck);
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      targetLanguage: config.language,
+      ensuredCount: ensuredCards.length,
+      cards: ensuredCards,
+      failedCount: failed.length,
+      failed,
+      model: OPENAI_TRANSLATE_MODEL,
+      publishedDecks: Array.from(publishedDecksMap.values())
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Falha ao garantir traducao e audio dos flashcards.',
+      ...(error.instructions ? { instructions: error.instructions } : {})
+    });
+  }
+});
+
 app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -23352,11 +23875,19 @@ app.post('/api/admin/levels/publish-local', express.json({ limit: '100mb' }), as
           const imageValue = readFlashcardItemImage(item);
           const audioValue = readFlashcardItemAudio(item);
           const audioValue2 = readFlashcardItemAudio2(item);
+          const audioValuePt = readFlashcardItemAudioPortuguese(item);
+          const audioValueFr = readFlashcardItemAudioFrench(item);
+          const audioValueZh = readFlashcardItemAudioMandarin(item);
+          const audioValueEs = readFlashcardItemAudioSpanish(item);
           return {
             ...item,
             imagem: resolvePublishedLevelAssetUrl(imageValue, assetUrlMap),
             audio: resolvePublishedLevelAssetUrl(audioValue, assetUrlMap),
-            audio2: resolvePublishedLevelAssetUrl(audioValue2, assetUrlMap)
+            audio2: resolvePublishedLevelAssetUrl(audioValue2, assetUrlMap),
+            audio_pt: resolvePublishedLevelAssetUrl(audioValuePt, assetUrlMap),
+            audio_fr: resolvePublishedLevelAssetUrl(audioValueFr, assetUrlMap),
+            audio_zh: resolvePublishedLevelAssetUrl(audioValueZh, assetUrlMap),
+            audio_es: resolvePublishedLevelAssetUrl(audioValueEs, assetUrlMap)
           };
         })
         .filter((item) => item.imagem && readFlashcardItemPortuguese(item) && readFlashcardItemEnglish(item))
