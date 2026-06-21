@@ -195,8 +195,8 @@
       .playtalk-energy-gate,
       body > .playtalk-energy-gate,
       body > #playtalkEnergyGate {
-        --playtalk-global-bg-desktop: url('/api/r2-media/backgrounds/playtalk-global-desktop.webp');
-        --playtalk-global-bg-mobile: url('/api/r2-media/backgrounds/playtalk-global-mobile.webp');
+        --playtalk-global-bg-desktop: url('/arquivos-codex/backgrounds/languages/american.png');
+        --playtalk-global-bg-mobile: url('/arquivos-codex/backgrounds/languages/american.png');
         --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
         --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 0.82) 0%, rgba(4, 18, 38, 0.4) 44%, rgba(4, 18, 38, 0.12) 100%);
         position: fixed;

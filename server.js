@@ -213,6 +213,123 @@ const databaseTarget = describeDatabaseTarget();
 const pool = (DATABASE_URL || DATABASE_CONFIG.host)
   ? new Pool(DATABASE_CONFIG)
   : null;
+const AUTH_USER_SELECT_COLUMNS_SQL = `
+  id, email, username, avatar_image, avatar_versions, avatar_generation_count,
+  onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
+  created_at, password_hash, premium_full_access, premium_until, no_energy,
+  level, is_bot, bot_config, bot_avatar_status, bot_avatar_error, offline_mode,
+  "fluency-plan", fluency_plan_minutes, fluency_plan_months,
+  fluency_plan_application, fluency_plan_books,
+  fluency_plan_flashcards_percentage, fluency_plan_smartbooks_percentage,
+  fluency_plan_score, fluency_plan_updated_at
+`;
+const AUTH_USER_REQUIRED_COLUMNS = Object.freeze([
+  'email',
+  'password_hash',
+  'avatar_image',
+  'created_at',
+  'username',
+  'avatar_versions',
+  'avatar_generation_count',
+  'onboarding_name_completed',
+  'onboarding_photo_completed',
+  'audio_check_completed',
+  'premium_full_access',
+  'premium_until',
+  'no_energy',
+  'level',
+  'is_bot',
+  'bot_config',
+  'bot_avatar_status',
+  'bot_avatar_error',
+  'offline_mode',
+  'fluency-plan',
+  'fluency_plan_minutes',
+  'fluency_plan_months',
+  'fluency_plan_application',
+  'fluency_plan_books',
+  'fluency_plan_flashcards_percentage',
+  'fluency_plan_smartbooks_percentage',
+  'fluency_plan_score',
+  'fluency_plan_updated_at'
+]);
+
+function isDatabasePermissionError(error) {
+  const code = String(error?.code || '').trim();
+  const message = String(error?.message || '').trim();
+  return code === '42501'
+    || /permission denied|must be owner of|insufficient privilege/i.test(message);
+}
+
+function compactErrorText(value, maxLength = 240) {
+  const normalized = String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized) return '';
+  return normalized.length > maxLength
+    ? `${normalized.slice(0, Math.max(0, maxLength - 3))}...`
+    : normalized;
+}
+
+function buildAuthDatabaseLabel() {
+  const host = compactErrorText(databaseTarget?.host || 'indefinido', 80) || 'indefinido';
+  const database = compactErrorText(databaseTarget?.database || 'indefinido', 80) || 'indefinido';
+  const port = compactErrorText(databaseTarget?.port || 'indefinido', 20) || 'indefinido';
+  return `${host}:${port}/${database}`;
+}
+
+async function hasRequiredPublicUsersColumns(requiredColumns = AUTH_USER_REQUIRED_COLUMNS) {
+  if (!pool) return false;
+  const expected = Array.isArray(requiredColumns)
+    ? requiredColumns.map((column) => String(column || '').trim()).filter(Boolean)
+    : [];
+  if (!expected.length) return true;
+  const result = await pool.query(
+    `SELECT column_name
+       FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'users'`
+  );
+  const existing = new Set((result.rows || []).map((row) => String(row?.column_name || '').trim()));
+  return expected.every((column) => existing.has(column));
+}
+
+async function ensureAuthSchemaReady() {
+  if (!pool) return false;
+  try {
+    await ensurePremiumAccessTables();
+    return true;
+  } catch (error) {
+    if (!isDatabasePermissionError(error)) {
+      throw error;
+    }
+    const authColumnsReady = await hasRequiredPublicUsersColumns().catch(() => false);
+    if (!authColumnsReady) {
+      throw error;
+    }
+    console.warn('Schema de auth mantido em modo somente leitura:', compactErrorText(error?.message || error));
+    return false;
+  }
+}
+
+function buildAuthErrorDetails(error, req) {
+  const parts = [];
+  const errorCode = compactErrorText(error?.code || '', 40);
+  const errorMessage = compactErrorText(error?.message || error, 180);
+  const origin = compactErrorText(req?.headers?.origin || 'sem-origin', 120);
+  const host = compactErrorText(req?.headers?.host || 'sem-host', 120);
+  if (errorCode) {
+    parts.push(`code=${errorCode}`);
+  }
+  if (errorMessage) {
+    parts.push(`erro=${errorMessage}`);
+  }
+  parts.push(`origin=${origin}`);
+  parts.push(`host=${host}`);
+  parts.push(`db=${buildAuthDatabaseLabel()}`);
+  return parts.join(' | ');
+}
+
 let flashcardRankingsTableReadyPromise = null;
 let usersAvatarColumnReadyPromise = null;
 let flashcardUserStateTablesReadyPromise = null;
@@ -14819,7 +14936,11 @@ async function readAuthenticatedUserFromRequest(req) {
 app.post('/register', async (req, res) => {
   try {
     if (!pool) {
-      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      res.status(500).json({
+        success: false,
+        message: 'DATABASE_URL nao configurada.',
+        details: `db=${buildAuthDatabaseLabel()}`
+      });
       return;
     }
     const username = normalizeUsername(req.body.username || req.body.email);
@@ -14850,8 +14971,7 @@ app.post('/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const email = buildLegacyEmailFromUsername(username);
     const avatarImage = normalizeAvatarImage(req.body.avatar || '');
-    await ensureUsersAvatarColumn();
-    await ensurePremiumAccessTables();
+    await ensureAuthSchemaReady();
 
     const result = await pool.query(
       `INSERT INTO public.users (
@@ -14859,9 +14979,7 @@ app.post('/register', async (req, res) => {
          onboarding_name_completed, onboarding_photo_completed
        )
        VALUES ($1, $2, $3, $4, true, $5)
-       RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
-                 onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
-                 created_at, password_hash, premium_full_access, premium_until, no_energy`,
+       RETURNING ${AUTH_USER_SELECT_COLUMNS_SQL}`,
       [email, username, passwordHash, avatarImage || null, Boolean(avatarImage)]
     );
 
@@ -14887,19 +15005,26 @@ app.post('/register', async (req, res) => {
       return;
     }
     console.error('Erro ao registrar usuario:', error);
-    res.status(500).json({ success: false, message: 'Erro ao registrar usuario.' });
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao registrar usuario.',
+      details: buildAuthErrorDetails(error, req)
+    });
   }
 });
 
 app.post('/auth/provision-temp', async (req, res) => {
   try {
     if (!pool) {
-      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      res.status(500).json({
+        success: false,
+        message: 'DATABASE_URL nao configurada.',
+        details: `db=${buildAuthDatabaseLabel()}`
+      });
       return;
     }
 
-    await ensureUsersAvatarColumn();
-    await ensurePremiumAccessTables();
+    await ensureAuthSchemaReady();
 
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     if (authUser?.id) {
@@ -14915,9 +15040,7 @@ app.post('/auth/provision-temp', async (req, res) => {
          email, username, password_hash, onboarding_name_completed, onboarding_photo_completed
        )
        VALUES ($1, $2, $3, false, false)
-       RETURNING id, email, username, avatar_image, avatar_versions, avatar_generation_count,
-                 onboarding_name_completed, onboarding_photo_completed,
-                 created_at, premium_full_access, premium_until, no_energy`,
+       RETURNING ${AUTH_USER_SELECT_COLUMNS_SQL}`,
       [email, generatedUsername, passwordHash]
     );
     const user = result.rows[0];
@@ -14928,14 +15051,22 @@ app.post('/auth/provision-temp', async (req, res) => {
     res.status(201).json({ success: true, user: await buildAuthUserPayload(user), token });
   } catch (error) {
     console.error('Erro ao provisionar usuario temporario:', error);
-    res.status(500).json({ success: false, message: 'Nao foi possivel preparar o usuario.' });
+    res.status(500).json({
+      success: false,
+      message: 'Nao foi possivel preparar o usuario.',
+      details: buildAuthErrorDetails(error, req)
+    });
   }
 });
 
 app.post('/login', async (req, res) => {
   try {
     if (!pool) {
-      res.status(500).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      res.status(500).json({
+        success: false,
+        message: 'DATABASE_URL nao configurada.',
+        details: `db=${buildAuthDatabaseLabel()}`
+      });
       return;
     }
     const username = normalizeUsername(req.body.username || req.body.email);
@@ -14950,14 +15081,11 @@ app.post('/login', async (req, res) => {
       return;
     }
 
-    await ensureUsersAvatarColumn();
-    await ensurePremiumAccessTables();
+    await ensureAuthSchemaReady();
 
     const legacyEmail = buildLegacyEmailFromUsername(username);
     const result = await pool.query(
-      `SELECT id, email, username, avatar_image, avatar_versions, avatar_generation_count,
-              onboarding_name_completed, onboarding_photo_completed,
-              password_hash, created_at, premium_full_access, premium_until, no_energy, is_bot
+      `SELECT ${AUTH_USER_SELECT_COLUMNS_SQL}
        FROM public.users
        WHERE email = $1 OR LOWER(COALESCE(username, '')) = LOWER($2)
        ORDER BY CASE WHEN email = $1 THEN 0 ELSE 1 END, id ASC
@@ -14979,7 +15107,11 @@ app.post('/login', async (req, res) => {
       console.error('Falha ao sincronizar ranking no login:', rankingError);
     });
     if (!JWT_SECRET) {
-      res.status(500).json({ success: false, message: 'JWT_SECRET nao configurado.' });
+      res.status(500).json({
+        success: false,
+        message: 'JWT_SECRET nao configurado.',
+        details: 'jwt=ausente'
+      });
       return;
     }
 
@@ -14993,7 +15125,11 @@ app.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao autenticar usuario:', error);
-    res.status(500).json({ success: false, message: 'Erro ao autenticar usuario.' });
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao autenticar usuario.',
+      details: buildAuthErrorDetails(error, req)
+    });
   }
 });
 

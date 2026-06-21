@@ -1200,7 +1200,9 @@
       });
       const registerPayload = await registerResponse.json().catch(() => ({}));
       if (!registerResponse.ok || !registerPayload?.success) {
-        throw new Error(registerPayload?.message || 'Nao foi possivel criar a conta.');
+        const baseMessage = safeText(registerPayload?.message) || 'Nao foi possivel criar a conta.';
+        const details = safeText(registerPayload?.details || registerPayload?.error || '');
+        throw new Error(details ? `${baseMessage} Detalhes: ${details}` : baseMessage);
       }
       if (registerPayload?.token) {
         persistAuthToken(registerPayload.token);
@@ -1296,7 +1298,9 @@
       }
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.success) {
-        throw new Error(payload?.message || 'Nao foi possivel entrar agora.');
+        const baseMessage = safeText(payload?.message) || 'Nao foi possivel entrar agora.';
+        const details = safeText(payload?.details || payload?.error || '');
+        throw new Error(details ? `${baseMessage} Detalhes: ${details}` : baseMessage);
       }
 
       if (payload?.token) {

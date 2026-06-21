@@ -7,7 +7,33 @@
   ]);
   const API_BASE_URL_STORAGE_KEY = 'playtalk_api_base_url';
   const AUTH_TOKEN_STORAGE_KEY = 'playtalk_auth_token';
+  const LANGUAGE_BACKGROUND_STORAGE_KEY = 'playtalk_language_background_v1';
   const DEFAULT_PUBLIC_ASSETS_ROOT = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
+  const DEFAULT_LANGUAGE_BACKGROUND = Object.freeze({
+    targetLanguage: 'english',
+    accent: 'mix_100_0'
+  });
+  const LANGUAGE_BACKGROUND_ASSET_PATHS = Object.freeze({
+    english: Object.freeze({
+      american: '/arquivos-codex/backgrounds/languages/american.png',
+      british: '/arquivos-codex/backgrounds/languages/brittish.png'
+    }),
+    spanish: Object.freeze({
+      primary: '/arquivos-codex/backgrounds/languages/spanish.png'
+    }),
+    french: Object.freeze({
+      primary: '/arquivos-codex/backgrounds/languages/french.png'
+    }),
+    german: Object.freeze({
+      primary: '/arquivos-codex/backgrounds/languages/german.png'
+    }),
+    portuguese: Object.freeze({
+      primary: '/arquivos-codex/backgrounds/languages/portuguese.png'
+    }),
+    mandarin: Object.freeze({
+      primary: '/arquivos-codex/backgrounds/languages/chinese.png'
+    })
+  });
 
   function isNativeRuntime() {
     const capacitor = window.Capacitor || null;
@@ -47,6 +73,85 @@
   function normalizeBaseUrl(value) {
     if (typeof value !== 'string') return '';
     return value.trim().replace(/\/+$/, '');
+  }
+
+  function normalizeLanguageBackgroundTarget(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(LANGUAGE_BACKGROUND_ASSET_PATHS, normalized)
+      ? normalized
+      : DEFAULT_LANGUAGE_BACKGROUND.targetLanguage;
+  }
+
+  function normalizeLanguageBackgroundAccent(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    return /^mix_\d{1,3}_\d{1,3}$/.test(normalized)
+      ? normalized
+      : DEFAULT_LANGUAGE_BACKGROUND.accent;
+  }
+
+  function pickEnglishBackgroundVariant(accent) {
+    const normalizedAccent = normalizeLanguageBackgroundAccent(accent);
+    const match = /^mix_(\d{1,3})_(\d{1,3})$/.exec(normalizedAccent);
+    if (!match) return 'american';
+    const american = Math.max(0, Math.min(100, Number.parseInt(match[1], 10) || 0));
+    const british = Math.max(0, Math.min(100, Number.parseInt(match[2], 10) || 0));
+    return british > american ? 'british' : 'american';
+  }
+
+  function readStoredLanguageBackgroundPreference() {
+    try {
+      const raw = window.localStorage.getItem(LANGUAGE_BACKGROUND_STORAGE_KEY);
+      if (!raw) return { ...DEFAULT_LANGUAGE_BACKGROUND };
+      const parsed = JSON.parse(raw);
+      return {
+        targetLanguage: normalizeLanguageBackgroundTarget(parsed?.targetLanguage),
+        accent: normalizeLanguageBackgroundAccent(parsed?.accent)
+      };
+    } catch (_error) {
+      return { ...DEFAULT_LANGUAGE_BACKGROUND };
+    }
+  }
+
+  function writeStoredLanguageBackgroundPreference(preference) {
+    const normalized = {
+      targetLanguage: normalizeLanguageBackgroundTarget(preference?.targetLanguage),
+      accent: normalizeLanguageBackgroundAccent(preference?.accent)
+    };
+    try {
+      window.localStorage.setItem(LANGUAGE_BACKGROUND_STORAGE_KEY, JSON.stringify(normalized));
+    } catch (_error) {
+      // ignore
+    }
+    return normalized;
+  }
+
+  function resolveLanguageBackgroundUrls(preference = null) {
+    const normalized = preference
+      ? {
+        targetLanguage: normalizeLanguageBackgroundTarget(preference?.targetLanguage),
+        accent: normalizeLanguageBackgroundAccent(preference?.accent)
+      }
+      : readStoredLanguageBackgroundPreference();
+    const targetAssets = LANGUAGE_BACKGROUND_ASSET_PATHS[normalized.targetLanguage]
+      || LANGUAGE_BACKGROUND_ASSET_PATHS[DEFAULT_LANGUAGE_BACKGROUND.targetLanguage];
+    let assetPath = safeAssetPath(targetAssets?.primary || '');
+    if (normalized.targetLanguage === 'english') {
+      const variant = pickEnglishBackgroundVariant(normalized.accent);
+      assetPath = safeAssetPath(targetAssets?.[variant] || targetAssets?.american || '');
+    }
+    if (!assetPath) {
+      assetPath = safeAssetPath(LANGUAGE_BACKGROUND_ASSET_PATHS.english?.american || '');
+    }
+    return {
+      ...normalized,
+      desktopUrl: assetPath,
+      mobileUrl: assetPath
+    };
+  }
+
+  function safeAssetPath(value) {
+    const normalized = String(value || '').trim();
+    return normalized.startsWith('/') ? normalized : '';
   }
 
   function joinPublicAssetUrl(baseUrl, relativePath = '') {
@@ -147,12 +252,17 @@
     return `${apiBaseUrl}${normalizePath(path)}`;
   }
 
-  function applyGlobalBackgroundCssVars(root = document) {
-    if (!root || !root.documentElement || !apiBaseUrl) return;
-    const desktopUrl = buildApiUrl('/api/r2-media/backgrounds/playtalk-global-desktop.webp');
-    const mobileUrl = buildApiUrl('/api/r2-media/backgrounds/playtalk-global-mobile.webp');
+  function applyLanguageBackgroundCssVars(root = document, preference = null) {
+    if (!root || !root.documentElement) return;
+    const selection = resolveLanguageBackgroundUrls(preference);
+    const desktopUrl = selection.desktopUrl;
+    const mobileUrl = selection.mobileUrl;
     root.documentElement.style.setProperty('--playtalk-global-bg-desktop', `url('${desktopUrl}')`);
     root.documentElement.style.setProperty('--playtalk-global-bg-mobile', `url('${mobileUrl}')`);
+  }
+
+  function applyGlobalBackgroundCssVars(root = document) {
+    applyLanguageBackgroundCssVars(root);
   }
 
   async function fetchWithTimeout(resource, options = {}, timeoutMs = 0) {
@@ -306,6 +416,13 @@
     accesskeyUrl: buildAccesskeyUrl,
     audiostutoUrl: buildAudiostutoUrl,
     rewritePublicAssetSources,
+    getLanguageBackgroundPreference: readStoredLanguageBackgroundPreference,
+    setLanguageBackgroundPreference(preference) {
+      const normalized = writeStoredLanguageBackgroundPreference(preference);
+      applyLanguageBackgroundCssVars(document, normalized);
+      return normalized;
+    },
+    applyLanguageBackgroundCssVars,
     applyGlobalBackgroundCssVars,
     setBaseUrl(nextBaseUrl) {
       const normalized = normalizeBaseUrl(nextBaseUrl);

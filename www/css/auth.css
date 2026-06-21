@@ -1,6 +1,6 @@
 :root {
-  --playtalk-global-bg-desktop: url('/api/r2-media/backgrounds/playtalk-global-desktop.webp');
-  --playtalk-global-bg-mobile: url('/api/r2-media/backgrounds/playtalk-global-mobile.webp');
+  --playtalk-global-bg-desktop: url('/arquivos-codex/backgrounds/languages/american.png');
+  --playtalk-global-bg-mobile: url('/arquivos-codex/backgrounds/languages/american.png');
   --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
 }
 
