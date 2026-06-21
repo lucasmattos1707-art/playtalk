@@ -501,7 +501,7 @@
       ];
       const SCENE_CHARACTER_MAP=new Map(SCENE_CHARACTERS.map(char=>[char.id,char]));
       const DATA_MANIFEST_REMOTE_PATH='/api/flashcards/manifest';
-      const $=id=>document.getElementById(id),state={mode:'flashcard',day:'1',title:'',levelKey:'',coverFile:'',coverDataUrl:'',soundFile:'',soundDataUrl:'',flashcardCoverUrl:'',items:[],chars:[],paste:false,testOnline:false,voiceMode:false,imageAiHint:'',sceneCharactersOpen:false,publicDeckFileName:'',publicDeckPath:'',publicDeckSource:'',ttsVoice:'harry',duoaccentBritishPreview:false,flashcardTextView:'pt'};
+      const $=id=>document.getElementById(id),state={mode:'flashcard',day:'1',title:'',levelKey:'',coverFile:'',coverDataUrl:'',soundFile:'',soundDataUrl:'',flashcardCoverUrl:'',items:[],chars:[],paste:false,testOnline:false,voiceMode:false,imageAiHint:'',sceneCharactersOpen:false,publicDeckFileName:'',publicDeckPath:'',publicDeckSource:'',ttsVoice:'harry',duoaccentBritishPreview:false,flashcardTextView:'pt',languageBatchStatus:''};
       const sceneStoryDraft={selectedIds:[],shares:{},topic:'',lineCount:8};
       const movieStoryDraft={topic:'',itemCount:8};
       const ADMIN_USERNAMES=new Set(['admin','adm','adminst']);
@@ -1894,12 +1894,13 @@
         if(selected.length)return selected.map(entry=>({entry,index:Number(entry.itemIndex),item:entry.item,source:entry.source}));
         return state.items.map((item,index)=>({entry:null,index,item,source:'editor'})).filter(target=>String(target?.item?.pt||'').trim());
       }
+      function chunkArray(items,size=40){const out=[];for(let index=0;index<items.length;index+=size)out.push(items.slice(index,index+size));return out}
       async function translateFlashcardLanguageBatch(targetLanguage,targets){
         const config=MULTI_LANGUAGE_TARGETS[targetLanguage];
         if(!config)throw new Error('Idioma invalido para traducao.');
         const normalizedTargets=(targets||[]).map(target=>({target,index:Number(target?.index),pt:String(target?.item?.pt||'').trim(),existingText:itemTextForLanguage(target?.item,config.key)})).filter(target=>Number.isInteger(target.index)&&target.pt&&!target.existingText);
         if(!normalizedTargets.length)throw new Error(`Nao ha campos em Portugues aguardando ${config.label}.`);
-        const response=await fetch('/api/text/openai/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetLanguage,items:normalizedTargets.map(target=>({index:target.index,pt:target.pt,existingText:target.existingText}))})});
+        const response=await fetch('/api/text/openai/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetLanguage,model:'gpt-4.1-mini',items:normalizedTargets.map(target=>({index:target.index,pt:target.pt,existingText:target.existingText}))})});
         let payload=null;try{payload=await response.json()}catch{}
         if(!response.ok)throw new Error(payload?.instructions||payload?.details||payload?.error||`Erro ao traduzir para ${config.label}.`);
         const items=Array.isArray(payload?.items)?payload.items.map(item=>({index:Number.parseInt(item?.index,10),text:String(item?.[config.responseKey]||'').trim()})).filter(item=>Number.isInteger(item.index)&&item.text):[];
@@ -1926,16 +1927,30 @@
         if(!config)throw new Error('Idioma invalido.');
         const targets=languageTargetsForAi();
         if(!targets.length)throw new Error('Selecione ou preencha flashcards com Portugues antes de adicionar idiomas.');
+        if(targets.length>500)throw new Error('Quantidade invalida. Traduza no maximo 500 itens por vez.');
+        closeTextPopover();
+        state.flashcardTextView=config.key;
+        state.languageBatchStatus=`Criando ${config.label}...`;
         aiTextBusy=true;
         renderAll();
         try{
-          const translations=await translateFlashcardLanguageBatch(targetLanguage,targets);
-          const applied=applyLanguageTranslations(targetLanguage,translations);
-          if(!applied)throw new Error(`Nenhum campo de ${config.label} precisou ser criado agora.`);
-          closeTextPopover();
-          showFeedbackToast(`${applied} card(s) receberam ${config.label}.`);
-          return applied;
+          const pendingTargets=targets.filter(target=>!itemTextForLanguage(target?.item,config.key));
+          const chunks=chunkArray(pendingTargets,40);
+          let appliedTotal=0;
+          for(let chunkIndex=0;chunkIndex<chunks.length;chunkIndex+=1){
+            const chunk=chunks[chunkIndex];
+            state.languageBatchStatus=`Criando ${config.label}... ${appliedTotal}/${pendingTargets.length}`;
+            renderAll();
+            const translations=await translateFlashcardLanguageBatch(targetLanguage,chunk);
+            appliedTotal+=applyLanguageTranslations(targetLanguage,translations);
+            state.languageBatchStatus=`Criando ${config.label}... ${appliedTotal}/${pendingTargets.length}`;
+            renderAll();
+          }
+          if(!appliedTotal)throw new Error(`Nenhum campo de ${config.label} precisou ser criado agora.`);
+          showFeedbackToast(`${appliedTotal} card(s) receberam ${config.label}.`);
+          return appliedTotal;
         }finally{
+          state.languageBatchStatus='';
           aiTextBusy=false;
           renderAll();
         }
@@ -2536,7 +2551,7 @@
       function syncVoicePopover(){const select=$('ttsVoiceSelect');if(select)select.value=normalizeTtsVoice(state.ttsVoice);const label=ttsVoiceLabel(state.ttsVoice);const providerLabel=voiceProvider(state.ttsVoice)==='elevenlabs'?'ElevenLabs':'OpenAI';setButtonLabel('addBtn',elevenBusy?`Gerando audio com ${providerLabel}... (${label})`:label);const currentLabel=$('openAiVoiceCurrentLabel');if(currentLabel)currentLabel.textContent=`Voz atual: ${label}`}
       function openVoicePopover(){state.ttsVoice=normalizeTtsVoice(state.ttsVoice);const select=$('ttsVoiceSelect');if(select)select.value=state.ttsVoice;$('voicePopover').classList.remove('hidden');$('voicePopover').setAttribute('aria-hidden','false');syncVoicePopover()}
       function closeVoicePopover(){$('voicePopover').classList.add('hidden');$('voicePopover').setAttribute('aria-hidden','true')}
-      function updateTop(){state.mode='flashcard';state.testOnline=false;state.voiceMode=false;$('hint').textContent=`Idioma visivel: ${FLASHCARD_LANGUAGE_META[activeFlashcardLanguage()]?.title||'Portugues'} | atalhos 1-5`;syncVoicePopover();$('addBtn').disabled=elevenBusy||r2UploadBusy;document.querySelectorAll('.movieOnly').forEach(n=>n.classList.add('hidden'));document.querySelectorAll('.flashcardOnly').forEach(n=>n.classList.remove('hidden'));$('charactersWrap').classList.add('hidden');syncAudioPopover();syncAiButton();syncAiTextButton();syncZipButton()}
+      function updateTop(){state.mode='flashcard';state.testOnline=false;state.voiceMode=false;const baseHint=`Idioma visivel: ${FLASHCARD_LANGUAGE_META[activeFlashcardLanguage()]?.title||'Portugues'} | atalhos 1-5`;$('hint').textContent=state.languageBatchStatus?`${baseHint} | ${state.languageBatchStatus}`:baseHint;syncVoicePopover();$('addBtn').disabled=elevenBusy||r2UploadBusy;document.querySelectorAll('.movieOnly').forEach(n=>n.classList.add('hidden'));document.querySelectorAll('.flashcardOnly').forEach(n=>n.classList.remove('hidden'));$('charactersWrap').classList.add('hidden');syncAudioPopover();syncAiButton();syncAiTextButton();syncZipButton()}
       function textBtn(title,value,onClick,className='textbtn--en'){const b=document.createElement('button');b.type='button';b.className=`textbtn ${className}`;b.textContent=value||`Clique para preencher ${title}`;b.onclick=onClick;return b}
       function cameraIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l1.4 2H20a2 2 0 0 1 2 2v8a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8a2 2 0 0 1 2-2h3.6L9 4Zm3 4.5A4.5 4.5 0 1 0 16.5 13 4.5 4.5 0 0 0 12 8.5Zm0 2A2.5 2.5 0 1 1 9.5 13 2.5 2.5 0 0 1 12 10.5Z"/></svg>'}
       function audioControl(icon,labelText,has,onClick,onDelete,voiceTarget=false){const wrap=document.createElement('div');wrap.className='audio';if(voiceTarget&&state.voiceMode)wrap.classList.add('voice-target');const btn=document.createElement('button');btn.type='button';btn.className=has?'has ready':'';btn.innerHTML=`<img src="${icon}" alt="">`;const text=document.createElement('div');text.className='mini';text.textContent=has?'Ok':`${labelText} vazio`;let timer=null,held=false;btn.onpointerdown=()=>{held=false;if(!has||state.voiceMode)return;timer=setTimeout(()=>{held=true;onDelete()},2000)};['pointerup','pointerleave','pointercancel'].forEach(name=>btn.addEventListener(name,()=>{if(timer)clearTimeout(timer);timer=null}));btn.onclick=()=>{if(held){held=false;return}onClick(btn)};wrap.append(btn,text);return wrap}

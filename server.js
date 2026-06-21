@@ -81,6 +81,7 @@ const OPENAI_TTS_MODEL = env(process.env.OPENAI_TTS_MODEL) || 'gpt-4o-mini-tts';
 const OPENAI_STT_MODEL = env(process.env.OPENAI_STT_MODEL) || 'gpt-4o-mini-transcribe';
 const OPENAI_CHAT_FAST_MODEL = env(process.env.OPENAI_CHAT_FAST_MODEL) || 'gpt-5-mini';
 const OPENAI_USERNAME_REVIEW_MODEL = env(process.env.OPENAI_USERNAME_REVIEW_MODEL) || 'gpt-4.1';
+const OPENAI_TRANSLATE_MODEL = env(process.env.OPENAI_TRANSLATE_MODEL) || 'gpt-4.1-mini';
 const OPENAI_CHAT_ALLOWED_MODELS = new Set([
   'gpt-5-nano',
   'gpt-5-mini',
@@ -22729,6 +22730,8 @@ app.post('/api/text/openai/movies', async (req, res) => {
 
 app.post('/api/text/openai/translate', async (req, res) => {
   const items = Array.isArray(req.body?.items) ? req.body.items : [];
+  const requestedModel = typeof req.body?.model === 'string' ? req.body.model.trim() : '';
+  const modelToUse = requestedModel || OPENAI_TRANSLATE_MODEL;
   const rawTargetLanguage = typeof req.body?.targetLanguage === 'string'
     ? req.body.targetLanguage.trim().toLowerCase()
     : 'english';
@@ -22793,8 +22796,8 @@ app.post('/api/text/openai/translate', async (req, res) => {
     return;
   }
 
-  if (normalizedItems.length > 48) {
-    res.status(400).json({ error: 'Quantidade invalida. Traduza no maximo 48 itens por vez.' });
+  if (normalizedItems.length > 500) {
+    res.status(400).json({ error: 'Quantidade invalida. Traduza no maximo 500 itens por vez.' });
     return;
   }
 
@@ -22826,7 +22829,7 @@ app.post('/api/text/openai/translate', async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: OPENAI_TEXT_MODEL,
+        model: modelToUse,
         input: prompt
       })
     });
@@ -22890,7 +22893,7 @@ app.post('/api/text/openai/translate', async (req, res) => {
       targetLanguage: rawTargetLanguage,
       outputKey: targetConfig.outputKey,
       usage: payload?.usage || null,
-      model: OPENAI_TEXT_MODEL
+      model: modelToUse
     });
   } catch (error) {
     res.status(502).json({
