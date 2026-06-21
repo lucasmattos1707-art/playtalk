@@ -7,7 +7,7 @@
   <script src="/config.js"></script>
   <style>
     @import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&family=Orbitron:wght@400&display=swap");
-    body{margin:0;font-family:Arial,sans-serif;background:#000;color:#fff}button,input,select,textarea{font:inherit}
+    body{margin:0;font-family:Arial,sans-serif;background:#000;color:#fff;transition:background 260ms ease}button,input,select,textarea{font:inherit}
     .page{max-width:1100px;margin:0 auto;padding:24px 16px 48px}.box,.card{background:linear-gradient(180deg,rgba(11,24,56,.82),rgba(7,15,36,.9));border:1px solid rgba(79,158,255,.18);border-radius:16px;backdrop-filter:blur(6px);box-shadow:0 0 18px rgba(63,145,255,.08)}
     .box{padding:14px;margin-bottom:16px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
     button{cursor:pointer;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);border-radius:12px;padding:10px 12px;color:#fff}.mode,.accent{color:#fff;font-weight:700}.mode{background:#c85732;border-color:#c85732}.accent{background:#ef8f1a;border-color:#ef8f1a}.tts-btn{background:linear-gradient(135deg,#7d36ff,#5a1fd1);border-color:#5a1fd1;color:#fff;font-weight:700}.eleven-btn{background:linear-gradient(135deg,#050505,#6b6b6b);border-color:#050505;color:#fff;font-weight:700}.r2-btn{background:linear-gradient(135deg,#1b7cff,#16b86a);border-color:#1777d8;color:#fff;font-weight:700;display:inline-flex;align-items:center;gap:8px}.r2-btn svg{width:16px;height:16px;fill:currentColor}
@@ -61,10 +61,27 @@
     }
     .char{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
     .popover{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:20px;z-index:50}.popover-card{width:min(420px,100%);background:#111;border:1px solid rgba(255,255,255,.16);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:14px}
+    .icon-btn-flags{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}
+    .icon-btn-flags img{width:24px;height:24px;max-width:none;border-radius:999px;object-fit:cover;box-shadow:0 8px 16px rgba(0,0,0,.24)}
+    .icon-btn-flags--stack img:nth-child(1){background:linear-gradient(135deg,#0f2d67 0%,#5e0f18 100%)}
+    .icon-btn-flags--stack img:nth-child(2){background:linear-gradient(135deg,#8f101a 0%,#4c071f 100%)}
+    .icon-btn-flags--stack img:nth-child(3){background:linear-gradient(135deg,#8f1118 0%,#7a5a00 100%)}
+    .icon-btn-flags--stack img:nth-child(4){background:linear-gradient(135deg,#0d0d0d 0%,#680d12 52%,#6f5200 100%)}
     .language-actions{display:grid;gap:10px}
-    .language-action{justify-content:flex-start;text-align:left;padding:14px 16px;border-radius:16px;background:linear-gradient(180deg,rgba(20,56,120,.92),rgba(9,26,63,.96));border:1px solid rgba(126,181,255,.35);color:#fff}
+    .language-action{display:flex;align-items:center;gap:14px;justify-content:flex-start;text-align:left;padding:14px 16px;border-radius:16px;background:linear-gradient(180deg,rgba(20,56,120,.92),rgba(9,26,63,.96));border:1px solid rgba(126,181,255,.35);color:#fff}
+    .language-action__flag{width:52px;height:52px;border-radius:999px;display:grid;place-items:center;box-shadow:0 12px 24px rgba(0,0,0,.28);flex:0 0 auto}
+    .language-action__flag img{width:34px;height:34px;object-fit:contain}
+    .language-action__copy{display:flex;flex-direction:column;min-width:0}
     .language-action strong{display:block;font-size:15px}
     .language-action span{display:block;margin-top:4px;color:rgba(255,255,255,.72);font-size:12px;line-height:1.4}
+    .language-action--fr{background:linear-gradient(135deg,#0f2d67 0%,#5e0f18 100%);border-color:rgba(138,177,255,.48)}
+    .language-action--fr .language-action__flag{background:linear-gradient(135deg,#0f2d67 0%,#5e0f18 100%)}
+    .language-action--zh{background:linear-gradient(135deg,#8f101a 0%,#4c071f 100%);border-color:rgba(255,122,122,.34)}
+    .language-action--zh .language-action__flag{background:linear-gradient(135deg,#8f101a 0%,#4c071f 100%)}
+    .language-action--es{background:linear-gradient(135deg,#8f1118 0%,#7a5a00 100%);border-color:rgba(255,197,106,.34)}
+    .language-action--es .language-action__flag{background:linear-gradient(135deg,#8f1118 0%,#7a5a00 100%)}
+    .language-action--de{background:linear-gradient(135deg,#0d0d0d 0%,#680d12 52%,#6f5200 100%);border-color:rgba(255,228,132,.3)}
+    .language-action--de .language-action__flag{background:linear-gradient(135deg,#0d0d0d 0%,#680d12 52%,#6f5200 100%)}
     #voicePopover #ttsVoiceSelect{background:#082a66;border-color:#0f3f93;color:#eef5ff}
     #voicePopover #ttsVoiceSelect option{background:#082a66;color:#eef5ff}
     .deck-edit-picker-box{padding:10px;background:linear-gradient(180deg,#0a1f4f,#071538);border-color:rgba(100,157,255,.28)}
@@ -206,7 +223,14 @@
       <button id="voiceModeBtn" class="icon-btn tts-btn language-flag-btn" type="button" aria-label="Gerar voz" title="Gerar voz"><img id="voiceModeBtnIcon" src="/arquivos-codex/icones/portugues.svg" alt=""></button>
       <button id="aiImageBtn" class="icon-btn ai-image-btn icon-btn--light" type="button" aria-label="Gerar imagens IA" title="Gerar imagens IA"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/Gerar%20imagens%20IA.svg" alt=""></button>
       <button id="translateBtn" class="icon-btn" type="button" aria-label="Traduzir PT para EN" title="Traduzir PT para EN"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/traduzir.svg" alt=""></button>
-      <button id="aiTextBtn" class="icon-btn" type="button" aria-label="Adicionar idiomas" title="Adicionar idiomas"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/gerar%20texto%20ia.svg" alt=""></button>
+      <button id="aiTextBtn" class="icon-btn language-flag-btn" type="button" aria-label="Adicionar idiomas" title="Adicionar idiomas">
+        <div class="icon-btn-flags icon-btn-flags--stack" aria-hidden="true">
+          <img src="/arquivos-codex/icones/frances.svg" alt="">
+          <img src="/arquivos-codex/icones/mandarim.svg" alt="">
+          <img src="/arquivos-codex/icones/espanhol.svg" alt="">
+          <img src="/arquivos-codex/icones/alemao.svg" alt="">
+        </div>
+      </button>
       <button id="importJsonBtn" class="icon-btn" type="button" aria-label="Importar JSON" title="Importar JSON"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/importar%20json.svg" alt=""></button>
       <button id="exportBtn" class="icon-btn" type="button" aria-label="Exportar JSON" title="Exportar JSON"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/exportar%20json.svg" alt=""></button>
       <button id="exportZipBtn" class="icon-btn" type="button" aria-label="Exportar ZIP" title="Exportar ZIP"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/exportar%20zip.svg" alt=""></button>
@@ -358,10 +382,10 @@
       <div><div class="mini" id="textPopoverEyebrow">FlashCard com IA</div><h2 id="textPopoverHeading" style="margin:6px 0 0">Adicionar idiomas</h2></div>
       <div id="flashcardTextFields">
         <div class="language-actions">
-          <button id="addFrenchBtn" class="language-action" type="button"><strong>Adicionar Frances</strong><span>Cria a traducao em frances para os cards selecionados ou para o deck atual.</span></button>
-          <button id="addMandarinBtn" class="language-action" type="button"><strong>Adicionar Mandarim</strong><span>Cria o mandarim em Pinyin com tons para os cards selecionados ou para o deck atual.</span></button>
-          <button id="addSpanishBtn" class="language-action" type="button"><strong>Adicionar Espanhol</strong><span>Cria a traducao em espanhol para os cards selecionados ou para o deck atual.</span></button>
-          <button id="addGermanBtn" class="language-action" type="button"><strong>Adicionar Alemao</strong><span>Cria a traducao em alemao para os cards selecionados ou para o deck atual.</span></button>
+          <button id="addFrenchBtn" class="language-action language-action--fr" type="button"><div class="language-action__flag" aria-hidden="true"><img src="/arquivos-codex/icones/frances.svg" alt=""></div><div class="language-action__copy"><strong>Adicionar Frances</strong><span>Cria a traducao em frances para os cards selecionados ou para o deck atual.</span></div></button>
+          <button id="addMandarinBtn" class="language-action language-action--zh" type="button"><div class="language-action__flag" aria-hidden="true"><img src="/arquivos-codex/icones/mandarim.svg" alt=""></div><div class="language-action__copy"><strong>Adicionar Mandarim</strong><span>Cria o mandarim em Pinyin com tons para os cards selecionados ou para o deck atual.</span></div></button>
+          <button id="addSpanishBtn" class="language-action language-action--es" type="button"><div class="language-action__flag" aria-hidden="true"><img src="/arquivos-codex/icones/espanhol.svg" alt=""></div><div class="language-action__copy"><strong>Adicionar Espanhol</strong><span>Cria a traducao em espanhol para os cards selecionados ou para o deck atual.</span></div></button>
+          <button id="addGermanBtn" class="language-action language-action--de" type="button"><div class="language-action__flag" aria-hidden="true"><img src="/arquivos-codex/icones/alemao.svg" alt=""></div><div class="language-action__copy"><strong>Adicionar Alemao</strong><span>Cria a traducao em alemao para os cards selecionados ou para o deck atual.</span></div></button>
         </div>
         <div class="mini" id="flashcardLanguageHint">As traducoes usam o Portugues como base sem perder o sentido original do English.</div>
       </div>
@@ -548,23 +572,30 @@
         if(window.PlaytalkApi&&typeof window.PlaytalkApi.url==='function')return window.PlaytalkApi.url(path);
         return path;
       }
-      const FLASHCARD_LANGUAGE_ORDER=['pt','en','fr','zh','es','de'];
+      const FLASHCARD_LANGUAGE_ORDER=['pt','en-us','en-gb','fr','zh','es','de'];
       const FLASHCARD_LANGUAGE_META={
-        pt:{title:'Portugues',className:'textbtn--pt',audioField:'audioPt',jsonTextKey:'nomePortugues',jsonAudioKey:'audio_pt'},
-        en:{title:'English',className:'textbtn--en',audioField:'audio',jsonTextKey:'nomeIngles',jsonAudioKey:'audio'},
-        fr:{title:'Frances',className:'textbtn--fr',audioField:'audioFr',jsonTextKey:'nomeFrances',jsonAudioKey:'audio_fr'},
-        zh:{title:'Mandarim',className:'textbtn--zh',audioField:'audioZh',jsonTextKey:'nomeMandarim',jsonAudioKey:'audio_zh'},
-        es:{title:'Espanhol',className:'textbtn--es',audioField:'audioEs',jsonTextKey:'nomeEspanhol',jsonAudioKey:'audio_es'},
-        de:{title:'Alemao',className:'textbtn--de',audioField:'audioDe',jsonTextKey:'nomeAlemao',jsonAudioKey:'audio_de'}
+        pt:{title:'Portugues',className:'textbtn--pt',audioField:'audioPt',jsonTextKey:'nomePortugues',jsonAudioKey:'audio_pt',itemKey:'pt'},
+        'en-us':{title:'Ingles Americano',className:'textbtn--en',audioField:'audio',jsonTextKey:'nomeIngles',jsonAudioKey:'audio',itemKey:'en'},
+        'en-gb':{title:'Ingles Britanico',className:'textbtn--en',audioField:'audio2',jsonTextKey:'nomeIngles',jsonAudioKey:'audio2',itemKey:'en'},
+        fr:{title:'Frances',className:'textbtn--fr',audioField:'audioFr',jsonTextKey:'nomeFrances',jsonAudioKey:'audio_fr',itemKey:'fr'},
+        zh:{title:'Mandarim',className:'textbtn--zh',audioField:'audioZh',jsonTextKey:'nomeMandarim',jsonAudioKey:'audio_zh',itemKey:'zh'},
+        es:{title:'Espanhol',className:'textbtn--es',audioField:'audioEs',jsonTextKey:'nomeEspanhol',jsonAudioKey:'audio_es',itemKey:'es'},
+        de:{title:'Alemao',className:'textbtn--de',audioField:'audioDe',jsonTextKey:'nomeAlemao',jsonAudioKey:'audio_de',itemKey:'de'}
       };
       const FLASHCARD_LANGUAGE_THEME={
-        pt:{icon:'/arquivos-codex/icones/portugues.svg',gradient:'linear-gradient(135deg,#0d4a24 0%,#6b5500 100%)'},
-        en:{icon:'/SVG/codex-icons/american.svg',gradient:'linear-gradient(135deg,#5a0c14 0%,#0d2f63 100%)'},
-        fr:{icon:'/arquivos-codex/icones/frances.svg',gradient:'linear-gradient(135deg,#0f2d67 0%,#5e0f18 100%)'},
-        zh:{icon:'/arquivos-codex/icones/mandarim.svg',gradient:'linear-gradient(135deg,#8f101a 0%,#4c071f 100%)'},
-        es:{icon:'/arquivos-codex/icones/espanhol.svg',gradient:'linear-gradient(135deg,#8f1118 0%,#7a5a00 100%)'},
-        de:{icon:'/arquivos-codex/icones/alemao.svg',gradient:'linear-gradient(135deg,#0d0d0d 0%,#680d12 52%,#6f5200 100%)'}
+        pt:{icon:'/arquivos-codex/icones/portugues.svg',gradient:'linear-gradient(135deg,#0d4a24 0%,#6b5500 100%)',pageGradient:'radial-gradient(circle at top left,rgba(28,110,60,.34),transparent 32%), linear-gradient(135deg,#02130a 0%,#0d4a24 38%,#6b5500 100%)'},
+        'en-us':{icon:'/SVG/codex-icons/american.svg',gradient:'linear-gradient(135deg,#5a0c14 0%,#0d2f63 100%)',pageGradient:'radial-gradient(circle at top left,rgba(162,35,54,.34),transparent 30%), linear-gradient(135deg,#160309 0%,#5a0c14 34%,#0d2f63 100%)'},
+        'en-gb':{icon:'/SVG/codex-icons/british.svg',gradient:'linear-gradient(135deg,#0f2d67 0%,#090909 100%)',pageGradient:'radial-gradient(circle at top left,rgba(86,136,255,.24),transparent 30%), linear-gradient(135deg,#05070d 0%,#0f2d67 38%,#090909 100%)'},
+        fr:{icon:'/arquivos-codex/icones/frances.svg',gradient:'linear-gradient(135deg,#0f2d67 0%,#5e0f18 100%)',pageGradient:'radial-gradient(circle at top left,rgba(43,102,201,.28),transparent 30%), linear-gradient(135deg,#07112c 0%,#0f2d67 42%,#5e0f18 100%)'},
+        zh:{icon:'/arquivos-codex/icones/mandarim.svg',gradient:'linear-gradient(135deg,#8f101a 0%,#4c071f 100%)',pageGradient:'radial-gradient(circle at top left,rgba(255,66,88,.3),transparent 32%), linear-gradient(135deg,#210309 0%,#8f101a 40%,#4c071f 100%)'},
+        es:{icon:'/arquivos-codex/icones/espanhol.svg',gradient:'linear-gradient(135deg,#8f1118 0%,#7a5a00 100%)',pageGradient:'radial-gradient(circle at top left,rgba(255,83,83,.3),transparent 30%), linear-gradient(135deg,#200305 0%,#8f1118 38%,#7a5a00 100%)'},
+        de:{icon:'/arquivos-codex/icones/alemao.svg',gradient:'linear-gradient(135deg,#0d0d0d 0%,#680d12 52%,#6f5200 100%)',pageGradient:'radial-gradient(circle at top left,rgba(255,220,100,.18),transparent 26%), linear-gradient(135deg,#050505 0%,#0d0d0d 24%,#680d12 62%,#6f5200 100%)'}
       };
+      function normalizeFlashcardTextView(value){
+        const normalized=String(value||'').trim().toLowerCase();
+        if(normalized==='en')return 'en-us';
+        return FLASHCARD_LANGUAGE_ORDER.includes(normalized)?normalized:'pt';
+      }
       const MULTI_LANGUAGE_TARGETS={
         french:{key:'fr',label:'Frances',responseKey:'fr'},
         mandarin:{key:'zh',label:'Mandarim',responseKey:'zh'},
@@ -1095,7 +1126,7 @@
         try{localStorage.removeItem(EDIT_DECK_LEVEL_STORE)}catch{}
         resetPersistedEditDeckLevel();
       }
-      const load=()=>{try{const parsed=JSON.parse(localStorage.getItem(STORE)||'null');if(!parsed)return;Object.assign(state,parsed);state.mode='flashcard';state.voiceMode=false;state.day=sanitizeDayKey(state.day);state.flashcardTextView=FLASHCARD_LANGUAGE_ORDER.includes(parsed?.flashcardTextView)?parsed.flashcardTextView:'pt';state.items=Array.isArray(state.items)?state.items.map(i=>({...defaultItem(),...i})):[];state.chars=normalizeSceneChars(Array.isArray(state.chars)?state.chars:[])}catch{}state.mode='flashcard';state.voiceMode=false;state.flashcardTextView=FLASHCARD_LANGUAGE_ORDER.includes(state.flashcardTextView)?state.flashcardTextView:'pt'};
+      const load=()=>{try{const parsed=JSON.parse(localStorage.getItem(STORE)||'null');if(!parsed)return;Object.assign(state,parsed);state.mode='flashcard';state.voiceMode=false;state.day=sanitizeDayKey(state.day);state.flashcardTextView=normalizeFlashcardTextView(parsed?.flashcardTextView);state.items=Array.isArray(state.items)?state.items.map(i=>({...defaultItem(),...i})):[];state.chars=normalizeSceneChars(Array.isArray(state.chars)?state.chars:[])}catch{}state.mode='flashcard';state.voiceMode=false;state.flashcardTextView=normalizeFlashcardTextView(state.flashcardTextView)};
       const stopAudio=()=>{if(!currentAudio)return;currentAudio.audio.pause();currentAudio.audio.currentTime=0;currentAudio.button.classList.remove('has');currentAudio=null};
       const play=(src,btn)=>{if(!src)return;stopAudio();const audio=new Audio(src);currentAudio={audio,button:btn};btn.classList.add('has');audio.addEventListener('ended',stopAudio);audio.addEventListener('error',stopAudio);audio.play().catch(stopAudio)};
       function playUiCue(src){
@@ -1106,10 +1137,11 @@
       }
       const audioSrc=(item,kind)=>kind==='single'?(item.audioDataUrl||item.audioRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioFile,'flashcard')):kind==='pt'?(item.audioPtDataUrl||item.audioPtRemoteUrl||cloud(state.day,phase(),item.audioPtFile,state.mode)):kind==='fr'?(item.audioFrDataUrl||item.audioFrRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioFrFile,'flashcard')):kind==='zh'?(item.audioZhDataUrl||item.audioZhRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioZhFile,'flashcard')):kind==='es'?(item.audioEsDataUrl||item.audioEsRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioEsFile,'flashcard')):kind==='de'?(item.audioDeDataUrl||item.audioDeRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioDeFile,'flashcard')):(item.audioEnDataUrl||cloud(state.day,phase(),item.audioEnFile,state.mode));
       const audioSrcBlonde=item=>item?.audioBlondeDataUrl||item?.audioBlondeRemoteUrl||cloud(state.day,PHASE.flashcard,item?.audioBlondeFile,'flashcard');
-      function activeFlashcardLanguage(){return FLASHCARD_LANGUAGE_ORDER.includes(state.flashcardTextView)?state.flashcardTextView:'pt'}
+      function activeFlashcardLanguage(){return normalizeFlashcardTextView(state.flashcardTextView)}
       function syncLanguageFlagButtons(){
         const languageKey=activeFlashcardLanguage();
         const theme=FLASHCARD_LANGUAGE_THEME[languageKey]||FLASHCARD_LANGUAGE_THEME.pt;
+        document.body.style.background=theme.pageGradient||theme.gradient;
         [['addBtn','addBtnIcon'],['voiceModeBtn','voiceModeBtnIcon']].forEach(([buttonId,imageId])=>{
           const button=$(buttonId),image=$(imageId);
           if(button){
@@ -1122,10 +1154,11 @@
           }
         });
       }
-      function itemTextForLanguage(item,key){if(key==='pt')return String(item?.pt||'').trim();if(key==='en')return String(item?.en||'').trim();if(key==='fr')return String(item?.fr||'').trim();if(key==='zh')return String(item?.zh||'').trim();if(key==='es')return String(item?.es||'').trim();if(key==='de')return String(item?.de||'').trim();return''}
+      function itemTextForLanguage(item,key){if(key==='pt')return String(item?.pt||'').trim();if(key==='en-us'||key==='en-gb')return String(item?.en||'').trim();if(key==='fr')return String(item?.fr||'').trim();if(key==='zh')return String(item?.zh||'').trim();if(key==='es')return String(item?.es||'').trim();if(key==='de')return String(item?.de||'').trim();return''}
       function itemAudioForLanguage(item,key){
         if(key==='pt')return audioSrc(item,'pt');
-        if(key==='en')return state.duoaccentBritishPreview?(audioSrcBlonde(item)||audioSrc(item,'single')):audioSrc(item,'single');
+        if(key==='en-us')return audioSrc(item,'single');
+        if(key==='en-gb')return audioSrcBlonde(item)||audioSrc(item,'single');
         if(key==='fr')return audioSrc(item,'fr');
         if(key==='zh')return audioSrc(item,'zh');
         if(key==='es')return audioSrc(item,'es');
@@ -2603,7 +2636,7 @@
       function syncVoicePopover(){const select=$('ttsVoiceSelect');if(select)select.value=normalizeTtsVoice(state.ttsVoice);const label=ttsVoiceLabel(state.ttsVoice);const providerLabel=voiceProvider(state.ttsVoice)==='elevenlabs'?'ElevenLabs':'OpenAI';const visibleLanguage=FLASHCARD_LANGUAGE_META[activeFlashcardLanguage()]?.title||'Portugues';setButtonLabel('addBtn',elevenBusy?`Gerando audio com ${providerLabel}... (${label})`:`${visibleLanguage} | ${label}`);setButtonLabel('voiceModeBtn',`${visibleLanguage} | ${voiceModeStatusLabel()}`);syncLanguageFlagButtons();const currentLabel=$('openAiVoiceCurrentLabel');if(currentLabel)currentLabel.textContent=`Voz atual: ${label}`}
       function openVoicePopover(){state.ttsVoice=normalizeTtsVoice(state.ttsVoice);const select=$('ttsVoiceSelect');if(select)select.value=state.ttsVoice;$('voicePopover').classList.remove('hidden');$('voicePopover').setAttribute('aria-hidden','false');syncVoicePopover()}
       function closeVoicePopover(){$('voicePopover').classList.add('hidden');$('voicePopover').setAttribute('aria-hidden','true')}
-      function updateTop(){state.mode='flashcard';state.testOnline=false;state.voiceMode=false;const baseHint=`Idioma visivel: ${FLASHCARD_LANGUAGE_META[activeFlashcardLanguage()]?.title||'Portugues'} | atalhos 1-6`;$('hint').textContent=state.languageBatchStatus?`${baseHint} | ${state.languageBatchStatus}`:baseHint;syncVoicePopover();$('addBtn').disabled=elevenBusy||r2UploadBusy;document.querySelectorAll('.movieOnly').forEach(n=>n.classList.add('hidden'));document.querySelectorAll('.flashcardOnly').forEach(n=>n.classList.remove('hidden'));$('charactersWrap').classList.add('hidden');syncAudioPopover();syncAiButton();syncAiTextButton();syncZipButton()}
+      function updateTop(){state.mode='flashcard';state.testOnline=false;state.voiceMode=false;const baseHint=`Idioma visivel: ${FLASHCARD_LANGUAGE_META[activeFlashcardLanguage()]?.title||'Portugues'} | atalhos 1-7`;$('hint').textContent=state.languageBatchStatus?`${baseHint} | ${state.languageBatchStatus}`:baseHint;syncVoicePopover();$('addBtn').disabled=elevenBusy||r2UploadBusy;document.querySelectorAll('.movieOnly').forEach(n=>n.classList.add('hidden'));document.querySelectorAll('.flashcardOnly').forEach(n=>n.classList.remove('hidden'));$('charactersWrap').classList.add('hidden');syncAudioPopover();syncAiButton();syncAiTextButton();syncZipButton()}
       function textBtn(title,value,onClick,className='textbtn--en'){const b=document.createElement('button');b.type='button';b.className=`textbtn ${className}`;b.textContent=value||`Clique para preencher ${title}`;b.onclick=onClick;return b}
       function cameraIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l1.4 2H20a2 2 0 0 1 2 2v8a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8a2 2 0 0 1 2-2h3.6L9 4Zm3 4.5A4.5 4.5 0 1 0 16.5 13 4.5 4.5 0 0 0 12 8.5Zm0 2A2.5 2.5 0 1 1 9.5 13 2.5 2.5 0 0 1 12 10.5Z"/></svg>'}
       function audioControl(icon,labelText,has,onClick,onDelete,voiceTarget=false){const wrap=document.createElement('div');wrap.className='audio';if(voiceTarget&&state.voiceMode)wrap.classList.add('voice-target');const btn=document.createElement('button');btn.type='button';btn.className=has?'has ready':'';btn.innerHTML=`<img src="${icon}" alt="">`;const text=document.createElement('div');text.className='mini';text.textContent=has?'Ok':`${labelText} vazio`;let timer=null,held=false;btn.onpointerdown=()=>{held=false;if(!has||state.voiceMode)return;timer=setTimeout(()=>{held=true;onDelete()},2000)};['pointerup','pointerleave','pointercancel'].forEach(name=>btn.addEventListener(name,()=>{if(timer)clearTimeout(timer);timer=null}));btn.onclick=()=>{if(held){held=false;return}onClick(btn)};wrap.append(btn,text);return wrap}
@@ -2735,7 +2768,7 @@
             const currentValue=itemTextForLanguage(item,languageKey);
             const v=prompt(`${languageMeta.title} do item ${sourceIndex+1}`,currentValue);
             if(v===null)return;
-            item[languageKey]=v.trim();
+            item[languageMeta.itemKey||languageKey]=v.trim();
             if(entry.source==='search')syncSearchEntryToDeck(entry);
             else queuePersistCurrentEditorDeck();
             save();
@@ -3071,7 +3104,7 @@
           persistDirtyDecksNow({fallbackCurrentDeck:true}).catch(error=>showFeedbackToast(error?.message||'Nao foi possivel salvar os decks no Postgres.'));
           return;
         }
-        if(state.mode==='flashcard'&&!watchRuntime&&['1','2','3','4','5','6'].includes(key)){
+        if(state.mode==='flashcard'&&!watchRuntime&&['1','2','3','4','5','6','7'].includes(key)){
           e.preventDefault();
           const nextLanguage=FLASHCARD_LANGUAGE_ORDER[Number(key)-1]||'pt';
           state.flashcardTextView=nextLanguage;
