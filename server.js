@@ -1887,6 +1887,42 @@ const normalizeFlashcardOnTableRecord = (raw) => {
   };
 };
 
+const normalizeFlashcardConqueredLanguagesPayload = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return new Map();
+  }
+  const entries = new Map();
+  Object.entries(value).forEach(([rawCardId, rawLanguages]) => {
+    const cardId = typeof rawCardId === 'string' ? rawCardId.trim() : '';
+    if (!cardId || !Array.isArray(rawLanguages)) return;
+    const languages = Array.from(new Set(
+      rawLanguages
+        .map((language) => normalizeFlashcardTargetLanguage(language))
+        .filter(Boolean)
+    ));
+    if (languages.length) {
+      entries.set(cardId, languages);
+    }
+  });
+  return entries;
+};
+
+const serializeFlashcardConqueredLanguages = (value) => {
+  const normalizedMap = value instanceof Map
+    ? value
+    : normalizeFlashcardConqueredLanguagesPayload(value);
+  const serialized = {};
+  normalizedMap.forEach((languages, cardId) => {
+    if (!cardId || !Array.isArray(languages) || !languages.length) return;
+    serialized[cardId] = Array.from(new Set(
+      languages
+        .map((language) => normalizeFlashcardTargetLanguage(language))
+        .filter(Boolean)
+    ));
+  });
+  return serialized;
+};
+
 const flashcardTimestampFromMillis = (value) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -2267,6 +2303,20 @@ const ensureFlashcardUserStateTables = async () => {
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_flashcard_language_levels_user_idx
         ON public.user_flashcard_language_levels (user_id, updated_at DESC)
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_language_cards (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          card_id text NOT NULL,
+          target_language text NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, card_id, target_language)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_language_cards_user_idx
+        ON public.user_flashcard_language_cards (user_id, updated_at DESC, card_id ASC)
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_type_portuguese (
@@ -6029,7 +6079,7 @@ const readFlashcardStateForUser = async (userId) => {
     throw error;
   }
 
-  const [progressResult, statsResult, accurateResult, hiddenResult, onTableResult, userLevelResult, booksEnergyXpResult, coinsResult, speedSamplesResult] = await Promise.all([
+  const [progressResult, statsResult, accurateResult, hiddenResult, onTableResult, userLevelResult, booksEnergyXpResult, coinsResult, speedSamplesResult, conqueredLanguagesResult] = await Promise.all([
     pool.query(
       `SELECT
          card_id,
@@ -6131,6 +6181,13 @@ const readFlashcardStateForUser = async (userId) => {
          LIMIT $2
        ) recent`,
       [normalizedUserId, FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE]
+    ),
+    pool.query(
+      `SELECT card_id, target_language
+       FROM public.user_flashcard_language_cards
+       WHERE user_id = $1
+       ORDER BY updated_at DESC, created_at DESC, card_id ASC, target_language ASC`,
+      [normalizedUserId]
     )
   ]);
 
@@ -6191,6 +6248,19 @@ const readFlashcardStateForUser = async (userId) => {
       updatedAt: flashcardMillisFromTimestamp(row?.updated_at)
     }))
     .filter(Boolean);
+  const conqueredLanguages = new Map();
+  conqueredLanguagesResult.rows.forEach((row) => {
+    const cardId = typeof row?.card_id === 'string' ? row.card_id.trim() : '';
+    const targetLanguage = normalizeFlashcardTargetLanguage(row?.target_language);
+    if (!cardId || !targetLanguage) return;
+    if (!conqueredLanguages.has(cardId)) {
+      conqueredLanguages.set(cardId, []);
+    }
+    const current = conqueredLanguages.get(cardId);
+    if (!current.includes(targetLanguage)) {
+      current.push(targetLanguage);
+    }
+  });
 
   return {
     progress: progressRecords,
@@ -6216,6 +6286,7 @@ const readFlashcardStateForUser = async (userId) => {
         : null,
       hasProgress: progressRecords.length > 0,
       hasStats: Boolean(statsResult.rows[0] || accurateResult.rows[0]),
+      conqueredLanguages: serializeFlashcardConqueredLanguages(conqueredLanguages),
       hiddenCardIds: hiddenResult.rows
         .map((row) => typeof row?.card_id === 'string' ? row.card_id.trim() : '')
         .filter(Boolean),
@@ -6242,6 +6313,12 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
   const hasProgressPayload = Array.isArray(payload?.progress);
   const hasHiddenCardIdsPayload = Array.isArray(payload?.hiddenCardIds);
   const hasOnTablePayload = Array.isArray(payload?.onTable);
+  const hasConqueredLanguagesPayload = Boolean(
+    payload
+    && payload.conqueredLanguages
+    && typeof payload.conqueredLanguages === 'object'
+    && !Array.isArray(payload.conqueredLanguages)
+  );
   const allowProgressReset = payload?.forceProgressReset === true;
   const rawProgress = hasProgressPayload ? payload.progress : [];
   if (rawProgress.length > 5000) {
@@ -6273,6 +6350,9 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     if (normalized) dedupedOnTable.set(normalized.cardId, normalized);
   });
   const onTable = Array.from(dedupedOnTable.values()).slice(0, FLASHCARD_ON_TABLE_MAX_CARDS);
+  const conqueredLanguages = hasConqueredLanguagesPayload
+    ? normalizeFlashcardConqueredLanguagesPayload(payload.conqueredLanguages)
+    : new Map();
   let persistedUserLevel = 1;
   let persistedUserLevelUpdatedAt = null;
   let booksEnergyXpTotal = 0;
@@ -6632,6 +6712,40 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       }
     }
 
+    if (hasConqueredLanguagesPayload) {
+      await client.query(
+        `DELETE FROM public.user_flashcard_language_cards
+         WHERE user_id = $1`,
+        [normalizedUserId]
+      );
+      if (conqueredLanguages.size) {
+        const languageValues = [];
+        const languageParams = [];
+        let languageIndex = 0;
+        conqueredLanguages.forEach((languages, cardId) => {
+          languages.forEach((language) => {
+            const offset = languageIndex * 3;
+            languageValues.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, now(), now())`);
+            languageParams.push(normalizedUserId, cardId, normalizeFlashcardTargetLanguage(language));
+            languageIndex += 1;
+          });
+        });
+        if (languageValues.length) {
+          await client.query(
+            `INSERT INTO public.user_flashcard_language_cards (
+               user_id,
+               card_id,
+               target_language,
+               created_at,
+               updated_at
+             )
+             VALUES ${languageValues.join(', ')}`,
+            languageParams
+          );
+        }
+      }
+    }
+
     if (cardsTodayDelta > 0) {
       await incrementUserDailyMissionProgress(client, normalizedUserId, {
         cardsDelta: cardsTodayDelta
@@ -6883,6 +6997,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     progressCount: progress.length,
     onTableCount: onTable.length,
     onTable,
+    conqueredLanguages: serializeFlashcardConqueredLanguages(conqueredLanguages),
     stats: {
       ...stats,
       speedFlashcardsPerHour: resolvedSpeedPerHourWithOverride,
@@ -15875,6 +15990,7 @@ app.get('/api/flashcards/state', async (req, res) => {
       success: true,
       progress: state.progress,
       onTable: state.onTable || [],
+      conqueredLanguages: state.meta?.conqueredLanguages || {},
       stats: state.stats,
       meta: state.meta,
       userLevel: state.meta.userLevel,
@@ -15913,6 +16029,7 @@ app.put('/api/flashcards/state', async (req, res) => {
       progressCount: savedState.progressCount,
       onTableCount: savedState.onTableCount || 0,
       onTable: savedState.onTable || [],
+      conqueredLanguages: savedState.conqueredLanguages || {},
       stats: savedState.stats,
       userLevel: savedState.userLevel,
       userLevelUpdatedAt: savedState.userLevelUpdatedAt,
