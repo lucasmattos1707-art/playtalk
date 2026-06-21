@@ -13049,9 +13049,9 @@
         const targetAudio = resolveSourceLanguageAudio(card, targetLanguage);
         return {
           ...card,
-          english: targetText || resolveSourceLanguageText(card, 'english') || resolveSourceLanguageText(card, 'portuguese'),
+          english: targetText,
           englishAnswers: resolveSourceLanguageAnswers(card, targetLanguage, targetText),
-          portuguese: nativeText || resolveSourceLanguageText(card, 'portuguese') || resolveSourceLanguageText(card, 'english'),
+          portuguese: nativeText,
           portugueseAnswers: resolveSourceLanguageAnswers(card, nativeLanguage, nativeText),
           audioUrl: targetAudio.primary,
           audioUrlBritish: targetAudio.british
@@ -20494,26 +20494,25 @@
         const normalized = normalizeGameOptionValue('targetLanguage', language);
         switch (normalized) {
           case 'portuguese':
-            if (typeof card?.sourcePortuguese === 'string') return repairDisplayText(card.sourcePortuguese);
-            return repairDisplayText(card?.portuguese || '');
+            return typeof card?.sourcePortuguese === 'string'
+              ? repairDisplayText(card.sourcePortuguese)
+              : '';
           case 'french':
-            if (typeof card?.sourceFrench === 'string') return repairDisplayText(card.sourceFrench);
-            if (currentTargetLanguage() === 'french') return repairDisplayText(card?.english || '');
-            if (currentNativeLanguage() === 'french') return repairDisplayText(card?.portuguese || '');
-            return '';
+            return typeof card?.sourceFrench === 'string'
+              ? repairDisplayText(card.sourceFrench)
+              : '';
           case 'mandarin':
-            if (typeof card?.sourceMandarin === 'string') return repairDisplayText(card.sourceMandarin);
-            if (currentTargetLanguage() === 'mandarin') return repairDisplayText(card?.english || '');
-            if (currentNativeLanguage() === 'mandarin') return repairDisplayText(card?.portuguese || '');
-            return '';
+            return typeof card?.sourceMandarin === 'string'
+              ? repairDisplayText(card.sourceMandarin)
+              : '';
           case 'spanish':
-            if (typeof card?.sourceSpanish === 'string') return repairDisplayText(card.sourceSpanish);
-            if (currentTargetLanguage() === 'spanish') return repairDisplayText(card?.english || '');
-            if (currentNativeLanguage() === 'spanish') return repairDisplayText(card?.portuguese || '');
-            return '';
+            return typeof card?.sourceSpanish === 'string'
+              ? repairDisplayText(card.sourceSpanish)
+              : '';
           default:
-            if (typeof card?.sourceEnglish === 'string') return repairDisplayText(card.sourceEnglish);
-            return repairDisplayText(card?.english || '');
+            return typeof card?.sourceEnglish === 'string'
+              ? repairDisplayText(card.sourceEnglish)
+              : '';
         }
       }
 
@@ -23699,10 +23698,12 @@
           }));
         }
 
-        if (window.speechSynthesis && card.english) {
+        if (window.speechSynthesis && safeText(card?.english)) {
           return finishPromptReflection(new Promise((resolve) => {
             const utterance = new SpeechSynthesisUtterance(card.english);
-            utterance.lang = pickCardAccent(card) === 'british' ? 'en-GB' : 'en-US';
+            utterance.lang = currentTargetLanguage() === 'english'
+              ? (pickCardAccent(card) === 'british' ? 'en-GB' : 'en-US')
+              : currentTargetSpeechCode();
             utterance.rate = rate;
             utterance.pitch = 1;
             utterance.onend = utterance.onerror = () => {
