@@ -58,8 +58,8 @@
 
     :root {
       --bg: #07111f;
-      --playtalk-global-bg-desktop: url('/api/r2-media/backgrounds/playtalk-global-desktop.webp');
-      --playtalk-global-bg-mobile: url('/api/r2-media/backgrounds/playtalk-global-mobile.webp');
+      --playtalk-global-bg-desktop: url('/arquivos-codex/backgrounds/languages/american.png');
+      --playtalk-global-bg-mobile: url('/arquivos-codex/backgrounds/languages/american.png');
       --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
       --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 0.78) 0%, rgba(4, 18, 38, 0.34) 42%, rgba(4, 18, 38, 0.04) 100%);
       --panel: rgba(8, 28, 54, 0.9);
@@ -13125,6 +13125,16 @@
         return FLASHCARD_LANGUAGE_OPTIONS[currentNativeLanguage()]?.speechCode || 'pt-BR';
       }
 
+      function syncLanguageBackgroundPreference() {
+        if (!window.PlaytalkApi || typeof window.PlaytalkApi.setLanguageBackgroundPreference !== 'function') {
+          return;
+        }
+        window.PlaytalkApi.setLanguageBackgroundPreference({
+          targetLanguage: currentTargetLanguage(),
+          accent: normalizeGameOptionValue('accent', state.options?.accent)
+        });
+      }
+
       function currentGameOptionSlides() {
         const slides = ['mode', 'targetLanguage', 'nativeLanguage'];
         if (currentTargetLanguage() === 'english') {
@@ -13407,6 +13417,7 @@
         if (previousTargetLanguage !== currentTargetLanguage() || previousNativeLanguage !== currentNativeLanguage()) {
           applySelectedLanguageProjectionToAllCards();
         }
+        syncLanguageBackgroundPreference();
       }
 
       function loadGameOptionsFromStorage() {
@@ -17823,7 +17834,9 @@
           const response = await postAuthJson(endpoint, { username, password });
           const payload = await response.json().catch(() => ({}));
           if (!response.ok || !payload?.success) {
-            throw new Error(payload?.message || 'Nao foi possivel autenticar agora.');
+            const details = safeText(payload?.details || payload?.error || '');
+            const baseMessage = safeText(payload?.message) || 'Nao foi possivel autenticar agora.';
+            throw new Error(details ? `${baseMessage} Detalhes: ${details}` : baseMessage);
           }
 
           persistAuthToken(payload.token || '');
@@ -19584,6 +19597,9 @@
           window.setTimeout(() => valueEl.classList.remove('is-swapping'), 220);
         }
         renderGameOptionsModal();
+        if (slideKey === 'targetLanguage' || slideKey === 'accent') {
+          syncLanguageBackgroundPreference();
+        }
         if (slideKey === 'targetLanguage' || slideKey === 'nativeLanguage') {
           applySelectedLanguageProjectionToAllCards();
         }
@@ -20883,6 +20899,9 @@
         state.options[slideKey] = normalizedNextValue;
         persistGameOptions();
         renderGameOptionsModal();
+        if (slideKey === 'targetLanguage' || slideKey === 'accent') {
+          syncLanguageBackgroundPreference();
+        }
         if (slideKey === 'targetLanguage' || slideKey === 'nativeLanguage') {
           applySelectedLanguageProjectionToAllCards();
         }
@@ -25970,7 +25989,7 @@
           });
       }
 
-      function getSecondStageWrongWords() {
+      function getSecondStageSupplementalWrongWords() {
         if (Array.isArray(secondStageWrongWords)) return secondStageWrongWords;
         if (!secondStageWrongWordsPromise) {
           secondStageWrongWordsPromise = Promise.all(
@@ -25989,6 +26008,39 @@
           });
         }
         return normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
+      }
+
+      function collectSecondStageWrongWordsFromCards(answerField, textField) {
+        const words = [];
+        const cards = Array.isArray(state.allCards) ? state.allCards : [];
+        cards.forEach((card) => {
+          const answers = Array.isArray(card?.[answerField]) && card[answerField].length
+            ? card[answerField]
+            : [card?.[textField] || ''];
+          answers.forEach((answer) => {
+            tokenizeWordBlocks(answer).forEach((token) => {
+              if (token?.word) words.push(token.word);
+            });
+          });
+        });
+        return normalizeSecondStageWrongWordList(words);
+      }
+
+      function getSecondStageWrongWords(typingState) {
+        const useNativePool = safeText(typingState?.typingMode) === 'portuguese';
+        const dynamicWords = collectSecondStageWrongWordsFromCards(
+          useNativePool ? 'portugueseAnswers' : 'englishAnswers',
+          useNativePool ? 'portuguese' : 'english'
+        );
+        const supplementalWords = useNativePool ? [] : getSecondStageSupplementalWrongWords();
+        const combined = normalizeSecondStageWrongWordList([
+          ...dynamicWords,
+          ...supplementalWords
+        ]);
+        if (combined.length) return combined;
+        return useNativePool
+          ? dynamicWords
+          : normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
       }
 
       function countSecondStageBlockChars(option) {
@@ -26104,7 +26156,7 @@
             });
           }
         });
-        const rows = buildSecondStageOptionRows(options, getSecondStageWrongWords());
+        const rows = buildSecondStageOptionRows(options, getSecondStageWrongWords(typingState));
         return {
           primarySequence,
           targetSequences: targetSequences.length ? targetSequences : [primarySequence],
