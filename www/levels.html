@@ -2343,7 +2343,19 @@
           });
           return out;
         }
-        const flashcardVoiceConfig={
+        const activeLanguageKey=activeFlashcardLanguage();
+        const activeLanguageVoiceConfig={
+          pt:{kind:'pt',text:item=>String(item?.pt||'').trim(),fileSuffix:'-pt',hasAudio:item=>hasGeneratedAudio(item,'pt'),languageCode:'pt'},
+          'en-us':{kind:'single',text:item=>String(item?.en||item?.pt||'').trim(),fileSuffix:'',hasAudio:item=>hasGeneratedAudio(item,'single'),languageCode:'en'},
+          'en-gb':{kind:'single-blonde',text:item=>String(item?.en||item?.pt||'').trim(),fileSuffix:'b',hasAudio:item=>Boolean(item?.audioBlondeFile||item?.audioBlondeDataUrl||item?.audioBlondeRemoteUrl),languageCode:'en'},
+          fr:{kind:'fr',text:item=>String(item?.fr||'').trim(),fileSuffix:'-fr',hasAudio:item=>hasGeneratedAudio(item,'fr'),languageCode:'fr'},
+          zh:{kind:'zh',text:item=>String(item?.zh||'').trim(),fileSuffix:'-zh',hasAudio:item=>hasGeneratedAudio(item,'zh'),languageCode:'zh'},
+          es:{kind:'es',text:item=>String(item?.es||'').trim(),fileSuffix:'-es',hasAudio:item=>hasGeneratedAudio(item,'es'),languageCode:'es'},
+          de:{kind:'de',text:item=>String(item?.de||'').trim(),fileSuffix:'-de',hasAudio:item=>hasGeneratedAudio(item,'de'),languageCode:'de'}
+        }[activeLanguageKey]||{kind:'single',text:item=>String(item?.en||item?.pt||'').trim(),fileSuffix:'',hasAudio:item=>hasGeneratedAudio(item,'single'),languageCode:'en'};
+        const flashcardVoiceConfig=voiceProvider(normalizedVoice)==='openai'
+          ? activeLanguageVoiceConfig
+          : ({
           portuguese:{kind:'pt',text:item=>String(item?.pt||'').trim(),fileSuffix:'-pt',hasAudio:item=>hasGeneratedAudio(item,'pt')},
           harry:{kind:'single',text:item=>String(item?.en||item?.pt||'').trim(),fileSuffix:'',hasAudio:item=>hasGeneratedAudio(item,'single')},
           blonde:{kind:'single-blonde',text:item=>String(item?.en||item?.pt||'').trim(),fileSuffix:'b',hasAudio:item=>Boolean(item?.audioBlondeFile||item?.audioBlondeDataUrl||item?.audioBlondeRemoteUrl)},
@@ -2351,24 +2363,24 @@
           sami:{kind:'zh',text:item=>String(item?.zh||'').trim(),fileSuffix:'-zh',hasAudio:item=>hasGeneratedAudio(item,'zh')},
           cristina:{kind:'es',text:item=>String(item?.es||'').trim(),fileSuffix:'-es',hasAudio:item=>hasGeneratedAudio(item,'es')},
           finn:{kind:'de',text:item=>String(item?.de||'').trim(),fileSuffix:'-de',hasAudio:item=>hasGeneratedAudio(item,'de')}
-        }[normalizedVoice]||{kind:'single',text:item=>String(item?.en||item?.pt||'').trim(),fileSuffix:'',hasAudio:item=>hasGeneratedAudio(item,'single')};
+        }[normalizedVoice]||{kind:'single',text:item=>String(item?.en||item?.pt||'').trim(),fileSuffix:'',hasAudio:item=>hasGeneratedAudio(item,'single')});
         const selectedEntries=selectedEntriesInView();
         const sourceEntries=selectedEntries.length
           ? selectedEntries
           : (editCardsState.searchMode
             ? renderableFlashcardEntries().filter(entry=>entry?.source==='search')
             : state.items.map((item,index)=>({item,itemIndex:index,source:'editor'})));
-        const mapFlashcardTarget=entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:flashcardVoiceConfig.text(entry?.item),kind:flashcardVoiceConfig.kind,fileSuffix:flashcardVoiceConfig.fileSuffix});
-        if(selectedEntries.length)return sourceEntries.map(mapFlashcardTarget).filter(entry=>entry.text&&!flashcardVoiceConfig.hasAudio(entry.item)).map(entry=>({index:entry.index,kind:entry.kind,text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}${entry.fileSuffix}.mp3`,entry:entry.entry}));
+        const mapFlashcardTarget=entry=>({entry,item:entry.item,index:Number(entry.itemIndex),text:flashcardVoiceConfig.text(entry?.item),kind:flashcardVoiceConfig.kind,fileSuffix:flashcardVoiceConfig.fileSuffix,languageCode:flashcardVoiceConfig.languageCode||''});
+        if(selectedEntries.length)return sourceEntries.map(mapFlashcardTarget).filter(entry=>entry.text).map(entry=>({index:entry.index,kind:entry.kind,text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}${entry.fileSuffix}.mp3`,entry:entry.entry,languageCode:entry.languageCode}));
         const pendingAudio=sourceEntries
           .map(mapFlashcardTarget)
           .filter(entry=>entry.text&&entry.item?.imageMuted&&!flashcardVoiceConfig.hasAudio(entry.item))
-          .map(entry=>({index:entry.index,kind:entry.kind,text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}${entry.fileSuffix}.mp3`,entry:entry.entry}));
+          .map(entry=>({index:entry.index,kind:entry.kind,text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}${entry.fileSuffix}.mp3`,entry:entry.entry,languageCode:entry.languageCode}));
         if(pendingAudio.length)return pendingAudio;
         return sourceEntries
           .map(mapFlashcardTarget)
           .filter(entry=>entry.text&&!flashcardVoiceConfig.hasAudio(entry.item))
-          .map(entry=>({index:entry.index,kind:entry.kind,text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}${entry.fileSuffix}.mp3`,entry:entry.entry}));
+          .map(entry=>({index:entry.index,kind:entry.kind,text:entry.text,fileName:`${flashcardAssetStem(entry.index,entry.entry)}${entry.fileSuffix}.mp3`,entry:entry.entry,languageCode:entry.languageCode}));
       }
       async function generateRemainingVoiceAssets(voice){
         const normalizedVoice=normalizeTtsVoice(voice);
@@ -2385,7 +2397,7 @@
           for(const target of targets){
             try{
               const fileName=target.fileName;
-              const asset=await generateVoiceAsset(target.text,fileName,normalizedVoice);
+              const asset=await generateVoiceAsset(target.text,fileName,normalizedVoice,target.languageCode||'');
               const item=target?.entry?.item||state.items[target.index];
               if(!item)continue;
               if(target.kind==='single'||target.kind==='single-blonde'){
@@ -2647,7 +2659,7 @@
       async function importAudioBatch(files){const targets=audioBatchOrder();if(!targets.length){alert('Nao existem slots de audio vazios para preencher.');return}let used=0;for(let i=0;i<files.length&&used<targets.length;i+=1){const target=targets[used],data=await prepAudio(files[i],`${itemStem(target.index)}-${target.kind}`),item=state.items[target.index];if(!item)continue;if(target.kind==='pt'){item.audioPtFile=data.fileName;item.audioPtDataUrl=data.dataUrl}else{item.audioEnFile=data.fileName;item.audioEnDataUrl=data.dataUrl}used+=1}save();renderItems();alert(`${used} audio(s) importado(s) em sequencia.`)}
       function detectModeFromJson(data){if(Array.isArray(data))return'flashcard';if(data&&typeof data==='object'){if(Array.isArray(data.characters))return'scenes';if(Array.isArray(data.items)&&data.items.every(entry=>entry&&typeof entry==='object'&&('imagem' in entry||'nomePortugues' in entry||'nomeIngles' in entry)))return'flashcard';if(Array.isArray(data.items))return'movies'}throw new Error('JSON nao reconhecido para este editor.')}
       function importJsonPayload(data){state.mode=detectModeFromJson(data);state.items=[];state.chars=[];state.flashcardCoverUrl='';const importedAssets=[];const rememberDay=value=>{const parsed=parseCloudAssetInfo(value);if(parsed?.day)importedAssets.push(parsed);return parsed};if(state.mode==='flashcard'){const flashcardItems=Array.isArray(data)?data:(Array.isArray(data?.items)?data.items:[]);state.title=Array.isArray(data)?'':String(data?.title||'').trim();state.flashcardCoverUrl=Array.isArray(data)?'':String(data?.coverImage||'').trim();state.items=flashcardItems.map(entry=>{const secondaryAudio=readDeckEntrySecondaryAudio(entry);const audioPt=readDeckEntryLanguageAudio(entry,'pt');const audioFr=readDeckEntryLanguageAudio(entry,'fr');const audioZh=readDeckEntryLanguageAudio(entry,'zh');const audioEs=readDeckEntryLanguageAudio(entry,'es');const audioDe=readDeckEntryLanguageAudio(entry,'de');rememberDay(entry.imagem);rememberDay(entry.audio);rememberDay(secondaryAudio);rememberDay(audioPt);rememberDay(audioFr);rememberDay(audioZh);rememberDay(audioEs);rememberDay(audioDe);return normalizeImportedItem({imageFile:importedFileName(entry.imagem),imageRemoteUrl:String(entry?.imagem||'').trim(),pt:entry.nomePortugues||'',en:entry.nomeIngles||'',fr:entry.nomeFrances||entry.fr||'',zh:entry.nomeMandarim||entry.zh||'',es:entry.nomeEspanhol||entry.es||'',de:entry.nomeAlemao||entry.german||entry.de||'',category:entry.categoria||'flashcard',audioFile:importedFileName(entry.audio),audioRemoteUrl:String(entry?.audio||'').trim(),audioBlondeFile:importedFileName(secondaryAudio),audioBlondeRemoteUrl:secondaryAudio,audioPtFile:importedFileName(audioPt),audioPtRemoteUrl:audioPt,audioFrFile:importedFileName(audioFr),audioFrRemoteUrl:audioFr,audioZhFile:importedFileName(audioZh),audioZhRemoteUrl:audioZh,audioEsFile:importedFileName(audioEs),audioEsRemoteUrl:audioEs,audioDeFile:importedFileName(audioDe),audioDeRemoteUrl:audioDe,tense:entry.tense||'present-simple',sentenceForm:entry.sentenceForm||'affirmative'})})}else{state.title=data.title||'';state.levelKey=data.level||defaultLevelKey();rememberDay(data.coverImage);rememberDay(data.soundtrack);state.coverFile=importedFileName(data.coverImage);state.coverDataUrl='';state.soundFile=importedFileName(data.soundtrack);state.soundDataUrl='';if(state.mode==='movies'){state.items=data.items.map(entry=>{rememberDay(entry.image);rememberDay(entry.audio_portuguese);rememberDay(entry.audio_english);return normalizeImportedItem({imageFile:importedFileName(entry.image),pt:entry.portuguese||'',en:entry.english||'',imagePrompt:entry.image_prompt||entry.imagePrompt||'',audioPtFile:importedFileName(entry.audio_portuguese),audioEnFile:importedFileName(entry.audio_english)})})}else{state.chars=normalizeSceneChars(Array.isArray(data.characters)?data.characters.map(char=>{rememberDay(char.image);return{id:char.id||'',name:char.name||'',voiceId:char.voiceId||'',imageFile:importedFileName(char.image),imageDataUrl:''}}):[]);state.items=data.items.map(entry=>{rememberDay(entry.audio_portuguese);rememberDay(entry.audio_english);return normalizeImportedItem({pt:entry.portuguese||'',en:entry.english||'',characterId:entry.character||'',audioPtFile:importedFileName(entry.audio_portuguese),audioEnFile:importedFileName(entry.audio_english)})})}}const expectedPhaseCode=PHASE_CODE[state.mode]||PHASE_CODE.flashcard;const detectedDay=(importedAssets.find(asset=>asset.phaseCode===expectedPhaseCode&&asset.day)||importedAssets.find(asset=>asset.day))?.day;if(detectedDay)state.day=sanitizeDayKey(detectedDay);save();renderAll()}
-      async function generateVoiceAsset(text,fileName,voice='harry'){const cleanText=String(text||'').trim();if(!cleanText)throw new Error('Preencha o texto antes de gerar voz.');const cleanVoice=normalizeTtsVoice(voice);const provider=voiceProvider(cleanVoice);const response=provider==='elevenlabs'?await fetch('/api/tts/elevenlabs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:cleanText,fileName,voice:cleanVoice})}):await fetch('/api/tts/openai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:cleanText,fileName,voice:cleanVoice})});let payload=null;if(!response.ok){try{payload=await response.json()}catch{}throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao gerar voz.')}const blob=await response.blob();return{fileName,dataUrl:await asDataUrl(blob)}}
+      async function generateVoiceAsset(text,fileName,voice='harry',languageCode=''){const cleanText=String(text||'').trim();if(!cleanText)throw new Error('Preencha o texto antes de gerar voz.');const cleanVoice=normalizeTtsVoice(voice);const provider=voiceProvider(cleanVoice);const normalizedLanguageCode=/^[a-z]{2}$/i.test(String(languageCode||'').trim())?String(languageCode||'').trim().toLowerCase():'';const body={text:cleanText,fileName,voice:cleanVoice,...(normalizedLanguageCode?{languageCode:normalizedLanguageCode}:{})};const response=provider==='elevenlabs'?await fetch('/api/tts/elevenlabs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}):await fetch('/api/tts/openai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let payload=null;if(!response.ok){try{payload=await response.json()}catch{}throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao gerar voz.')}const blob=await response.blob();return{fileName,dataUrl:await asDataUrl(blob)}}
       function syncVoicePopover(){const select=$('ttsVoiceSelect');if(select)select.value=normalizeTtsVoice(state.ttsVoice);const label=ttsVoiceLabel(state.ttsVoice);const providerLabel=voiceProvider(state.ttsVoice)==='elevenlabs'?'ElevenLabs':'OpenAI';const visibleLanguage=FLASHCARD_LANGUAGE_META[activeFlashcardLanguage()]?.title||'Portugues';setButtonLabel('addBtn',elevenBusy?`Gerando audio com ${providerLabel}... (${label})`:`${visibleLanguage} | ${label}`);setButtonLabel('voiceModeBtn',`${visibleLanguage} | ${voiceModeStatusLabel()}`);syncLanguageFlagButtons();const currentLabel=$('openAiVoiceCurrentLabel');if(currentLabel)currentLabel.textContent=`Voz atual: ${label}`}
       function openVoicePopover(){state.ttsVoice=normalizeTtsVoice(state.ttsVoice);const select=$('ttsVoiceSelect');if(select)select.value=state.ttsVoice;$('voicePopover').classList.remove('hidden');$('voicePopover').setAttribute('aria-hidden','false');syncVoicePopover()}
       function closeVoicePopover(){$('voicePopover').classList.add('hidden');$('voicePopover').setAttribute('aria-hidden','true')}

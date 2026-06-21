@@ -24563,20 +24563,7 @@
       }
 
       function maintainFirstStageAudioBuffer() {
-        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
-        if (phaseKey !== 'first-star') return;
-        const candidateIds = [];
-        if (state.game.currentId) {
-          candidateIds.push(state.game.currentId);
-        }
-        state.game.queue.forEach((id) => candidateIds.push(id));
-        const uniqueIds = Array.from(new Set(candidateIds.map((id) => safeText(id)).filter(Boolean)));
-        uniqueIds
-          .slice(0, FIRST_STAGE_AUDIO_PRELOAD_COUNT)
-          .forEach((id) => {
-            const card = cardById(id);
-            if (card) preloadCardAudio(card);
-          });
+        return;
       }
 
       function queueFifthStageCoinsGainAudio(delayMs = 500) {
@@ -24659,50 +24646,13 @@
       }
 
       function primeCurrentAndUpcomingGameMedia(currentCard = null) {
-        const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
-        const upcomingCount = phaseKey === 'first-star'
-          ? FIRST_STAGE_AUDIO_PRELOAD_COUNT
-          : GAME_UPCOMING_PRELOAD_COUNT;
-        const audioEnsureUpcomingCount = Math.min(2, Math.max(0, upcomingCount));
-        if (phaseKey === 'first-star') {
-          maintainFirstStageAudioBuffer();
-        }
+        if (!currentCard) return;
         if (isLevelTextModeActive()) {
-          const cards = [];
-          if (currentCard) {
-            cards.push(currentCard);
-          }
-          state.game.queue
-            .slice(0, upcomingCount)
-            .forEach((nextId) => {
-              const nextCard = cardById(nextId);
-              if (nextCard) {
-                cards.push(nextCard);
-              }
-            });
-          ensureUpcomingGameCardAudio(cards.slice(0, 1 + audioEnsureUpcomingCount)).catch(() => {});
-          cards.forEach((card) => {
-            preloadCardAudio(card);
-          });
+          preloadCardAudio(currentCard);
           return;
         }
-        const cards = [];
-        if (currentCard) {
-          cards.push(currentCard);
-        }
-        state.game.queue
-          .slice(0, upcomingCount)
-          .forEach((nextId) => {
-            const nextCard = cardById(nextId);
-            if (nextCard) {
-              cards.push(nextCard);
-            }
-          });
-        ensureUpcomingGameCardAudio(cards.slice(0, 1 + audioEnsureUpcomingCount)).catch(() => {});
-        cards.forEach((card) => {
-          preloadCardImage(card);
-          preloadCardAudio(card);
-        });
+        preloadCardImage(currentCard);
+        preloadCardAudio(currentCard);
       }
 
       function expandEnglishSpeechContractions(text) {
