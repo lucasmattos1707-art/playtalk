@@ -20490,6 +20490,39 @@
         });
       }
 
+      function resolveStoredLanguageText(card, language) {
+        const normalized = normalizeGameOptionValue('targetLanguage', language);
+        switch (normalized) {
+          case 'portuguese':
+            if (typeof card?.sourcePortuguese === 'string') return repairDisplayText(card.sourcePortuguese);
+            return repairDisplayText(card?.portuguese || '');
+          case 'french':
+            if (typeof card?.sourceFrench === 'string') return repairDisplayText(card.sourceFrench);
+            if (currentTargetLanguage() === 'french') return repairDisplayText(card?.english || '');
+            if (currentNativeLanguage() === 'french') return repairDisplayText(card?.portuguese || '');
+            return '';
+          case 'mandarin':
+            if (typeof card?.sourceMandarin === 'string') return repairDisplayText(card.sourceMandarin);
+            if (currentTargetLanguage() === 'mandarin') return repairDisplayText(card?.english || '');
+            if (currentNativeLanguage() === 'mandarin') return repairDisplayText(card?.portuguese || '');
+            return '';
+          case 'spanish':
+            if (typeof card?.sourceSpanish === 'string') return repairDisplayText(card.sourceSpanish);
+            if (currentTargetLanguage() === 'spanish') return repairDisplayText(card?.english || '');
+            if (currentNativeLanguage() === 'spanish') return repairDisplayText(card?.portuguese || '');
+            return '';
+          default:
+            if (typeof card?.sourceEnglish === 'string') return repairDisplayText(card.sourceEnglish);
+            return repairDisplayText(card?.english || '');
+        }
+      }
+
+      function hasCardTextForActiveLanguages(card) {
+        const targetText = safeText(resolveStoredLanguageText(card, currentTargetLanguage()));
+        const nativeText = safeText(resolveStoredLanguageText(card, currentNativeLanguage()));
+        return Boolean(targetText && nativeText);
+      }
+
       function scheduleLevelSyncRefresh(options = {}) {
         if (state.ui.levelSyncRefreshTimer) {
           window.clearTimeout(state.ui.levelSyncRefreshTimer);
@@ -20508,7 +20541,7 @@
       }
 
       function hasCoreFlashcardText(card) {
-        return Boolean(safeText(card?.english) && safeText(card?.portuguese));
+        return hasCardTextForActiveLanguages(card);
       }
 
       function normalizeFlashcardImageSource(value) {
@@ -24221,7 +24254,7 @@
         byUpdated.forEach((saved) => {
           if (usedIds.has(saved.id)) return;
           const card = cardById(saved.id);
-          if (!card || !isCardAllowedForUserLevel(card)) return;
+          if (!card || !hasCardTextForActiveLanguages(card) || !isCardAllowedForUserLevel(card)) return;
           const pool = state.userCards.has(saved.id) ? 'review' : 'base';
           if (pool === 'review') {
             if (reviewEntries.length >= ON_TABLE_REVIEW_MAX) return;
