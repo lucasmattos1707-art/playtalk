@@ -69,6 +69,7 @@ const ELEVENLABS_VOICE_ID_BLONDE = env(process.env.ELEVENLABS_VOICE_ID_BLONDE) |
 const ELEVENLABS_VOICE_ID_PAUL = env(process.env.ELEVENLABS_VOICE_ID_PAUL) || '0igQGE0lbNpTaWsexf1r';
 const ELEVENLABS_VOICE_ID_SAMI = env(process.env.ELEVENLABS_VOICE_ID_SAMI) || 'UFDAUkGzdLAEJlINT3Fx';
 const ELEVENLABS_VOICE_ID_CRISTINA = env(process.env.ELEVENLABS_VOICE_ID_CRISTINA) || 'qWWAqFomnJ99VwQLREfT';
+const ELEVENLABS_VOICE_ID_FINN = env(process.env.ELEVENLABS_VOICE_ID_FINN) || 'cCwaxHZZF7rVaQK2aOys';
 const ELEVENLABS_VOICE_ID_BURT_RAYNALDS = env(process.env.ELEVENLABS_VOICE_ID_BURT_RAYNALDS) || '4YYIPFl9wE5c4L2eu2Gb';
 const flashcardEnsureAudioLocks = new Map();
 const ELEVENLABS_MODEL_ID = env(process.env.ELEVENLABS_MODEL_ID) || 'eleven_multilingual_v2';
@@ -1795,6 +1796,7 @@ const FLASHCARD_GAME_OPTIONS_DEFAULTS = Object.freeze({
   speed: '0.90',
   accent: 'mix_100_0',
   fourthStageTyping: 'off',
+  mode: 'training',
   targetLanguage: 'english',
   nativeLanguage: 'portuguese'
 });
@@ -1804,7 +1806,8 @@ const FLASHCARD_LANGUAGE_CODES = Object.freeze([
   'portuguese',
   'french',
   'mandarin',
-  'spanish'
+  'spanish',
+  'german'
 ]);
 
 function normalizeFlashcardLanguage(value, fallback = FLASHCARD_GAME_OPTIONS_DEFAULTS.targetLanguage) {
@@ -1852,6 +1855,11 @@ function normalizeFlashcardGameFourthTyping(value) {
   return normalized === 'on' ? 'on' : 'off';
 }
 
+function normalizeFlashcardGameMode(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'journey' ? 'journey' : FLASHCARD_GAME_OPTIONS_DEFAULTS.mode;
+}
+
 function normalizeFlashcardGameOptions(value) {
   const source = value && typeof value === 'object' ? value : {};
   return {
@@ -1859,6 +1867,7 @@ function normalizeFlashcardGameOptions(value) {
     speed: normalizeFlashcardGameSpeed(source.speed),
     accent: normalizeFlashcardGameAccent(source.accent),
     fourthStageTyping: normalizeFlashcardGameFourthTyping(source.fourthStageTyping),
+    mode: normalizeFlashcardGameMode(source.mode),
     targetLanguage: normalizeFlashcardTargetLanguage(source.targetLanguage),
     nativeLanguage: normalizeFlashcardNativeLanguage(source.nativeLanguage)
   };
@@ -2135,6 +2144,10 @@ const ensureFlashcardUserStateTables = async () => {
       await pool.query(`
         ALTER TABLE public.user_flashcard_stats
         ADD COLUMN IF NOT EXISTS game_option_fourth_stage_typing text NOT NULL DEFAULT 'off'
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS game_option_mode text NOT NULL DEFAULT 'training'
       `);
       await pool.query(`
         ALTER TABLE public.user_flashcard_stats
@@ -6039,7 +6052,8 @@ const readFlashcardStateForUser = async (userId) => {
     pool.query(
       `SELECT play_time_ms, speakings, listenings, readings, training_time_ms, pronunciation_samples,
               admin_speed_flashcards_per_hour,
-              game_option_difficulty, game_option_speed, game_option_accent, game_option_fourth_stage_typing,
+              game_option_difficulty, game_option_speed, game_option_accent, game_option_fourth_stage_typing, game_option_mode,
+              game_option_target_language, game_option_native_language,
               second_star_error_heard, updated_at
        FROM public.user_flashcard_stats
        WHERE user_id = $1
@@ -6130,6 +6144,7 @@ const readFlashcardStateForUser = async (userId) => {
     speed: flashcardStatsRow.game_option_speed,
     accent: flashcardStatsRow.game_option_accent,
     fourthStageTyping: flashcardStatsRow.game_option_fourth_stage_typing,
+    mode: flashcardStatsRow.game_option_mode,
     targetLanguage: flashcardStatsRow.game_option_target_language,
     nativeLanguage: flashcardStatsRow.game_option_native_language
   });
@@ -6679,31 +6694,33 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
          game_option_speed,
          game_option_accent,
          game_option_fourth_stage_typing,
+         game_option_mode,
          game_option_target_language,
          game_option_native_language,
          second_star_error_heard,
          updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $13, $14, now())
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $13, $14, $15, now())
        ON CONFLICT (user_id)
        DO UPDATE SET
          play_time_ms = EXCLUDED.play_time_ms,
-         speakings = CASE WHEN $15::boolean THEN EXCLUDED.speakings ELSE GREATEST(public.user_flashcard_stats.speakings, EXCLUDED.speakings) END,
-         listenings = CASE WHEN $15::boolean THEN EXCLUDED.listenings ELSE GREATEST(public.user_flashcard_stats.listenings, EXCLUDED.listenings) END,
-         readings = CASE WHEN $15::boolean THEN EXCLUDED.readings ELSE GREATEST(public.user_flashcard_stats.readings, EXCLUDED.readings) END,
+         speakings = CASE WHEN $16::boolean THEN EXCLUDED.speakings ELSE GREATEST(public.user_flashcard_stats.speakings, EXCLUDED.speakings) END,
+         listenings = CASE WHEN $16::boolean THEN EXCLUDED.listenings ELSE GREATEST(public.user_flashcard_stats.listenings, EXCLUDED.listenings) END,
+         readings = CASE WHEN $16::boolean THEN EXCLUDED.readings ELSE GREATEST(public.user_flashcard_stats.readings, EXCLUDED.readings) END,
          game_option_difficulty = EXCLUDED.game_option_difficulty,
          game_option_speed = EXCLUDED.game_option_speed,
          game_option_accent = EXCLUDED.game_option_accent,
          game_option_fourth_stage_typing = EXCLUDED.game_option_fourth_stage_typing,
+         game_option_mode = EXCLUDED.game_option_mode,
          game_option_target_language = EXCLUDED.game_option_target_language,
          game_option_native_language = EXCLUDED.game_option_native_language,
-         training_time_ms = CASE WHEN $15::boolean THEN EXCLUDED.training_time_ms ELSE GREATEST(public.user_flashcard_stats.training_time_ms, EXCLUDED.training_time_ms) END,
+         training_time_ms = CASE WHEN $16::boolean THEN EXCLUDED.training_time_ms ELSE GREATEST(public.user_flashcard_stats.training_time_ms, EXCLUDED.training_time_ms) END,
          pronunciation_samples = CASE
-           WHEN $16::boolean THEN EXCLUDED.pronunciation_samples
+           WHEN $17::boolean THEN EXCLUDED.pronunciation_samples
            ELSE public.user_flashcard_stats.pronunciation_samples
          END,
-         speed_level_gain_carry = CASE WHEN $15::boolean THEN 0 ELSE public.user_flashcard_stats.speed_level_gain_carry END,
-         speed_level_practice_carry_ms = CASE WHEN $15::boolean THEN 0 ELSE public.user_flashcard_stats.speed_level_practice_carry_ms END,
+         speed_level_gain_carry = CASE WHEN $16::boolean THEN 0 ELSE public.user_flashcard_stats.speed_level_gain_carry END,
+         speed_level_practice_carry_ms = CASE WHEN $16::boolean THEN 0 ELSE public.user_flashcard_stats.speed_level_practice_carry_ms END,
          second_star_error_heard = EXCLUDED.second_star_error_heard,
          updated_at = now()`,
       [
@@ -6718,6 +6735,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
         gameOptions.speed,
         gameOptions.accent,
         gameOptions.fourthStageTyping,
+        gameOptions.mode,
         gameOptions.targetLanguage,
         gameOptions.nativeLanguage,
         stats.secondStarErrorHeard,
@@ -6933,6 +6951,7 @@ const closeFlashcardSessionClock = async (userId, options = {}) => {
   const normalizedUserId = Number.parseInt(userId, 10);
   const keepOpen = Boolean(options?.keepOpen);
   const normalizedTargetLanguage = normalizeFlashcardTargetLanguage(options?.targetLanguage);
+  const gameMode = normalizeFlashcardGameMode(options?.mode);
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
     const error = new Error('userId invalido.');
     error.statusCode = 400;
@@ -6988,11 +7007,13 @@ const closeFlashcardSessionClock = async (userId, options = {}) => {
            updated_at = now()`,
         [normalizedUserId, addedPracticeSeconds]
       );
-      const speedDrivenLevel = await applyFlashcardSpeedMinuteLevelGain(client, normalizedUserId, addedTrainingMs, {
-        targetLanguage: normalizedTargetLanguage
-      });
-      speedDrivenLevelDelta = Math.max(0, Number(speedDrivenLevel.levelDelta) || 0);
-      speedPerHour = Math.max(0, Number(speedDrivenLevel.speedPerHour) || 0);
+      if (gameMode !== 'journey') {
+        const speedDrivenLevel = await applyFlashcardSpeedMinuteLevelGain(client, normalizedUserId, addedTrainingMs, {
+          targetLanguage: normalizedTargetLanguage
+        });
+        speedDrivenLevelDelta = Math.max(0, Number(speedDrivenLevel.levelDelta) || 0);
+        speedPerHour = Math.max(0, Number(speedDrivenLevel.speedPerHour) || 0);
+      }
     }
 
     if (keepOpen) {
@@ -7508,6 +7529,50 @@ function extractResponseText(payload) {
     }
   }
   return chunks.join('\n').trim();
+}
+
+function containsHanScript(value) {
+  return /[\p{Script=Han}]/u.test(String(value || ''));
+}
+
+async function transliterateMandarinTextToPinyin(rawText) {
+  const sourceText = String(rawText || '').trim();
+  if (!sourceText || !containsHanScript(sourceText)) {
+    return sourceText;
+  }
+
+  const upstreamResponse = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: OPENAI_TRANSLATE_MODEL,
+      instructions: [
+        'You convert Mandarin Chinese text into Hanyu Pinyin for a speaking game.',
+        'Return only the Mandarin pronunciation in Hanyu Pinyin with tone marks.',
+        'Do not return Hanzi, translations, explanations, quotes, numbering, or extra punctuation.',
+        'Preserve natural word spacing when helpful for learners.'
+      ].join('\n'),
+      input: sourceText
+    })
+  });
+
+  const responseText = await upstreamResponse.text();
+  let payload = null;
+  try {
+    payload = responseText ? JSON.parse(responseText) : null;
+  } catch (_error) {
+    payload = null;
+  }
+
+  if (!upstreamResponse.ok) {
+    throw new Error(payload?.error?.message || responseText.slice(0, 500) || 'Falha ao romanizar mandarim.');
+  }
+
+  const outputText = extractResponseText(payload);
+  return String(outputText || '').trim() || sourceText;
 }
 
 function stripJsonCodeFence(text) {
@@ -11038,6 +11103,10 @@ function setFlashcardItemSpanish(item, value) {
   setPreferredFlashcardField(item, ['nomeEspanhol', 'spanish', 'es'], value);
 }
 
+function setFlashcardItemGerman(item, value) {
+  setPreferredFlashcardField(item, ['nomeAlemao', 'german', 'de'], value);
+}
+
 function setFlashcardItemImage(item, value) {
   setPreferredFlashcardField(item, ['imagem', 'image'], value);
 }
@@ -11084,6 +11153,16 @@ function readFlashcardItemSpanish(item) {
         : '';
 }
 
+function readFlashcardItemGerman(item) {
+  return typeof item?.nomeAlemao === 'string'
+    ? item.nomeAlemao.trim()
+    : typeof item?.german === 'string'
+      ? item.german.trim()
+      : typeof item?.de === 'string'
+        ? item.de.trim()
+        : '';
+}
+
 function readFlashcardItemAudioPortuguese(item) {
   return typeof item?.audio_pt === 'string'
     ? item.audio_pt.trim()
@@ -11124,6 +11203,16 @@ function readFlashcardItemAudioSpanish(item) {
         : '';
 }
 
+function readFlashcardItemAudioGerman(item) {
+  return typeof item?.audio_de === 'string'
+    ? item.audio_de.trim()
+    : typeof item?.audioGerman === 'string'
+      ? item.audioGerman.trim()
+      : typeof item?.audioAlemao === 'string'
+        ? item.audioAlemao.trim()
+        : '';
+}
+
 function setFlashcardItemAudioPortuguese(item, value) {
   setPreferredFlashcardField(item, ['audio_pt', 'audioPortuguese', 'audioPortugues'], value);
 }
@@ -11140,6 +11229,10 @@ function setFlashcardItemAudioSpanish(item, value) {
   setPreferredFlashcardField(item, ['audio_es', 'audioSpanish', 'audioEspanhol'], value);
 }
 
+function setFlashcardItemAudioGerman(item, value) {
+  setPreferredFlashcardField(item, ['audio_de', 'audioGerman', 'audioAlemao'], value);
+}
+
 function listFlashcardAudioVariants() {
   return [
     { key: 'english', read: readFlashcardItemAudio, set: setFlashcardItemAudio, suffix: '' },
@@ -11147,7 +11240,8 @@ function listFlashcardAudioVariants() {
     { key: 'portuguese', read: readFlashcardItemAudioPortuguese, set: setFlashcardItemAudioPortuguese, suffix: '-pt' },
     { key: 'french', read: readFlashcardItemAudioFrench, set: setFlashcardItemAudioFrench, suffix: '-fr' },
     { key: 'mandarin', read: readFlashcardItemAudioMandarin, set: setFlashcardItemAudioMandarin, suffix: '-zh' },
-    { key: 'spanish', read: readFlashcardItemAudioSpanish, set: setFlashcardItemAudioSpanish, suffix: '-es' }
+    { key: 'spanish', read: readFlashcardItemAudioSpanish, set: setFlashcardItemAudioSpanish, suffix: '-es' },
+    { key: 'german', read: readFlashcardItemAudioGerman, set: setFlashcardItemAudioGerman, suffix: '-de' }
   ];
 }
 
@@ -11157,6 +11251,7 @@ function normalizeFlashcardEnsureLanguage(value) {
   if (normalized === 'french' || normalized === 'fr') return 'french';
   if (normalized === 'mandarin' || normalized === 'zh') return 'mandarin';
   if (normalized === 'spanish' || normalized === 'es') return 'spanish';
+  if (normalized === 'german' || normalized === 'de') return 'german';
   return 'english';
 }
 
@@ -11234,6 +11329,24 @@ function getFlashcardEnsureLanguageConfig(language) {
         translationPrompt: [
           'You translate language-learning content into natural, modern, useful Spanish.',
           'Preserve the original meaning closely and prefer everyday Spanish over literal awkward translations.'
+        ]
+      };
+    case 'german':
+      return {
+        language: 'german',
+        languageCode: 'de',
+        outputKey: 'de',
+        voiceId: ELEVENLABS_VOICE_ID_FINN,
+        voiceEnvKey: 'ELEVENLABS_VOICE_ID_FINN',
+        readText: readFlashcardItemGerman,
+        setText: setFlashcardItemGerman,
+        readAudio: readFlashcardItemAudioGerman,
+        setAudio: setFlashcardItemAudioGerman,
+        audioSuffix: '-de',
+        errorLabel: 'alemao',
+        translationPrompt: [
+          'You translate language-learning content into natural, modern, useful German.',
+          'Preserve the original meaning closely and prefer everyday German over literal awkward translations.'
         ]
       };
     default:
@@ -17264,13 +17377,14 @@ app.post('/api/flashcards/session-clock', express.json({ limit: '16kb' }), async
 
     const action = String(req.body?.action || '').trim().toLowerCase();
     const targetLanguage = normalizeFlashcardTargetLanguage(req.body?.targetLanguage);
+    const mode = normalizeFlashcardGameMode(req.body?.mode);
     if (action === 'in') {
-      await startFlashcardSessionClock(authUser.id, { targetLanguage });
+      await startFlashcardSessionClock(authUser.id, { targetLanguage, mode });
       res.json({ success: true, action: 'in' });
       return;
     }
     if (action === 'out') {
-      const result = await closeFlashcardSessionClock(authUser.id, { targetLanguage });
+      const result = await closeFlashcardSessionClock(authUser.id, { targetLanguage, mode });
       res.json({
         success: true,
         action: 'out',
@@ -17284,7 +17398,7 @@ app.post('/api/flashcards/session-clock', express.json({ limit: '16kb' }), async
       return;
     }
     if (action === 'tick') {
-      const result = await closeFlashcardSessionClock(authUser.id, { keepOpen: true, targetLanguage });
+      const result = await closeFlashcardSessionClock(authUser.id, { keepOpen: true, targetLanguage, mode });
       res.json({
         success: true,
         action: 'tick',
@@ -22264,10 +22378,18 @@ app.post('/api/stt/openai', async (req, res) => {
       return;
     }
 
-    const text = typeof payload?.text === 'string' ? payload.text.trim() : '';
+    let text = typeof payload?.text === 'string' ? payload.text.trim() : '';
     if (!text) {
       res.status(502).json({ error: 'A OpenAI nao retornou texto da transcricao.' });
       return;
+    }
+
+    if (language === 'zh' && containsHanScript(text)) {
+      try {
+        text = await transliterateMandarinTextToPinyin(text);
+      } catch (romanizeError) {
+        console.warn('Falha ao romanizar transcricao de mandarim:', romanizeError);
+      }
     }
 
     res.json({
@@ -22395,6 +22517,7 @@ app.post('/api/tts/elevenlabs', async (req, res) => {
     paul: { voiceId: ELEVENLABS_VOICE_ID_PAUL, instructionsKey: 'ELEVENLABS_VOICE_ID_PAUL' },
     sami: { voiceId: ELEVENLABS_VOICE_ID_SAMI, instructionsKey: 'ELEVENLABS_VOICE_ID_SAMI' },
     cristina: { voiceId: ELEVENLABS_VOICE_ID_CRISTINA, instructionsKey: 'ELEVENLABS_VOICE_ID_CRISTINA' },
+    finn: { voiceId: ELEVENLABS_VOICE_ID_FINN, instructionsKey: 'ELEVENLABS_VOICE_ID_FINN' },
     'burt-raynalds': { voiceId: ELEVENLABS_VOICE_ID_BURT_RAYNALDS, instructionsKey: 'ELEVENLABS_VOICE_ID_BURT_RAYNALDS' },
     burt: { voiceId: ELEVENLABS_VOICE_ID_BURT_RAYNALDS, instructionsKey: 'ELEVENLABS_VOICE_ID_BURT_RAYNALDS' }
   };
@@ -23340,6 +23463,15 @@ app.post('/api/text/openai/translate', async (req, res) => {
       systemPrompt: [
         'You translate Brazilian Portuguese learning content into natural, modern, useful Spanish.',
         'Preserve meaning, but prefer everyday Spanish over overly literal translations.'
+      ]
+    },
+    german: {
+      outputKey: 'de',
+      errorLabel: 'alemao',
+      noItemsError: 'Nao ha textos em portugues aguardando traducao para alemao.',
+      systemPrompt: [
+        'You translate Brazilian Portuguese learning content into natural, modern, useful German.',
+        'Preserve meaning, but prefer everyday German over overly literal translations.'
       ]
     }
   };
