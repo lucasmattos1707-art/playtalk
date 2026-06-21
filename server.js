@@ -1792,8 +1792,38 @@ const FLASHCARD_GAME_OPTIONS_DEFAULTS = Object.freeze({
   difficulty: 'automatic',
   speed: '0.90',
   accent: 'mix_100_0',
-  fourthStageTyping: 'off'
+  fourthStageTyping: 'off',
+  targetLanguage: 'english',
+  nativeLanguage: 'portuguese'
 });
+
+const FLASHCARD_LANGUAGE_CODES = Object.freeze([
+  'english',
+  'portuguese',
+  'french',
+  'mandarin',
+  'spanish'
+]);
+
+function normalizeFlashcardLanguage(value, fallback = FLASHCARD_GAME_OPTIONS_DEFAULTS.targetLanguage) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return FLASHCARD_LANGUAGE_CODES.includes(normalized) ? normalized : fallback;
+}
+
+function normalizeFlashcardTargetLanguage(value) {
+  return normalizeFlashcardLanguage(value, FLASHCARD_GAME_OPTIONS_DEFAULTS.targetLanguage);
+}
+
+function normalizeFlashcardNativeLanguage(value) {
+  return normalizeFlashcardLanguage(value, FLASHCARD_GAME_OPTIONS_DEFAULTS.nativeLanguage);
+}
+
+function defaultFlashcardLevelForTargetLanguage(targetLanguage, legacyLevel = 1) {
+  const normalizedTargetLanguage = normalizeFlashcardTargetLanguage(targetLanguage);
+  return normalizedTargetLanguage === 'english'
+    ? normalizeUserFlashcardLevel(legacyLevel)
+    : 1;
+}
 
 function normalizeFlashcardGameDifficulty(value) {
   const normalized = String(value || '').trim().toLowerCase();
@@ -1826,7 +1856,9 @@ function normalizeFlashcardGameOptions(value) {
     difficulty: normalizeFlashcardGameDifficulty(source.difficulty),
     speed: normalizeFlashcardGameSpeed(source.speed),
     accent: normalizeFlashcardGameAccent(source.accent),
-    fourthStageTyping: normalizeFlashcardGameFourthTyping(source.fourthStageTyping)
+    fourthStageTyping: normalizeFlashcardGameFourthTyping(source.fourthStageTyping),
+    targetLanguage: normalizeFlashcardTargetLanguage(source.targetLanguage),
+    nativeLanguage: normalizeFlashcardNativeLanguage(source.nativeLanguage)
   };
 }
 
@@ -2104,6 +2136,14 @@ const ensureFlashcardUserStateTables = async () => {
       `);
       await pool.query(`
         ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS game_option_target_language text NOT NULL DEFAULT 'english'
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
+        ADD COLUMN IF NOT EXISTS game_option_native_language text NOT NULL DEFAULT 'portuguese'
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_stats
         ADD COLUMN IF NOT EXISTS speed_level_gain_carry numeric(10,4) NOT NULL DEFAULT 0
       `);
       await pool.query(`
@@ -2191,6 +2231,27 @@ const ensureFlashcardUserStateTables = async () => {
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_flashcard_on_table_user_idx
         ON public.user_flashcard_on_table (user_id, updated_at DESC)
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_language_levels (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          target_language text NOT NULL,
+          current_level integer NOT NULL DEFAULT 1,
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, target_language)
+        )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_language_levels
+        ADD COLUMN IF NOT EXISTS current_level integer NOT NULL DEFAULT 1
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_language_levels
+        ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_language_levels_user_idx
+        ON public.user_flashcard_language_levels (user_id, updated_at DESC)
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_type_portuguese (
@@ -5785,7 +5846,7 @@ async function appendFlashcardSpeedSamples(client, userId, samples = []) {
   );
 }
 
-async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingMs) {
+async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingMs, options = {}) {
   const normalizedUserId = Number.parseInt(userId, 10);
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
     return { levelDelta: 0, practiceMinutes: 0, speedPerHour: 0 };
@@ -5801,7 +5862,9 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
        COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric AS admin_speed_per_hour,
        COALESCE(stats.speed_level_gain_carry, 0)::numeric AS speed_level_gain_carry,
        COALESCE(stats.speed_level_practice_carry_ms, 0)::bigint AS speed_level_practice_carry_ms,
-       COALESCE(overrides.speed_delta, 0)::numeric AS speed_delta
+       COALESCE(overrides.speed_delta, 0)::numeric AS speed_delta,
+       COALESCE(stats.game_option_target_language, 'english') AS target_language,
+       COALESCE(u.level, 1)::int AS fallback_level
      FROM public.users u
      LEFT JOIN public.user_flashcard_stats stats
       ON stats.user_id = u.id
@@ -5812,6 +5875,19 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
     [normalizedUserId]
   );
   const totalsRow = totalsResult.rows[0] || {};
+  const targetLanguage = normalizeFlashcardTargetLanguage(options?.targetLanguage || totalsRow.target_language);
+  const fallbackLevel = defaultFlashcardLevelForTargetLanguage(targetLanguage, totalsRow.fallback_level);
+  await client.query(
+    `INSERT INTO public.user_flashcard_language_levels (
+       user_id,
+       target_language,
+       current_level,
+       updated_at
+     )
+     VALUES ($1, $2, $3, now())
+     ON CONFLICT (user_id, target_language) DO NOTHING`,
+    [normalizedUserId, targetLanguage, fallbackLevel]
+  );
   const carriedPracticeMs = Math.max(0, Math.round(Number(totalsRow.speed_level_practice_carry_ms) || 0));
   const totalPracticeMs = carriedPracticeMs + practiceMs;
   const practiceMinutes = Math.floor(totalPracticeMs / 60000);
@@ -5878,14 +5954,46 @@ async function applyFlashcardSpeedMinuteLevelGain(client, userId, addedTrainingM
   }
 
   await client.query(
-    `UPDATE public.users
-     SET level = GREATEST(1, LEAST(200, GREATEST(1, COALESCE(level, 1)) + $2)),
-         level_updated_at = now()
-     WHERE id = $1`,
-    [normalizedUserId, levelDelta]
+    `UPDATE public.user_flashcard_language_levels
+     SET current_level = GREATEST(1, LEAST(200, GREATEST(1, COALESCE(current_level, 1)) + $3)),
+         updated_at = now()
+     WHERE user_id = $1
+       AND target_language = $2`,
+    [normalizedUserId, targetLanguage, levelDelta]
   );
 
   return { levelDelta, levelDeltaRaw: levelDeltaRawWithCarry, practiceMinutes, speedPerHour };
+}
+
+async function ensureFlashcardUserLanguageLevelRow(client, userId, targetLanguage, fallbackLevel = 1) {
+  const normalizedUserId = Number.parseInt(userId, 10);
+  const normalizedTargetLanguage = normalizeFlashcardTargetLanguage(targetLanguage);
+  const normalizedFallbackLevel = defaultFlashcardLevelForTargetLanguage(normalizedTargetLanguage, fallbackLevel);
+  await client.query(
+    `INSERT INTO public.user_flashcard_language_levels (
+       user_id,
+       target_language,
+       current_level,
+       updated_at
+     )
+     VALUES ($1, $2, $3, now())
+     ON CONFLICT (user_id, target_language) DO NOTHING`,
+    [normalizedUserId, normalizedTargetLanguage, normalizedFallbackLevel]
+  );
+  const result = await client.query(
+    `SELECT current_level, updated_at
+     FROM public.user_flashcard_language_levels
+     WHERE user_id = $1
+       AND target_language = $2
+     FOR UPDATE`,
+    [normalizedUserId, normalizedTargetLanguage]
+  );
+  const row = result.rows[0] || {};
+  return {
+    targetLanguage: normalizedTargetLanguage,
+    level: normalizeUserFlashcardLevel(row.current_level || normalizedFallbackLevel),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null
+  };
 }
 
 const readFlashcardStateForUser = async (userId) => {
@@ -6015,6 +6123,35 @@ const readFlashcardStateForUser = async (userId) => {
   const accurateAggregate = getFlashcardAccurateAggregateFromRow(accurateResult.rows[0]);
 
   const flashcardStatsRow = statsResult.rows[0] || {};
+  const gameOptions = normalizeFlashcardGameOptions({
+    difficulty: flashcardStatsRow.game_option_difficulty,
+    speed: flashcardStatsRow.game_option_speed,
+    accent: flashcardStatsRow.game_option_accent,
+    fourthStageTyping: flashcardStatsRow.game_option_fourth_stage_typing,
+    targetLanguage: flashcardStatsRow.game_option_target_language,
+    nativeLanguage: flashcardStatsRow.game_option_native_language
+  });
+  const selectedTargetLanguage = normalizeFlashcardTargetLanguage(gameOptions.targetLanguage);
+  const fallbackUserLevel = defaultFlashcardLevelForTargetLanguage(selectedTargetLanguage, userLevelResult.rows[0]?.level);
+  await pool.query(
+    `INSERT INTO public.user_flashcard_language_levels (
+       user_id,
+       target_language,
+       current_level,
+       updated_at
+     )
+     VALUES ($1, $2, $3, now())
+     ON CONFLICT (user_id, target_language) DO NOTHING`,
+    [normalizedUserId, selectedTargetLanguage, fallbackUserLevel]
+  );
+  const languageLevelResult = await pool.query(
+    `SELECT current_level, updated_at
+     FROM public.user_flashcard_language_levels
+     WHERE user_id = $1
+       AND target_language = $2
+     LIMIT 1`,
+    [normalizedUserId, selectedTargetLanguage]
+  );
   const normalizedCharsTotal = Math.max(0, Number(speedSamplesResult.rows[0]?.normalized_chars_total) || 0);
   const speedSampleCount = Math.max(0, Number(speedSamplesResult.rows[0]?.sample_count) || 0);
   const speedPracticeWindowMs = Math.max(0, Number(speedSamplesResult.rows[0]?.practice_window_ms) || 0);
@@ -6029,12 +6166,6 @@ const readFlashcardStateForUser = async (userId) => {
     0,
     Number((resolvedSpeedPerHourBase + Number(userLevelResult.rows[0]?.speed_delta || 0)).toFixed(1))
   );
-  const gameOptions = normalizeFlashcardGameOptions({
-    difficulty: flashcardStatsRow.game_option_difficulty,
-    speed: flashcardStatsRow.game_option_speed,
-    accent: flashcardStatsRow.game_option_accent,
-    fourthStageTyping: flashcardStatsRow.game_option_fourth_stage_typing
-  });
   const onTableRecords = onTableResult.rows
     .map((row) => normalizeFlashcardOnTableRecord({
       cardId: row?.card_id,
@@ -6062,9 +6193,9 @@ const readFlashcardStateForUser = async (userId) => {
       coinsTotal: Math.max(0, Number(coinsResult.rows[0]?.coins_total) || 0)
     },
     meta: {
-      userLevel: normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level),
-      userLevelUpdatedAt: userLevelResult.rows[0]?.level_updated_at
-        ? new Date(userLevelResult.rows[0].level_updated_at).toISOString()
+      userLevel: normalizeUserFlashcardLevel(languageLevelResult.rows[0]?.current_level || fallbackUserLevel),
+      userLevelUpdatedAt: languageLevelResult.rows[0]?.updated_at
+        ? new Date(languageLevelResult.rows[0].updated_at).toISOString()
         : null,
       hasProgress: progressRecords.length > 0,
       hasStats: Boolean(statsResult.rows[0] || accurateResult.rows[0]),
@@ -6112,6 +6243,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
   let progress = Array.from(dedupedProgress.values());
   const stats = normalizeFlashcardStats(payload?.stats, totalFlashcardLettersFromProgress(progress));
   const gameOptions = normalizeFlashcardGameOptions(payload?.gameOptions);
+  const selectedTargetLanguage = normalizeFlashcardTargetLanguage(gameOptions.targetLanguage);
   const hiddenCardIds = hasHiddenCardIdsPayload
     ? Array.from(new Set(payload.hiddenCardIds
       .map((cardId) => typeof cardId === 'string' ? cardId.trim() : '')
@@ -6153,12 +6285,17 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       [normalizedUserId]
     );
     const currentUserLevelRow = currentUserLevelResult.rows[0] || {};
-    const currentPersistedUserLevel = normalizeUserFlashcardLevel(currentUserLevelRow.level);
+    const fallbackPersistedUserLevel = defaultFlashcardLevelForTargetLanguage(selectedTargetLanguage, currentUserLevelRow.level);
+    const currentLanguageLevel = await ensureFlashcardUserLanguageLevelRow(
+      client,
+      normalizedUserId,
+      selectedTargetLanguage,
+      fallbackPersistedUserLevel
+    );
+    const currentPersistedUserLevel = normalizeUserFlashcardLevel(currentLanguageLevel.level);
     speedOverrideDelta = Number(currentUserLevelRow?.speed_delta || 0);
     persistedUserLevel = currentPersistedUserLevel;
-    persistedUserLevelUpdatedAt = currentUserLevelRow.level_updated_at
-      ? new Date(currentUserLevelRow.level_updated_at).toISOString()
-      : null;
+    persistedUserLevelUpdatedAt = currentLanguageLevel.updatedAt;
 
     const existingStatsResult = await client.query(
       `SELECT training_time_ms, speakings, listenings, readings, admin_speed_flashcards_per_hour
@@ -6479,6 +6616,26 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     const requestedCoinsDelta = requestedCoinsDeltaRaw;
     const requestedXpDelta = requestedXpDeltaRaw;
 
+    const requestedUserLevel = Number.isFinite(Number(payload?.userLevel))
+      ? normalizeUserFlashcardLevel(payload.userLevel)
+      : currentPersistedUserLevel;
+    await client.query(
+      `INSERT INTO public.user_flashcard_language_levels (
+         user_id,
+         target_language,
+         current_level,
+         updated_at
+       )
+       VALUES ($1, $2, $3, now())
+       ON CONFLICT (user_id, target_language)
+       DO UPDATE SET
+         current_level = EXCLUDED.current_level,
+         updated_at = now()`,
+      [normalizedUserId, selectedTargetLanguage, requestedUserLevel]
+    );
+    persistedUserLevel = requestedUserLevel;
+    persistedUserLevelUpdatedAt = new Date().toISOString();
+
     await client.query(
       `INSERT INTO public.user_flashcard_stats (
          user_id,
@@ -6492,10 +6649,12 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
          game_option_speed,
          game_option_accent,
          game_option_fourth_stage_typing,
+         game_option_target_language,
+         game_option_native_language,
          second_star_error_heard,
          updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, now())
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $13, $14, now())
        ON CONFLICT (user_id)
        DO UPDATE SET
          play_time_ms = EXCLUDED.play_time_ms,
@@ -6506,9 +6665,11 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
          game_option_speed = EXCLUDED.game_option_speed,
          game_option_accent = EXCLUDED.game_option_accent,
          game_option_fourth_stage_typing = EXCLUDED.game_option_fourth_stage_typing,
+         game_option_target_language = EXCLUDED.game_option_target_language,
+         game_option_native_language = EXCLUDED.game_option_native_language,
          training_time_ms = GREATEST(public.user_flashcard_stats.training_time_ms, EXCLUDED.training_time_ms),
          pronunciation_samples = CASE
-           WHEN $13::boolean THEN EXCLUDED.pronunciation_samples
+           WHEN $15::boolean THEN EXCLUDED.pronunciation_samples
            ELSE public.user_flashcard_stats.pronunciation_samples
          END,
          second_star_error_heard = EXCLUDED.second_star_error_heard,
@@ -6525,6 +6686,8 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
         gameOptions.speed,
         gameOptions.accent,
         gameOptions.fourthStageTyping,
+        gameOptions.targetLanguage,
+        gameOptions.nativeLanguage,
         stats.secondStarErrorHeard,
         shouldPersistPerformanceStats
       ]
@@ -6682,16 +6845,35 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
   };
 };
 
-const startFlashcardSessionClock = async (userId) => {
+const startFlashcardSessionClock = async (userId, options = {}) => {
   if (!pool) throw new Error('DATABASE_URL nao configurada.');
   await ensureFlashcardUserStateTables();
   await ensureUserCoinsTable();
   const normalizedUserId = Number.parseInt(userId, 10);
+  const targetLanguage = normalizeFlashcardTargetLanguage(options?.targetLanguage);
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
     const error = new Error('userId invalido.');
     error.statusCode = 400;
     throw error;
   }
+  const fallbackLevelResult = await pool.query(
+    `SELECT level
+     FROM public.users
+     WHERE id = $1
+     LIMIT 1`,
+    [normalizedUserId]
+  );
+  await pool.query(
+    `INSERT INTO public.user_flashcard_language_levels (
+       user_id,
+       target_language,
+       current_level,
+       updated_at
+     )
+     VALUES ($1, $2, $3, now())
+     ON CONFLICT (user_id, target_language) DO NOTHING`,
+    [normalizedUserId, targetLanguage, defaultFlashcardLevelForTargetLanguage(targetLanguage, fallbackLevelResult.rows[0]?.level)]
+  );
   await pool.query(
     `INSERT INTO public.user_flashcard_session_clock (
        user_id,
@@ -6715,6 +6897,7 @@ const closeFlashcardSessionClock = async (userId, options = {}) => {
   await ensureFlashcardUserStateTables();
   const normalizedUserId = Number.parseInt(userId, 10);
   const keepOpen = Boolean(options?.keepOpen);
+  const normalizedTargetLanguage = normalizeFlashcardTargetLanguage(options?.targetLanguage);
   if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
     const error = new Error('userId invalido.');
     error.statusCode = 400;
@@ -6770,7 +6953,9 @@ const closeFlashcardSessionClock = async (userId, options = {}) => {
            updated_at = now()`,
         [normalizedUserId, addedPracticeSeconds]
       );
-      const speedDrivenLevel = await applyFlashcardSpeedMinuteLevelGain(client, normalizedUserId, addedTrainingMs);
+      const speedDrivenLevel = await applyFlashcardSpeedMinuteLevelGain(client, normalizedUserId, addedTrainingMs, {
+        targetLanguage: normalizedTargetLanguage
+      });
       speedDrivenLevelDelta = Math.max(0, Number(speedDrivenLevel.levelDelta) || 0);
       speedPerHour = Math.max(0, Number(speedDrivenLevel.speedPerHour) || 0);
     }
@@ -6809,22 +6994,26 @@ const closeFlashcardSessionClock = async (userId, options = {}) => {
       );
     }
 
-    const [totalResult, userLevelResult] = await Promise.all([
-      client.query(
-        `SELECT training_time_ms
-         FROM public.user_flashcard_stats
-         WHERE user_id = $1
-         LIMIT 1`,
-        [normalizedUserId]
-      ),
-      client.query(
-        `SELECT level, level_updated_at
-         FROM public.users
-         WHERE id = $1
-         LIMIT 1`,
-        [normalizedUserId]
-      )
-    ]);
+    const totalResult = await client.query(
+      `SELECT training_time_ms
+       FROM public.user_flashcard_stats
+       WHERE user_id = $1
+       LIMIT 1`,
+      [normalizedUserId]
+    );
+    const fallbackUserResult = await client.query(
+      `SELECT level
+       FROM public.users
+       WHERE id = $1
+       LIMIT 1`,
+      [normalizedUserId]
+    );
+    const currentLanguageLevel = await ensureFlashcardUserLanguageLevelRow(
+      client,
+      normalizedUserId,
+      normalizedTargetLanguage,
+      fallbackUserResult.rows[0]?.level
+    );
     await client.query('COMMIT');
     return {
       success: true,
@@ -6833,10 +7022,8 @@ const closeFlashcardSessionClock = async (userId, options = {}) => {
       speedDrivenLevelDelta,
       speedPerHour,
       trainingTimeMs: Math.max(0, Number(totalResult.rows[0]?.training_time_ms) || 0),
-      userLevel: normalizeUserFlashcardLevel(userLevelResult.rows[0]?.level),
-      userLevelUpdatedAt: userLevelResult.rows[0]?.level_updated_at
-        ? new Date(userLevelResult.rows[0].level_updated_at).toISOString()
-        : null
+      userLevel: currentLanguageLevel.level,
+      userLevelUpdatedAt: currentLanguageLevel.updatedAt
     };
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch (_rollbackError) {}
@@ -16752,13 +16939,14 @@ app.post('/api/flashcards/session-clock', express.json({ limit: '16kb' }), async
     }
 
     const action = String(req.body?.action || '').trim().toLowerCase();
+    const targetLanguage = normalizeFlashcardTargetLanguage(req.body?.targetLanguage);
     if (action === 'in') {
-      await startFlashcardSessionClock(authUser.id);
+      await startFlashcardSessionClock(authUser.id, { targetLanguage });
       res.json({ success: true, action: 'in' });
       return;
     }
     if (action === 'out') {
-      const result = await closeFlashcardSessionClock(authUser.id);
+      const result = await closeFlashcardSessionClock(authUser.id, { targetLanguage });
       res.json({
         success: true,
         action: 'out',
@@ -16772,7 +16960,7 @@ app.post('/api/flashcards/session-clock', express.json({ limit: '16kb' }), async
       return;
     }
     if (action === 'tick') {
-      const result = await closeFlashcardSessionClock(authUser.id, { keepOpen: true });
+      const result = await closeFlashcardSessionClock(authUser.id, { keepOpen: true, targetLanguage });
       res.json({
         success: true,
         action: 'tick',
@@ -16820,6 +17008,7 @@ app.post('/api/flashcards/first-stage-level-penalty', express.json({ limit: '16k
     }
 
     const providedLevel = Number.parseInt(req.body?.currentLevel, 10);
+    const targetLanguage = normalizeFlashcardTargetLanguage(req.body?.targetLanguage);
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -16835,7 +17024,13 @@ app.post('/api/flashcards/first-stage-level-penalty', express.json({ limit: '16k
         res.status(404).json({ success: false, message: 'Usuario nao encontrado.' });
         return;
       }
-      const persistedLevel = normalizeUserFlashcardLevel(userResult.rows[0]?.level);
+      const persistedLanguageLevel = await ensureFlashcardUserLanguageLevelRow(
+        client,
+        userId,
+        targetLanguage,
+        userResult.rows[0]?.level
+      );
+      const persistedLevel = normalizeUserFlashcardLevel(persistedLanguageLevel.level);
       const baseLevel = Number.isInteger(providedLevel)
         ? normalizeUserFlashcardLevel(providedLevel)
         : persistedLevel;
@@ -16853,21 +17048,22 @@ app.post('/api/flashcards/first-stage-level-penalty', express.json({ limit: '16k
         return;
       }
       const updateResult = await client.query(
-        `UPDATE public.users
-         SET level = GREATEST(1, LEAST(200, COALESCE(level, 1)) - $2),
-             level_updated_at = now()
-         WHERE id = $1
-         RETURNING level, level_updated_at`,
-        [userId, levelLoss]
+        `UPDATE public.user_flashcard_language_levels
+         SET current_level = GREATEST(1, LEAST(200, COALESCE(current_level, 1)) - $3),
+             updated_at = now()
+         WHERE user_id = $1
+           AND target_language = $2
+         RETURNING current_level, updated_at`,
+        [userId, targetLanguage, levelLoss]
       );
       await client.query('COMMIT');
-      const updatedLevel = normalizeUserFlashcardLevel(updateResult.rows[0]?.level);
+      const updatedLevel = normalizeUserFlashcardLevel(updateResult.rows[0]?.current_level);
       res.json({
         success: true,
         levelLoss,
         userLevel: updatedLevel,
-        userLevelUpdatedAt: updateResult.rows[0]?.level_updated_at
-          ? new Date(updateResult.rows[0].level_updated_at).toISOString()
+        userLevelUpdatedAt: updateResult.rows[0]?.updated_at
+          ? new Date(updateResult.rows[0].updated_at).toISOString()
           : null
       });
     } catch (innerError) {
@@ -16909,16 +17105,36 @@ app.post('/api/flashcards/jump-level-penalty', express.json({ limit: '16kb' }), 
     }
 
     const levelLoss = 1;
+    const targetLanguage = normalizeFlashcardTargetLanguage(req.body?.targetLanguage);
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const updateResult = await client.query(
-        `UPDATE public.users
-         SET level = GREATEST(1, LEAST(200, COALESCE(level, 1)) - $2),
-             level_updated_at = now()
+      const userResult = await client.query(
+        `SELECT level
+         FROM public.users
          WHERE id = $1
-         RETURNING level, level_updated_at`,
-        [userId, levelLoss]
+         FOR UPDATE`,
+        [userId]
+      );
+      if (!userResult.rows.length) {
+        await client.query('ROLLBACK');
+        res.status(404).json({ success: false, message: 'Usuario nao encontrado.' });
+        return;
+      }
+      await ensureFlashcardUserLanguageLevelRow(
+        client,
+        userId,
+        targetLanguage,
+        userResult.rows[0]?.level
+      );
+      const updateResult = await client.query(
+        `UPDATE public.user_flashcard_language_levels
+         SET current_level = GREATEST(1, LEAST(200, COALESCE(current_level, 1)) - $3),
+             updated_at = now()
+         WHERE user_id = $1
+           AND target_language = $2
+         RETURNING current_level, updated_at`,
+        [userId, targetLanguage, levelLoss]
       );
       if (!updateResult.rows.length) {
         await client.query('ROLLBACK');
@@ -16926,13 +17142,13 @@ app.post('/api/flashcards/jump-level-penalty', express.json({ limit: '16kb' }), 
         return;
       }
       await client.query('COMMIT');
-      const updatedLevel = normalizeUserFlashcardLevel(updateResult.rows[0]?.level);
+      const updatedLevel = normalizeUserFlashcardLevel(updateResult.rows[0]?.current_level);
       res.json({
         success: true,
         levelLoss,
         userLevel: updatedLevel,
-        userLevelUpdatedAt: updateResult.rows[0]?.level_updated_at
-          ? new Date(updateResult.rows[0].level_updated_at).toISOString()
+        userLevelUpdatedAt: updateResult.rows[0]?.updated_at
+          ? new Date(updateResult.rows[0].updated_at).toISOString()
           : null
       });
     } catch (innerError) {

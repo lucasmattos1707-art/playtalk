@@ -11759,18 +11759,28 @@
       const USER_MEDAL_COUNT = 12;
       const USER_MEDAL_LEVEL_GROUP_SIZE = 10;
       const USER_MEDAL_MAX_LEVEL = USER_MEDAL_COUNT * USER_MEDAL_LEVEL_GROUP_SIZE;
-      const GAME_OPTION_SLIDES = ['accent', 'fourthStageTyping'];
+      const FLASHCARD_LANGUAGE_OPTIONS = {
+        english: { label: 'Ingles padrao', speechCode: 'en-US' },
+        portuguese: { label: 'Portugues', speechCode: 'pt-BR' },
+        french: { label: 'Frances', speechCode: 'fr-FR' },
+        mandarin: { label: 'Mandarim', speechCode: 'zh-CN' },
+        spanish: { label: 'Espanhol', speechCode: 'es-ES' }
+      };
       const GAME_OPTION_VALUE_MAP = {
         difficulty: ['automatic'],
         speed: ['0.70', '0.80', '0.90', '1.00'],
         accent: ['mix_100_0', 'mix_90_10', 'mix_80_20', 'mix_70_30', 'mix_60_40', 'mix_50_50', 'mix_40_60', 'mix_30_70', 'mix_20_80', 'mix_10_90', 'mix_0_100'],
-        fourthStageTyping: ['off', 'on']
+        fourthStageTyping: ['off', 'on'],
+        targetLanguage: ['english', 'portuguese', 'french', 'mandarin', 'spanish'],
+        nativeLanguage: ['portuguese', 'english', 'french', 'mandarin', 'spanish']
       };
       const DEFAULT_GAME_OPTIONS = {
         difficulty: 'automatic',
         speed: '0.90',
         accent: 'mix_100_0',
-        fourthStageTyping: 'off'
+        fourthStageTyping: 'off',
+        targetLanguage: 'english',
+        nativeLanguage: 'portuguese'
       };
       const ONBOARDING_GATE_TRANSITION_MS = 2000;
       const ONBOARDING_GATE_OPEN_DELAY_MS = 4000;
@@ -12553,7 +12563,9 @@
           difficulty: DEFAULT_GAME_OPTIONS.difficulty,
           speed: DEFAULT_GAME_OPTIONS.speed,
           accent: DEFAULT_GAME_OPTIONS.accent,
-          fourthStageTyping: DEFAULT_GAME_OPTIONS.fourthStageTyping
+          fourthStageTyping: DEFAULT_GAME_OPTIONS.fourthStageTyping,
+          targetLanguage: DEFAULT_GAME_OPTIONS.targetLanguage,
+          nativeLanguage: DEFAULT_GAME_OPTIONS.nativeLanguage
         }
       };
 
@@ -12932,11 +12944,137 @@
         return DEFAULT_GAME_OPTIONS[key];
       }
 
+      function currentTargetLanguage() {
+        return normalizeGameOptionValue('targetLanguage', state.options?.targetLanguage);
+      }
+
+      function currentNativeLanguage() {
+        return normalizeGameOptionValue('nativeLanguage', state.options?.nativeLanguage);
+      }
+
+      function currentTargetLanguageLabel() {
+        return FLASHCARD_LANGUAGE_OPTIONS[currentTargetLanguage()]?.label || 'Ingles padrao';
+      }
+
+      function currentNativeLanguageLabel() {
+        return FLASHCARD_LANGUAGE_OPTIONS[currentNativeLanguage()]?.label || 'Portugues';
+      }
+
+      function currentTargetSpeechCode() {
+        return FLASHCARD_LANGUAGE_OPTIONS[currentTargetLanguage()]?.speechCode || 'en-US';
+      }
+
+      function currentNativeSpeechCode() {
+        return FLASHCARD_LANGUAGE_OPTIONS[currentNativeLanguage()]?.speechCode || 'pt-BR';
+      }
+
+      function currentGameOptionSlides() {
+        const slides = ['targetLanguage', 'nativeLanguage'];
+        if (currentTargetLanguage() === 'english') {
+          slides.push('accent');
+        }
+        slides.push('fourthStageTyping');
+        return slides;
+      }
+
+      function resolveSourceLanguageText(card, language) {
+        const normalized = normalizeGameOptionValue('targetLanguage', language);
+        switch (normalized) {
+          case 'portuguese':
+            return repairDisplayText(card?.sourcePortuguese || card?.portuguese || '');
+          case 'french':
+            return repairDisplayText(card?.sourceFrench || '');
+          case 'mandarin':
+            return repairDisplayText(card?.sourceMandarin || '');
+          case 'spanish':
+            return repairDisplayText(card?.sourceSpanish || '');
+          default:
+            return repairDisplayText(card?.sourceEnglish || card?.english || '');
+        }
+      }
+
+      function resolveSourceLanguageAnswers(card, language, fallbackText = '') {
+        const normalized = normalizeGameOptionValue('targetLanguage', language);
+        const direct = normalized === 'portuguese'
+          ? card?.sourcePortugueseAnswers
+          : normalized === 'french'
+            ? card?.sourceFrenchAnswers
+            : normalized === 'mandarin'
+              ? card?.sourceMandarinAnswers
+              : normalized === 'spanish'
+                ? card?.sourceSpanishAnswers
+                : card?.sourceEnglishAnswers;
+        const list = Array.isArray(direct) ? direct : [];
+        const withFallback = list.length ? list : [fallbackText];
+        return uniqueAnswerList(withFallback.map(repairDisplayText).map(item => safeText(item)).filter(Boolean));
+      }
+
+      function resolveSourceLanguageAudio(card, language) {
+        const normalized = normalizeGameOptionValue('targetLanguage', language);
+        switch (normalized) {
+          case 'portuguese':
+            return {
+              primary: safeText(card?.sourceAudioPortuguese || ''),
+              british: ''
+            };
+          case 'french':
+            return {
+              primary: safeText(card?.sourceAudioFrench || ''),
+              british: ''
+            };
+          case 'mandarin':
+            return {
+              primary: safeText(card?.sourceAudioMandarin || ''),
+              british: ''
+            };
+          case 'spanish':
+            return {
+              primary: safeText(card?.sourceAudioSpanish || ''),
+              british: ''
+            };
+          default:
+            return {
+              primary: safeText(card?.sourceAudioEnglish || card?.audioUrl || ''),
+              british: safeText(card?.sourceAudioEnglishBritish || card?.audioUrlBritish || '')
+            };
+        }
+      }
+
+      function projectFlashcardLanguageFields(card) {
+        if (!card || typeof card !== 'object') return card;
+        const targetLanguage = currentTargetLanguage();
+        const nativeLanguage = currentNativeLanguage();
+        const targetText = resolveSourceLanguageText(card, targetLanguage);
+        const nativeText = resolveSourceLanguageText(card, nativeLanguage);
+        const targetAudio = resolveSourceLanguageAudio(card, targetLanguage);
+        return {
+          ...card,
+          english: targetText || resolveSourceLanguageText(card, 'english') || resolveSourceLanguageText(card, 'portuguese'),
+          englishAnswers: resolveSourceLanguageAnswers(card, targetLanguage, targetText),
+          portuguese: nativeText || resolveSourceLanguageText(card, 'portuguese') || resolveSourceLanguageText(card, 'english'),
+          portugueseAnswers: resolveSourceLanguageAnswers(card, nativeLanguage, nativeText),
+          audioUrl: targetAudio.primary,
+          audioUrlBritish: targetAudio.british
+        };
+      }
+
+      function applySelectedLanguageProjectionToAllCards() {
+        if (!Array.isArray(state.allCards) || !state.allCards.length) return;
+        state.allCards = state.allCards.map((card) => projectFlashcardLanguageFields(card));
+      }
+
       function applyStoredGameOptions(options = {}) {
+        const previousTargetLanguage = currentTargetLanguage();
+        const previousNativeLanguage = currentNativeLanguage();
         state.options.difficulty = normalizeGameOptionValue('difficulty', options.difficulty);
         state.options.speed = normalizeGameOptionValue('speed', options.speed);
         state.options.accent = normalizeGameOptionValue('accent', options.accent);
         state.options.fourthStageTyping = normalizeGameOptionValue('fourthStageTyping', options.fourthStageTyping);
+        state.options.targetLanguage = normalizeGameOptionValue('targetLanguage', options.targetLanguage);
+        state.options.nativeLanguage = normalizeGameOptionValue('nativeLanguage', options.nativeLanguage);
+        if (previousTargetLanguage !== currentTargetLanguage() || previousNativeLanguage !== currentNativeLanguage()) {
+          applySelectedLanguageProjectionToAllCards();
+        }
       }
 
       function loadGameOptionsFromStorage() {
@@ -14153,9 +14291,10 @@
             difficulty: normalizeGameOptionValue('difficulty', state.options?.difficulty),
             speed: normalizeGameOptionValue('speed', state.options?.speed),
             accent: normalizeGameOptionValue('accent', state.options?.accent),
-            fourthStageTyping: normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping)
+            fourthStageTyping: normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping),
+            targetLanguage: normalizeGameOptionValue('targetLanguage', state.options?.targetLanguage),
+            nativeLanguage: normalizeGameOptionValue('nativeLanguage', state.options?.nativeLanguage)
           },
-          userLevel: normalizeUserLevel(state.userLevel),
           userLevelUpdatedAt: safeText(state.userLevelUpdatedAt),
           hiddenCardIds: Array.from(state.hiddenCardIds.values()),
           onTable
@@ -14190,6 +14329,12 @@
           const coinsDeltaToSync = Math.max(0, Math.round(Number(state.stats?.coinsDelta) || 0));
           const xpDeltaToSync = Math.max(0, Math.round(Number(state.stats?.xpDelta) || 0));
           const payloadToSync = buildFlashcardCloudPayload();
+          if (!state.entry.omitNextUserLevelSync) {
+            payloadToSync.userLevel = normalizeUserLevel(state.userLevel);
+          }
+          if (state.entry.forceProgressResetPending) {
+            payloadToSync.forceProgressReset = true;
+          }
           if (payloadToSync?.stats && typeof payloadToSync.stats === 'object') {
             payloadToSync.stats.coinsDelta = coinsDeltaToSync;
             payloadToSync.stats.xpDelta = xpDeltaToSync;
@@ -14243,6 +14388,8 @@
               delayMs: 0
             });
           }
+          state.entry.omitNextUserLevelSync = false;
+          state.entry.forceProgressResetPending = false;
           if (state.entry.dailyPlanMissionSnapshot) {
             void refreshDailyPlanMissionSnapshot({ force: true }).then(() => {
               updateSpeakingStarMicSealProgress();
@@ -15968,7 +16115,10 @@
             }),
             credentials: 'include',
             keepalive: normalizedAction === 'out',
-            body: JSON.stringify({ action: normalizedAction })
+            body: JSON.stringify({
+              action: normalizedAction,
+              targetLanguage: currentTargetLanguage()
+            })
           });
           const payload = await response.json().catch(() => ({}));
           if (!response.ok || !payload?.success) {
@@ -18825,8 +18975,29 @@
 
       function gameOptionSlideMeta() {
         return {
+          targetLanguage: {
+            name: 'Idioma',
+            desc: 'Define o idioma alvo das cartas do jogo.',
+            values: Object.fromEntries((GAME_OPTION_VALUE_MAP.targetLanguage || []).map((value) => [
+              value,
+              {
+                label: FLASHCARD_LANGUAGE_OPTIONS[value]?.label || value,
+                desc: value === 'english' ? 'Usa Ingles padrao com controle de sotaque.' : 'Troca o idioma alvo do jogo.'
+              }
+            ]))
+          },
+          nativeLanguage: {
+            name: 'Lingua nativa',
+            desc: 'Troca a lingua-base do apoio visual sem resetar seu nivel.',
+            values: Object.fromEntries((GAME_OPTION_VALUE_MAP.nativeLanguage || []).map((value) => [
+              value,
+              {
+                label: FLASHCARD_LANGUAGE_OPTIONS[value]?.label || value,
+                desc: 'Substitui o Portugues como lingua nativa nas cartas.'
+              }
+            ]))
+          },
           accent: {
-            label: '1/2',
             name: 'Sotaque',
             desc: 'Cada toque muda 10% entre Americano e Britânico.',
             values: Object.fromEntries((GAME_OPTION_VALUE_MAP.accent || []).map((value) => {
@@ -18837,7 +19008,6 @@
             }))
           },
           fourthStageTyping: {
-            label: '2/2',
             name: 'Digitação',
             desc: 'Troca entre blocos e teclado de 9 letras.',
             values: {
@@ -18856,6 +19026,10 @@
             return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l-5 9h4l-1 9 7-11h-4l2-7z" fill="currentColor" stroke="none"></path></svg>';
           case 'accent':
             return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15V9"></path><path d="M8 17V7"></path><path d="M12 19V5"></path><path d="M16 17V7"></path><path d="M20 15V9"></path></svg>';
+          case 'targetLanguage':
+            return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10"></path><path d="M4 12h7"></path><path d="M4 17h10"></path><path d="M16 6l4 4-4 4"></path></svg>';
+          case 'nativeLanguage':
+            return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v12H5z"></path><path d="M9 10h6"></path><path d="M9 14h4"></path></svg>';
           case 'fourthStageTyping':
             return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="10" rx="2"></rect><circle cx="7.5" cy="11" r="0.8" fill="currentColor" stroke="none"></circle><circle cx="10.5" cy="11" r="0.8" fill="currentColor" stroke="none"></circle><circle cx="13.5" cy="11" r="0.8" fill="currentColor" stroke="none"></circle><circle cx="16.5" cy="11" r="0.8" fill="currentColor" stroke="none"></circle><path d="M8.5 14h7"></path></svg>';
           default:
@@ -18871,7 +19045,7 @@
       function renderGameOptionsModal() {
         if (!els.gameOptionsModal || !els.gameOptionsDeck) return;
         state.options.difficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
-        const cards = GAME_OPTION_SLIDES.map((key) => {
+        const cards = currentGameOptionSlides().map((key) => {
           const meta = gameOptionMetaForKey(key);
           if (!meta) return '';
           const valueKey = normalizeGameOptionValue(key, state.options[key]);
@@ -18912,6 +19086,9 @@
           window.setTimeout(() => valueEl.classList.remove('is-swapping'), 220);
         }
         renderGameOptionsModal();
+        if (slideKey === 'targetLanguage' || slideKey === 'nativeLanguage') {
+          applySelectedLanguageProjectionToAllCards();
+        }
         if (state.game.active) {
           if (slideKey === 'fourthStageTyping' && currentValue !== nextValue && state.game.currentId && state.game.entries.has(state.game.currentId)) {
             renderCurrentCard();
@@ -18926,7 +19103,9 @@
           difficulty: normalizeGameOptionValue('difficulty', state.options?.difficulty),
           speed: normalizeGameOptionValue('speed', state.options?.speed),
           accent: normalizeGameOptionValue('accent', state.options?.accent),
-          fourthStageTyping: normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping)
+          fourthStageTyping: normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping),
+          targetLanguage: normalizeGameOptionValue('targetLanguage', state.options?.targetLanguage),
+          nativeLanguage: normalizeGameOptionValue('nativeLanguage', state.options?.nativeLanguage)
         };
         state.entry.gameOptionsOpen = true;
         els.gameOptionsModal.classList.add('is-visible');
@@ -18940,8 +19119,39 @@
         const nextDifficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
         const previousFourthTyping = normalizeGameOptionValue('fourthStageTyping', previousOptions.fourthStageTyping);
         const nextFourthTyping = normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping);
+        const previousTargetLanguage = normalizeGameOptionValue('targetLanguage', previousOptions.targetLanguage);
+        const nextTargetLanguage = normalizeGameOptionValue('targetLanguage', state.options?.targetLanguage);
+        const previousNativeLanguage = normalizeGameOptionValue('nativeLanguage', previousOptions.nativeLanguage);
+        const nextNativeLanguage = normalizeGameOptionValue('nativeLanguage', state.options?.nativeLanguage);
         const difficultyChanged = previousDifficulty !== nextDifficulty;
         const fourthTypingChanged = previousFourthTyping !== nextFourthTyping;
+        const targetLanguageChanged = previousTargetLanguage !== nextTargetLanguage;
+        const nativeLanguageChanged = previousNativeLanguage !== nextNativeLanguage;
+        if (targetLanguageChanged || nativeLanguageChanged) {
+          applySelectedLanguageProjectionToAllCards();
+          refreshLibrary();
+        }
+        if (targetLanguageChanged) {
+          state.entry.forceProgressResetPending = true;
+          state.entry.omitNextUserLevelSync = true;
+          state.userCards = new Map();
+          state.hiddenCardIds = new Set();
+          state.game.persistedOnTable = [];
+          applyUserLevelState(1, { allowTransition: false, scheduleRefresh: false });
+          clearGameSessionLocally();
+          state.game.entries.clear();
+          state.game.queue = [];
+          state.game.currentId = null;
+          resetGameOrderedPoolCursor();
+          state.game.paused = true;
+          state.ui.gamePausedAtWelcome = true;
+          updateLevelProgressBar();
+          persistGameOptions();
+          return;
+        }
+        if (nativeLanguageChanged && state.game.currentId && state.game.entries.has(state.game.currentId)) {
+          renderCurrentCard();
+        }
         if (difficultyChanged && !state.game.tutorial?.active) {
           clearGameSessionLocally();
           state.game.entries.clear();
@@ -19286,14 +19496,14 @@
           els.gameLanguageBtn.hidden = !active;
           els.gameLanguageBtn.tabIndex = active ? 0 : -1;
           els.gameLanguageBtn.setAttribute('aria-hidden', active ? 'false' : 'true');
-          els.gameLanguageBtn.setAttribute('aria-label', 'Responder em ingles');
+          els.gameLanguageBtn.setAttribute('aria-label', `Responder em ${currentTargetLanguageLabel()}`);
           els.gameLanguageBtn.classList.toggle('is-active', active && language === 'english');
         }
         if (els.gameAdvanceBtn) {
           els.gameAdvanceBtn.hidden = !active;
           els.gameAdvanceBtn.tabIndex = active ? 0 : -1;
           els.gameAdvanceBtn.setAttribute('aria-hidden', active ? 'false' : 'true');
-          els.gameAdvanceBtn.setAttribute('aria-label', 'Responder em portugues');
+          els.gameAdvanceBtn.setAttribute('aria-label', `Responder em ${currentNativeLanguageLabel()}`);
           els.gameAdvanceBtn.classList.toggle('is-active', active && language === 'portuguese');
         }
       }
@@ -19847,7 +20057,10 @@
               'Content-Type': 'application/json'
             }),
             credentials: 'include',
-            body: JSON.stringify({ currentLevel: baseLevel })
+            body: JSON.stringify({
+              currentLevel: baseLevel,
+              targetLanguage: currentTargetLanguage()
+            })
           });
           const payload = await response.json().catch(() => ({}));
           if (response.ok && payload?.success && Number.isFinite(Number(payload?.userLevel))) {
@@ -19883,7 +20096,11 @@
               'Content-Type': 'application/json'
             }),
             credentials: 'include',
-            body: JSON.stringify({ currentLevel: baseLevel, levelLoss: 1 })
+            body: JSON.stringify({
+              currentLevel: baseLevel,
+              levelLoss: 1,
+              targetLanguage: currentTargetLanguage()
+            })
           });
           const payload = await response.json().catch(() => ({}));
           if (response.ok && payload?.success && Number.isFinite(Number(payload?.userLevel))) {
@@ -20163,18 +20380,27 @@
             : [];
 
         return items.map((item, index) => {
-          const english = repairDisplayText(item?.nomeIngles || item?.english || item?.word);
-          const portuguese = repairDisplayText(item?.nomePortugues || item?.portuguese || item?.translation);
-          return {
+          const sourceEnglish = repairDisplayText(item?.nomeIngles || item?.english || item?.word);
+          const sourcePortuguese = repairDisplayText(item?.nomePortugues || item?.portuguese || item?.translation);
+          const sourceFrench = repairDisplayText(item?.nomeFrances || item?.french || item?.fr);
+          const sourceMandarin = repairDisplayText(
+            item?.nomeMandarim
+            || item?.mandarin
+            || item?.pinyin
+            || item?.pinyinComTons
+            || item?.['Pinyin com tons']
+          );
+          const sourceSpanish = repairDisplayText(item?.nomeEspanhol || item?.spanish || item?.es);
+          const baseCard = {
             id: `${slug(idSource)}-${slug(title)}-${index}`,
             source: sourceKey,
             sourceIndex: index,
             deckTitle: title,
             deckLevel,
             imageUrl: safeText(item?.imagem || item?.image),
-            english,
-            englishAnswers: collectAcceptedAnswers(
-              english,
+            sourceEnglish,
+            sourceEnglishAnswers: collectAcceptedAnswers(
+              sourceEnglish,
               item?.acceptedEnglish,
               item?.acceptedAnswersEnglish,
               item?.englishAlternatives,
@@ -20182,9 +20408,9 @@
               item?.respostasIngles,
               item?.correctEnglish
             ),
-            portuguese,
-            portugueseAnswers: collectAcceptedAnswers(
-              portuguese,
+            sourcePortuguese,
+            sourcePortugueseAnswers: collectAcceptedAnswers(
+              sourcePortuguese,
               item?.acceptedPortuguese,
               item?.acceptedAnswersPortuguese,
               item?.portugueseAlternatives,
@@ -20192,16 +20418,52 @@
               item?.respostasPortugues,
               item?.correctPortuguese
             ),
-            audioUrl: safeText(item?.audio || item?.audioUrl),
-            audioUrlBritish: safeText(
+            sourceFrench,
+            sourceFrenchAnswers: collectAcceptedAnswers(
+              sourceFrench,
+              item?.acceptedFrench,
+              item?.acceptedAnswersFrench,
+              item?.frenchAlternatives,
+              item?.alternativasFrances,
+              item?.respostasFrances,
+              item?.correctFrench
+            ),
+            sourceMandarin,
+            sourceMandarinAnswers: collectAcceptedAnswers(
+              sourceMandarin,
+              item?.acceptedMandarin,
+              item?.acceptedAnswersMandarin,
+              item?.mandarinAlternatives,
+              item?.alternativasMandarim,
+              item?.respostasMandarim,
+              item?.correctMandarin,
+              item?.pinyinAlternatives
+            ),
+            sourceSpanish,
+            sourceSpanishAnswers: collectAcceptedAnswers(
+              sourceSpanish,
+              item?.acceptedSpanish,
+              item?.acceptedAnswersSpanish,
+              item?.spanishAlternatives,
+              item?.alternativasEspanhol,
+              item?.respostasEspanhol,
+              item?.correctSpanish
+            ),
+            sourceAudioEnglish: safeText(item?.audio || item?.audioUrl),
+            sourceAudioEnglishBritish: safeText(
               item?.audio2
               || item?.audioUrl2
               || item?.audioBritish
               || item?.audioBritanico
               || item?.britishAudio
             ),
+            sourceAudioPortuguese: safeText(item?.audio_pt || item?.audioPortuguese || item?.audioPortugues),
+            sourceAudioFrench: safeText(item?.audio_fr || item?.audioFrench || item?.audioFrances),
+            sourceAudioMandarin: safeText(item?.audio_zh || item?.audioMandarin || item?.audioPinyin),
+            sourceAudioSpanish: safeText(item?.audio_es || item?.audioSpanish || item?.audioEspanhol),
             category: repairDisplayText(item?.categoria || title)
           };
+          return projectFlashcardLanguageFields(baseCard);
         });
       }
 
@@ -20501,7 +20763,7 @@
       async function loadCards() {
         const freshPayload = await refreshCardsFromNetwork();
         state.allCards = Array.isArray(freshPayload?.cards)
-          ? freshPayload.cards.map((card) => applyTutorialPlanetCardDefaults(card))
+          ? freshPayload.cards.map((card) => projectFlashcardLanguageFields(applyTutorialPlanetCardDefaults(card)))
           : [];
         state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
         maybeAdvanceUserLevel();
@@ -21075,7 +21337,9 @@
         state.entry.cardsReloadInFlight = true;
         try {
           const freshPayload = await refreshCardsFromNetwork();
-          state.allCards = Array.isArray(freshPayload?.cards) ? freshPayload.cards : [];
+          state.allCards = Array.isArray(freshPayload?.cards)
+            ? freshPayload.cards.map((card) => projectFlashcardLanguageFields(card))
+            : [];
           state.deckCatalog = Array.isArray(freshPayload?.deckCatalog) ? freshPayload.deckCatalog : [];
           await refreshAdminDecks();
           await refreshAdminReportSummary();
@@ -22296,14 +22560,21 @@
 
       function resolveGameStageConfig(entry) {
         if (isLevelModeActive() && !isTrainingMode()) {
-          return STAGES[resolveLevelModeStage()] || STAGES[1];
+          entry = { stage: resolveLevelModeStage() };
         }
         const baseConfig = STAGES[entry?.stage] || STAGES[1];
+        const targetLabel = currentTargetLanguageLabel();
+        const localizedConfig = {
+          ...baseConfig,
+          instruction: baseConfig.inputMode === 'typing'
+            ? `Escreva ${targetLabel}`
+            : `Fale ${targetLabel}`
+        };
         if (!hasStageTwoPortugueseOverlay(entry) || Number(entry?.stage) === 2) {
-          return baseConfig;
+          return localizedConfig;
         }
         return {
-          ...baseConfig,
+          ...localizedConfig,
           overlayFlag: ENGLISH_ICON_PATH,
           overlayClassName: 'game-card__phase-flag--english'
         };
@@ -24304,6 +24575,18 @@
         }
       }
 
+      function updateGameEndMessageForCurrentLanguage() {
+        if (!els.gameEnd) return;
+        const heading = els.gameEnd.querySelector('h3');
+        const copy = els.gameEnd.querySelector('p');
+        if (heading) {
+          heading.textContent = 'Sem cartas disponiveis para jogar.';
+        }
+        if (copy) {
+          copy.textContent = `As cartas acabaram para ${currentTargetLanguageLabel()} neste nivel, ou ainda nao existem traducoes suficientes para montar a rodada.`;
+        }
+      }
+
       function buildStageThreePlaceholderMarkup(card) {
         const placeholderLabel = capitalizeWords(card.portuguese || card.english || card.deckTitle || '?');
         const words = placeholderLabel.split(/\s+/).filter(Boolean);
@@ -25771,6 +26054,7 @@
           if (!state.game.entries.size) {
             clearGameSessionLocally();
             els.gameCard.style.display = 'none';
+            updateGameEndMessageForCurrentLanguage();
             els.gameEnd.classList.add('is-visible');
           }
           updateGuestFirstStarResultsBanner(null, false);
@@ -27830,8 +28114,8 @@
         updateGuestFirstStarResultsBanner(entry, true);
 
         const recognitionLanguage = isLevelTextModeActive()
-          ? (selectedLevelTextResponseLanguage() === 'portuguese' ? 'pt-BR' : 'en-US')
-          : (entry.stage === 2 ? 'pt-BR' : 'en-US');
+          ? (selectedLevelTextResponseLanguage() === 'portuguese' ? currentNativeSpeechCode() : currentTargetSpeechCode())
+          : currentTargetSpeechCode();
 
         let activeRecognition = null;
         let finished = false;
@@ -28962,7 +29246,7 @@
             await loadCards();
           } catch (cardsError) {
             console.warn('Falha ao carregar os decks na inicializacao:', cardsError);
-            state.allCards = readCachedCards();
+            state.allCards = (readCachedCards() || []).map((card) => projectFlashcardLanguageFields(card));
             state.deckCatalog = [];
           } finally {
             state.entry.cardsReady = true;
