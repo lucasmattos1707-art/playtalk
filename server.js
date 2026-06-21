@@ -16381,6 +16381,39 @@ app.post('/api/admin/flashcards/sequence', express.json({ limit: '4mb' }), async
   }
 });
 
+app.post('/api/admin/flashcards/sequence/sync-levels', async (req, res) => {
+  try {
+    const adminUser = await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+
+    const fallback = await buildDefaultFlashcardsSequenceState();
+    const savedStateRow = await readFlashcardsSequenceState();
+    const savedPayload = savedStateRow?.payload && typeof savedStateRow.payload === 'object'
+      ? savedStateRow.payload
+      : null;
+    const nextState = savedPayload
+      ? sanitizeFlashcardsSequencePayload(savedPayload, fallback.decks)
+      : fallback;
+    const compactState = compactFlashcardsSequenceForStorage(nextState);
+    const saved = await writeFlashcardsSequenceState(compactState, adminUser?.id || null);
+
+    res.json({
+      success: true,
+      state: nextState,
+      savedAt: saved?.updated_at || null,
+      message: 'Sequence atualizada com os dados mais recentes do /levels.'
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Falha ao sincronizar a sequence com o /levels.'
+    });
+  }
+});
+
 app.post('/api/admin/flashcards/public-decks/delete', express.json({ limit: '256kb' }), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);

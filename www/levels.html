@@ -7,7 +7,8 @@
   <script src="/config.js"></script>
   <style>
     @import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&family=Orbitron:wght@400&display=swap");
-    body{margin:0;font-family:Arial,sans-serif;background:#000;color:#fff;transition:background 260ms ease}button,input,select,textarea{font:inherit}
+    html,body{min-height:100%}
+    body{margin:0;font-family:Arial,sans-serif;background:#000;color:#fff;transition:background 260ms ease;background-repeat:no-repeat;background-size:100% 100vh;background-attachment:fixed;background-position:center top}button,input,select,textarea{font:inherit}
     .page{max-width:1100px;margin:0 auto;padding:24px 16px 48px}.box,.card{background:linear-gradient(180deg,rgba(11,24,56,.82),rgba(7,15,36,.9));border:1px solid rgba(79,158,255,.18);border-radius:16px;backdrop-filter:blur(6px);box-shadow:0 0 18px rgba(63,145,255,.08)}
     .box{padding:14px;margin-bottom:16px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
     button{cursor:pointer;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);border-radius:12px;padding:10px 12px;color:#fff}.mode,.accent{color:#fff;font-weight:700}.mode{background:#c85732;border-color:#c85732}.accent{background:#ef8f1a;border-color:#ef8f1a}.tts-btn{background:linear-gradient(135deg,#7d36ff,#5a1fd1);border-color:#5a1fd1;color:#fff;font-weight:700}.eleven-btn{background:linear-gradient(135deg,#050505,#6b6b6b);border-color:#050505;color:#fff;font-weight:700}.r2-btn{background:linear-gradient(135deg,#1b7cff,#16b86a);border-color:#1777d8;color:#fff;font-weight:700;display:inline-flex;align-items:center;gap:8px}.r2-btn svg{width:16px;height:16px;fill:currentColor}
@@ -412,7 +413,7 @@
           <div class="story-characters" id="sceneStoryCharacters"></div>
         </div>
       </div>
-      <div class="row" style="justify-content:space-between"><button id="textPopoverCloseBtn" type="button">Fechar</button><button id="textGenerateBtn" class="accent" type="button">Gerar agora</button></div>
+      <div class="row" style="justify-content:space-between"><button id="textPopoverCloseBtn" type="button">Fechar</button><button id="syncSequenceBtn" type="button">Atualizar /sequence</button><button id="textGenerateBtn" class="accent" type="button">Gerar agora</button></div>
     </div>
   </div>
   <div id="watchPopover" class="popover hidden" aria-hidden="true">
@@ -1142,6 +1143,10 @@
         const languageKey=activeFlashcardLanguage();
         const theme=FLASHCARD_LANGUAGE_THEME[languageKey]||FLASHCARD_LANGUAGE_THEME.pt;
         document.body.style.background=theme.pageGradient||theme.gradient;
+        document.body.style.backgroundRepeat='no-repeat';
+        document.body.style.backgroundSize='100% 100vh';
+        document.body.style.backgroundAttachment='fixed';
+        document.body.style.backgroundPosition='center top';
         [['addBtn','addBtnIcon'],['voiceModeBtn','voiceModeBtnIcon']].forEach(([buttonId,imageId])=>{
           const button=$(buttonId),image=$(imageId);
           if(button){
@@ -1951,6 +1956,16 @@
       async function startWatchPlayback(options={}){const settings={gapMs:3000,scope:(options.scope||$('watchScopeSelect').value)==='all'?'all':'mine',music:$('watchMusicSelect').value==='on'?'on':'off'};saveWatchSettings(settings);const prefs=loadWatchViewPrefs();watchTextColor=prefs.textColor||'';watchEnglishOnly=Boolean(prefs.englishOnly);closeWatchPopover();showWatchView();renderWatchCard({pt:'Carregando...',en:'Loading...',deckTitle:'Fluent LevelUp',sourceLabel:settings.scope==='all'?'Todos os flashcards':'Meus flashcards'},'');let items=[];try{items=settings.scope==='all'?await loadAllWatchItems():currentDeckWatchItems()}catch(error){hideWatchView();alert(error.message||'Erro ao preparar os flashcards para reproducao.');return}if(!items.length){hideWatchView();alert(settings.scope==='all'?'Nenhum flashcard com audio foi encontrado na biblioteca.':'Seu deck atual precisa ter flashcards com audio para assistir.');return}const session={id:`watch-${Date.now()}-${Math.random()}`,running:true,items,gapMs:3000,musicEnabled:settings.music==='on',musicQueue:[],currentIndex:-1,controlMode:'none',imageTransform:prefs.imageTransform||{x:0,y:0,scale:1},textTransform:prefs.textTransform||{x:0,y:0,scale:1}};watchRuntime=session;updateWatchTransforms();try{while(isWatchSessionActive(session)){const item=nextWatchItem(session);if(!item)break;const keepGoing=await playWatchSequence(session,item);if(!keepGoing)break}}catch(error){console.error('Erro no modo assistir flashcards',error);if(isWatchSessionActive(session))alert(error.message||'Erro ao assistir flashcards.')}finally{if(isWatchSessionActive(session))stopWatchPlayback()}}
       function syncAiTextButton(){const supportedMode=state.mode==='flashcard'||state.mode==='scenes'||state.mode==='movies';$('aiTextBtn').classList.toggle('hidden',!supportedMode);setButtonLabel('aiTextBtn',state.mode==='flashcard'?'Adicionar idiomas':aiTextStatusLabel());$('aiTextBtn').disabled=!supportedMode||aiTextBusy;setButtonLabel('translateBtn',aiTextBusy?'Traduzindo...':'Traduzir PT para EN');$('translateBtn').disabled=aiTextBusy||!state.items.some(item=>String(item?.pt||'').trim()&&!String(item?.en||'').trim())}
       function openTextPopover(){const sceneMode=state.mode==='scenes',movieMode=state.mode==='movies',flashcardMode=state.mode==='flashcard';$('textPopoverEyebrow').textContent=sceneMode?'Historia com IA':movieMode?'Filme com IA':'Idiomas com IA';$('textPopoverHeading').textContent=sceneMode?'Criar historia para Cenas':movieMode?'Criar sequencia para Filmes':'Adicionar idiomas';$('flashcardTextFields').classList.toggle('hidden',!flashcardMode);$('movieTextFields').classList.toggle('hidden',!movieMode);$('sceneTextFields').classList.toggle('hidden',!sceneMode);$('textGenerateBtn').classList.toggle('hidden',flashcardMode);if(sceneMode)renderSceneStoryEditor();if(movieMode){$('movieStoryTopicInput').value=movieStoryDraft.topic||'';$('movieStoryCountInput').value=movieStoryDraft.itemCount||8}$('textPopover').classList.remove('hidden');$('textPopover').setAttribute('aria-hidden','false')}
+      async function syncSequenceFromLevels(){
+        if(state.mode!=='flashcard')throw new Error('A atualizacao do /sequence funciona apenas no modo flashcard.');
+        await persistDirtyDecksNow({fallbackCurrentDeck:true,silent:true});
+        const response=await fetch('/api/admin/flashcards/sequence/sync-levels',{method:'POST',credentials:'include'});
+        let payload=null;
+        try{payload=await response.json()}catch{}
+        if(!response.ok||!payload?.success)throw new Error(payload?.message||'Nao foi possivel atualizar o /sequence.');
+        showFeedbackToast(payload?.message||'Sequence atualizada com o /levels.');
+        return payload;
+      }
       function sceneStorySelectedIds(){return SCENE_CHARACTERS.filter(char=>sceneStoryDraft.selectedIds.includes(char.id)).map(char=>char.id).slice(0,4)}
       function sceneCharacterIdFromShortcut(line){const match=String(line||'').trim().match(/^#\s*(\d+)\b/i);if(!match)return'';const index=Number.parseInt(match[1],10)-1;return SCENE_CHARACTERS[index]?.id||''}
       function normalizeSceneStoryShares(preferredId=''){const selectedIds=sceneStorySelectedIds();if(!selectedIds.length)return;const current={};selectedIds.forEach(id=>{current[id]=Math.max(0,Math.min(100,Number(sceneStoryDraft.shares?.[id]||0)))});if(selectedIds.length===1){sceneStoryDraft.shares={[selectedIds[0]]:100};return}let lockedId=preferredId&&selectedIds.includes(preferredId)?preferredId:'';let lockedValue=lockedId?Math.max(0,Math.min(100,current[lockedId])):0;if(lockedId)lockedValue=Math.min(100-(selectedIds.length-1),lockedValue);const remainder=100-(lockedId?lockedValue:0);const targets=selectedIds.filter(id=>id!==lockedId);let remaining=remainder;const nextShares={};if(lockedId)nextShares[lockedId]=lockedValue;targets.forEach((id,index)=>{const slotsLeft=targets.length-index;const value=index===targets.length-1?remaining:Math.round(remaining/slotsLeft);nextShares[id]=value;remaining-=value});sceneStoryDraft.shares=nextShares}
@@ -3036,6 +3051,7 @@
         renderItems();
       };
       $('textPopoverCloseBtn').onclick=()=>closeTextPopover();
+      $('syncSequenceBtn').onclick=()=>syncSequenceFromLevels().catch(error=>alert(error.message||'Erro ao atualizar a sequence.'));
       $('watchPopoverCloseBtn').onclick=()=>closeWatchPopover();
       $('jsonBatchCloseBtn').onclick=()=>closeJsonBatchPublishPopover();
       $('jsonBatchPickBtn').onclick=()=>$('jsonBatchPublishInput').click();
@@ -3109,6 +3125,7 @@
           const nextLanguage=FLASHCARD_LANGUAGE_ORDER[Number(key)-1]||'pt';
           state.flashcardTextView=nextLanguage;
           save();
+          updateTop();
           renderItems();
           showFeedbackToast(`${FLASHCARD_LANGUAGE_META[nextLanguage]?.title||'Idioma'} ativo.`);
           return;
