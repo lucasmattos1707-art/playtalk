@@ -16382,10 +16382,15 @@
             && (normalizedAction === 'out' || normalizedAction === 'tick')
             && Number.isFinite(Number(payload?.userLevel))
           ) {
-            applyUserLevelState(payload.userLevel, {
+            const nextLevel = normalizeUserLevel(payload.userLevel);
+            const nextUpdatedAt = safeText(payload?.userLevelUpdatedAt || state.userLevelUpdatedAt);
+            const currentLevelValue = currentUserLevel();
+            const levelChanged = nextLevel !== currentLevelValue;
+            const updatedAtChanged = Boolean(nextUpdatedAt && nextUpdatedAt !== safeText(state.userLevelUpdatedAt));
+            applyUserLevelState(nextLevel, {
               updatedAt: payload?.userLevelUpdatedAt || state.userLevelUpdatedAt,
-              allowTransition: true,
-              scheduleRefresh: true,
+              allowTransition: levelChanged,
+              scheduleRefresh: levelChanged || updatedAtChanged,
               delayMs: normalizedAction === 'tick' ? 120 : 0
             });
           }
