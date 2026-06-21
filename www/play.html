@@ -11834,6 +11834,7 @@
       const USER_MEDAL_TRANSITION_LABEL_AT_MS = 1500;
       const USER_MEDAL_TRANSITION_SOUND_AT_MS = 2001;
       const USER_MEDAL_TRANSITION_CLOSE_READY_AT_MS = 2501;
+      const JOURNEY_LEVEL_WIN_TARGET = 25;
       const USER_MEDAL_TRANSITION_DISSOLVE_MS = 500;
       const SEQUENCE_STREAK_AUDIO_PATH = '/gamesounds/sequence-clean.mp3';
       const GAME_SEQUENCE_STREAK_MODAL_TOTAL_MS = 1000;
@@ -12460,6 +12461,7 @@
             hitStreak: 0,
             totalHits: 0
           },
+          journeyCardsWonLevel: 0,
           persistedOnTable: [],
           micUnlockStage: 0,
           audioCanBeInterruptedAt: 0,
@@ -13539,6 +13541,10 @@
           hitStreak: 0,
           totalHits: 0
         };
+      }
+
+      function resetJourneyLevelProgress() {
+        state.game.journeyCardsWonLevel = 0;
       }
 
       function loadSelectedGameCount() {
@@ -19278,10 +19284,10 @@
         return {
           mode: {
             name: 'Modo de jogo',
-            desc: 'Treinamento usa o fluxo atual. Jornada sobe por sequencia de acertos.',
+            desc: 'Treinamento usa o fluxo atual. Jornada sobe por cartas ganhas no deck atual.',
             values: {
               training: { label: 'Treinamento', desc: 'Mantem o progresso atual baseado no fluxo normal do jogo.' },
-              journey: { label: 'Jornada', desc: 'Para idiomas nao ingleses, sobe 1 nivel a cada 20 acertos seguidos.' }
+              journey: { label: 'Jornada', desc: 'Para idiomas nao ingleses, sobe 1 nivel a cada 25 cartas ganhas e limpa a mesa para iniciar o proximo deck.' }
             }
           },
           targetLanguage: {
@@ -19498,6 +19504,7 @@
           state.game.currentLevelPriorityPendingIds = [];
           state.game.currentLevelPriorityLevel = 0;
           state.game.currentLevelPriorityClearQueued = false;
+          resetJourneyLevelProgress();
           applyUserLevelState(1, { allowTransition: false, scheduleRefresh: false });
           clearGameSessionLocally();
           state.game.entries.clear();
@@ -19519,6 +19526,7 @@
           state.game.currentLevelPriorityIds = [];
           state.game.currentLevelPriorityPendingIds = [];
           state.game.currentLevelPriorityLevel = 0;
+          resetJourneyLevelProgress();
           resetGameOrderedPoolCursor();
           resetTimedGameCardRelease({ seedInitialCard: true });
           refillGameEntry('base', state.game.contextLimit || currentGameActiveCardCap(), { ignoreTimedReleaseGate: true });
@@ -27054,6 +27062,7 @@
         state.game.currentLevelPriorityPendingIds = [];
         state.game.currentLevelPriorityLevel = 0;
         state.game.currentLevelPriorityClearQueued = false;
+        resetJourneyLevelProgress();
         resetGameOrderedPoolCursor();
         applyUserLevelState(normalizedLevel, { allowTransition: true, scheduleRefresh: true, delayMs: 0 });
         state.stats.winsSequence = 0;
@@ -28493,10 +28502,7 @@
         clearStageHintLoop({ clearStatus: true });
           }
           entry.stars += 1;
-          const winsSequence = incrementWinsSequenceForStarGain();
-          if (isJourneyLevelingLanguage() && winsSequence > 0 && winsSequence % 20 === 0) {
-            entry._journeyLevelUpTo = normalizeUserLevel(currentUserLevel() + 1);
-          }
+          incrementWinsSequenceForStarGain();
           entry.stage = Math.min(entry.stars + 1, GAME_STAR_TARGET);
           entry.missesWithoutStars = 0;
           entry.typingMistakes = 0;
@@ -28552,6 +28558,12 @@
             renderWelcomeEnergyMiniTicker();
             showRewardGameStatus();
             triggerLibrarySummaryRankSwap();
+            if (isJourneyLevelingLanguage()) {
+              state.game.journeyCardsWonLevel = Math.max(0, Number(state.game.journeyCardsWonLevel) || 0) + 1;
+              if (state.game.journeyCardsWonLevel >= JOURNEY_LEVEL_WIN_TARGET) {
+                entry._journeyLevelUpTo = normalizeUserLevel(currentUserLevel() + 1);
+              }
+            }
             entry._removeAfterReward = true;
             if (evaluatedStage === 5) {
               entry._skipRewardStagePromptAudio = true;
