@@ -5070,6 +5070,16 @@
       color: rgba(223, 239, 255, 0.84);
     }
 
+    .albums-player-option--toggle {
+      margin-top: 14px;
+    }
+
+    .albums-player-option--toggle.is-active {
+      border-color: rgba(125, 203, 255, 0.54);
+      background: rgba(91, 196, 255, 0.1);
+      box-shadow: inset 0 0 0 1px rgba(125, 203, 255, 0.2);
+    }
+
     .watch-decks {
       display: grid;
       gap: 14px;
@@ -11598,6 +11608,10 @@
             <span class="albums-player-option__copy">Exibe a janela real do seu nível, como o jogo provavelmente vai sortear.</span>
           </button>
         </div>
+        <button class="albums-player-option albums-player-option--toggle" id="albumsNativeOrderToggleBtn" type="button">
+          <span class="albums-player-option__title">Ordem nativa -> destino</span>
+          <span class="albums-player-option__copy" id="albumsNativeOrderToggleCopy">Quando ativo, toca primeiro a língua nativa e depois a língua destino.</span>
+        </button>
       </div>
     </section>
 
@@ -12503,6 +12517,7 @@
           scope: 'all',
           gapMs: 3000,
           music: 'on',
+          albumsPlayNativeFirst: true,
           returnToAlbums: false,
           selectedSources: [],
           queue: [],
@@ -12606,6 +12621,8 @@
           albumsSealsLoading: false,
           albumsFlashSwapTimer: 0,
           albumsFlashSwapCardId: '',
+          albumsNarrationAudio: null,
+          albumsNarrationRunId: 0,
           soundTestOpen: false,
           soundTestBusy: false,
           soundTestStatus: '',
@@ -12890,9 +12907,11 @@
           gameSetupCountCopy: document.getElementById('gameSetupCountCopy'),
           startTutorialBtn: document.getElementById('startTutorialBtn'),
           watchPopover: document.getElementById('watchPopover'),
-          albumsPlayerPopover: document.getElementById('albumsPlayerPopover'),
-          closeAlbumsPlayerPopoverBtn: document.getElementById('closeAlbumsPlayerPopoverBtn'),
-          albumsPlayerOptions: document.getElementById('albumsPlayerOptions'),
+        albumsPlayerPopover: document.getElementById('albumsPlayerPopover'),
+        closeAlbumsPlayerPopoverBtn: document.getElementById('closeAlbumsPlayerPopoverBtn'),
+        albumsPlayerOptions: document.getElementById('albumsPlayerOptions'),
+        albumsNativeOrderToggleBtn: document.getElementById('albumsNativeOrderToggleBtn'),
+        albumsNativeOrderToggleCopy: document.getElementById('albumsNativeOrderToggleCopy'),
         closeWatchPopoverBtn: document.getElementById('closeWatchPopoverBtn'),
         startWatchBtn: document.getElementById('startWatchBtn'),
         watchGapSelect: document.getElementById('watchGapSelect'),
@@ -13179,6 +13198,10 @@
               if (ensuredText) next.sourceSpanish = ensuredText;
               if (ensuredAudioUrl) next.sourceAudioSpanish = ensuredAudioUrl;
               break;
+            case 'german':
+              if (ensuredText) next.sourceGerman = ensuredText;
+              if (ensuredAudioUrl) next.sourceAudioGerman = ensuredAudioUrl;
+              break;
             default:
               if (ensuredText) next.sourceEnglish = ensuredText;
               if (ensuredAudioUrl) next.sourceAudioEnglish = ensuredAudioUrl;
@@ -13190,68 +13213,111 @@
         return changed;
       }
 
-      async function ensureUpcomingGameCardAudio(cards = []) {
-        const targetLanguage = currentTargetLanguage();
-        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
-        const candidates = Array.isArray(cards) ? cards : [];
-        const unique = [];
-        const seen = new Set();
-        candidates.forEach((card) => {
-          const key = buildCardEnsureAudioKey(card, normalizedLanguage);
-          if (!key || seen.has(key) || state.game.pendingEnsureAudioKeys.has(key)) return;
-          if (cardHasSourceAudioForLanguage(card, normalizedLanguage)) return;
-          seen.add(key);
-          unique.push({
-            key,
-            source: safeText(card?.source),
-            sourceIndex: Number.parseInt(card?.sourceIndex, 10)
-          });
-        });
-        if (!unique.length) return;
-
-        unique.forEach((entry) => state.game.pendingEnsureAudioKeys.add(entry.key));
-        try {
-          const response = await fetch('/api/flashcards/ensure-audio', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              targetLanguage: normalizedLanguage,
-              cards: unique.map((entry) => ({
-                source: entry.source,
-                sourceIndex: entry.sourceIndex
-              }))
-            })
-          });
-          let payload = null;
-          try {
-            payload = await response.json();
-          } catch (_error) {
-            payload = null;
-          }
-          if (!response.ok) {
-            throw new Error(payload?.instructions || payload?.details || payload?.error || 'Falha ao preparar audio do flashcard.');
-          }
-          const ensuredCards = Array.isArray(payload?.cards) ? payload.cards : [];
-          let anyChanged = false;
-          ensuredCards.forEach((entry) => {
-            anyChanged = applyEnsuredCardLanguagePayload(entry) || anyChanged;
-          });
-          if (anyChanged) {
-            ensuredCards.forEach((entry) => {
-              const refreshedCard = state.allCards.find((card) => (
-                safeText(card?.source) === safeText(entry?.source)
-                && Number.parseInt(card?.sourceIndex, 10) === Number.parseInt(entry?.sourceIndex, 10)
-              ));
-              if (refreshedCard) {
-                preloadCardAudio(refreshedCard);
-              }
-            });
-          }
-        } catch (_error) {
-          // keep gameplay flowing even if on-demand generation fails
-        } finally {
-          unique.forEach((entry) => state.game.pendingEnsureAudioKeys.delete(entry.key));
+      function refreshCardFromState(card) {
+        const source = safeText(card?.source);
+        const sourceIndex = Number.parseInt(card?.sourceIndex, 10);
+        if (source && Number.isInteger(sourceIndex) && sourceIndex >= 0) {
+          return state.allCards.find((entry) => (
+            safeText(entry?.source) === source
+            && Number.parseInt(entry?.sourceIndex, 10) === sourceIndex
+          )) || card;
         }
+        const cardId = safeText(card?.id);
+        if (!cardId) return card;
+        return cardById(cardId) || card;
+      }
+
+      function cardHasTextForLanguage(card, language = currentTargetLanguage()) {
+        return Boolean(safeText(resolveSourceLanguageText(card, language)));
+      }
+
+      function canEnsureLanguageForCard(card, language = currentTargetLanguage()) {
+        const source = safeText(card?.source);
+        const sourceIndex = Number.parseInt(card?.sourceIndex, 10);
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        const basePortuguese = safeText(card?.sourcePortuguese || card?.portuguese || '');
+        return Boolean(source && Number.isInteger(sourceIndex) && sourceIndex >= 0 && normalizedLanguage && basePortuguese);
+      }
+
+      async function ensureFlashcardAssetsForLanguages(cards = [], languages = []) {
+        const candidateCards = Array.isArray(cards) ? cards.map((card) => refreshCardFromState(card)).filter(Boolean) : [];
+        const normalizedLanguages = Array.from(new Set(
+          (Array.isArray(languages) ? languages : [])
+            .map((language) => normalizeGameOptionValue('targetLanguage', language))
+            .filter(Boolean)
+        ));
+        if (!candidateCards.length || !normalizedLanguages.length) return false;
+        let anyChanged = false;
+
+        for (const normalizedLanguage of normalizedLanguages) {
+          const unique = [];
+          const seen = new Set();
+          candidateCards.forEach((card) => {
+            const refreshedCard = refreshCardFromState(card);
+            const key = buildCardEnsureAudioKey(refreshedCard, normalizedLanguage);
+            if (!key || seen.has(key) || state.game.pendingEnsureAudioKeys.has(key)) return;
+            if (!canEnsureLanguageForCard(refreshedCard, normalizedLanguage)) return;
+            if (cardHasTextForLanguage(refreshedCard, normalizedLanguage) && cardHasSourceAudioForLanguage(refreshedCard, normalizedLanguage)) {
+              return;
+            }
+            seen.add(key);
+            unique.push({
+              key,
+              source: safeText(refreshedCard?.source),
+              sourceIndex: Number.parseInt(refreshedCard?.sourceIndex, 10)
+            });
+          });
+          if (!unique.length) continue;
+
+          unique.forEach((entry) => state.game.pendingEnsureAudioKeys.add(entry.key));
+          try {
+            const response = await fetch('/api/flashcards/ensure-audio', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                targetLanguage: normalizedLanguage,
+                cards: unique.map((entry) => ({
+                  source: entry.source,
+                  sourceIndex: entry.sourceIndex
+                }))
+              })
+            });
+            let payload = null;
+            try {
+              payload = await response.json();
+            } catch (_error) {
+              payload = null;
+            }
+            if (!response.ok) {
+              throw new Error(payload?.instructions || payload?.details || payload?.error || 'Falha ao preparar audio do flashcard.');
+            }
+            const ensuredCards = Array.isArray(payload?.cards) ? payload.cards : [];
+            ensuredCards.forEach((entry) => {
+              anyChanged = applyEnsuredCardLanguagePayload(entry) || anyChanged;
+            });
+            if (anyChanged) {
+              ensuredCards.forEach((entry) => {
+                const refreshedCard = state.allCards.find((card) => (
+                  safeText(card?.source) === safeText(entry?.source)
+                  && Number.parseInt(card?.sourceIndex, 10) === Number.parseInt(entry?.sourceIndex, 10)
+                ));
+                if (refreshedCard) {
+                  preloadCardAudio(refreshedCard);
+                }
+              });
+            }
+          } catch (_error) {
+            // keep album and game flows moving even if generation fails
+          } finally {
+            unique.forEach((entry) => state.game.pendingEnsureAudioKeys.delete(entry.key));
+          }
+        }
+
+        return anyChanged;
+      }
+
+      async function ensureUpcomingGameCardAudio(cards = []) {
+        await ensureFlashcardAssetsForLanguages(cards, [currentTargetLanguage()]);
       }
 
       function projectFlashcardLanguageFields(card) {
@@ -19549,7 +19615,7 @@
       }
 
       function albumFlashcardsItems() {
-        return userProgressCards().map(buildLibraryCardView);
+        return buildAlbumsSequentialLevelCards().map(buildLibraryCardView);
       }
 
       const albumsFlashImageBuffer = new Set();
@@ -19639,25 +19705,111 @@
         state.ui.albumsFlashSwapCardId = '';
       }
 
+      function stopAlbumsNarrationAudio() {
+        const current = state.ui.albumsNarrationAudio;
+        if (current) {
+          try {
+            current.pause();
+            current.currentTime = 0;
+          } catch (_error) {
+            // ignore
+          }
+        }
+        state.ui.albumsNarrationAudio = null;
+        state.ui.albumsNarrationRunId = Math.max(0, Number(state.ui.albumsNarrationRunId) || 0) + 1;
+      }
+
+      function resolveCardAudioUrlForLanguage(card, language = currentTargetLanguage()) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        const targetAudio = resolveSourceLanguageAudio(card, normalizedLanguage);
+        if (normalizedLanguage === 'english') {
+          const primary = safeText(targetAudio?.primary || '');
+          const british = safeText(targetAudio?.british || '');
+          const pickedAccent = pickCardAccent(card);
+          return pickedAccent === 'british' ? (british || primary) : (primary || british);
+        }
+        return safeText(targetAudio?.primary || targetAudio?.british || '');
+      }
+
+      function albumsNarrationLanguages() {
+        const ordered = state.watch.albumsPlayNativeFirst
+          ? [currentNativeLanguage(), currentTargetLanguage()]
+          : [currentTargetLanguage(), currentNativeLanguage()];
+        return Array.from(new Set(ordered.filter(Boolean)));
+      }
+
+      async function playAlbumsNarrationAudioUrl(src, rate = 1, runId = 0) {
+        const safeSrc = safeText(src);
+        if (!safeSrc || runId !== Number(state.ui.albumsNarrationRunId || 0)) return;
+        const current = state.ui.albumsNarrationAudio;
+        if (current) {
+          try {
+            current.pause();
+            current.currentTime = 0;
+          } catch (_error) {
+            // ignore
+          }
+        }
+        state.ui.albumsNarrationAudio = null;
+        const audio = new Audio(safeSrc);
+        audio.playbackRate = Math.max(0.1, Math.min(2.5, Number(rate || 1) * resolveSelectedGameSpeed()));
+        audio.defaultPlaybackRate = audio.playbackRate;
+        audio.preservesPitch = true;
+        state.ui.albumsNarrationAudio = audio;
+        try {
+          await audio.play();
+        } catch (_error) {
+          if (state.ui.albumsNarrationAudio === audio) {
+            state.ui.albumsNarrationAudio = null;
+          }
+          return;
+        }
+        await new Promise((resolve) => {
+          audio.addEventListener('ended', resolve, { once: true });
+          audio.addEventListener('error', resolve, { once: true });
+        });
+        if (state.ui.albumsNarrationAudio === audio) {
+          state.ui.albumsNarrationAudio = null;
+        }
+      }
+
+      async function narrateAlbumsFlashcard(card) {
+        if (!state.ui.albumsOpen || state.ui.albumsSectionIndex !== 0) return;
+        const runId = Math.max(0, Number(state.ui.albumsNarrationRunId) || 0) + 1;
+        state.ui.albumsNarrationRunId = runId;
+        const languages = albumsNarrationLanguages();
+        await ensureFlashcardAssetsForLanguages([card], languages);
+        let activeCard = refreshCardFromState(card);
+        if (!activeCard || runId !== Number(state.ui.albumsNarrationRunId || 0) || !state.ui.albumsOpen || state.ui.albumsSectionIndex !== 0) return;
+        const titleNode = els.albumsFlashcardsStack?.querySelector('.albums-modal__flashcard-title');
+        const subtitleNode = els.albumsFlashcardsStack?.querySelector('.albums-modal__flashcard-subtitle');
+        for (const language of languages) {
+          activeCard = refreshCardFromState(activeCard);
+          if (!activeCard || runId !== Number(state.ui.albumsNarrationRunId || 0) || !state.ui.albumsOpen || state.ui.albumsSectionIndex !== 0) return;
+          const text = safeText(resolveSourceLanguageText(activeCard, language));
+          const audioUrl = resolveCardAudioUrlForLanguage(activeCard, language);
+          if (titleNode) {
+            titleNode.textContent = safeText(resolveSourceLanguageText(activeCard, currentTargetLanguage())) || activeCard?.deckTitle || 'Flashcard';
+          }
+          if (subtitleNode) {
+            subtitleNode.textContent = safeText(resolveSourceLanguageText(activeCard, currentNativeLanguage()));
+          }
+          if (!audioUrl) continue;
+          await playAlbumsNarrationAudioUrl(audioUrl, 1, runId);
+        }
+      }
+
       function scheduleAlbumsFlashSwap(card) {
         stopAlbumsFlashSwapLoop();
         const cardId = safeText(card?.id || card?.cardId);
         if (!cardId || !state.ui.albumsOpen) return;
         state.ui.albumsFlashSwapCardId = cardId;
-        const english = safeText(card?.displayEnglish || card?.english || 'Flashcard');
-        const portuguese = safeText(card?.displayPortuguese || card?.portuguese || '');
-        if (!portuguese) return;
-
-        let showPortuguese = false;
-        const tick = () => {
-          if (!state.ui.albumsOpen || state.ui.albumsFlashSwapCardId !== cardId) return;
-          const titleNode = els.albumsFlashcardsStack?.querySelector('.albums-modal__flashcard-title');
-          if (!titleNode) return;
-          showPortuguese = !showPortuguese;
-          titleNode.textContent = showPortuguese ? portuguese : english;
-          state.ui.albumsFlashSwapTimer = window.setTimeout(tick, 3000);
-        };
-        state.ui.albumsFlashSwapTimer = window.setTimeout(tick, 3000);
+        const nativeText = safeText(card?.displayPortuguese || card?.portuguese || '');
+        if (!nativeText) return;
+        const subtitleNode = els.albumsFlashcardsStack?.querySelector('.albums-modal__flashcard-subtitle');
+        if (subtitleNode) {
+          subtitleNode.textContent = nativeText;
+        }
       }
 
       function renderAlbumsFlashcards(direction = 'none') {
@@ -19692,6 +19844,7 @@
           `, direction);
         prefetchAlbumsFlashcards(items, state.ui.albumsFlashIndex);
         scheduleAlbumsFlashSwap(card);
+        narrateAlbumsFlashcard(card).catch(() => {});
       }
 
       function renderAlbumsSeals(direction = 'none') {
@@ -19716,6 +19869,7 @@
       }
 
       function renderAlbumsSection() {
+        stopAlbumsNarrationAudio();
         const section = ALBUMS_SECTIONS[Math.max(0, Math.min(ALBUMS_SECTIONS.length - 1, state.ui.albumsSectionIndex))] || ALBUMS_SECTIONS[0];
         if (els.albumsSectionTitle) {
           els.albumsSectionTitle.textContent = section.label;
@@ -19732,6 +19886,7 @@
       function closeAlbumsModal() {
         state.ui.albumsOpen = false;
         stopAlbumsFlashSwapLoop();
+        stopAlbumsNarrationAudio();
         if (els.albumsModal) {
           els.albumsModal.classList.remove('is-visible');
           els.albumsModal.setAttribute('aria-hidden', 'true');
@@ -19742,6 +19897,7 @@
         state.ui.albumsOpen = true;
         state.ui.albumsSectionIndex = 0;
         state.ui.albumsSealIndex = 0;
+        stopAlbumsNarrationAudio();
         if (els.albumsModal) {
           els.albumsModal.classList.add('is-visible');
           els.albumsModal.setAttribute('aria-hidden', 'false');
@@ -19759,6 +19915,7 @@
         const total = ALBUMS_SECTIONS.length;
         state.ui.albumsSectionIndex = (state.ui.albumsSectionIndex + normalizedStep + total) % total;
         stopAlbumsFlashSwapLoop();
+        stopAlbumsNarrationAudio();
         renderAlbumsSection();
       }
 
@@ -21239,7 +21396,7 @@
       }
 
       function buildLibraryCardView(card) {
-        const record = card.progress;
+        const record = card.progress || { status: 'ready', phaseIndex: 0, targetPhaseIndex: 1 };
         const percent = progressPercent(record);
         const memorizing = record.status === 'memorizing';
         const displayedSeal = activeSealPhase(record);
@@ -22959,6 +23116,28 @@
           overlayFlag: ENGLISH_ICON_PATH,
           overlayClassName: 'game-card__phase-flag--english'
         };
+      }
+
+      function canAlbumsSurfaceCard(card) {
+        return Boolean(
+          card
+          && hasPlayableFlashcardImage(card)
+          && safeText(card?.sourcePortuguese || card?.portuguese || '')
+        );
+      }
+
+      function buildAlbumsSequentialLevelCards() {
+        return uniqueCardsById(
+          state.allCards
+            .filter(canAlbumsSurfaceCard)
+            .sort((left, right) => {
+              const levelDiff = normalizeDeckLevel(left?.deckLevel) - normalizeDeckLevel(right?.deckLevel);
+              if (levelDiff !== 0) return levelDiff;
+              const sourceDiff = safeText(left?.source || left?.deckTitle).localeCompare(safeText(right?.source || right?.deckTitle), 'pt-BR', { sensitivity: 'base' });
+              if (sourceDiff !== 0) return sourceDiff;
+              return (Number(left?.sourceIndex) || 0) - (Number(right?.sourceIndex) || 0);
+            })
+        );
       }
 
       function renderStageOneWordSwap(entry, hasSubword) {
@@ -26915,6 +27094,14 @@
 
       function openAlbumsPlayerPopover() {
         if (!els.albumsPlayerPopover) return;
+        if (els.albumsNativeOrderToggleBtn) {
+          els.albumsNativeOrderToggleBtn.classList.toggle('is-active', state.watch.albumsPlayNativeFirst !== false);
+        }
+        if (els.albumsNativeOrderToggleCopy) {
+          els.albumsNativeOrderToggleCopy.textContent = state.watch.albumsPlayNativeFirst !== false
+            ? 'Ativo: toca primeiro a língua nativa e depois a língua destino.'
+            : 'Desativado: toca primeiro a língua destino.';
+        }
         els.albumsPlayerPopover.classList.add('is-visible');
         window.requestAnimationFrame(() => els.albumsPlayerPopover.classList.add('is-active'));
       }
@@ -26962,20 +27149,13 @@
         const normalizedScope = safeText(scope).toLowerCase();
         let sourceCards = [];
         if (normalizedScope === 'all') {
-          sourceCards = uniqueCardsById(state.allCards.filter((card) => (
-            hasCoreFlashcardText(card)
-            && hasPlayableFlashcardImage(card)
-          )));
+          sourceCards = uniqueCardsById(state.allCards.filter(canAlbumsSurfaceCard));
         } else if (normalizedScope === 'level') {
-          sourceCards = uniqueCardsById(buildAlbumsLevelWindowCards());
+          sourceCards = buildAlbumsSequentialLevelCards();
         } else {
           sourceCards = uniqueCardsById(userProgressCards().map((card) => ({ ...card })));
         }
-        return sourceCards.filter((card) => (
-          hasCoreFlashcardText(card)
-          && hasPlayableFlashcardImage(card)
-          && Boolean(resolveCardAudioUrl(card))
-        ));
+        return sourceCards.filter((card) => canAlbumsSurfaceCard(card));
       }
 
       function formatAlbumsPlayerWord(text, maxCharsPerLine = 16, maxLines = 3) {
@@ -27178,9 +27358,11 @@
         els.watchVisual.innerHTML = imageMarkup;
         const albumsMode = state.watch.mode === 'albums';
         if (albumsMode) {
-          els.watchWord.textContent = formatAlbumsPlayerWord(card?.english || card?.portuguese || card?.deckTitle || 'Preparando...');
-          els.watchSubword.textContent = '';
-          els.watchSubword.style.display = 'none';
+          const targetText = safeText(resolveSourceLanguageText(card, currentTargetLanguage())) || card?.english || card?.portuguese || card?.deckTitle || 'Preparando...';
+          const nativeText = safeText(resolveSourceLanguageText(card, currentNativeLanguage()));
+          els.watchWord.textContent = formatAlbumsPlayerWord(targetText);
+          els.watchSubword.textContent = nativeText;
+          els.watchSubword.style.display = nativeText ? '' : 'none';
           els.watchStars.innerHTML = '';
         } else {
           els.watchWord.textContent = card?.english || card?.portuguese || 'Preparando...';
@@ -27450,6 +27632,32 @@
         }
       }
 
+      async function playWatchAudioForLanguage(card, language, rate) {
+        const src = resolveCardAudioUrlForLanguage(card, language);
+        if (!state.watch.active || !src) return;
+        stopWatchVoice();
+        const resolvedRate = Math.max(0.1, Math.min(2.5, Number(rate || 1) * resolveSelectedGameSpeed()));
+        const audio = new Audio(src);
+        audio.playbackRate = resolvedRate;
+        audio.defaultPlaybackRate = resolvedRate;
+        audio.preservesPitch = true;
+        state.watch.voiceAudio = audio;
+        try {
+          await audio.play();
+          addListeningCharsForCard(card);
+        } catch (_error) {
+          state.watch.voiceAudio = null;
+          return;
+        }
+        await new Promise(resolve => {
+          audio.addEventListener('ended', resolve, { once: true });
+          audio.addEventListener('error', resolve, { once: true });
+        });
+        if (state.watch.voiceAudio === audio) {
+          state.watch.voiceAudio = null;
+        }
+      }
+
       async function runWatchCycle() {
         if (!state.watch.active) return;
         if (!state.watch.queue.length) {
@@ -27473,9 +27681,15 @@
           }
         }
         if (state.watch.mode === 'albums') {
+          await ensureFlashcardAssetsForLanguages([card], albumsNarrationLanguages());
+          const refreshedCard = refreshCardFromState(card);
+          renderWatchCard(refreshedCard);
           await waitForWatchVisualReady();
           if (!state.watch.active) return;
-          await playWatchAudio(card, 1);
+          for (const language of albumsNarrationLanguages()) {
+            if (!state.watch.active) return;
+            await playWatchAudioForLanguage(refreshCardFromState(refreshedCard), language, 1);
+          }
           if (!state.watch.active) return;
           stopWatchTimer();
           state.watch.timer = window.setTimeout(() => {
@@ -27547,7 +27761,7 @@
       function startAlbumsPreview(scope = 'mine') {
         const sourceCards = buildAlbumsPreviewSourceCards(scope);
         if (!sourceCards.length) {
-          window.alert('Nenhum flashcard com áudio foi encontrado para essa opção.');
+          window.alert('Nenhum flashcard compatível foi encontrado para essa opção.');
           return;
         }
         state.watch.mode = 'albums';
@@ -29089,6 +29303,12 @@
           if (event.target === els.albumsPlayerPopover) {
             closeAlbumsPlayerPopover();
           }
+        });
+        els.albumsNativeOrderToggleBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          state.watch.albumsPlayNativeFirst = !(state.watch.albumsPlayNativeFirst !== false);
+          openAlbumsPlayerPopover();
         });
         els.albumsPlayerOptions?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-albums-player-scope]');
