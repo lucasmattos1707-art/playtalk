@@ -8891,6 +8891,7 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
       .map((deck) => [String(deck.source || '').trim(), deck])
   );
 
+  const sequenceCardCatalogKey = (source, itemId) => `${String(source || '').trim()}::${String(itemId || '').trim()}`;
   const parseSlot = (value) => {
     const parsed = Number.parseInt(value, 10);
     return Number.isInteger(parsed) && parsed >= 1 ? parsed : null;
@@ -8910,11 +8911,13 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
 
   const fallbackItemCatalog = new Map();
   fallbackDecks.forEach((deck) => {
+    const source = String(deck?.source || '').trim();
     const items = Array.isArray(deck?.items) ? deck.items : [];
     items.forEach((item) => {
       const id = String(item?.id || '').trim();
-      if (!id || fallbackItemCatalog.has(id)) return;
-      fallbackItemCatalog.set(id, {
+      const catalogKey = sequenceCardCatalogKey(source, id);
+      if (!source || !id || fallbackItemCatalog.has(catalogKey)) return;
+      fallbackItemCatalog.set(catalogKey, {
         id,
         english: String(item?.english || '').trim(),
         portuguese: String(item?.portuguese || '').trim(),
@@ -8936,10 +8939,11 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
 
   const incomingSelectedIds = new Set();
   incomingDecks.forEach((deck) => {
+    const source = String(deck?.source || '').trim();
     const items = Array.isArray(deck?.items) ? deck.items : [];
     items.forEach((item) => {
       const id = String(item?.id || '').trim();
-      if (id) incomingSelectedIds.add(id);
+      if (source && id) incomingSelectedIds.add(sequenceCardCatalogKey(source, id));
     });
   });
 
@@ -8957,7 +8961,7 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
     (Array.isArray(deck?.items) ? deck.items : []).forEach((item) => {
       const rawId = String(item?.id || '').trim();
       if (!rawId || usedDeckItemIds.has(rawId)) return;
-      const catalogItem = fallbackItemCatalog.get(rawId);
+      const catalogItem = fallbackItemCatalog.get(sequenceCardCatalogKey(source, rawId));
       if (!catalogItem) return;
       usedDeckItemIds.add(rawId);
       orderedItems.push({
@@ -8972,16 +8976,25 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
         if (!id) return false;
         if (usedDeckItemIds.has(id)) return false;
         // If card is already placed in another deck in sequence state, keep that move.
-        if (incomingSelectedIds.has(id)) return false;
+        if (incomingSelectedIds.has(sequenceCardCatalogKey(source, id))) return false;
         return true;
       })
       .map((item, index) => ({
         id: String(item?.id || '').trim(),
         english: String(item?.english || '').trim(),
         portuguese: String(item?.portuguese || '').trim(),
+        french: String(item?.french || '').trim(),
+        mandarin: String(item?.mandarin || '').trim(),
+        spanish: String(item?.spanish || '').trim(),
+        german: String(item?.german || '').trim(),
         image: String(item?.image || '').trim(),
         audio: String(item?.audio || '').trim(),
         audio2: String(item?.audio2 || '').trim(),
+        audioPt: String(item?.audioPt || '').trim(),
+        audioFr: String(item?.audioFr || '').trim(),
+        audioZh: String(item?.audioZh || '').trim(),
+        audioEs: String(item?.audioEs || '').trim(),
+        audioDe: String(item?.audioDe || '').trim(),
         orderIndex: orderedItems.length + index
       }));
 
@@ -9009,9 +9022,18 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
           id: String(item?.id || `${String(deck.source || '').trim()}#${index + 1}`).trim(),
           english: String(item?.english || '').trim(),
           portuguese: String(item?.portuguese || '').trim(),
+          french: String(item?.french || '').trim(),
+          mandarin: String(item?.mandarin || '').trim(),
+          spanish: String(item?.spanish || '').trim(),
+          german: String(item?.german || '').trim(),
           image: String(item?.image || '').trim(),
           audio: String(item?.audio || '').trim(),
           audio2: String(item?.audio2 || '').trim(),
+          audioPt: String(item?.audioPt || '').trim(),
+          audioFr: String(item?.audioFr || '').trim(),
+          audioZh: String(item?.audioZh || '').trim(),
+          audioEs: String(item?.audioEs || '').trim(),
+          audioDe: String(item?.audioDe || '').trim(),
           orderIndex: Number.isInteger(Number(item?.orderIndex)) ? Number(item.orderIndex) : index
         })).filter((item) => item.id)
         : []
