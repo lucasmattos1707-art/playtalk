@@ -8812,9 +8812,18 @@ async function ensureFlashcardsSequenceStateTable() {
 function normalizeFlashcardsSequenceCard(sourceKey, item, index) {
   const english = readFlashcardItemEnglish(item);
   const portuguese = readFlashcardItemPortuguese(item);
+  const french = readFlashcardItemFrench(item);
+  const mandarin = readFlashcardItemMandarin(item);
+  const spanish = readFlashcardItemSpanish(item);
+  const german = readFlashcardItemGerman(item);
   const image = readFlashcardItemImage(item);
   const audio = readFlashcardItemAudio(item);
   const audio2 = readFlashcardItemAudio2(item);
+  const audioPt = readFlashcardItemAudioPortuguese(item);
+  const audioFr = readFlashcardItemAudioFrench(item);
+  const audioZh = readFlashcardItemAudioMandarin(item);
+  const audioEs = readFlashcardItemAudioSpanish(item);
+  const audioDe = readFlashcardItemAudioGerman(item);
   const rawId = typeof item?.id === 'string' || typeof item?.id === 'number'
     ? String(item.id).trim()
     : '';
@@ -8823,9 +8832,18 @@ function normalizeFlashcardsSequenceCard(sourceKey, item, index) {
     id,
     english,
     portuguese,
+    french,
+    mandarin,
+    spanish,
+    german,
     image,
     audio,
     audio2,
+    audioPt,
+    audioFr,
+    audioZh,
+    audioEs,
+    audioDe,
     orderIndex: index
   };
 }
@@ -8900,9 +8918,18 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
         id,
         english: String(item?.english || '').trim(),
         portuguese: String(item?.portuguese || '').trim(),
+        french: String(item?.french || '').trim(),
+        mandarin: String(item?.mandarin || '').trim(),
+        spanish: String(item?.spanish || '').trim(),
+        german: String(item?.german || '').trim(),
         image: String(item?.image || '').trim(),
         audio: String(item?.audio || '').trim(),
-        audio2: String(item?.audio2 || '').trim()
+        audio2: String(item?.audio2 || '').trim(),
+        audioPt: String(item?.audioPt || '').trim(),
+        audioFr: String(item?.audioFr || '').trim(),
+        audioZh: String(item?.audioZh || '').trim(),
+        audioEs: String(item?.audioEs || '').trim(),
+        audioDe: String(item?.audioDe || '').trim()
       });
     });
   });
@@ -9114,9 +9141,18 @@ async function applyFlashcardsSequenceForPhaseSix(dayNumber, payload) {
         id: String(item?.id || '').trim(),
         english: String(item?.english || '').trim(),
         portuguese: String(item?.portuguese || '').trim(),
+        french: String(item?.french || '').trim(),
+        mandarin: String(item?.mandarin || '').trim(),
+        spanish: String(item?.spanish || '').trim(),
+        german: String(item?.german || '').trim(),
         image: String(item?.image || '').trim(),
         audio: String(item?.audio || '').trim(),
-        audio2: String(item?.audio2 || '').trim()
+        audio2: String(item?.audio2 || '').trim(),
+        audioPt: String(item?.audioPt || '').trim(),
+        audioFr: String(item?.audioFr || '').trim(),
+        audioZh: String(item?.audioZh || '').trim(),
+        audioEs: String(item?.audioEs || '').trim(),
+        audioDe: String(item?.audioDe || '').trim()
       }))
       .filter((item) => item.id && (item.english || item.portuguese))
     : [];

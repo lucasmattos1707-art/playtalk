@@ -15,6 +15,9 @@
     .toolbar .mode{min-height:72px}
     .icon-btn{display:grid;place-items:center;width:100%;min-height:72px;padding:10px;background:rgba(255,255,255,.04);border-color:transparent}
     .icon-btn img{display:block;width:100%;max-width:120px;height:44px;object-fit:contain}
+    .icon-btn.language-flag-btn{position:relative;overflow:hidden;border-color:rgba(255,255,255,.26);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 16px 30px rgba(0,0,0,.26)}
+    .icon-btn.language-flag-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,0));pointer-events:none}
+    .icon-btn.language-flag-btn img{position:relative;z-index:1;filter:none}
     .playtalk-send-btn{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;background:linear-gradient(135deg,#111,#2c2c2c);border-color:#111;color:#fff;font-weight:700}
     .playtalk-send-btn img{width:30px;height:30px;max-width:none;object-fit:contain}
     .playtalk-send-btn span{font-size:11px;line-height:1.1;text-align:center}
@@ -39,6 +42,7 @@
     .textbtn--fr{color:#8ef0c2}
     .textbtn--zh{color:#ff9ecb}
     .textbtn--es{color:#ffb36b}
+    .textbtn--de{color:#ffd76d}
     .icon-delete,.icon-play{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border-color:transparent}
     .icon-delete{background:rgba(255,0,0,.08)}
     .icon-delete svg{width:20px;height:20px;fill:#ff4d4f}
@@ -48,7 +52,7 @@
     .icon-play.has svg{fill:#72f0a8}
     .icon-play[disabled]{opacity:.45;cursor:not-allowed}
     .audio{display:flex;gap:10px;align-items:center}.audio button{width:56px;height:56px;padding:0;display:grid;place-items:center}.audio img{width:28px;height:28px;filter:grayscale(1) brightness(1.2)}.audio .has img{filter:none}.audio.voice-target button{background:linear-gradient(135deg,#8f53ff,#6427db);border-color:#6427db}.audio.voice-target img{filter:brightness(0) invert(1)}.audio button.ready{background:linear-gradient(135deg,#41c26e,#1f6b3e);border-color:#1f6b3e}.audio button.ready img{filter:brightness(0) invert(1)}
-    .icon-btn--light img,.eleven-btn img,.ai-image-btn img{filter:brightness(0) invert(1)}
+    .icon-btn--light img,.ai-image-btn img{filter:brightness(0) invert(1)}
     .plus-icon{font-size:46px;line-height:1;color:#38d678;font-weight:700}
     @keyframes spin{to{transform:rotate(360deg)}}
     @keyframes visualColorRestore{
@@ -196,10 +200,10 @@
   <div class="page">
     <div class="box toolbar">
       <button id="newBtn" class="icon-btn" type="button" aria-label="Nova grade" title="Nova grade"><span class="plus-icon" aria-hidden="true">+</span></button>
-      <button id="addBtn" class="icon-btn eleven-btn icon-btn--light" type="button" aria-label="ElevenLabs" title="ElevenLabs"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/gerar%20eleven%20labs.svg" alt=""></button>
+      <button id="addBtn" class="icon-btn eleven-btn language-flag-btn" type="button" aria-label="ElevenLabs" title="ElevenLabs"><img id="addBtnIcon" src="/arquivos-codex/icones/portugues.svg" alt=""></button>
       <button id="uploadBtn" class="icon-btn" type="button" aria-label="Upload de imagens" title="Upload de imagens"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/upload%20de%20imagens.svg" alt=""></button>
       <button id="pasteBtn" class="icon-btn" type="button" aria-label="Colar texto" title="Colar texto"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/colar%20texto.svg" alt=""></button>
-      <button id="voiceModeBtn" class="icon-btn tts-btn" type="button" aria-label="Gerar voz" title="Gerar voz"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/gerar%20eleven%20labs.svg" alt=""></button>
+      <button id="voiceModeBtn" class="icon-btn tts-btn language-flag-btn" type="button" aria-label="Gerar voz" title="Gerar voz"><img id="voiceModeBtnIcon" src="/arquivos-codex/icones/portugues.svg" alt=""></button>
       <button id="aiImageBtn" class="icon-btn ai-image-btn icon-btn--light" type="button" aria-label="Gerar imagens IA" title="Gerar imagens IA"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/Gerar%20imagens%20IA.svg" alt=""></button>
       <button id="translateBtn" class="icon-btn" type="button" aria-label="Traduzir PT para EN" title="Traduzir PT para EN"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/traduzir.svg" alt=""></button>
       <button id="aiTextBtn" class="icon-btn" type="button" aria-label="Adicionar idiomas" title="Adicionar idiomas"><img src="https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/svg/gerar%20texto%20ia.svg" alt=""></button>
@@ -552,6 +556,14 @@
         zh:{title:'Mandarim',className:'textbtn--zh',audioField:'audioZh',jsonTextKey:'nomeMandarim',jsonAudioKey:'audio_zh'},
         es:{title:'Espanhol',className:'textbtn--es',audioField:'audioEs',jsonTextKey:'nomeEspanhol',jsonAudioKey:'audio_es'},
         de:{title:'Alemao',className:'textbtn--de',audioField:'audioDe',jsonTextKey:'nomeAlemao',jsonAudioKey:'audio_de'}
+      };
+      const FLASHCARD_LANGUAGE_THEME={
+        pt:{icon:'/arquivos-codex/icones/portugues.svg',gradient:'linear-gradient(135deg,#0d4a24 0%,#6b5500 100%)'},
+        en:{icon:'/SVG/codex-icons/american.svg',gradient:'linear-gradient(135deg,#5a0c14 0%,#0d2f63 100%)'},
+        fr:{icon:'/arquivos-codex/icones/frances.svg',gradient:'linear-gradient(135deg,#0f2d67 0%,#5e0f18 100%)'},
+        zh:{icon:'/arquivos-codex/icones/mandarim.svg',gradient:'linear-gradient(135deg,#8f101a 0%,#4c071f 100%)'},
+        es:{icon:'/arquivos-codex/icones/espanhol.svg',gradient:'linear-gradient(135deg,#8f1118 0%,#7a5a00 100%)'},
+        de:{icon:'/arquivos-codex/icones/alemao.svg',gradient:'linear-gradient(135deg,#0d0d0d 0%,#680d12 52%,#6f5200 100%)'}
       };
       const MULTI_LANGUAGE_TARGETS={
         french:{key:'fr',label:'Frances',responseKey:'fr'},
@@ -1095,6 +1107,21 @@
       const audioSrc=(item,kind)=>kind==='single'?(item.audioDataUrl||item.audioRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioFile,'flashcard')):kind==='pt'?(item.audioPtDataUrl||item.audioPtRemoteUrl||cloud(state.day,phase(),item.audioPtFile,state.mode)):kind==='fr'?(item.audioFrDataUrl||item.audioFrRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioFrFile,'flashcard')):kind==='zh'?(item.audioZhDataUrl||item.audioZhRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioZhFile,'flashcard')):kind==='es'?(item.audioEsDataUrl||item.audioEsRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioEsFile,'flashcard')):kind==='de'?(item.audioDeDataUrl||item.audioDeRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioDeFile,'flashcard')):(item.audioEnDataUrl||cloud(state.day,phase(),item.audioEnFile,state.mode));
       const audioSrcBlonde=item=>item?.audioBlondeDataUrl||item?.audioBlondeRemoteUrl||cloud(state.day,PHASE.flashcard,item?.audioBlondeFile,'flashcard');
       function activeFlashcardLanguage(){return FLASHCARD_LANGUAGE_ORDER.includes(state.flashcardTextView)?state.flashcardTextView:'pt'}
+      function syncLanguageFlagButtons(){
+        const languageKey=activeFlashcardLanguage();
+        const theme=FLASHCARD_LANGUAGE_THEME[languageKey]||FLASHCARD_LANGUAGE_THEME.pt;
+        [['addBtn','addBtnIcon'],['voiceModeBtn','voiceModeBtnIcon']].forEach(([buttonId,imageId])=>{
+          const button=$(buttonId),image=$(imageId);
+          if(button){
+            button.style.background=theme.gradient;
+            button.style.borderColor='rgba(255,255,255,.24)';
+          }
+          if(image){
+            image.src=theme.icon;
+            image.alt=FLASHCARD_LANGUAGE_META[languageKey]?.title||'Idioma';
+          }
+        });
+      }
       function itemTextForLanguage(item,key){if(key==='pt')return String(item?.pt||'').trim();if(key==='en')return String(item?.en||'').trim();if(key==='fr')return String(item?.fr||'').trim();if(key==='zh')return String(item?.zh||'').trim();if(key==='es')return String(item?.es||'').trim();if(key==='de')return String(item?.de||'').trim();return''}
       function itemAudioForLanguage(item,key){
         if(key==='pt')return audioSrc(item,'pt');
@@ -2573,7 +2600,7 @@
       function detectModeFromJson(data){if(Array.isArray(data))return'flashcard';if(data&&typeof data==='object'){if(Array.isArray(data.characters))return'scenes';if(Array.isArray(data.items)&&data.items.every(entry=>entry&&typeof entry==='object'&&('imagem' in entry||'nomePortugues' in entry||'nomeIngles' in entry)))return'flashcard';if(Array.isArray(data.items))return'movies'}throw new Error('JSON nao reconhecido para este editor.')}
       function importJsonPayload(data){state.mode=detectModeFromJson(data);state.items=[];state.chars=[];state.flashcardCoverUrl='';const importedAssets=[];const rememberDay=value=>{const parsed=parseCloudAssetInfo(value);if(parsed?.day)importedAssets.push(parsed);return parsed};if(state.mode==='flashcard'){const flashcardItems=Array.isArray(data)?data:(Array.isArray(data?.items)?data.items:[]);state.title=Array.isArray(data)?'':String(data?.title||'').trim();state.flashcardCoverUrl=Array.isArray(data)?'':String(data?.coverImage||'').trim();state.items=flashcardItems.map(entry=>{const secondaryAudio=readDeckEntrySecondaryAudio(entry);const audioPt=readDeckEntryLanguageAudio(entry,'pt');const audioFr=readDeckEntryLanguageAudio(entry,'fr');const audioZh=readDeckEntryLanguageAudio(entry,'zh');const audioEs=readDeckEntryLanguageAudio(entry,'es');const audioDe=readDeckEntryLanguageAudio(entry,'de');rememberDay(entry.imagem);rememberDay(entry.audio);rememberDay(secondaryAudio);rememberDay(audioPt);rememberDay(audioFr);rememberDay(audioZh);rememberDay(audioEs);rememberDay(audioDe);return normalizeImportedItem({imageFile:importedFileName(entry.imagem),imageRemoteUrl:String(entry?.imagem||'').trim(),pt:entry.nomePortugues||'',en:entry.nomeIngles||'',fr:entry.nomeFrances||entry.fr||'',zh:entry.nomeMandarim||entry.zh||'',es:entry.nomeEspanhol||entry.es||'',de:entry.nomeAlemao||entry.german||entry.de||'',category:entry.categoria||'flashcard',audioFile:importedFileName(entry.audio),audioRemoteUrl:String(entry?.audio||'').trim(),audioBlondeFile:importedFileName(secondaryAudio),audioBlondeRemoteUrl:secondaryAudio,audioPtFile:importedFileName(audioPt),audioPtRemoteUrl:audioPt,audioFrFile:importedFileName(audioFr),audioFrRemoteUrl:audioFr,audioZhFile:importedFileName(audioZh),audioZhRemoteUrl:audioZh,audioEsFile:importedFileName(audioEs),audioEsRemoteUrl:audioEs,audioDeFile:importedFileName(audioDe),audioDeRemoteUrl:audioDe,tense:entry.tense||'present-simple',sentenceForm:entry.sentenceForm||'affirmative'})})}else{state.title=data.title||'';state.levelKey=data.level||defaultLevelKey();rememberDay(data.coverImage);rememberDay(data.soundtrack);state.coverFile=importedFileName(data.coverImage);state.coverDataUrl='';state.soundFile=importedFileName(data.soundtrack);state.soundDataUrl='';if(state.mode==='movies'){state.items=data.items.map(entry=>{rememberDay(entry.image);rememberDay(entry.audio_portuguese);rememberDay(entry.audio_english);return normalizeImportedItem({imageFile:importedFileName(entry.image),pt:entry.portuguese||'',en:entry.english||'',imagePrompt:entry.image_prompt||entry.imagePrompt||'',audioPtFile:importedFileName(entry.audio_portuguese),audioEnFile:importedFileName(entry.audio_english)})})}else{state.chars=normalizeSceneChars(Array.isArray(data.characters)?data.characters.map(char=>{rememberDay(char.image);return{id:char.id||'',name:char.name||'',voiceId:char.voiceId||'',imageFile:importedFileName(char.image),imageDataUrl:''}}):[]);state.items=data.items.map(entry=>{rememberDay(entry.audio_portuguese);rememberDay(entry.audio_english);return normalizeImportedItem({pt:entry.portuguese||'',en:entry.english||'',characterId:entry.character||'',audioPtFile:importedFileName(entry.audio_portuguese),audioEnFile:importedFileName(entry.audio_english)})})}}const expectedPhaseCode=PHASE_CODE[state.mode]||PHASE_CODE.flashcard;const detectedDay=(importedAssets.find(asset=>asset.phaseCode===expectedPhaseCode&&asset.day)||importedAssets.find(asset=>asset.day))?.day;if(detectedDay)state.day=sanitizeDayKey(detectedDay);save();renderAll()}
       async function generateVoiceAsset(text,fileName,voice='harry'){const cleanText=String(text||'').trim();if(!cleanText)throw new Error('Preencha o texto antes de gerar voz.');const cleanVoice=normalizeTtsVoice(voice);const provider=voiceProvider(cleanVoice);const response=provider==='elevenlabs'?await fetch('/api/tts/elevenlabs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:cleanText,fileName,voice:cleanVoice})}):await fetch('/api/tts/openai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:cleanText,fileName,voice:cleanVoice})});let payload=null;if(!response.ok){try{payload=await response.json()}catch{}throw new Error(payload?.instructions||payload?.details||payload?.error||'Erro ao gerar voz.')}const blob=await response.blob();return{fileName,dataUrl:await asDataUrl(blob)}}
-      function syncVoicePopover(){const select=$('ttsVoiceSelect');if(select)select.value=normalizeTtsVoice(state.ttsVoice);const label=ttsVoiceLabel(state.ttsVoice);const providerLabel=voiceProvider(state.ttsVoice)==='elevenlabs'?'ElevenLabs':'OpenAI';setButtonLabel('addBtn',elevenBusy?`Gerando audio com ${providerLabel}... (${label})`:label);const currentLabel=$('openAiVoiceCurrentLabel');if(currentLabel)currentLabel.textContent=`Voz atual: ${label}`}
+      function syncVoicePopover(){const select=$('ttsVoiceSelect');if(select)select.value=normalizeTtsVoice(state.ttsVoice);const label=ttsVoiceLabel(state.ttsVoice);const providerLabel=voiceProvider(state.ttsVoice)==='elevenlabs'?'ElevenLabs':'OpenAI';const visibleLanguage=FLASHCARD_LANGUAGE_META[activeFlashcardLanguage()]?.title||'Portugues';setButtonLabel('addBtn',elevenBusy?`Gerando audio com ${providerLabel}... (${label})`:`${visibleLanguage} | ${label}`);setButtonLabel('voiceModeBtn',`${visibleLanguage} | ${voiceModeStatusLabel()}`);syncLanguageFlagButtons();const currentLabel=$('openAiVoiceCurrentLabel');if(currentLabel)currentLabel.textContent=`Voz atual: ${label}`}
       function openVoicePopover(){state.ttsVoice=normalizeTtsVoice(state.ttsVoice);const select=$('ttsVoiceSelect');if(select)select.value=state.ttsVoice;$('voicePopover').classList.remove('hidden');$('voicePopover').setAttribute('aria-hidden','false');syncVoicePopover()}
       function closeVoicePopover(){$('voicePopover').classList.add('hidden');$('voicePopover').setAttribute('aria-hidden','true')}
       function updateTop(){state.mode='flashcard';state.testOnline=false;state.voiceMode=false;const baseHint=`Idioma visivel: ${FLASHCARD_LANGUAGE_META[activeFlashcardLanguage()]?.title||'Portugues'} | atalhos 1-6`;$('hint').textContent=state.languageBatchStatus?`${baseHint} | ${state.languageBatchStatus}`:baseHint;syncVoicePopover();$('addBtn').disabled=elevenBusy||r2UploadBusy;document.querySelectorAll('.movieOnly').forEach(n=>n.classList.add('hidden'));document.querySelectorAll('.flashcardOnly').forEach(n=>n.classList.remove('hidden'));$('charactersWrap').classList.add('hidden');syncAudioPopover();syncAiButton();syncAiTextButton();syncZipButton()}
@@ -3044,7 +3071,7 @@
           persistDirtyDecksNow({fallbackCurrentDeck:true}).catch(error=>showFeedbackToast(error?.message||'Nao foi possivel salvar os decks no Postgres.'));
           return;
         }
-        if(state.mode==='flashcard'&&!watchRuntime&&['1','2','3','4','5'].includes(key)){
+        if(state.mode==='flashcard'&&!watchRuntime&&['1','2','3','4','5','6'].includes(key)){
           e.preventDefault();
           const nextLanguage=FLASHCARD_LANGUAGE_ORDER[Number(key)-1]||'pt';
           state.flashcardTextView=nextLanguage;
@@ -3082,7 +3109,6 @@
         }
         if(key==='o'){e.preventDefault();$('watchFontInput').click();return}
         if(key==='z'){e.preventDefault();$('watchTextColorInput').click();return}
-        if(key==='6'){e.preventDefault();startWatchPlayback({scope:'mine'});return}
         if(key==='u'){e.preventDefault();$('watchMediaInput').click();return}
         if(key==='escape'){if(watchRuntime){e.preventDefault();stopWatchPlayback()}return}
         if(overlayOpen&&!watchRuntime){e.preventDefault();return}

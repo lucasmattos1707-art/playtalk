@@ -6,7 +6,7 @@
   <title>Sequence | Admin</title>
   <style>
     :root{
-      --bg:#030d1f;
+      --bg:#000;
       --deck:#082c6a;
       --card:#3f9ae8;
       --text:#fff;
@@ -14,8 +14,8 @@
       --warn:#ffb86b;
     }
     *{box-sizing:border-box}
-    body{margin:0;background:radial-gradient(circle at 20% 0%,#103067 0%,var(--bg) 48%);color:var(--text);font-family:Arial,sans-serif}
-    .page{max-width:1100px;margin:0 auto;padding:18px 14px 36px}
+    body{margin:0;background:#000;color:var(--text);font-family:Arial,sans-serif}
+    .page{width:100%;max-width:none;margin:0;padding:18px 18px 36px}
     .top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
     .title{font-size:26px;font-weight:800}
     .hint{font-size:12px;color:var(--muted);line-height:1.4;margin-top:6px}
@@ -40,7 +40,7 @@
     .deck-head{
       height:8vh;
       min-height:56px;
-      width:90%;
+      width:100%;
       display:flex;
       align-items:center;
       justify-content:space-between;
@@ -112,8 +112,8 @@
     .deck.is-open .deck-items{display:grid}
     .card{
       height:8vh;
-      min-height:52px;
-      width:90%;
+      min-height:74px;
+      width:100%;
       display:flex;
       align-items:center;
       gap:10px;
@@ -148,8 +148,22 @@
       background:#fff;
       box-shadow:0 0 0 4px rgba(255,255,255,.26);
     }
-    .card .label{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .card .id{margin-left:auto;font-size:12px;opacity:.5;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .card .label{flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .card-side{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:250px}
+    .card .id{font-size:12px;opacity:.5;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .language-flags{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:nowrap}
+    .language-flag{width:26px;height:26px;border:none;padding:0;border-radius:999px;background:transparent;display:grid;place-items:center;box-shadow:0 8px 18px rgba(0,0,0,.22)}
+    .language-flag img{width:100%;height:100%;border-radius:999px;object-fit:cover;background:rgba(255,255,255,.08)}
+    .language-flag.is-empty img{filter:grayscale(1) brightness(.95)}
+    .language-flag.is-text-only img{opacity:.5}
+    .language-flag.is-audio img{opacity:1}
+    .language-flag img[data-tone="pt"]{background:linear-gradient(135deg,#0d4a24 0%,#6b5500 100%)}
+    .language-flag img[data-tone="en-us"]{background:linear-gradient(135deg,#5a0c14 0%,#0d2f63 100%)}
+    .language-flag img[data-tone="en-gb"]{background:linear-gradient(135deg,#0f2d67 0%,#090909 100%)}
+    .language-flag img[data-tone="fr"]{background:linear-gradient(135deg,#0f2d67 0%,#5e0f18 100%)}
+    .language-flag img[data-tone="zh"]{background:linear-gradient(135deg,#8f101a 0%,#4c071f 100%)}
+    .language-flag img[data-tone="es"]{background:linear-gradient(135deg,#8f1118 0%,#7a5a00 100%)}
+    .language-flag img[data-tone="de"]{background:linear-gradient(135deg,#0d0d0d 0%,#680d12 52%,#6f5200 100%)}
     .card.is-selected{outline:2px solid rgba(255,255,255,.95);transform:translateX(2px)}
     .card.is-dimmed{opacity:.42}
     .empty{font-size:13px;color:var(--muted)}
@@ -187,6 +201,15 @@
         lastExportSlot: 1
       };
       const $ = (id) => document.getElementById(id);
+      const LANGUAGE_FLAGS = [
+        { key: 'pt', textField: 'portuguese', audioField: 'audioPt', icon: '/arquivos-codex/icones/portugues.svg', tone: 'pt', label: 'Portugues' },
+        { key: 'en-us', textField: 'english', audioField: 'audio', icon: '/SVG/codex-icons/american.svg', tone: 'en-us', label: 'Ingles americano' },
+        { key: 'en-gb', textField: 'english', audioField: 'audio2', icon: '/SVG/codex-icons/british.svg', tone: 'en-gb', label: 'Ingles britanico' },
+        { key: 'fr', textField: 'french', audioField: 'audioFr', icon: '/arquivos-codex/icones/frances.svg', tone: 'fr', label: 'Frances' },
+        { key: 'zh', textField: 'mandarin', audioField: 'audioZh', icon: '/arquivos-codex/icones/mandarim.svg', tone: 'zh', label: 'Mandarim' },
+        { key: 'es', textField: 'spanish', audioField: 'audioEs', icon: '/arquivos-codex/icones/espanhol.svg', tone: 'es', label: 'Espanhol' },
+        { key: 'de', textField: 'german', audioField: 'audioDe', icon: '/arquivos-codex/icones/alemao.svg', tone: 'de', label: 'Alemao' }
+      ];
 
       const cardKey = (deckSource, cardId) => `${String(deckSource || '').trim()}::${String(cardId || '').trim()}`;
       const parseSlot = (value) => {
@@ -226,7 +249,18 @@
               id: String(item?.id || '').trim(),
               english: String(item?.english || '').trim(),
               portuguese: String(item?.portuguese || '').trim(),
-              image: String(item?.image || '').trim()
+              french: String(item?.french || '').trim(),
+              mandarin: String(item?.mandarin || '').trim(),
+              spanish: String(item?.spanish || '').trim(),
+              german: String(item?.german || '').trim(),
+              image: String(item?.image || '').trim(),
+              audio: String(item?.audio || '').trim(),
+              audio2: String(item?.audio2 || '').trim(),
+              audioPt: String(item?.audioPt || '').trim(),
+              audioFr: String(item?.audioFr || '').trim(),
+              audioZh: String(item?.audioZh || '').trim(),
+              audioEs: String(item?.audioEs || '').trim(),
+              audioDe: String(item?.audioDe || '').trim()
             })).filter((item) => item.id) : []
           }))
           .filter((deck) => deck.source && Number.isInteger(deck.deckLevel));
@@ -454,7 +488,18 @@
                     id: String(item?.id || '').trim(),
                     english: String(item?.english || '').trim(),
                     portuguese: String(item?.portuguese || '').trim(),
-                    image: String(item?.image || '').trim()
+                    french: String(item?.french || '').trim(),
+                    mandarin: String(item?.mandarin || '').trim(),
+                    spanish: String(item?.spanish || '').trim(),
+                    german: String(item?.german || '').trim(),
+                    image: String(item?.image || '').trim(),
+                    audio: String(item?.audio || '').trim(),
+                    audio2: String(item?.audio2 || '').trim(),
+                    audioPt: String(item?.audioPt || '').trim(),
+                    audioFr: String(item?.audioFr || '').trim(),
+                    audioZh: String(item?.audioZh || '').trim(),
+                    audioEs: String(item?.audioEs || '').trim(),
+                    audioDe: String(item?.audioDe || '').trim()
                   })).filter((item) => item.id)
                   : []
               }))
@@ -526,13 +571,22 @@
               row.type = 'button';
               row.className = 'card';
               const selected = isSelectedCard(deck.source, item.id);
+              const flagsMarkup = LANGUAGE_FLAGS.map((language) => {
+                const hasText = Boolean(String(item?.[language.textField] || '').trim());
+                const hasAudio = Boolean(String(item?.[language.audioField] || '').trim());
+                const stateClass = hasAudio ? 'is-audio' : hasText ? 'is-text-only' : 'is-empty';
+                return `<span class="language-flag ${stateClass}" title="${language.label}"><img src="${language.icon}" alt="${language.label}" data-tone="${language.tone}"></span>`;
+              }).join('');
               if (selected) row.classList.add('is-selected');
               if (hasSelection && !selected) row.classList.add('is-dimmed');
               row.innerHTML = `
                 <span class="pick${selected ? ' is-on' : ''}" aria-hidden="true"></span>
                 <img src="${item.image || ''}" alt="">
                 <span class="label">${item.english || item.portuguese || '(sem texto)'}</span>
-                <span class="id">${item.id}</span>
+                <span class="card-side">
+                  <span class="language-flags">${flagsMarkup}</span>
+                  <span class="id">${item.id}</span>
+                </span>
               `;
               row.addEventListener('click', (event) => selectCard(deck.source, item.id, event));
               itemsHost.appendChild(row);
