@@ -9188,6 +9188,7 @@ function normalizeFlashcardsSequenceCard(sourceKey, item, index) {
   const portuguese = readFlashcardItemPortuguese(item);
   const french = readFlashcardItemFrench(item);
   const mandarin = readFlashcardItemMandarin(item);
+  const mandarinPinyin = readFlashcardItemMandarinPinyin(item);
   const spanish = readFlashcardItemSpanish(item);
   const german = readFlashcardItemGerman(item);
   const image = readFlashcardItemImage(item);
@@ -9208,6 +9209,7 @@ function normalizeFlashcardsSequenceCard(sourceKey, item, index) {
     portuguese,
     french,
     mandarin,
+    mandarinPinyin,
     spanish,
     german,
     image,
@@ -9298,6 +9300,7 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
         portuguese: String(item?.portuguese || '').trim(),
         french: String(item?.french || '').trim(),
         mandarin: String(item?.mandarin || '').trim(),
+        mandarinPinyin: String(item?.mandarinPinyin || item?.pinyinComTons || item?.pinyin || '').trim(),
         spanish: String(item?.spanish || '').trim(),
         german: String(item?.german || '').trim(),
         image: String(item?.image || '').trim(),
@@ -9360,6 +9363,7 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
         portuguese: String(item?.portuguese || '').trim(),
         french: String(item?.french || '').trim(),
         mandarin: String(item?.mandarin || '').trim(),
+        mandarinPinyin: String(item?.mandarinPinyin || item?.pinyinComTons || item?.pinyin || '').trim(),
         spanish: String(item?.spanish || '').trim(),
         german: String(item?.german || '').trim(),
         image: String(item?.image || '').trim(),
@@ -11571,6 +11575,20 @@ function readFlashcardItemMandarin(item) {
         ? item.pinyin.trim()
         : typeof item?.pinyinComTons === 'string'
           ? item.pinyinComTons.trim()
+          : typeof item?.['Pinyin com tons'] === 'string'
+            ? item['Pinyin com tons'].trim()
+            : '';
+}
+
+function readFlashcardItemMandarinPinyin(item) {
+  return typeof item?.pinyinComTons === 'string'
+    ? item.pinyinComTons.trim()
+    : typeof item?.pinyin === 'string'
+      ? item.pinyin.trim()
+      : typeof item?.nomeMandarimPinyin === 'string'
+        ? item.nomeMandarimPinyin.trim()
+        : typeof item?.mandarinPinyin === 'string'
+          ? item.mandarinPinyin.trim()
           : typeof item?.['Pinyin com tons'] === 'string'
             ? item['Pinyin com tons'].trim()
             : '';
@@ -23906,6 +23924,7 @@ app.post('/api/text/openai/translate', async (req, res) => {
   const items = Array.isArray(req.body?.items) ? req.body.items : [];
   const requestedModel = typeof req.body?.model === 'string' ? req.body.model.trim() : '';
   const modelToUse = requestedModel || OPENAI_TRANSLATE_MODEL;
+  const replaceExisting = req.body?.replaceExisting === true;
   const rawTargetLanguage = typeof req.body?.targetLanguage === 'string'
     ? req.body.targetLanguage.trim().toLowerCase()
     : 'english';
@@ -23934,10 +23953,11 @@ app.post('/api/text/openai/translate', async (req, res) => {
       noItemsError: 'Nao ha textos em portugues aguardando traducao para mandarim.',
       systemPrompt: [
         'You translate Brazilian Portuguese learning content into natural, modern, useful Mandarin Chinese.',
-        'Return Mandarin only in Simplified Chinese Hanzi.',
-        'Do not return Pinyin, romanization, English explanations, numbering, or extra commentary.',
+        'Return Simplified Chinese Hanzi plus the matching Hanyu Pinyin with tone marks.',
+        'Do not return English explanations, numbering, or extra commentary.',
         'Preserve meaning, but prefer natural everyday Mandarin over literal awkward translations.'
-      ]
+      ],
+      extraOutputKeys: ['pinyinComTons']
     },
     spanish: {
       outputKey: 'es',
@@ -23970,9 +23990,16 @@ app.post('/api/text/openai/translate', async (req, res) => {
           ? item[targetConfig.outputKey].trim()
           : typeof item?.en === 'string'
             ? item.en.trim()
+            : '',
+      existingPinyin: typeof item?.existingPinyin === 'string'
+        ? item.existingPinyin.trim()
+        : typeof item?.pinyinComTons === 'string'
+          ? item.pinyinComTons.trim()
+          : typeof item?.pinyin === 'string'
+            ? item.pinyin.trim()
             : ''
     }))
-    .filter(item => Number.isInteger(item.index) && item.pt && !item.existingText);
+    .filter(item => Number.isInteger(item.index) && item.pt && (replaceExisting || !item.existingText));
 
   if (!normalizedItems.length) {
     res.status(400).json({ error: targetConfig.noItemsError });
@@ -23998,11 +24025,15 @@ app.post('/api/text/openai/translate', async (req, res) => {
     'Keep the tone child-safe and practical for a language-learning app.',
     'Do not invent extra context.',
     'Every translated sentence must always end with a final period.',
-    `Do not translate items that already have ${targetConfig.errorLabel} text.`,
+    replaceExisting
+      ? `Replace any existing ${targetConfig.errorLabel} text for the provided items.`
+      : `Do not translate items that already have ${targetConfig.errorLabel} text.`,
     'Output JSON with this exact shape:',
-    `{"items":[{"index":0,"${targetConfig.outputKey}":"..."}]}`,
+    rawTargetLanguage === 'mandarin'
+      ? `{"items":[{"index":0,"${targetConfig.outputKey}":"...","pinyinComTons":"..."}]}`
+      : `{"items":[{"index":0,"${targetConfig.outputKey}":"..."}]}`,
     'Translate these Portuguese items:',
-    JSON.stringify(normalizedItems.map(item => ({ index: item.index, pt: item.pt })))
+    JSON.stringify(normalizedItems.map(item => ({ index: item.index, pt: item.pt, existingText: item.existingText, existingPinyin: item.existingPinyin })))
   ].join('\n');
 
   try {
@@ -24055,12 +24086,18 @@ app.post('/api/text/openai/translate', async (req, res) => {
           index: Number.isInteger(item?.index) ? item.index : Number.parseInt(item?.index, 10),
           text: typeof item?.[targetConfig.outputKey] === 'string'
             ? ensureSentenceFinalPeriod(item[targetConfig.outputKey])
-            : ''
+            : '',
+          pinyinComTons: rawTargetLanguage === 'mandarin' && typeof item?.pinyinComTons === 'string'
+            ? ensureSentenceFinalPeriod(item.pinyinComTons)
+            : rawTargetLanguage === 'mandarin' && typeof item?.pinyin === 'string'
+              ? ensureSentenceFinalPeriod(item.pinyin)
+              : ''
         }))
         .filter(item => Number.isInteger(item.index) && item.text)
         .map(item => ({
           index: item.index,
-          [targetConfig.outputKey]: item.text
+          [targetConfig.outputKey]: item.text,
+          ...(rawTargetLanguage === 'mandarin' && item.pinyinComTons ? { pinyinComTons: item.pinyinComTons, pinyin: item.pinyinComTons } : {})
         }))
       : [];
 
