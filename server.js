@@ -2008,17 +2008,47 @@ const normalizeFlashcardConqueredLanguagesPayload = (value) => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return new Map();
   }
+  const normalizeLanguageMeta = (language, rawMeta = {}) => {
+    const normalizedLanguage = normalizeFlashcardTargetLanguage(language);
+    if (!normalizedLanguage) return null;
+    const status = safeText(rawMeta?.status).toLowerCase() === 'memorizing' ? 'memorizing' : 'ready';
+    const phaseIndex = Math.max(0, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(rawMeta?.phaseIndex ?? rawMeta?.phase_index, 10) || (status === 'memorizing' ? 0 : 1)));
+    const targetPhaseIndex = Math.max(1, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(rawMeta?.targetPhaseIndex ?? rawMeta?.target_phase_index, 10) || phaseIndex || 1));
+    const sealImage = safeText(rawMeta?.sealImage || rawMeta?.seal_image || resolveFlashcardSealImage({
+      phaseIndex,
+      targetPhaseIndex,
+      status
+    }));
+    return {
+      language: normalizedLanguage,
+      phaseIndex,
+      targetPhaseIndex,
+      status,
+      sealImage
+    };
+  };
   const entries = new Map();
   Object.entries(value).forEach(([rawCardId, rawLanguages]) => {
     const cardId = typeof rawCardId === 'string' ? rawCardId.trim() : '';
-    if (!cardId || !Array.isArray(rawLanguages)) return;
-    const languages = Array.from(new Set(
-      rawLanguages
-        .map((language) => normalizeFlashcardTargetLanguage(language))
-        .filter(Boolean)
-    ));
-    if (languages.length) {
-      entries.set(cardId, languages);
+    if (!cardId) return;
+    const normalizedEntry = {};
+    if (Array.isArray(rawLanguages)) {
+      rawLanguages.forEach((language) => {
+        const meta = normalizeLanguageMeta(language, {});
+        if (meta) {
+          normalizedEntry[meta.language] = meta;
+        }
+      });
+    } else if (rawLanguages && typeof rawLanguages === 'object') {
+      Object.entries(rawLanguages).forEach(([language, rawMeta]) => {
+        const meta = normalizeLanguageMeta(language, rawMeta);
+        if (meta) {
+          normalizedEntry[meta.language] = meta;
+        }
+      });
+    }
+    if (Object.keys(normalizedEntry).length) {
+      entries.set(cardId, normalizedEntry);
     }
   });
   return entries;
@@ -2030,12 +2060,21 @@ const serializeFlashcardConqueredLanguages = (value) => {
     : normalizeFlashcardConqueredLanguagesPayload(value);
   const serialized = {};
   normalizedMap.forEach((languages, cardId) => {
-    if (!cardId || !Array.isArray(languages) || !languages.length) return;
-    serialized[cardId] = Array.from(new Set(
-      languages
-        .map((language) => normalizeFlashcardTargetLanguage(language))
-        .filter(Boolean)
-    ));
+    if (!cardId || !languages || typeof languages !== 'object') return;
+    const normalizedEntry = {};
+    Object.entries(languages).forEach(([language, rawMeta]) => {
+      const normalizedLanguage = normalizeFlashcardTargetLanguage(language);
+      if (!normalizedLanguage) return;
+      normalizedEntry[normalizedLanguage] = {
+        phaseIndex: Math.max(0, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(rawMeta?.phaseIndex ?? rawMeta?.phase_index, 10) || 0)),
+        targetPhaseIndex: Math.max(1, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(rawMeta?.targetPhaseIndex ?? rawMeta?.target_phase_index, 10) || 1)),
+        status: safeText(rawMeta?.status).toLowerCase() === 'memorizing' ? 'memorizing' : 'ready',
+        sealImage: safeText(rawMeta?.sealImage || rawMeta?.seal_image || resolveFlashcardSealImage(rawMeta || {}))
+      };
+    });
+    if (Object.keys(normalizedEntry).length) {
+      serialized[cardId] = normalizedEntry;
+    }
   });
   return serialized;
 };
@@ -2476,10 +2515,30 @@ const ensureFlashcardUserStateTables = async () => {
           user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
           card_id text NOT NULL,
           target_language text NOT NULL,
+          phase_index integer NOT NULL DEFAULT 0,
+          target_phase_index integer NOT NULL DEFAULT 1,
+          status text NOT NULL DEFAULT 'ready',
+          seal_image text NOT NULL DEFAULT '',
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now(),
           PRIMARY KEY (user_id, card_id, target_language)
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_language_cards
+        ADD COLUMN IF NOT EXISTS phase_index integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_language_cards
+        ADD COLUMN IF NOT EXISTS target_phase_index integer NOT NULL DEFAULT 1
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_language_cards
+        ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'ready'
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_language_cards
+        ADD COLUMN IF NOT EXISTS seal_image text NOT NULL DEFAULT ''
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS user_flashcard_language_cards_user_idx
@@ -6357,7 +6416,7 @@ const readFlashcardStateForUser = async (userId, options = {}) => {
       [normalizedUserId, FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE]
     ),
     pool.query(
-      `SELECT card_id, target_language
+      `SELECT card_id, target_language, phase_index, target_phase_index, status, seal_image
        FROM public.user_flashcard_language_cards
        WHERE user_id = $1
        ORDER BY updated_at DESC, created_at DESC, card_id ASC, target_language ASC`,
@@ -6425,12 +6484,15 @@ const readFlashcardStateForUser = async (userId, options = {}) => {
     const targetLanguage = normalizeFlashcardTargetLanguage(row?.target_language);
     if (!cardId || !targetLanguage) return;
     if (!conqueredLanguages.has(cardId)) {
-      conqueredLanguages.set(cardId, []);
+      conqueredLanguages.set(cardId, {});
     }
     const current = conqueredLanguages.get(cardId);
-    if (!current.includes(targetLanguage)) {
-      current.push(targetLanguage);
-    }
+    current[targetLanguage] = {
+      phaseIndex: Math.max(0, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(row?.phase_index, 10) || 0)),
+      targetPhaseIndex: Math.max(1, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(row?.target_phase_index, 10) || 1)),
+      status: safeText(row?.status).toLowerCase() === 'memorizing' ? 'memorizing' : 'ready',
+      sealImage: safeText(row?.seal_image || resolveFlashcardSealImage(row || {}))
+    };
   });
 
   return {
@@ -6904,10 +6966,20 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
         const languageParams = [];
         let languageIndex = 0;
         conqueredLanguages.forEach((languages, cardId) => {
-          languages.forEach((language) => {
-            const offset = languageIndex * 3;
-            languageValues.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, now(), now())`);
-            languageParams.push(normalizedUserId, cardId, normalizeFlashcardTargetLanguage(language));
+          Object.entries(languages || {}).forEach(([language, rawMeta]) => {
+            const normalizedLanguage = normalizeFlashcardTargetLanguage(language);
+            if (!normalizedLanguage) return;
+            const offset = languageIndex * 7;
+            languageValues.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, now(), now())`);
+            languageParams.push(
+              normalizedUserId,
+              cardId,
+              normalizedLanguage,
+              Math.max(0, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(rawMeta?.phaseIndex ?? rawMeta?.phase_index, 10) || 0)),
+              Math.max(1, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(rawMeta?.targetPhaseIndex ?? rawMeta?.target_phase_index, 10) || 1)),
+              safeText(rawMeta?.status).toLowerCase() === 'memorizing' ? 'memorizing' : 'ready',
+              safeText(rawMeta?.sealImage || rawMeta?.seal_image || resolveFlashcardSealImage(rawMeta || {}))
+            );
             languageIndex += 1;
           });
         });
@@ -6917,6 +6989,10 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
                user_id,
                card_id,
                target_language,
+               phase_index,
+               target_phase_index,
+               status,
+               seal_image,
                created_at,
                updated_at
              )

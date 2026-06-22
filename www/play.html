@@ -10928,6 +10928,17 @@
       pointer-events: none;
     }
 
+    .albums-modal__flashcard-language-seal {
+      position: absolute;
+      right: -4px;
+      bottom: -4px;
+      width: 42%;
+      height: 42%;
+      object-fit: contain;
+      z-index: 2;
+      filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.42));
+    }
+
     .albums-modal__flashcard-visual img {
       width: 100%;
       height: auto;
@@ -11925,7 +11936,6 @@
       const JOURNEY_LEVEL_WIN_TARGET = 25;
       const USER_MEDAL_TRANSITION_DISSOLVE_MS = 500;
       const SEQUENCE_STREAK_AUDIO_PATH = '/gamesounds/sequence-clean.mp3';
-      const GAME_SEQUENCE_STREAK_MODAL_TOTAL_MS = 1000;
       const REMEMBER_BUTTON_ENTRY_DELAY_MS = 420;
       const GAME_CARD_SLIDE_ENTRY_MS = 320;
       const USER_MEDAL_COUNT = 12;
@@ -14214,19 +14224,54 @@
         return Object.prototype.hasOwnProperty.call(FLASHCARD_LANGUAGE_OPTIONS, normalized) ? normalized : fallback;
       }
 
+      function normalizeConqueredLanguageMeta(language, rawMeta = {}) {
+        const normalizedLanguage = normalizeFlashcardLanguageCode(language, '');
+        if (!normalizedLanguage) return null;
+        const status = safeText(rawMeta?.status).toLowerCase() === 'memorizing' ? 'memorizing' : 'ready';
+        const phaseIndex = Math.max(0, Math.min(REVIEW_PHASE_MAX, Number.parseInt(rawMeta?.phaseIndex ?? rawMeta?.phase_index, 10) || (status === 'memorizing' ? 0 : 1)));
+        const targetPhaseIndex = Math.max(1, Math.min(REVIEW_PHASE_MAX, Number.parseInt(rawMeta?.targetPhaseIndex ?? rawMeta?.target_phase_index, 10) || phaseIndex || 1));
+        const sealPhase = Math.max(1, Math.min(REVIEW_PHASE_MAX, phaseFromSealImage(rawMeta?.sealImage || rawMeta?.seal_image) || targetPhaseIndex || phaseIndex || 1));
+        return {
+          language: normalizedLanguage,
+          phaseIndex,
+          targetPhaseIndex,
+          status,
+          sealImage: safeText(rawMeta?.sealImage || rawMeta?.seal_image || phaseMeta(sealPhase).sealPath)
+        };
+      }
+
+      function normalizeConqueredLanguageEntry(rawEntry) {
+        const entry = {};
+        if (Array.isArray(rawEntry)) {
+          rawEntry.forEach((language) => {
+            const meta = normalizeConqueredLanguageMeta(language, {});
+            if (meta) {
+              entry[meta.language] = meta;
+            }
+          });
+          return entry;
+        }
+        if (!rawEntry || typeof rawEntry !== 'object') {
+          return entry;
+        }
+        Object.entries(rawEntry).forEach(([language, rawMeta]) => {
+          const meta = normalizeConqueredLanguageMeta(language, rawMeta);
+          if (meta) {
+            entry[meta.language] = meta;
+          }
+        });
+        return entry;
+      }
+
       function normalizeConqueredLanguagesPayload(raw) {
         const map = new Map();
         if (!raw || typeof raw !== 'object') return map;
         Object.entries(raw).forEach(([cardIdRaw, languagesRaw]) => {
           const cardId = safeText(cardIdRaw);
-          if (!cardId || !Array.isArray(languagesRaw)) return;
-          const languages = Array.from(new Set(
-            languagesRaw
-              .map((language) => normalizeFlashcardLanguageCode(language, ''))
-              .filter(Boolean)
-          ));
-          if (languages.length) {
-            map.set(cardId, languages);
+          if (!cardId) return;
+          const normalizedEntry = normalizeConqueredLanguageEntry(languagesRaw);
+          if (Object.keys(normalizedEntry).length) {
+            map.set(cardId, normalizedEntry);
           }
         });
         return map;
@@ -14237,14 +14282,10 @@
         if (!(map instanceof Map)) return payload;
         map.forEach((languages, cardId) => {
           const normalizedCardId = safeText(cardId);
-          if (!normalizedCardId || !Array.isArray(languages)) return;
-          const normalizedLanguages = Array.from(new Set(
-            languages
-              .map((language) => normalizeFlashcardLanguageCode(language, ''))
-              .filter(Boolean)
-          ));
-          if (normalizedLanguages.length) {
-            payload[normalizedCardId] = normalizedLanguages;
+          if (!normalizedCardId) return;
+          const normalizedEntry = normalizeConqueredLanguageEntry(languages);
+          if (Object.keys(normalizedEntry).length) {
+            payload[normalizedCardId] = normalizedEntry;
           }
         });
         return payload;
@@ -14317,8 +14358,9 @@
         const normalizedCardId = safeText(cardId);
         if (!normalizedCardId) return [];
         const stored = state.userCardLanguages.get(normalizedCardId);
-        if (Array.isArray(stored) && stored.length) {
-          return stored.slice().sort((left, right) => {
+        const storedLanguages = Object.keys(normalizeConqueredLanguageEntry(stored));
+        if (storedLanguages.length) {
+          return storedLanguages.slice().sort((left, right) => {
             return FLASHCARD_LANGUAGE_BADGE_ORDER.indexOf(left) - FLASHCARD_LANGUAGE_BADGE_ORDER.indexOf(right);
           });
         }
@@ -14328,18 +14370,30 @@
         return [];
       }
 
+      function getConqueredLanguageMeta(cardId, language) {
+        const normalizedCardId = safeText(cardId);
+        const normalizedLanguage = normalizeFlashcardLanguageCode(language, '');
+        if (!normalizedCardId || !normalizedLanguage) return null;
+        const stored = normalizeConqueredLanguageEntry(state.userCardLanguages.get(normalizedCardId));
+        return stored[normalizedLanguage] || null;
+      }
+
       function clearAlbumsLanguageCache() {
         state.ui.albumsLanguageCache = new Map();
         state.ui.albumsLanguageLoading = false;
       }
 
-      function markCardConqueredLanguage(cardId, language = currentTargetLanguage()) {
+      function markCardConqueredLanguage(cardId, language = currentTargetLanguage(), rawMeta = {}) {
         const normalizedCardId = safeText(cardId);
         const normalizedLanguage = normalizeFlashcardLanguageCode(language, '');
         if (!normalizedCardId || !normalizedLanguage) return;
-        const nextLanguages = new Set(getOwnedLanguagesForCard(normalizedCardId));
-        nextLanguages.add(normalizedLanguage);
-        state.userCardLanguages.set(normalizedCardId, Array.from(nextLanguages));
+        const currentEntry = normalizeConqueredLanguageEntry(state.userCardLanguages.get(normalizedCardId));
+        const nextMeta = normalizeConqueredLanguageMeta(normalizedLanguage, {
+          ...currentEntry[normalizedLanguage],
+          ...rawMeta
+        }) || normalizeConqueredLanguageMeta(normalizedLanguage, {});
+        currentEntry[normalizedLanguage] = nextMeta;
+        state.userCardLanguages.set(normalizedCardId, currentEntry);
       }
 
       function createProgressRecord(cardId, overrides = {}) {
@@ -14446,7 +14500,7 @@
 
         const conqueredLanguages = readUserCardLanguagesForUser(userId);
         let ownedIds = Array.from(conqueredLanguages.entries())
-          .filter(([, languages]) => Array.isArray(languages) && languages.includes(normalizedLanguage))
+          .filter(([, languages]) => Object.keys(normalizeConqueredLanguageEntry(languages)).includes(normalizedLanguage))
           .map(([cardId]) => cardId)
           .filter(Boolean);
         if (!ownedIds.length && normalizedLanguage === 'english') {
@@ -14820,6 +14874,32 @@
 
       function buildFlashcardCloudPayload(targetLanguage = currentProgressLanguage()) {
         const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
+        const conqueredLanguagesSnapshot = new Map();
+        if (state.userCardLanguages instanceof Map) {
+          state.userCardLanguages.forEach((entry, cardId) => {
+            const normalizedCardId = safeText(cardId);
+            if (!normalizedCardId) return;
+            const normalizedEntry = normalizeConqueredLanguageEntry(entry);
+            if (Object.keys(normalizedEntry).length) {
+              conqueredLanguagesSnapshot.set(normalizedCardId, normalizedEntry);
+            }
+          });
+        }
+        state.userCards.forEach((record, cardId) => {
+          const normalizedCardId = safeText(cardId);
+          if (!normalizedCardId) return;
+          const currentEntry = normalizeConqueredLanguageEntry(conqueredLanguagesSnapshot.get(normalizedCardId));
+          const currentMeta = normalizeConqueredLanguageMeta(normalizedTargetLanguage, {
+            phaseIndex: Math.max(0, Math.min(REVIEW_PHASE_MAX, Number.parseInt(record?.phaseIndex, 10) || 0)),
+            targetPhaseIndex: Math.max(1, Math.min(REVIEW_PHASE_MAX, Number.parseInt(record?.targetPhaseIndex, 10) || 1)),
+            status: record?.status === 'memorizing' ? 'memorizing' : 'ready',
+            sealImage: safeText(record?.sealImage || phaseMeta(activeSealPhase(record)).sealPath)
+          });
+          if (currentMeta) {
+            currentEntry[normalizedTargetLanguage] = currentMeta;
+            conqueredLanguagesSnapshot.set(normalizedCardId, currentEntry);
+          }
+        });
         const onTable = Array.from(state.game.entries.values()).map((entry) => ({
           cardId: safeText(entry?.id),
           stars: Math.max(0, Math.min(5, Number.parseInt(entry?.stars, 10) || 0)),
@@ -14846,7 +14926,7 @@
             })(),
             sealImage: safeText(record?.sealImage || phaseMeta(activeSealPhase(record)).sealPath)
           })).filter(record => record.cardId),
-          conqueredLanguages: serializeConqueredLanguagesMap(),
+          conqueredLanguages: serializeConqueredLanguagesMap(conqueredLanguagesSnapshot),
           stats: normalizeStatsSnapshot(state.stats),
           gameOptions: {
             difficulty: normalizeGameOptionValue('difficulty', state.options?.difficulty),
@@ -14863,9 +14943,15 @@
         };
       }
 
-      async function fetchFlashcardCloudState(targetLanguage = currentTargetLanguage()) {
-        const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
-        const response = await fetch(buildApiUrl(`/api/flashcards/state?targetLanguage=${encodeURIComponent(normalizedTargetLanguage)}`), {
+      async function fetchFlashcardCloudState(targetLanguage) {
+        const hasExplicitTargetLanguage = safeText(targetLanguage).length > 0;
+        const normalizedTargetLanguage = hasExplicitTargetLanguage
+          ? normalizeGameOptionValue('targetLanguage', targetLanguage)
+          : '';
+        const requestPath = hasExplicitTargetLanguage
+          ? `/api/flashcards/state?targetLanguage=${encodeURIComponent(normalizedTargetLanguage)}`
+          : '/api/flashcards/state';
+        const response = await fetch(buildApiUrl(requestPath), {
           headers: buildAuthHeaders(),
           cache: 'no-store',
           credentials: 'include'
@@ -14879,7 +14965,7 @@
         return payload;
       }
 
-      async function syncFlashcardCloudNow(targetLanguage = currentProgressLanguage()) {
+      async function syncFlashcardCloudNow(targetLanguage = currentProgressLanguage(), options = {}) {
         if (!state.user?.id) return false;
 
         if (state.flashcardsSyncInFlight) {
@@ -14908,6 +14994,7 @@
               'Content-Type': 'application/json'
             }),
             credentials: 'include',
+            keepalive: options?.keepalive === true,
             body: JSON.stringify(payloadToSync)
           });
           const payload = await response.json().catch(() => ({}));
@@ -18738,21 +18825,25 @@
 
       function playSequenceStreakAudio() {
         stopSequenceStreakAudio();
-        try {
-          const audio = new Audio(SEQUENCE_STREAK_AUDIO_PATH);
-          audio.preload = 'auto';
-          state.ui.sequenceStreakAudio = audio;
-          const clearCurrent = () => {
-            if (state.ui.sequenceStreakAudio === audio) {
-              state.ui.sequenceStreakAudio = null;
-            }
-          };
-          audio.addEventListener('ended', clearCurrent, { once: true });
-          audio.addEventListener('error', clearCurrent, { once: true });
-          audio.play().catch(clearCurrent);
-        } catch (_error) {
-          state.ui.sequenceStreakAudio = null;
-        }
+        return new Promise((resolve) => {
+          try {
+            const audio = new Audio(SEQUENCE_STREAK_AUDIO_PATH);
+            audio.preload = 'auto';
+            state.ui.sequenceStreakAudio = audio;
+            const finalize = (status = 'ended') => {
+              if (state.ui.sequenceStreakAudio === audio) {
+                state.ui.sequenceStreakAudio = null;
+              }
+              resolve(status);
+            };
+            audio.addEventListener('ended', () => finalize('ended'), { once: true });
+            audio.addEventListener('error', () => finalize('error'), { once: true });
+            audio.play().catch(() => finalize('error'));
+          } catch (_error) {
+            state.ui.sequenceStreakAudio = null;
+            resolve('error');
+          }
+        });
       }
 
       function resolveGameEventModalWaiters() {
@@ -18895,7 +18986,6 @@
       function openSequenceStreakModal(sequence = 0, options = {}) {
         if (!els.sequenceStreakModal) return Promise.resolve();
         closeSequenceStreakModal({ preserveGameEventExit: true, resumeIdlePause: false });
-        const autoCloseMs = Math.max(0, Number(options.autoCloseMs) || GAME_SEQUENCE_STREAK_MODAL_TOTAL_MS);
         const safeSequence = Math.max(0, Math.round(Number(sequence) || 0));
         cleanupGameRecognition();
         stopActiveAudio();
@@ -18919,15 +19009,19 @@
         }
         els.sequenceStreakModal.classList.add('is-visible');
         els.sequenceStreakModal.setAttribute('aria-hidden', 'false');
-        playSequenceStreakAudio();
-        if (autoCloseMs > 0) {
-          queueUserMedalTransitionTimer(() => {
+        void playSequenceStreakAudio().then((result) => {
+          if (!state.ui.gameEventModalOpen || !els.sequenceStreakModal?.classList.contains('is-visible')) {
+            return;
+          }
+          if (result === 'ended') {
             els.sequenceStreakModal?.classList.add('is-closing');
-          }, Math.max(0, autoCloseMs - 220));
-          state.ui.medalTransitionTimer = window.setTimeout(() => {
-            closeSequenceStreakModal();
-          }, autoCloseMs);
-        }
+            state.ui.medalTransitionTimer = window.setTimeout(() => {
+              closeSequenceStreakModal();
+            }, 180);
+            return;
+          }
+          closeSequenceStreakModal();
+        });
         return waitForGameEventModalClear();
       }
 
@@ -20074,10 +20168,13 @@
             ${languages.map((language) => {
               const meta = FLASHCARD_LANGUAGE_OPTIONS[language] || {};
               const iconPath = safeText(meta.iconPath);
+              const progressMeta = getConqueredLanguageMeta(card?.id, language);
+              const sealPath = safeText(progressMeta?.sealImage || '');
               if (!iconPath) return '';
               return `
                 <span class="albums-modal__flashcard-language-badge" title="${escapeHtml(meta.label || language)}" aria-hidden="true">
                   <img src="${escapeHtml(iconPath)}" alt="">
+                  ${sealPath ? `<img class="albums-modal__flashcard-language-seal" src="${escapeHtml(sealPath.startsWith('/') ? sealPath : `/${sealPath}`)}" alt="">` : ''}
                 </span>
               `;
             }).join('')}
@@ -27514,7 +27611,12 @@
         const currentRecord = state.userCards.get(entry.id) || null;
         const currentPhase = Math.max(0, Math.min(REVIEW_PHASE_MAX, Number(currentRecord?.phaseIndex) || 0));
         const nextPhase = Math.max(1, Math.min(REVIEW_PHASE_MAX, currentPhase + 1));
-        markCardConqueredLanguage(entry.id, currentTargetLanguage());
+        markCardConqueredLanguage(entry.id, currentTargetLanguage(), {
+          phaseIndex: nextPhase,
+          targetPhaseIndex: nextPhase,
+          status: 'memorizing',
+          sealImage: phaseMeta(nextPhase).sealPath
+        });
         moveCardToMemorizing(entry.id, nextPhase);
         maybeAdvanceUserLevel();
         updateSpeakingStarMicSealProgress();
@@ -28697,6 +28799,9 @@
         state.game.sessionClockActive = false;
         stopFlashcardSessionTick();
         void signalFlashcardSessionClock('out');
+        if (state.user?.id) {
+          void syncFlashcardCloudNow(currentProgressLanguage());
+        }
         commitCurrentCardTrainingTime();
         if (!state.game.tutorial.active && state.game.entries.size) {
           persistGameSessionLocally();
@@ -30204,6 +30309,9 @@
           pauseFlashcardsGameToWelcome();
         });
         window.addEventListener('beforeunload', () => {
+          if (state.user?.id) {
+            void syncFlashcardCloudNow(currentProgressLanguage(), { keepalive: true });
+          }
           if (!state.game.active || state.game.paused) return;
           state.game.sessionClockActive = false;
           stopFlashcardSessionTick();
