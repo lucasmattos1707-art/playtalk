@@ -13698,7 +13698,8 @@
       }
 
       function canUseLocalCompetitiveStorage(userId = state.user?.id) {
-        return (Number(userId) || 0) <= 0;
+        const normalizedUserId = Number(userId);
+        return Number.isInteger(normalizedUserId) && normalizedUserId >= 0;
       }
 
       function clearFlashcardsLocalStorage() {
@@ -14963,6 +14964,22 @@
           throw error;
         }
         return payload;
+      }
+
+      function buildLocalAuthenticatedLanguageSnapshot(userId, targetLanguage) {
+        const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
+        const progress = Array.from(readUserProgressForUser(userId, normalizedTargetLanguage).values());
+        const conqueredLanguages = serializeConqueredLanguagesMap(readUserCardLanguagesForUser(userId));
+        const hiddenCardIds = Array.from(readHiddenCardIdsForUser(userId).values());
+        const meta = readUserLanguageMetaForUser(userId, normalizedTargetLanguage);
+        return {
+          targetLanguage: normalizedTargetLanguage,
+          progress,
+          conqueredLanguages,
+          hiddenCardIds,
+          userLevel: normalizeUserLevel(meta.userLevel || 1),
+          userLevelUpdatedAt: safeText(meta.userLevelUpdatedAt)
+        };
       }
 
       async function syncFlashcardCloudNow(targetLanguage = currentProgressLanguage(), options = {}) {
@@ -17958,21 +17975,42 @@
           }
         }
 
+        const storedGameOptions = cloudState?.meta?.gameOptions || cloudState?.gameOptions || DEFAULT_GAME_OPTIONS;
+        applyStoredGameOptions(storedGameOptions);
+        const hydratedTargetLanguage = currentTargetLanguage();
+        const localLanguageSnapshot = buildLocalAuthenticatedLanguageSnapshot(state.user.id, hydratedTargetLanguage);
         const cloudProgress = Array.isArray(cloudState?.progress)
           ? cloudState.progress.map(normalizeProgressRecord).filter(Boolean)
           : [];
-        const hasCloudProgress = Boolean(cloudState?.meta?.hasProgress);
+        const hasCloudProgress = cloudProgress.length > 0 || Boolean(cloudState?.meta?.hasProgress);
         const hasCloudStats = Boolean(cloudState?.meta?.hasStats);
+        const shouldRestoreLocalProgress = !hasCloudProgress && localLanguageSnapshot.progress.length > 0;
         state.stats = hasCloudStats
           ? normalizeStatsSnapshot(cloudState?.stats)
           : normalizeStatsSnapshot({});
         state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
         state.ui.fifthStarDisplayedCoinsTotal = state.ui.gameStatusLastCoinsTotal;
-        applyStoredGameOptions(cloudState?.meta?.gameOptions || cloudState?.gameOptions || DEFAULT_GAME_OPTIONS);
         applyFlashcardStatePayloadForLanguage({
           ...cloudState,
-          progress: hasCloudProgress ? cloudProgress : []
-        }, currentTargetLanguage(), { preserveStats: true });
+          progress: shouldRestoreLocalProgress
+            ? localLanguageSnapshot.progress
+            : (hasCloudProgress ? cloudProgress : []),
+          conqueredLanguages: shouldRestoreLocalProgress
+            ? localLanguageSnapshot.conqueredLanguages
+            : (cloudState?.conqueredLanguages || cloudState?.meta?.conqueredLanguages || {}),
+          meta: {
+            ...(cloudState?.meta || {}),
+            hiddenCardIds: shouldRestoreLocalProgress
+              ? localLanguageSnapshot.hiddenCardIds
+              : (cloudState?.meta?.hiddenCardIds || []),
+            userLevel: shouldRestoreLocalProgress
+              ? localLanguageSnapshot.userLevel
+              : (cloudState?.meta?.userLevel),
+            userLevelUpdatedAt: shouldRestoreLocalProgress
+              ? localLanguageSnapshot.userLevelUpdatedAt
+              : (cloudState?.meta?.userLevelUpdatedAt)
+          }
+        }, hydratedTargetLanguage, { preserveStats: true });
         state.game.tutorial.completed = readTutorialProgress();
         syncOwnedIdsFromProgress();
         reconcileTutorialProgress();
@@ -17986,6 +18024,10 @@
         persistUserProgressLocally();
         persistUserCardLanguagesLocally();
         persistHiddenCardIdsLocally();
+
+        if (shouldRestoreLocalProgress) {
+          scheduleFlashcardCloudSync(250);
+        }
 
         renderMetrics();
         updateGameChips();
@@ -30498,7 +30540,6 @@
           }
         }
         const requestedPremiumOpen = searchParams.get('premium') === '1';
-        clearFlashcardsLocalStorage();
         state.entry.soundTestCompleted = readAudioCheckCompletedFlag();
         state.timeOffsetMs = readTimeOffsetMs();
         loadSelectedGameCount();
