@@ -20302,6 +20302,29 @@
         return Array.from(new Set(ordered.filter(Boolean)));
       }
 
+      function albumsModalNarrationLanguages() {
+        return Array.from(new Set([currentAlbumsLanguage()].filter(Boolean)));
+      }
+
+      function albumsPreviewRequiredLanguages() {
+        const targetLanguage = currentAlbumsLanguage();
+        const nativeLanguage = currentNativeLanguage();
+        const ordered = state.watch.albumsPlayNativeFirst
+          ? [nativeLanguage, targetLanguage]
+          : [targetLanguage];
+        return Array.from(new Set(
+          ordered
+            .map((language) => normalizeGameOptionValue('targetLanguage', language))
+            .filter(Boolean)
+        ));
+      }
+
+      function cardHasAlbumsPreviewAudio(card) {
+        const requiredLanguages = albumsPreviewRequiredLanguages();
+        if (!requiredLanguages.length) return false;
+        return requiredLanguages.every((language) => cardHasSourceAudioForLanguage(card, language));
+      }
+
       async function playAlbumsNarrationAudioUrl(src, rate = 1, runId = 0) {
         const safeSrc = safeText(src);
         if (!safeSrc || runId !== Number(state.ui.albumsNarrationRunId || 0)) return;
@@ -20341,7 +20364,7 @@
         if (!state.ui.albumsOpen || state.ui.albumsSectionIndex !== 0) return;
         const runId = Math.max(0, Number(state.ui.albumsNarrationRunId) || 0) + 1;
         state.ui.albumsNarrationRunId = runId;
-        const languages = albumsNarrationLanguages();
+        const languages = albumsModalNarrationLanguages();
         await ensureFlashcardAssetsForLanguages([card], languages);
         let activeCard = refreshCardFromState(card);
         if (!activeCard || runId !== Number(state.ui.albumsNarrationRunId || 0) || !state.ui.albumsOpen || state.ui.albumsSectionIndex !== 0) return;
@@ -27757,7 +27780,7 @@
         } else {
           sourceCards = uniqueCardsById(userProgressCards().map((card) => ({ ...card })));
         }
-        return sourceCards.filter((card) => canAlbumsSurfaceCard(card));
+        return sourceCards.filter((card) => canAlbumsSurfaceCard(card) && cardHasAlbumsPreviewAudio(card));
       }
 
       function formatAlbumsPlayerWord(text, maxCharsPerLine = 16, maxLines = 3) {
