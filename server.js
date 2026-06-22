@@ -2213,6 +2213,7 @@ const ensureFlashcardUserStateTables = async () => {
           id bigserial PRIMARY KEY,
           user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
           card_id text NOT NULL,
+          target_language text NOT NULL DEFAULT 'english',
           phase_index integer NOT NULL DEFAULT 0,
           target_phase_index integer NOT NULL DEFAULT 1,
           status text NOT NULL DEFAULT 'memorizing',
@@ -2225,8 +2226,12 @@ const ensureFlashcardUserStateTables = async () => {
           seal_image text NOT NULL DEFAULT '',
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now(),
-          CONSTRAINT user_flashcard_progress_unique UNIQUE (user_id, card_id)
+          CONSTRAINT user_flashcard_progress_unique UNIQUE (user_id, card_id, target_language)
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_progress
+        ADD COLUMN IF NOT EXISTS target_language text NOT NULL DEFAULT 'english'
       `);
       await pool.query(`
         ALTER TABLE public.user_flashcard_progress
@@ -2246,8 +2251,28 @@ const ensureFlashcardUserStateTables = async () => {
         WHERE card_chars IS NULL OR card_chars <= 0
       `);
       await pool.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = 'user_flashcard_progress_unique'
+          ) THEN
+            ALTER TABLE public.user_flashcard_progress
+              DROP CONSTRAINT user_flashcard_progress_unique;
+          END IF;
+          ALTER TABLE public.user_flashcard_progress
+            ADD CONSTRAINT user_flashcard_progress_unique UNIQUE (user_id, card_id, target_language);
+        EXCEPTION
+          WHEN duplicate_table THEN
+            NULL;
+          WHEN duplicate_object THEN
+            NULL;
+        END $$;
+      `);
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS user_flashcard_progress_user_idx
-        ON public.user_flashcard_progress (user_id, status, available_at, updated_at DESC)
+        ON public.user_flashcard_progress (user_id, target_language, status, available_at, updated_at DESC)
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_stats (
@@ -2390,15 +2415,40 @@ const ensureFlashcardUserStateTables = async () => {
         CREATE TABLE IF NOT EXISTS public.user_flashcard_on_table (
           user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
           card_id text NOT NULL,
+          target_language text NOT NULL DEFAULT 'english',
           stars integer NOT NULL DEFAULT 0,
           stage integer NOT NULL DEFAULT 1,
           updated_at timestamptz NOT NULL DEFAULT now(),
-          PRIMARY KEY (user_id, card_id)
+          PRIMARY KEY (user_id, card_id, target_language)
         )
       `);
       await pool.query(`
+        ALTER TABLE public.user_flashcard_on_table
+        ADD COLUMN IF NOT EXISTS target_language text NOT NULL DEFAULT 'english'
+      `);
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = 'user_flashcard_on_table_pkey'
+          ) THEN
+            ALTER TABLE public.user_flashcard_on_table
+              DROP CONSTRAINT user_flashcard_on_table_pkey;
+          END IF;
+          ALTER TABLE public.user_flashcard_on_table
+            ADD CONSTRAINT user_flashcard_on_table_pkey PRIMARY KEY (user_id, card_id, target_language);
+        EXCEPTION
+          WHEN duplicate_table THEN
+            NULL;
+          WHEN duplicate_object THEN
+            NULL;
+        END $$;
+      `);
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS user_flashcard_on_table_user_idx
-        ON public.user_flashcard_on_table (user_id, updated_at DESC)
+        ON public.user_flashcard_on_table (user_id, target_language, updated_at DESC)
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_language_levels (
@@ -6178,7 +6228,7 @@ async function ensureFlashcardUserLanguageLevelRow(client, userId, targetLanguag
   };
 }
 
-const readFlashcardStateForUser = async (userId) => {
+const readFlashcardStateForUser = async (userId, options = {}) => {
   if (!pool) {
     throw new Error('DATABASE_URL nao configurada.');
   }
@@ -6196,7 +6246,24 @@ const readFlashcardStateForUser = async (userId) => {
     throw error;
   }
 
-  const [progressResult, statsResult, accurateResult, hiddenResult, onTableResult, userLevelResult, booksEnergyXpResult, coinsResult, speedSamplesResult, conqueredLanguagesResult] = await Promise.all([
+  const statsResult = await pool.query(
+      `SELECT play_time_ms, speakings, listenings, readings, training_time_ms, pronunciation_samples,
+              admin_speed_flashcards_per_hour,
+              game_option_difficulty, game_option_speed, game_option_accent, game_option_fourth_stage_typing, game_option_mode,
+              game_option_target_language, game_option_native_language,
+              second_star_error_heard, updated_at
+       FROM public.user_flashcard_stats
+       WHERE user_id = $1
+       LIMIT 1`,
+      [normalizedUserId]
+  );
+  const flashcardStatsRow = statsResult.rows[0] || {};
+  const explicitTargetLanguage = safeText(options?.targetLanguage);
+  const selectedTargetLanguage = explicitTargetLanguage
+    ? normalizeFlashcardTargetLanguage(explicitTargetLanguage)
+    : normalizeFlashcardTargetLanguage(flashcardStatsRow.game_option_target_language);
+
+  const [progressResult, accurateResult, hiddenResult, onTableResult, userLevelResult, booksEnergyXpResult, coinsResult, speedSamplesResult, conqueredLanguagesResult] = await Promise.all([
     pool.query(
       `SELECT
          card_id,
@@ -6213,21 +6280,10 @@ const readFlashcardStateForUser = async (userId) => {
          created_at
        FROM public.user_flashcard_progress
        WHERE user_id = $1
+         AND target_language = $2
        ORDER BY updated_at DESC, created_at DESC, card_id ASC`,
-      [normalizedUserId]
+      [normalizedUserId, selectedTargetLanguage]
     ),
-    pool.query(
-      `SELECT play_time_ms, speakings, listenings, readings, training_time_ms, pronunciation_samples,
-              admin_speed_flashcards_per_hour,
-              game_option_difficulty, game_option_speed, game_option_accent, game_option_fourth_stage_typing, game_option_mode,
-              game_option_target_language, game_option_native_language,
-              second_star_error_heard, updated_at
-       FROM public.user_flashcard_stats
-       WHERE user_id = $1
-       LIMIT 1`,
-      [normalizedUserId]
-    )
-    ,
     pool.query(
       `SELECT pronunciation_tag, pronunciation_samples, pronunciation_sum,
               pronunciation_samples_count, latest_pronunciation_percent, updated_at
@@ -6247,8 +6303,9 @@ const readFlashcardStateForUser = async (userId) => {
       `SELECT card_id, stars, stage, updated_at
        FROM public.user_flashcard_on_table
        WHERE user_id = $1
+         AND target_language = $2
        ORDER BY updated_at DESC, card_id ASC`,
-      [normalizedUserId]
+      [normalizedUserId, selectedTargetLanguage]
     ),
     pool.query(
       `SELECT
@@ -6311,18 +6368,15 @@ const readFlashcardStateForUser = async (userId) => {
   const progressRecords = progressResult.rows.map(mapStoredFlashcardProgressRow).filter((item) => item.cardId);
   await syncFlashcardRankingForUser(normalizedUserId, flashcardProgressRankingScoreTotal(progressRecords));
   const accurateAggregate = getFlashcardAccurateAggregateFromRow(accurateResult.rows[0]);
-
-  const flashcardStatsRow = statsResult.rows[0] || {};
   const gameOptions = normalizeFlashcardGameOptions({
     difficulty: flashcardStatsRow.game_option_difficulty,
     speed: flashcardStatsRow.game_option_speed,
     accent: flashcardStatsRow.game_option_accent,
     fourthStageTyping: flashcardStatsRow.game_option_fourth_stage_typing,
     mode: flashcardStatsRow.game_option_mode,
-    targetLanguage: flashcardStatsRow.game_option_target_language,
+    targetLanguage: selectedTargetLanguage,
     nativeLanguage: flashcardStatsRow.game_option_native_language
   });
-  const selectedTargetLanguage = normalizeFlashcardTargetLanguage(gameOptions.targetLanguage);
   const fallbackUserLevel = defaultFlashcardLevelForTargetLanguage(selectedTargetLanguage, userLevelResult.rows[0]?.level);
   await pool.query(
     `INSERT INTO public.user_flashcard_language_levels (
@@ -6542,14 +6596,16 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     const existingProgressResult = await client.query(
       `SELECT card_id, phase_index, target_phase_index, status, seal_image, card_chars
        FROM public.user_flashcard_progress
-       WHERE user_id = $1`,
-      [normalizedUserId]
+       WHERE user_id = $1
+         AND target_language = $2`,
+      [normalizedUserId, selectedTargetLanguage]
     );
     const existingOnTableResult = await client.query(
       `SELECT card_id, stars, stage, updated_at
        FROM public.user_flashcard_on_table
-       WHERE user_id = $1`,
-      [normalizedUserId]
+       WHERE user_id = $1
+         AND target_language = $2`,
+      [normalizedUserId, selectedTargetLanguage]
     );
     const existingProgressByCardId = new Map();
     existingProgressResult.rows.forEach((row) => {
@@ -6673,18 +6729,20 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
         await client.query(
           `DELETE FROM public.user_flashcard_progress
            WHERE user_id = $1
-             AND NOT (card_id = ANY($2::text[]))`,
-          [normalizedUserId, cardIds]
+             AND target_language = $2
+             AND NOT (card_id = ANY($3::text[]))`,
+          [normalizedUserId, selectedTargetLanguage, cardIds]
         );
 
         const values = [];
         const params = [];
         progress.forEach((item, index) => {
-          const offset = index * 13;
-          values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, now())`);
+          const offset = index * 14;
+          values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14}, now())`);
           params.push(
             normalizedUserId,
             item.cardId,
+            selectedTargetLanguage,
             item.phaseIndex,
             item.targetPhaseIndex,
             item.status,
@@ -6703,6 +6761,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
           `INSERT INTO public.user_flashcard_progress (
              user_id,
              card_id,
+             target_language,
              phase_index,
              target_phase_index,
              status,
@@ -6717,7 +6776,7 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
              updated_at
            )
            VALUES ${values.join(', ')}
-           ON CONFLICT (user_id, card_id)
+           ON CONFLICT (user_id, card_id, target_language)
            DO UPDATE SET
              phase_index = EXCLUDED.phase_index,
              target_phase_index = EXCLUDED.target_phase_index,
@@ -6735,8 +6794,9 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       } else if (allowProgressReset) {
         await client.query(
           `DELETE FROM public.user_flashcard_progress
-           WHERE user_id = $1`,
-          [normalizedUserId]
+           WHERE user_id = $1
+             AND target_language = $2`,
+          [normalizedUserId, selectedTargetLanguage]
         );
       }
     }
@@ -6786,18 +6846,20 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
         await client.query(
           `DELETE FROM public.user_flashcard_on_table
            WHERE user_id = $1
-             AND NOT (card_id = ANY($2::text[]))`,
-          [normalizedUserId, onTableCardIds]
+             AND target_language = $2
+             AND NOT (card_id = ANY($3::text[]))`,
+          [normalizedUserId, selectedTargetLanguage, onTableCardIds]
         );
 
         const onTableValues = [];
         const onTableParams = [];
         onTable.forEach((item, index) => {
-          const offset = index * 5;
-          onTableValues.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`);
+          const offset = index * 6;
+          onTableValues.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`);
           onTableParams.push(
             normalizedUserId,
             item.cardId,
+            selectedTargetLanguage,
             item.stars,
             item.stage,
             flashcardTimestampFromMillis(item.updatedAt) || new Date()
@@ -6808,12 +6870,13 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
           `INSERT INTO public.user_flashcard_on_table (
              user_id,
              card_id,
+             target_language,
              stars,
              stage,
              updated_at
            )
            VALUES ${onTableValues.join(', ')}
-           ON CONFLICT (user_id, card_id)
+           ON CONFLICT (user_id, card_id, target_language)
            DO UPDATE SET
              stars = EXCLUDED.stars,
              stage = EXCLUDED.stage,
@@ -6823,8 +6886,9 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
       } else {
         await client.query(
           `DELETE FROM public.user_flashcard_on_table
-           WHERE user_id = $1`,
-          [normalizedUserId]
+           WHERE user_id = $1
+             AND target_language = $2`,
+          [normalizedUserId, selectedTargetLanguage]
         );
       }
     }
@@ -16121,7 +16185,9 @@ app.get('/api/flashcards/state', async (req, res) => {
       return;
     }
 
-    const state = await readFlashcardStateForUser(authUser.id);
+    const state = await readFlashcardStateForUser(authUser.id, {
+      targetLanguage: req.query?.targetLanguage
+    });
     res.json({
       success: true,
       progress: state.progress,

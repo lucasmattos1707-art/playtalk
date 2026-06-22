@@ -11030,6 +11030,45 @@
       text-align: center;
       letter-spacing: 0.02em;
     }
+
+    .albums-modal__language-footer {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+      width: min(100%, 420px);
+      align-self: center;
+    }
+
+    .albums-modal__language-btn {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      opacity: 0.46;
+      cursor: pointer;
+      transition: opacity 180ms ease, transform 180ms ease, filter 180ms ease;
+    }
+
+    .albums-modal__language-btn.is-active {
+      opacity: 1;
+      transform: translateY(-1px) scale(1.03);
+      filter: drop-shadow(0 8px 16px rgba(64, 179, 255, 0.28));
+    }
+
+    .albums-modal__language-btn:hover {
+      opacity: 0.82;
+    }
+
+    .albums-modal__language-btn img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body class="flashcards-home-collapsed">
@@ -11231,6 +11270,7 @@
           <section class="albums-modal__stage is-active" id="albumsFlashcardsStage" aria-label="FlashCards">
             <div class="albums-modal__stack" id="albumsFlashcardsStack"></div>
             <p class="albums-modal__hint">Deslize para cima ou para baixo para ver o proximo item.</p>
+            <div class="albums-modal__language-footer" id="albumsLanguageFooter" aria-label="Idiomas do album"></div>
           </section>
           <section class="albums-modal__stage" id="albumsSealsStage" aria-label="Selos">
             <div class="albums-modal__stack" id="albumsSealsStack"></div>
@@ -12368,6 +12408,7 @@
         user: null,
         userLevel: 1,
         userLevelUpdatedAt: '',
+        activeProgressLanguage: DEFAULT_GAME_OPTIONS.targetLanguage,
         levelRules: buildDefaultLevelRules(),
         lastLevelUpLevel: 0,
         authMode: 'login',
@@ -12666,6 +12707,9 @@
           albumsSectionIndex: 0,
           albumsFlashIndex: 0,
           albumsSealIndex: 0,
+          albumsLanguage: DEFAULT_GAME_OPTIONS.targetLanguage,
+          albumsLanguageLoading: false,
+          albumsLanguageCache: new Map(),
           albumsSwipeStartX: 0,
           albumsSwipeStartY: 0,
           albumsSealsPayload: null,
@@ -12737,6 +12781,7 @@
         albumsFlashcardsStage: document.getElementById('albumsFlashcardsStage'),
         albumsSealsStage: document.getElementById('albumsSealsStage'),
         albumsFlashcardsStack: document.getElementById('albumsFlashcardsStack'),
+        albumsLanguageFooter: document.getElementById('albumsLanguageFooter'),
         albumsSealsStack: document.getElementById('albumsSealsStack'),
         dailyPlanUserAvatar: document.getElementById('dailyPlanUserAvatar'),
         dailyPlanUserLevel: document.getElementById('dailyPlanUserLevel'),
@@ -13091,6 +13136,14 @@
 
       function currentTargetLanguage() {
         return normalizeGameOptionValue('targetLanguage', state.options?.targetLanguage);
+      }
+
+      function currentProgressLanguage() {
+        return normalizeGameOptionValue('targetLanguage', state.activeProgressLanguage || state.options?.targetLanguage);
+      }
+
+      function currentAlbumsLanguage() {
+        return normalizeGameOptionValue('targetLanguage', state.ui?.albumsLanguage || state.options?.targetLanguage);
       }
 
       function currentNativeLanguage() {
@@ -13624,6 +13677,11 @@
         return normalizedUserId ? `${baseKey}:${normalizedUserId}` : baseKey;
       }
 
+      function storageKeyForUserLanguage(baseKey, userId = state.user?.id, language = currentProgressLanguage()) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        return storageKeyForUser(`${baseKey}:${normalizedLanguage}`, userId);
+      }
+
       function userScopedStorageKey(baseKey) {
         return storageKeyForUser(baseKey, state.user?.id);
       }
@@ -13657,6 +13715,9 @@
             localStorage.removeItem(baseKey);
             for (let userId = 0; userId <= 999; userId += 1) {
               localStorage.removeItem(storageKeyForUser(baseKey, userId));
+              TARGET_LANGUAGE_DISPLAY_ORDER.forEach((language) => {
+                localStorage.removeItem(storageKeyForUserLanguage(baseKey, userId, language));
+              });
             }
           });
           directKeys.forEach((key) => localStorage.removeItem(key));
@@ -13747,8 +13808,12 @@
         return;
       }
 
-      function clearGameSessionLocally(userId = state.user?.id) {
-        removeScopedStorage(GAME_SESSION_STORAGE_KEY, userId);
+      function clearGameSessionLocally(userId = state.user?.id, language = currentProgressLanguage()) {
+        try {
+          localStorage.removeItem(storageKeyForUserLanguage(GAME_SESSION_STORAGE_KEY, userId, language));
+        } catch (_error) {
+          // ignore
+        }
       }
 
       function readGameSessionForUser(userId = state.user?.id) {
@@ -14220,9 +14285,14 @@
           });
         }
         if (state.userCards.has(normalizedCardId)) {
-          return ['english'];
+          return [currentProgressLanguage()];
         }
         return [];
+      }
+
+      function clearAlbumsLanguageCache() {
+        state.ui.albumsLanguageCache = new Map();
+        state.ui.albumsLanguageLoading = false;
       }
 
       function markCardConqueredLanguage(cardId, language = currentTargetLanguage()) {
@@ -14321,12 +14391,13 @@
         });
       }
 
-      function readUserProgressForUser(userId = state.user?.id) {
+      function readUserProgressForUser(userId = state.user?.id, language = currentProgressLanguage()) {
         if (!canUseLocalCompetitiveStorage(userId)) {
           return new Map();
         }
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
         try {
-          const parsed = JSON.parse(localStorage.getItem(storageKeyForUser(USER_PROGRESS_STORAGE_KEY, userId)) || 'null');
+          const parsed = JSON.parse(localStorage.getItem(storageKeyForUserLanguage(USER_PROGRESS_STORAGE_KEY, userId, normalizedLanguage)) || 'null');
           const records = Array.isArray(parsed) ? parsed.map(normalizeProgressRecord).filter(Boolean) : [];
           if (records.length) {
             return new Map(records.map((record) => [record.cardId, record]));
@@ -14335,7 +14406,14 @@
           // ignore
         }
 
-        const ownedIds = readOwnedIdsForUser(userId);
+        const conqueredLanguages = readUserCardLanguagesForUser(userId);
+        let ownedIds = Array.from(conqueredLanguages.entries())
+          .filter(([, languages]) => Array.isArray(languages) && languages.includes(normalizedLanguage))
+          .map(([cardId]) => cardId)
+          .filter(Boolean);
+        if (!ownedIds.length && normalizedLanguage === 'english') {
+          ownedIds = readOwnedIdsForUser(userId);
+        }
         if (!ownedIds.length) return new Map();
         const now = getNowMs();
         return new Map(ownedIds.map((cardId, index) => [cardId, createProgressRecord(cardId, {
@@ -14354,7 +14432,7 @@
         return readUserProgressForUser(state.user?.id);
       }
 
-      function persistUserProgressLocally() {
+      function persistUserProgressLocally(language = currentProgressLanguage()) {
         syncOwnedIdsFromProgress();
         if (!canUseLocalCompetitiveStorage(state.user?.id)) {
           return;
@@ -14362,7 +14440,7 @@
         persistOwnedIdsLocally();
         try {
           localStorage.setItem(
-            storageKeyForUser(USER_PROGRESS_STORAGE_KEY, state.user?.id),
+            storageKeyForUserLanguage(USER_PROGRESS_STORAGE_KEY, state.user?.id, language),
             JSON.stringify(Array.from(state.userCards.values()))
           );
         } catch (_error) {
@@ -14702,7 +14780,8 @@
         return !isAdminUser() && state.hiddenCardIds.has(safeText(cardId));
       }
 
-      function buildFlashcardCloudPayload() {
+      function buildFlashcardCloudPayload(targetLanguage = currentProgressLanguage()) {
+        const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
         const onTable = Array.from(state.game.entries.values()).map((entry) => ({
           cardId: safeText(entry?.id),
           stars: Math.max(0, Math.min(5, Number.parseInt(entry?.stars, 10) || 0)),
@@ -14737,7 +14816,7 @@
             accent: normalizeGameOptionValue('accent', state.options?.accent),
             fourthStageTyping: normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping),
             mode: normalizeGameOptionValue('mode', state.options?.mode),
-            targetLanguage: normalizeGameOptionValue('targetLanguage', state.options?.targetLanguage),
+            targetLanguage: normalizedTargetLanguage,
             nativeLanguage: normalizeGameOptionValue('nativeLanguage', state.options?.nativeLanguage)
           },
           userLevelUpdatedAt: safeText(state.userLevelUpdatedAt),
@@ -14746,8 +14825,9 @@
         };
       }
 
-      async function fetchFlashcardCloudState() {
-        const response = await fetch(buildApiUrl('/api/flashcards/state'), {
+      async function fetchFlashcardCloudState(targetLanguage = currentTargetLanguage()) {
+        const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
+        const response = await fetch(buildApiUrl(`/api/flashcards/state?targetLanguage=${encodeURIComponent(normalizedTargetLanguage)}`), {
           headers: buildAuthHeaders(),
           cache: 'no-store',
           credentials: 'include'
@@ -14761,7 +14841,7 @@
         return payload;
       }
 
-      async function syncFlashcardCloudNow() {
+      async function syncFlashcardCloudNow(targetLanguage = currentProgressLanguage()) {
         if (!state.user?.id) return false;
 
         if (state.flashcardsSyncInFlight) {
@@ -14773,7 +14853,7 @@
         try {
           const coinsDeltaToSync = Math.max(0, Math.round(Number(state.stats?.coinsDelta) || 0));
           const xpDeltaToSync = Math.max(0, Math.round(Number(state.stats?.xpDelta) || 0));
-          const payloadToSync = buildFlashcardCloudPayload();
+          const payloadToSync = buildFlashcardCloudPayload(targetLanguage);
           if (!state.entry.omitNextUserLevelSync) {
             payloadToSync.userLevel = normalizeUserLevel(state.userLevel);
           }
@@ -14862,6 +14942,57 @@
           state.flashcardsSyncTimer = 0;
           syncFlashcardCloudNow();
         }, Math.max(0, Number(delayMs) || 0));
+      }
+
+      function applyFlashcardStatePayloadForLanguage(cloudState, targetLanguage, options = {}) {
+        const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
+        const preserveStats = Boolean(options?.preserveStats);
+        state.activeProgressLanguage = normalizedTargetLanguage;
+        state.userCardLanguages = normalizeConqueredLanguagesPayload(cloudState?.conqueredLanguages || cloudState?.meta?.conqueredLanguages || {});
+        state.userCards = Array.isArray(cloudState?.progress)
+          ? new Map(cloudState.progress.map(normalizeProgressRecord).filter(Boolean).map((record) => [record.cardId, record]))
+          : new Map();
+        state.hiddenCardIds = Array.isArray(cloudState?.meta?.hiddenCardIds)
+          ? new Set(cloudState.meta.hiddenCardIds.map((cardId) => safeText(cardId)).filter(Boolean))
+          : new Set();
+        state.game.persistedOnTable = Array.isArray(cloudState?.onTable) ? cloudState.onTable.slice(0, ON_TABLE_MAX_CARDS) : [];
+        if (!preserveStats && cloudState?.stats) {
+          state.stats = normalizeStatsSnapshot(cloudState.stats);
+          state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
+          state.ui.fifthStarDisplayedCoinsTotal = state.ui.gameStatusLastCoinsTotal;
+        }
+        if (Number.isFinite(Number(cloudState?.userLevel ?? cloudState?.meta?.userLevel))) {
+          state.userLevel = normalizeUserLevel(cloudState?.userLevel ?? cloudState?.meta?.userLevel);
+          if (state.user) {
+            state.user.level = state.userLevel;
+          }
+        }
+        state.userLevelUpdatedAt = safeText(cloudState?.userLevelUpdatedAt || cloudState?.meta?.userLevelUpdatedAt);
+        syncOwnedIdsFromProgress();
+      }
+
+      async function loadFlashcardStateForLanguage(targetLanguage, options = {}) {
+        const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
+        const preserveStats = Boolean(options?.preserveStats);
+        if (state.user?.id) {
+          const cloudState = await fetchFlashcardCloudState(normalizedTargetLanguage);
+          applyFlashcardStatePayloadForLanguage(cloudState, normalizedTargetLanguage, { preserveStats });
+          persistUserProgressLocally(normalizedTargetLanguage);
+          persistUserCardLanguagesLocally();
+          persistHiddenCardIdsLocally();
+          if (!preserveStats) {
+            persistUserStatsLocally();
+          }
+          return cloudState;
+        }
+
+        state.activeProgressLanguage = normalizedTargetLanguage;
+        state.userCards = readUserProgressForUser(0, normalizedTargetLanguage);
+        state.userCardLanguages = readUserCardLanguagesForUser(0);
+        state.hiddenCardIds = readHiddenCardIdsForUser(0);
+        state.game.persistedOnTable = [];
+        syncOwnedIdsFromProgress();
+        return null;
       }
 
       function authCopyText() {
@@ -16520,7 +16651,7 @@
         if (!state.user?.id) return;
         if (state.entry.forceProgressResetPending) return;
         try {
-          const payload = await fetchFlashcardCloudState();
+          const payload = await fetchFlashcardCloudState(currentProgressLanguage());
           if (expectedStagePrimeKey && state.game.sessionClockStagePrimeKey !== expectedStagePrimeKey) return;
           const rawSpeed = Number(payload?.stats?.speedFlashcardsPerHour ?? payload?.stats?.speed_flashcards_per_hour);
           if (!Number.isFinite(rawSpeed)) return;
@@ -16563,7 +16694,7 @@
             keepalive: normalizedAction === 'out',
             body: JSON.stringify({
               action: normalizedAction,
-              targetLanguage: currentTargetLanguage(),
+              targetLanguage: currentProgressLanguage(),
               mode: currentGameMode()
             })
           });
@@ -17689,18 +17820,11 @@
           : normalizeStatsSnapshot({});
         state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
         state.ui.fifthStarDisplayedCoinsTotal = state.ui.gameStatusLastCoinsTotal;
-        state.userCardLanguages = normalizeConqueredLanguagesPayload(cloudState?.conqueredLanguages || cloudState?.meta?.conqueredLanguages || {});
-        state.userCards = hasCloudProgress
-          ? new Map(cloudProgress.map(record => [record.cardId, record]))
-          : new Map();
-        state.hiddenCardIds = Array.isArray(cloudState?.meta?.hiddenCardIds)
-          ? new Set(cloudState.meta.hiddenCardIds.map((cardId) => safeText(cardId)).filter(Boolean))
-          : new Set();
-        state.userLevel = normalizeUserLevel(cloudState?.userLevel ?? cloudState?.meta?.userLevel ?? state.user.level);
-        state.user.level = state.userLevel;
         applyStoredGameOptions(cloudState?.meta?.gameOptions || cloudState?.gameOptions || DEFAULT_GAME_OPTIONS);
-        state.userLevelUpdatedAt = safeText(cloudState?.userLevelUpdatedAt || cloudState?.meta?.userLevelUpdatedAt);
-        state.game.persistedOnTable = Array.isArray(cloudState?.onTable) ? cloudState.onTable.slice(0, ON_TABLE_MAX_CARDS) : [];
+        applyFlashcardStatePayloadForLanguage({
+          ...cloudState,
+          progress: hasCloudProgress ? cloudProgress : []
+        }, currentTargetLanguage(), { preserveStats: true });
         state.game.tutorial.completed = readTutorialProgress();
         syncOwnedIdsFromProgress();
         reconcileTutorialProgress();
@@ -17779,7 +17903,8 @@
         }
         state.flashcardsSyncInFlight = false;
         state.flashcardsSyncQueued = false;
-        state.userCards = readUserProgressForUser(0);
+        state.activeProgressLanguage = currentTargetLanguage();
+        state.userCards = readUserProgressForUser(0, currentTargetLanguage());
         state.userCardLanguages = readUserCardLanguagesForUser(0);
         state.hiddenCardIds = readHiddenCardIdsForUser(0);
         state.stats = readUserStatsForUser(0);
@@ -18040,6 +18165,25 @@
             if (isCardHiddenForUser(card.id)) return null;
             if (!hasCoreFlashcardText(card) || !hasPlayableFlashcardImage(card)) return null;
             return { ...card, progress: record };
+          })
+          .filter(Boolean)
+          .sort((left, right) => {
+            const leftPin = left.progress.status === 'memorizing' ? Number(left.progress.availableAt) || 0 : Number(left.progress.returnedAt || left.progress.createdAt) || 0;
+            const rightPin = right.progress.status === 'memorizing' ? Number(right.progress.availableAt) || 0 : Number(right.progress.returnedAt || right.progress.createdAt) || 0;
+            return rightPin - leftPin;
+          });
+      }
+
+      function buildCardsFromProgressRecords(records) {
+        return Array.from(records || [])
+          .map((record) => {
+            const normalizedRecord = normalizeProgressRecord(record);
+            if (!normalizedRecord?.cardId) return null;
+            const card = state.allCards.find((item) => item.id === normalizedRecord.cardId);
+            if (!card) return null;
+            if (isCardHiddenForUser(card.id)) return null;
+            if (!hasCoreFlashcardText(card) || !hasPlayableFlashcardImage(card)) return null;
+            return { ...card, progress: normalizedRecord };
           })
           .filter(Boolean)
           .sort((left, right) => {
@@ -19628,7 +19772,7 @@
         renderGameOptionsModal();
       }
 
-      function applyGameOptionsAfterModalClose(previousOptions) {
+      async function applyGameOptionsAfterModalClose(previousOptions) {
         if (!previousOptions || !state.game.active) return;
         const previousDifficulty = normalizeGameOptionValue('difficulty', previousOptions.difficulty);
         const nextDifficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
@@ -19645,34 +19789,29 @@
         const modeChanged = previousMode !== nextMode;
         const targetLanguageChanged = previousTargetLanguage !== nextTargetLanguage;
         const nativeLanguageChanged = previousNativeLanguage !== nextNativeLanguage;
-        if (targetLanguageChanged || nativeLanguageChanged) {
+        if (targetLanguageChanged) {
+          if (state.flashcardsSyncTimer) {
+            window.clearTimeout(state.flashcardsSyncTimer);
+            state.flashcardsSyncTimer = 0;
+          }
+          if (state.user?.id) {
+            await syncFlashcardCloudNow(previousTargetLanguage);
+          } else {
+            persistUserProgressLocally(previousTargetLanguage);
+            persistUserCardLanguagesLocally();
+            persistHiddenCardIdsLocally();
+          }
+          await loadFlashcardStateForLanguage(nextTargetLanguage);
+          state.entry.forceProgressResetPending = false;
+          state.entry.omitNextUserLevelSync = false;
           applySelectedLanguageProjectionToAllCards();
           refreshLibrary();
-        }
-        if (targetLanguageChanged) {
-          state.entry.forceProgressResetPending = true;
-          state.entry.omitNextUserLevelSync = true;
-          state.game.sessionClockActive = false;
-          state.game.sessionClockStagePrimeKey = '';
-          stopFlashcardSessionTick();
-          state.stats = {
-            ...state.stats,
-            trainingTimeMs: 0,
-            speedFlashcardsPerHour: 0,
-            winsSequence: 0
-          };
-          persistUserStatsLocally();
-          state.userCards = new Map();
-          state.userCardLanguages = new Map();
-          state.hiddenCardIds = new Set();
-          state.game.persistedOnTable = [];
+          renderMetrics();
+          updateGameChips();
           state.game.currentLevelPriorityIds = [];
           state.game.currentLevelPriorityPendingIds = [];
           state.game.currentLevelPriorityLevel = 0;
           state.game.currentLevelPriorityClearQueued = false;
-          resetJourneyLevelProgress();
-          applyUserLevelState(1, { allowTransition: false, scheduleRefresh: false });
-          clearGameSessionLocally();
           state.game.entries.clear();
           state.game.queue = [];
           state.game.currentId = null;
@@ -19680,8 +19819,11 @@
           state.game.paused = true;
           state.ui.gamePausedAtWelcome = true;
           updateLevelProgressBar();
-          persistGameOptions();
           return;
+        }
+        if (targetLanguageChanged || nativeLanguageChanged) {
+          applySelectedLanguageProjectionToAllCards();
+          refreshLibrary();
         }
         if (modeChanged) {
           clearGameSessionLocally();
@@ -19788,8 +19930,78 @@
         `;
       }
 
+      function getAlbumsLanguageProgressRecords(language = currentAlbumsLanguage()) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        if (normalizedLanguage === currentProgressLanguage()) {
+          advanceReadyMemorizations();
+          return Array.from(state.userCards.values());
+        }
+        const cached = state.ui.albumsLanguageCache instanceof Map
+          ? state.ui.albumsLanguageCache.get(normalizedLanguage)
+          : null;
+        return Array.isArray(cached?.progress) ? cached.progress : [];
+      }
+
+      async function ensureAlbumsLanguageLoaded(language = currentAlbumsLanguage()) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        if (normalizedLanguage === currentProgressLanguage()) {
+          return;
+        }
+        if (state.ui.albumsLanguageCache instanceof Map && state.ui.albumsLanguageCache.has(normalizedLanguage)) {
+          return;
+        }
+        state.ui.albumsLanguageLoading = true;
+        try {
+          let progress = [];
+          if (state.user?.id) {
+            const payload = await fetchFlashcardCloudState(normalizedLanguage);
+            progress = Array.isArray(payload?.progress)
+              ? payload.progress.map(normalizeProgressRecord).filter(Boolean)
+              : [];
+          } else {
+            progress = Array.from(readUserProgressForUser(0, normalizedLanguage).values());
+          }
+          if (!(state.ui.albumsLanguageCache instanceof Map)) {
+            state.ui.albumsLanguageCache = new Map();
+          }
+          state.ui.albumsLanguageCache.set(normalizedLanguage, { progress });
+        } catch (error) {
+          console.warn('Falha ao carregar flashcards do album por idioma:', error);
+          if (!(state.ui.albumsLanguageCache instanceof Map)) {
+            state.ui.albumsLanguageCache = new Map();
+          }
+          state.ui.albumsLanguageCache.set(normalizedLanguage, { progress: [] });
+        } finally {
+          state.ui.albumsLanguageLoading = false;
+        }
+      }
+
       function albumFlashcardsItems() {
-        return userProgressCards().map(buildLibraryCardView);
+        const selectedLanguage = currentAlbumsLanguage();
+        return buildCardsFromProgressRecords(getAlbumsLanguageProgressRecords(selectedLanguage))
+          .filter((card) => getOwnedLanguagesForCard(card?.id).includes(selectedLanguage))
+          .map(buildLibraryCardView);
+      }
+
+      function renderAlbumsLanguageFooter() {
+        if (!els.albumsLanguageFooter) return;
+        const selectedLanguage = currentAlbumsLanguage();
+        els.albumsLanguageFooter.innerHTML = FLASHCARD_LANGUAGE_BADGE_ORDER.map((language) => {
+          const meta = FLASHCARD_LANGUAGE_OPTIONS[language] || {};
+          const iconPath = safeText(meta.iconPath || '');
+          if (!iconPath) return '';
+          return `
+            <button
+              class="albums-modal__language-btn${language === selectedLanguage ? ' is-active' : ''}"
+              type="button"
+              data-albums-language="${escapeHtml(language)}"
+              aria-pressed="${language === selectedLanguage ? 'true' : 'false'}"
+              aria-label="Ver flashcards em ${escapeHtml(meta.label || language)}"
+            >
+              <img src="${escapeHtml(iconPath)}" alt="">
+            </button>
+          `;
+        }).join('');
       }
 
       function renderAlbumsConqueredLanguageBadges(card) {
@@ -19926,8 +20138,8 @@
 
       function albumsNarrationLanguages() {
         const ordered = state.watch.albumsPlayNativeFirst
-          ? [currentNativeLanguage(), currentTargetLanguage()]
-          : [currentTargetLanguage(), currentNativeLanguage()];
+          ? [currentNativeLanguage(), currentAlbumsLanguage()]
+          : [currentAlbumsLanguage(), currentNativeLanguage()];
         return Array.from(new Set(ordered.filter(Boolean)));
       }
 
@@ -19982,7 +20194,7 @@
           const text = safeText(resolveSourceLanguageText(activeCard, language));
           const audioUrl = resolveCardAudioUrlForLanguage(activeCard, language);
           if (titleNode) {
-            titleNode.textContent = safeText(resolveSourceLanguageText(activeCard, currentTargetLanguage())) || activeCard?.deckTitle || 'Flashcard';
+            titleNode.textContent = safeText(resolveSourceLanguageText(activeCard, currentAlbumsLanguage())) || activeCard?.deckTitle || 'Flashcard';
           }
           if (subtitleNode) {
             subtitleNode.textContent = safeText(resolveSourceLanguageText(activeCard, currentNativeLanguage()));
@@ -20008,6 +20220,11 @@
       function renderAlbumsFlashcards(direction = 'none') {
         if (!els.albumsFlashcardsStack) return;
         const items = albumFlashcardsItems();
+        renderAlbumsLanguageFooter();
+        if (state.ui.albumsLanguageLoading && !items.length) {
+          renderAlbumsSlide(els.albumsFlashcardsStack, '<p class="albums-modal__empty">Carregando flashcards...</p>', direction);
+          return;
+        }
         if (!items.length) {
           renderAlbumsSlide(els.albumsFlashcardsStack, '<p class="albums-modal__empty">Nenhum flashcard disponivel no momento.</p>', direction);
           return;
@@ -20032,7 +20249,7 @@
                 ${sealSrc ? `<img class="albums-modal__flashcard-seal" src="${escapeHtml(sealSrc.startsWith('/') ? sealSrc : `/${sealSrc}`)}" alt="Selo">` : ''}
               </div>
               ${isMemorizing ? `<div class="albums-modal__flashcard-progress" aria-label="Progresso memorizing"><span style="--progress:${escapeHtml(progressValue.toFixed(2))}%"></span></div>` : ''}
-              <p class="albums-modal__flashcard-title">${escapeHtml(card?.displayEnglish || card?.english || 'Flashcard')}</p>
+              <p class="albums-modal__flashcard-title">${escapeHtml(resolveSourceLanguageText(card, currentAlbumsLanguage()) || card?.displayEnglish || card?.english || 'Flashcard')}</p>
               <p class="albums-modal__flashcard-subtitle"></p>
               ${renderAlbumsDeckValueMarkup()}
             </article>
@@ -20091,6 +20308,9 @@
       async function openAlbumsModal() {
         state.ui.albumsOpen = true;
         state.ui.albumsSectionIndex = 0;
+        state.ui.albumsLanguage = currentTargetLanguage();
+        clearAlbumsLanguageCache();
+        state.ui.albumsFlashIndex = 0;
         state.ui.albumsSealIndex = 0;
         stopAlbumsNarrationAudio();
         if (els.albumsModal) {
@@ -20131,6 +20351,23 @@
         if (nextIndex < 0 || nextIndex >= timeline.length) return;
         state.ui.albumsSealIndex = nextIndex;
         renderAlbumsSeals(step < 0 ? 'down' : 'up');
+      }
+
+      async function setAlbumsLanguage(language) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        if (!normalizedLanguage || normalizedLanguage === currentAlbumsLanguage()) return;
+        state.ui.albumsLanguage = normalizedLanguage;
+        state.ui.albumsFlashIndex = 0;
+        stopAlbumsFlashSwapLoop();
+        stopAlbumsNarrationAudio();
+        renderAlbumsLanguageFooter();
+        if (state.ui.albumsOpen && state.ui.albumsSectionIndex === 0) {
+          renderAlbumsFlashcards();
+          await ensureAlbumsLanguageLoaded(normalizedLanguage);
+          if (state.ui.albumsOpen && currentAlbumsLanguage() === normalizedLanguage && state.ui.albumsSectionIndex === 0) {
+            renderAlbumsFlashcards();
+          }
+        }
       }
 
       function shouldUseLevelModeBufferedPool() {
@@ -24942,6 +25179,24 @@
         return { baseEntries, reviewEntries };
       }
 
+      function restorePersistedOnTableEntries(limit) {
+        const normalizedLimit = Math.max(1, Math.min(ON_TABLE_MAX_CARDS, Number(limit) || ON_TABLE_MAX_CARDS));
+        const restored = buildEntriesFromPersistedOnTable(normalizedLimit);
+        const entries = [...restored.reviewEntries, ...restored.baseEntries].slice(0, normalizedLimit);
+        if (!entries.length) {
+          return false;
+        }
+        state.game.entries.clear();
+        state.game.queue = [];
+        resetGameOrderedPoolCursor();
+        state.game.currentId = null;
+        entries.forEach((entry) => {
+          state.game.entries.set(entry.id, entry);
+          state.game.queue.push(entry.id);
+        });
+        return state.game.entries.size > 0;
+      }
+
       function createTrainingGameEntry(card, stage) {
         const entry = createGameEntry(card, 'training');
         entry.stage = normalizeTrainingStage(stage) || 1;
@@ -28240,7 +28495,18 @@
         if (!hasTutorialPlanetUnlocked()) {
           clearGameSessionLocally();
         }
-        const restored = false;
+        const restored = !isLevelModeActive() && restorePersistedOnTableEntries(
+          Math.min(
+            ON_TABLE_MAX_CARDS,
+            Math.max(
+              MIN_GAME_CONTEXT_LIMIT,
+              currentGameActiveCardCap(
+                currentUserLevel(),
+                Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount())
+              )
+            )
+          )
+        );
         if (!restored) {
           resetTutorialRuntime({ preserveCompletion: true });
           if (isLevelModeActive()) {
@@ -29512,6 +29778,13 @@
           event.stopPropagation();
           openAlbumsPlayerPopover();
         });
+        els.albumsLanguageFooter?.addEventListener('click', async (event) => {
+          const button = event.target.closest('[data-albums-language]');
+          if (!button) return;
+          event.preventDefault();
+          event.stopPropagation();
+          await setAlbumsLanguage(button.getAttribute('data-albums-language') || '');
+        });
         els.watchDeckGrid?.addEventListener('click', (event) => {
           const toggle = event.target.closest('[data-watch-source]');
           if (!toggle) return;
@@ -29532,11 +29805,11 @@
           pauseFlashcardsGameToWelcome();
         });
         els.gameOptionsCloseBtn?.addEventListener('click', closeGameOptionsModal);
-        els.gameOptionsContinueBtn?.addEventListener('click', (event) => {
+        els.gameOptionsContinueBtn?.addEventListener('click', async (event) => {
           event.preventDefault();
           event.stopPropagation();
           const previousOptions = state.ui.gameOptionsSnapshotBeforeOpen;
-          applyGameOptionsAfterModalClose(previousOptions);
+          await applyGameOptionsAfterModalClose(previousOptions);
           state.ui.gameOptionsSnapshotBeforeOpen = null;
           state.entry.gameOptionsOpen = false;
           els.gameOptionsModal?.classList.remove('is-visible');
