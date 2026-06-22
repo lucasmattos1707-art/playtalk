@@ -8,9 +8,13 @@
   <style>
     @import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&family=Orbitron:wght@400&display=swap");
     html,body{min-height:100%}
-    body{margin:0;font-family:Arial,sans-serif;background:#000;color:#fff;transition:background 260ms ease;background-repeat:no-repeat;background-size:100% 100vh;background-attachment:fixed;background-position:center top}button,input,select,textarea{font:inherit}
-    .page{max-width:1100px;margin:0 auto;padding:24px 16px 48px}.box,.card{background:linear-gradient(180deg,rgba(11,24,56,.82),rgba(7,15,36,.9));border:1px solid rgba(79,158,255,.18);border-radius:16px;backdrop-filter:blur(6px);box-shadow:0 0 18px rgba(63,145,255,.08)}
-    .box{padding:14px;margin-bottom:16px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+    body{margin:0;font-family:Arial,sans-serif;background:#000;color:#fff}button,input,select,textarea{font:inherit}
+    #levelsBackdropShell{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:#000}
+    .levels-backdrop-layer{position:absolute;inset:0;background-repeat:no-repeat;background-size:cover;background-position:center top;opacity:0;will-change:opacity,background-position}
+    .levels-backdrop-layer--base{opacity:1}
+    .levels-backdrop-layer--fade{transition:opacity 1000ms ease}
+    .page{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:24px 16px 48px}.box,.card{border:1px solid rgba(79,158,255,.18);border-radius:16px}
+    .box{padding:14px;margin-bottom:16px;background:linear-gradient(180deg,rgba(11,24,56,.82),rgba(7,15,36,.9));backdrop-filter:blur(6px);box-shadow:0 0 18px rgba(63,145,255,.08)}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
     button{cursor:pointer;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);border-radius:12px;padding:10px 12px;color:#fff}.mode,.accent{color:#fff;font-weight:700}.mode{background:#c85732;border-color:#c85732}.accent{background:#ef8f1a;border-color:#ef8f1a}.tts-btn{background:linear-gradient(135deg,#7d36ff,#5a1fd1);border-color:#5a1fd1;color:#fff;font-weight:700}.eleven-btn{background:linear-gradient(135deg,#050505,#6b6b6b);border-color:#050505;color:#fff;font-weight:700}.r2-btn{background:linear-gradient(135deg,#1b7cff,#16b86a);border-color:#1777d8;color:#fff;font-weight:700;display:inline-flex;align-items:center;gap:8px}.r2-btn svg{width:16px;height:16px;fill:currentColor}
     .toolbar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;align-items:start}
     .toolbar .mode{min-height:72px}
@@ -27,23 +31,18 @@
     @media (max-width:700px){.toolbar{grid-template-columns:repeat(4,minmax(0,1fr))}.icon-btn img{max-width:92px;height:38px}}
     @media (max-width:520px){.toolbar{grid-template-columns:repeat(3,minmax(0,1fr))}}
     .hidden{display:none!important}.muted,.mini{color:rgba(255,255,255,.72)}.mini{font-size:12px}.field{display:flex;flex-direction:column;gap:6px;min-width:180px}.field input,.field textarea,.field select{padding:10px 12px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(255,255,255,.08);color:#fff}
-    .card{position:relative;overflow:hidden;padding:12px;display:flex;flex-direction:column;gap:10px}.visual,.charpic{border:none;background:rgba(255,255,255,.08) center/cover no-repeat;display:grid;place-items:center;color:rgba(255,255,255,.72)}
+    .card{position:relative;overflow:hidden;padding:12px;display:flex;flex-direction:column;gap:10px;background:transparent!important;border-color:transparent!important;backdrop-filter:none!important;box-shadow:none!important}.visual,.charpic{border:none;background:transparent center/cover no-repeat;display:grid;place-items:center;color:rgba(255,255,255,.72)}
     .card-select-dot{position:absolute;top:8px;left:8px;width:22px;height:22px;border-radius:999px;border:2px solid rgba(144,216,255,.95);background:rgba(144,216,255,.28);z-index:3;padding:0;display:grid;place-items:center}
     .card-select-dot::after{content:'';width:10px;height:10px;border-radius:999px;background:transparent}
     .card.is-selected .card-select-dot{background:rgba(89,184,255,.95);border-color:#e9f8ff}
     .card.is-selected .card-select-dot::after{background:#fff}
-    .card.has-audio::after{content:'';position:absolute;left:0;right:0;bottom:0;height:30%;pointer-events:none;background:linear-gradient(180deg,rgba(56,214,120,0) 0%,rgba(56,214,120,.16) 45%,rgba(56,214,120,.36) 100%);box-shadow:0 18px 28px rgba(56,214,120,.18)}
+    .card.has-audio::after{content:none}
     .visual{position:relative;width:139px;height:139px;border-radius:999px;padding:12px;margin:0 auto;background-size:cover;background-position:center;transition:filter 1000ms ease,opacity 1000ms ease}.visual.has-image{border:none;box-shadow:none}.visual.is-loading::after{content:'';position:absolute;inset:-6px;border-radius:999px;border:3px solid rgba(255,255,255,.16);border-top-color:#fff;animation:spin 1s linear infinite}.visual.is-audio-pending{filter:grayscale(1);opacity:.5}.visual.is-restoring{animation:visualColorRestore 1000ms ease}.visual svg{width:34px;height:34px;fill:#8f8f8f}.charpic{width:70px;height:70px;border-radius:16px}.textbtn{text-align:left;min-height:56px;display:flex;align-items:center;font-size:20px;line-height:1.35;font-weight:700;background:transparent;border-color:transparent}.textbtn small{display:none}
     .asset-sync-check{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-size:17px;font-weight:900;border:1px solid transparent;box-shadow:0 10px 20px rgba(0,0,0,.28);pointer-events:none}
     .asset-sync-check--image{background:rgba(255,255,255,.94);color:#1d2433;border-color:rgba(255,255,255,.88)}
     .asset-sync-check--audio{background:rgba(120,255,186,.92);color:#0e3d23;border-color:rgba(120,255,186,.98)}
     .asset-sync-check--both{background:rgba(111,203,255,.92);color:#073a69;border-color:rgba(111,203,255,.98)}
-    .textbtn--pt{color:#ffd84d}
-    .textbtn--en{color:#74b7ff}
-    .textbtn--fr{color:#8ef0c2}
-    .textbtn--zh{color:#ff9ecb}
-    .textbtn--es{color:#ffb36b}
-    .textbtn--de{color:#ffd76d}
+    .textbtn,.textbtn--pt,.textbtn--en,.textbtn--fr,.textbtn--zh,.textbtn--es,.textbtn--de{color:#fff}
     .icon-delete,.icon-play{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border-color:transparent}
     .icon-delete{background:rgba(255,0,0,.08)}
     .icon-delete svg{width:20px;height:20px;fill:#ff4d4f}
@@ -169,9 +168,9 @@
     .json-batch-summary{font-size:13px;color:rgba(255,255,255,.72)}
     .watch-options{display:grid;gap:12px}
     .watch-options .field{min-width:0}
-    .watch-view{position:fixed;inset:0;z-index:70;background:linear-gradient(180deg,#0d1f4a,#09142d 58%,#050b18);color:#fff;padding:24px 18px;display:flex;flex-direction:column;overflow:hidden}
-    body.duoaccent-british .watch-view{background:linear-gradient(180deg,#2a0012,#120007 58%,#050305)}
-    .watch-view::before{content:'';position:absolute;inset:0;background:var(--watch-bg-image,none) center/cover no-repeat;opacity:1;z-index:0}
+    .watch-view{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.18);color:#fff;padding:24px 18px;display:flex;flex-direction:column;overflow:hidden}
+    body.duoaccent-british .watch-view{background:rgba(0,0,0,.18)}
+    .watch-view::before{content:'';position:absolute;inset:0;background:var(--watch-bg-image,none) center top/cover no-repeat;opacity:1;z-index:0}
     .watch-view::after{content:none}
     .watch-view__bg-video{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;background:#000}
     .watch-view__bg-video.hidden{display:none}
@@ -212,9 +211,15 @@
     .card.is-selected{border-color:#c85732;box-shadow:0 0 0 3px rgba(200,87,50,.14)}
     #voiceModeBtn,#uploadBtn,#importJsonBtn,#exportBtn,#exportZipBtn,#translateBtn,#testOnlineBtn,#watchFlashcardsBtn,#adminStudioBar{display:none!important}
     @media (max-width:640px){.watch-view{padding:18px 14px}.watch-card{min-height:72vh}.watch-view__top{margin-bottom:12px}}
+    @media (min-width:961px){.levels-backdrop-layer,.watch-view::before{animation:levelsBackdropPan 20000ms ease-in-out infinite alternate}}
+    @keyframes levelsBackdropPan{from{background-position:center top}to{background-position:center bottom}}
   </style>
 </head>
 <body>
+  <div id="levelsBackdropShell" aria-hidden="true">
+    <div id="levelsBackdropBase" class="levels-backdrop-layer levels-backdrop-layer--base"></div>
+    <div id="levelsBackdropFade" class="levels-backdrop-layer levels-backdrop-layer--fade"></div>
+  </div>
   <div class="page">
     <div class="box toolbar">
       <button id="newBtn" class="icon-btn" type="button" aria-label="Nova grade" title="Nova grade"><span class="plus-icon" aria-hidden="true">+</span></button>
@@ -544,7 +549,7 @@
       const jsonBatchPublishState={files:[],results:[],busy:false};
       let deckMetaAction='r2';
       let pendingImage=null,pendingAudio=null,currentAudio=null,audioBatchTargets={pt:false,en:false},aiBatchBusy=false,aiTextBusy=false,zipBusy=false,elevenBusy=false,r2UploadBusy=false,publishLocalBusy=false,feedbackToastTimer=0;
-      let watchRuntime=null,watchVoiceAudio=null,watchMusicAudio=null,watchLibraryCache=null,editableDeckOptionsCache=null,watchObjectUrlPool=[],watchBackdropImageUrl='',watchBackdropVideoUrl='',watchCustomFontFamily='',watchEnglishOnly=false,watchTextColor='';
+      let watchRuntime=null,watchVoiceAudio=null,watchMusicAudio=null,watchLibraryCache=null,editableDeckOptionsCache=null,watchObjectUrlPool=[],watchBackdropImageUrl='',watchBackdropVideoUrl='',watchCustomFontFamily='',watchEnglishOnly=false,watchTextColor='',levelsBackdropFadeTimer=0;
       const postgresDeckSyncTimers=new Map();
       const dirtyDeckPaths=new Set();
       const visualClickTimers=new Map();
@@ -587,14 +592,14 @@
         'zh-pinyin':{title:'Pinyin com tons',className:'textbtn--zh',audioField:'audioZh',jsonTextKey:'pinyinComTons',jsonAudioKey:'audio_zh',itemKey:'zhPinyin'}
       };
       const FLASHCARD_LANGUAGE_THEME={
-        pt:{icon:'/arquivos-codex/icones/portugues.svg',gradient:'linear-gradient(135deg,#0d4a24 0%,#6b5500 100%)',pageGradient:'radial-gradient(circle at top left,rgba(28,110,60,.34),transparent 32%), linear-gradient(135deg,#02130a 0%,#0d4a24 38%,#6b5500 100%)'},
-        'en-us':{icon:'/SVG/codex-icons/american.svg',gradient:'linear-gradient(135deg,#5a0c14 0%,#0d2f63 100%)',pageGradient:'radial-gradient(circle at top left,rgba(162,35,54,.34),transparent 30%), linear-gradient(135deg,#160309 0%,#5a0c14 34%,#0d2f63 100%)'},
-        'en-gb':{icon:'/SVG/codex-icons/british.svg',gradient:'linear-gradient(135deg,#0f2d67 0%,#090909 100%)',pageGradient:'radial-gradient(circle at top left,rgba(86,136,255,.24),transparent 30%), linear-gradient(135deg,#05070d 0%,#0f2d67 38%,#090909 100%)'},
-        fr:{icon:'/arquivos-codex/icones/frances.svg',gradient:'linear-gradient(135deg,#0f2d67 0%,#5e0f18 100%)',pageGradient:'radial-gradient(circle at top left,rgba(43,102,201,.28),transparent 30%), linear-gradient(135deg,#07112c 0%,#0f2d67 42%,#5e0f18 100%)'},
-        es:{icon:'/arquivos-codex/icones/espanhol.svg',gradient:'linear-gradient(135deg,#8f1118 0%,#7a5a00 100%)',pageGradient:'radial-gradient(circle at top left,rgba(255,83,83,.3),transparent 30%), linear-gradient(135deg,#200305 0%,#8f1118 38%,#7a5a00 100%)'},
-        de:{icon:'/arquivos-codex/icones/alemao.svg',gradient:'linear-gradient(135deg,#0d0d0d 0%,#680d12 52%,#6f5200 100%)',pageGradient:'radial-gradient(circle at top left,rgba(255,220,100,.18),transparent 26%), linear-gradient(135deg,#050505 0%,#0d0d0d 24%,#680d12 62%,#6f5200 100%)'},
-        zh:{icon:'/arquivos-codex/icones/mandarim.svg',gradient:'linear-gradient(135deg,#8f101a 0%,#4c071f 100%)',pageGradient:'radial-gradient(circle at top left,rgba(255,66,88,.3),transparent 32%), linear-gradient(135deg,#210309 0%,#8f101a 40%,#4c071f 100%)'},
-        'zh-pinyin':{icon:'/arquivos-codex/icones/mandarim.svg',gradient:'linear-gradient(135deg,#8f101a 0%,#4c071f 100%)',pageGradient:'radial-gradient(circle at top left,rgba(255,66,88,.3),transparent 32%), linear-gradient(135deg,#210309 0%,#8f101a 40%,#4c071f 100%)'}
+        pt:{icon:'/arquivos-codex/icones/portugues.svg',gradient:'linear-gradient(135deg,#0d4a24 0%,#6b5500 100%)',backgroundImage:'/arquivos-codex/backgrounds/languages/portuguese.png'},
+        'en-us':{icon:'/SVG/codex-icons/american.svg',gradient:'linear-gradient(135deg,#5a0c14 0%,#0d2f63 100%)',backgroundImage:'/arquivos-codex/backgrounds/languages/american.png'},
+        'en-gb':{icon:'/SVG/codex-icons/british.svg',gradient:'linear-gradient(135deg,#0f2d67 0%,#090909 100%)',backgroundImage:'/arquivos-codex/backgrounds/languages/brittish.png'},
+        fr:{icon:'/arquivos-codex/icones/frances.svg',gradient:'linear-gradient(135deg,#0f2d67 0%,#5e0f18 100%)',backgroundImage:'/arquivos-codex/backgrounds/languages/french.png'},
+        es:{icon:'/arquivos-codex/icones/espanhol.svg',gradient:'linear-gradient(135deg,#8f1118 0%,#7a5a00 100%)',backgroundImage:'/arquivos-codex/backgrounds/languages/spanish.png'},
+        de:{icon:'/arquivos-codex/icones/alemao.svg',gradient:'linear-gradient(135deg,#0d0d0d 0%,#680d12 52%,#6f5200 100%)',backgroundImage:'/arquivos-codex/backgrounds/languages/german.png'},
+        zh:{icon:'/arquivos-codex/icones/mandarim.svg',gradient:'linear-gradient(135deg,#8f101a 0%,#4c071f 100%)',backgroundImage:'/arquivos-codex/backgrounds/languages/chinese.png'},
+        'zh-pinyin':{icon:'/arquivos-codex/icones/mandarim.svg',gradient:'linear-gradient(135deg,#8f101a 0%,#4c071f 100%)',backgroundImage:'/arquivos-codex/backgrounds/languages/chinese.png'}
       };
       function normalizeFlashcardTextView(value){
         const normalized=String(value||'').trim().toLowerCase();
@@ -1149,14 +1154,49 @@
       const audioSrc=(item,kind)=>kind==='single'?(item.audioDataUrl||item.audioRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioFile,'flashcard')):kind==='pt'?(item.audioPtDataUrl||item.audioPtRemoteUrl||cloud(state.day,phase(),item.audioPtFile,state.mode)):kind==='fr'?(item.audioFrDataUrl||item.audioFrRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioFrFile,'flashcard')):kind==='zh'?(item.audioZhDataUrl||item.audioZhRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioZhFile,'flashcard')):kind==='es'?(item.audioEsDataUrl||item.audioEsRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioEsFile,'flashcard')):kind==='de'?(item.audioDeDataUrl||item.audioDeRemoteUrl||cloud(state.day,PHASE.flashcard,item.audioDeFile,'flashcard')):(item.audioEnDataUrl||cloud(state.day,phase(),item.audioEnFile,state.mode));
       const audioSrcBlonde=item=>item?.audioBlondeDataUrl||item?.audioBlondeRemoteUrl||cloud(state.day,PHASE.flashcard,item?.audioBlondeFile,'flashcard');
       function activeFlashcardLanguage(){return normalizeFlashcardTextView(state.flashcardTextView)}
+      function activeFlashcardTheme(){return FLASHCARD_LANGUAGE_THEME[activeFlashcardLanguage()]||FLASHCARD_LANGUAGE_THEME.pt}
+      function activeFlashcardBackgroundUrl(){return String(activeFlashcardTheme()?.backgroundImage||FLASHCARD_LANGUAGE_THEME.pt.backgroundImage||'').trim()}
+      function syncLevelsLanguageBackdrop({immediate=false}={}){
+        const base=$('levelsBackdropBase'),fade=$('levelsBackdropFade');
+        if(!base||!fade)return;
+        const nextUrl=activeFlashcardBackgroundUrl();
+        if(!nextUrl)return;
+        document.documentElement.style.setProperty('--levels-language-bg',`url("${nextUrl}")`);
+        const currentUrl=String(base.dataset.url||'').trim();
+        if(levelsBackdropFadeTimer){
+          clearTimeout(levelsBackdropFadeTimer);
+          levelsBackdropFadeTimer=0;
+        }
+        if(immediate||!currentUrl){
+          base.style.backgroundImage=`url("${nextUrl}")`;
+          base.dataset.url=nextUrl;
+          fade.style.opacity='0';
+          fade.style.backgroundImage='none';
+          fade.dataset.url='';
+          return;
+        }
+        if(currentUrl===nextUrl)return;
+        fade.style.transition='none';
+        fade.style.backgroundImage=`url("${nextUrl}")`;
+        fade.dataset.url=nextUrl;
+        fade.style.opacity='0';
+        void fade.offsetWidth;
+        fade.style.transition='opacity 1000ms ease';
+        fade.style.opacity='1';
+        levelsBackdropFadeTimer=setTimeout(()=>{
+          base.style.backgroundImage=`url("${nextUrl}")`;
+          base.dataset.url=nextUrl;
+          fade.style.opacity='0';
+          fade.style.backgroundImage='none';
+          fade.dataset.url='';
+          levelsBackdropFadeTimer=0;
+        },1000);
+      }
       function syncLanguageFlagButtons(){
         const languageKey=activeFlashcardLanguage();
         const theme=FLASHCARD_LANGUAGE_THEME[languageKey]||FLASHCARD_LANGUAGE_THEME.pt;
-        document.body.style.background=theme.pageGradient||theme.gradient;
-        document.body.style.backgroundRepeat='no-repeat';
-        document.body.style.backgroundSize='100% 100vh';
-        document.body.style.backgroundAttachment='fixed';
-        document.body.style.backgroundPosition='center top';
+        syncLevelsLanguageBackdrop();
+        if($('watchView')&&!$('watchView').classList.contains('hidden'))syncWatchBackdropBackground();
         [['addBtn','addBtnIcon'],['voiceModeBtn','voiceModeBtnIcon']].forEach(([buttonId,imageId])=>{
           const button=$(buttonId),image=$(imageId);
           if(button){
@@ -1949,7 +1989,7 @@
       }
       function renderWatchText(node,text){const lines=watchLines(text);node.innerHTML=lines.map(line=>`<span class="watch-card__text-line">${escapeHtml(line)}</span>`).join('')}
       function syncWatchTextFont(){const family=watchCustomFontFamily?`${watchCustomFontFamily},"Orbitron","Exo 2",Arial,sans-serif`:'"Orbitron","Exo 2",Arial,sans-serif';$('watchCardPt').style.fontFamily=family;$('watchCardEn').style.fontFamily=family;const color=String(watchTextColor||'').trim();$('watchCardPt').style.color=color||'';$('watchCardEn').style.color=color||''}
-      function syncWatchBackdropBackground(){const watchView=$('watchView'),backgroundVideo=$('watchBackgroundVideo');if(!watchView)return;if(watchBackdropVideoUrl){watchView.style.setProperty('--watch-bg-image','none');if(backgroundVideo){if(backgroundVideo.src!==watchBackdropVideoUrl)backgroundVideo.src=watchBackdropVideoUrl;backgroundVideo.classList.remove('hidden');backgroundVideo.play().catch(()=>{})}return}if(backgroundVideo){backgroundVideo.pause();backgroundVideo.removeAttribute('src');backgroundVideo.classList.add('hidden')}if(watchBackdropImageUrl){watchView.style.setProperty('--watch-bg-image',`url("${watchBackdropImageUrl}")`);return}watchView.style.setProperty('--watch-bg-image','none')}
+      function syncWatchBackdropBackground(){const watchView=$('watchView'),backgroundVideo=$('watchBackgroundVideo');if(!watchView)return;if(watchBackdropVideoUrl){watchView.style.setProperty('--watch-bg-image','none');if(backgroundVideo){if(backgroundVideo.src!==watchBackdropVideoUrl)backgroundVideo.src=watchBackdropVideoUrl;backgroundVideo.classList.remove('hidden');backgroundVideo.play().catch(()=>{})}return}if(backgroundVideo){backgroundVideo.pause();backgroundVideo.removeAttribute('src');backgroundVideo.classList.add('hidden')}if(watchBackdropImageUrl){watchView.style.setProperty('--watch-bg-image',`url("${watchBackdropImageUrl}")`);return}const fallbackUrl=activeFlashcardBackgroundUrl();watchView.style.setProperty('--watch-bg-image',fallbackUrl?`url("${fallbackUrl}")`:'none')}
       function renderWatchCard(item,extraStatus=''){const image=String(item?.image||'').trim(),video=String(item?.video||'').trim(),watchCard=$('watchCard'),videoEl=$('watchCardVideo');$('watchDeckLabel').textContent=item?.sourceLabel||'Flashcards';$('watchPrimaryText').textContent=item?.pt||item?.en||'Flashcard';$('watchCardDeck').textContent=item?.deckTitle||item?.sourceLabel||'Deck';renderWatchText($('watchCardPt'),item?.pt||'Sem portugues');renderWatchText($('watchCardEn'),item?.en||'Sem english');syncWatchTextFont();$('watchCardHint').textContent=extraStatus||'Sequencia em ordem, sem aleatorio.';$('watchCardImage').style.backgroundImage=image?`url("${image}")`:'none';syncWatchBackdropBackground();if(video){videoEl.classList.remove('hidden');if(videoEl.src!==video)videoEl.src=video;videoEl.play().catch(()=>{})}else{videoEl.pause();videoEl.removeAttribute('src');videoEl.classList.add('hidden')}watchCard.classList.remove('is-sliding');void watchCard.offsetWidth;watchCard.classList.add('is-sliding','is-pulsing');updateWatchTransforms();setWatchStatus(extraStatus||'Preparando audio...')}
       function normalizeWatchItem(entry,deckTitle,sourceLabel){const pt=String(entry?.nomePortugues||entry?.pt||entry?.portuguese||'').trim(),en=String(entry?.nomeIngles||entry?.en||entry?.english||'').trim(),audio=String(entry?.audio||entry?.audioFile||'').trim(),image=String(entry?.imagem||entry?.image||entry?.imageFile||'').trim(),video=String(entry?.video||'').trim();if(!(pt||en))return null;return{key:`${sourceLabel}::${deckTitle}::${pt}::${en}::${audio}::${image}::${video}`,pt,en,audio,image,video,deckTitle:String(deckTitle||'Flashcards').trim()||'Flashcards',sourceLabel:String(sourceLabel||'Flashcards').trim()||'Flashcards'}}
       function currentDeckWatchItems(){return state.items.map(item=>normalizeWatchItem({pt:item.pt,en:item.en,audio:audioSrc(item,'single'),image:(itemImg(item)||'')},state.title.trim()||`Pasta ${state.day}`,'Meus flashcards')).filter(item=>item&&item.audio)}
