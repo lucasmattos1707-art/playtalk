@@ -11841,6 +11841,7 @@
       const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v3-postgres';
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
       const USER_CARD_LANGUAGES_STORAGE_KEY = 'playtalk-flashcards-card-languages-v1';
+      const USER_LANGUAGE_META_STORAGE_KEY = 'playtalk-flashcards-language-meta-v1';
       const USER_HIDDEN_STORAGE_KEY = 'playtalk-flashcards-hidden-v1';
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
       const TUTORIAL_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-tutorial-v1';
@@ -14261,6 +14262,43 @@
         }
       }
 
+      function readUserLanguageMetaForUser(userId = state.user?.id, language = currentProgressLanguage()) {
+        if (!canUseLocalCompetitiveStorage(userId)) {
+          return {};
+        }
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        try {
+          const parsed = JSON.parse(localStorage.getItem(storageKeyForUserLanguage(USER_LANGUAGE_META_STORAGE_KEY, userId, normalizedLanguage)) || 'null');
+          if (!parsed || typeof parsed !== 'object') {
+            return {};
+          }
+          return {
+            userLevel: normalizeUserLevel(parsed.userLevel),
+            userLevelUpdatedAt: safeText(parsed.userLevelUpdatedAt)
+          };
+        } catch (_error) {
+          return {};
+        }
+      }
+
+      function persistUserLanguageMetaLocally(language = currentProgressLanguage()) {
+        if (!canUseLocalCompetitiveStorage(state.user?.id)) {
+          return;
+        }
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        try {
+          localStorage.setItem(
+            storageKeyForUserLanguage(USER_LANGUAGE_META_STORAGE_KEY, state.user?.id, normalizedLanguage),
+            JSON.stringify({
+              userLevel: normalizeUserLevel(state.userLevel),
+              userLevelUpdatedAt: safeText(state.userLevelUpdatedAt)
+            })
+          );
+        } catch (_error) {
+          // ignore
+        }
+      }
+
       function persistUserCardLanguagesLocally() {
         if (!canUseLocalCompetitiveStorage(state.user?.id)) {
           return;
@@ -14969,29 +15007,52 @@
         }
         state.userLevelUpdatedAt = safeText(cloudState?.userLevelUpdatedAt || cloudState?.meta?.userLevelUpdatedAt);
         syncOwnedIdsFromProgress();
+        persistUserLanguageMetaLocally(normalizedTargetLanguage);
       }
 
       async function loadFlashcardStateForLanguage(targetLanguage, options = {}) {
         const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
         const preserveStats = Boolean(options?.preserveStats);
         if (state.user?.id) {
-          const cloudState = await fetchFlashcardCloudState(normalizedTargetLanguage);
-          applyFlashcardStatePayloadForLanguage(cloudState, normalizedTargetLanguage, { preserveStats });
-          persistUserProgressLocally(normalizedTargetLanguage);
-          persistUserCardLanguagesLocally();
-          persistHiddenCardIdsLocally();
-          if (!preserveStats) {
-            persistUserStatsLocally();
+          try {
+            const cloudState = await fetchFlashcardCloudState(normalizedTargetLanguage);
+            applyFlashcardStatePayloadForLanguage(cloudState, normalizedTargetLanguage, { preserveStats });
+            persistUserProgressLocally(normalizedTargetLanguage);
+            persistUserCardLanguagesLocally();
+            persistHiddenCardIdsLocally();
+            if (!preserveStats) {
+              persistUserStatsLocally();
+            }
+            return cloudState;
+          } catch (error) {
+            console.warn('Falha ao carregar estado do idioma; usando fallback local:', error);
+            const localMeta = readUserLanguageMetaForUser(state.user.id, normalizedTargetLanguage);
+            state.activeProgressLanguage = normalizedTargetLanguage;
+            state.userCards = readUserProgressForUser(state.user.id, normalizedTargetLanguage);
+            state.userCardLanguages = readUserCardLanguagesForUser(state.user.id);
+            state.hiddenCardIds = readHiddenCardIdsForUser(state.user.id);
+            state.game.persistedOnTable = [];
+            state.userLevel = normalizeUserLevel(localMeta.userLevel || 1);
+            if (state.user) {
+              state.user.level = state.userLevel;
+            }
+            state.userLevelUpdatedAt = safeText(localMeta.userLevelUpdatedAt);
+            syncOwnedIdsFromProgress();
+            persistUserLanguageMetaLocally(normalizedTargetLanguage);
+            return null;
           }
-          return cloudState;
         }
 
+        const guestMeta = readUserLanguageMetaForUser(0, normalizedTargetLanguage);
         state.activeProgressLanguage = normalizedTargetLanguage;
         state.userCards = readUserProgressForUser(0, normalizedTargetLanguage);
         state.userCardLanguages = readUserCardLanguagesForUser(0);
         state.hiddenCardIds = readHiddenCardIdsForUser(0);
         state.game.persistedOnTable = [];
+        state.userLevel = normalizeUserLevel(guestMeta.userLevel || 1);
+        state.userLevelUpdatedAt = safeText(guestMeta.userLevelUpdatedAt);
         syncOwnedIdsFromProgress();
+        persistUserLanguageMetaLocally(normalizedTargetLanguage);
         return null;
       }
 
@@ -18943,6 +19004,7 @@
         if (Object.prototype.hasOwnProperty.call(options, 'updatedAt')) {
           state.userLevelUpdatedAt = safeText(options.updatedAt || state.userLevelUpdatedAt);
         }
+        persistUserLanguageMetaLocally(currentProgressLanguage());
         if (options.syncNavigator !== false) {
           syncGameLevelNavigator();
         }
@@ -29808,24 +29870,36 @@
         els.gameOptionsContinueBtn?.addEventListener('click', async (event) => {
           event.preventDefault();
           event.stopPropagation();
-          const previousOptions = state.ui.gameOptionsSnapshotBeforeOpen;
-          await applyGameOptionsAfterModalClose(previousOptions);
-          state.ui.gameOptionsSnapshotBeforeOpen = null;
-          state.entry.gameOptionsOpen = false;
-          els.gameOptionsModal?.classList.remove('is-visible');
-          els.gameOptionsModal?.setAttribute('aria-hidden', 'true');
-          state.entry.pendingPlayStart = false;
-          state.entry.welcomeStartRequested = false;
-          state.entry.flashStartInFlight = false;
-          state.entry.welcomeFlashStartAt = 0;
-          window.PlaytalkLoader?.hide?.('welcome-flash-start', { force: true });
-          window.PlaytalkLoader?.hide?.('page-init', { force: true });
-          state.game.levelMode = false;
-          state.game.levelScaleMode = false;
-          state.game.levelAudioMode = false;
-          state.game.levelTextMode = false;
-          state.game.levelTypingMode = false;
-          resetScaleBatchProgress();
+          if (els.gameOptionsContinueBtn?.disabled) return;
+          if (els.gameOptionsContinueBtn) {
+            els.gameOptionsContinueBtn.disabled = true;
+          }
+          try {
+            const previousOptions = state.ui.gameOptionsSnapshotBeforeOpen;
+            await applyGameOptionsAfterModalClose(previousOptions);
+          } catch (error) {
+            console.warn('Falha ao aplicar opcoes do jogo:', error);
+          } finally {
+            state.ui.gameOptionsSnapshotBeforeOpen = null;
+            state.entry.gameOptionsOpen = false;
+            els.gameOptionsModal?.classList.remove('is-visible');
+            els.gameOptionsModal?.setAttribute('aria-hidden', 'true');
+            state.entry.pendingPlayStart = false;
+            state.entry.welcomeStartRequested = false;
+            state.entry.flashStartInFlight = false;
+            state.entry.welcomeFlashStartAt = 0;
+            window.PlaytalkLoader?.hide?.('welcome-flash-start', { force: true });
+            window.PlaytalkLoader?.hide?.('page-init', { force: true });
+            state.game.levelMode = false;
+            state.game.levelScaleMode = false;
+            state.game.levelAudioMode = false;
+            state.game.levelTextMode = false;
+            state.game.levelTypingMode = false;
+            resetScaleBatchProgress();
+            if (els.gameOptionsContinueBtn) {
+              els.gameOptionsContinueBtn.disabled = false;
+            }
+          }
           if (canResumePausedFlashGame()) {
             resumeFlashcardsGameFromWelcome();
             return;
