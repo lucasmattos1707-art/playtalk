@@ -69,6 +69,8 @@ const ELEVENLABS_VOICE_ID_BLONDE = env(process.env.ELEVENLABS_VOICE_ID_BLONDE) |
 const ELEVENLABS_VOICE_ID_PAUL = env(process.env.ELEVENLABS_VOICE_ID_PAUL) || '0igQGE0lbNpTaWsexf1r';
 const ELEVENLABS_VOICE_ID_SAMI = env(process.env.ELEVENLABS_VOICE_ID_SAMI) || 'UFDAUkGzdLAEJlINT3Fx';
 const ELEVENLABS_VOICE_ID_CRISTINA = env(process.env.ELEVENLABS_VOICE_ID_CRISTINA) || 'qWWAqFomnJ99VwQLREfT';
+const ELEVENLABS_VOICE_ID_CASSANDRA = env(process.env.ELEVENLABS_VOICE_ID_CASSANDRA) || 'kcQkGnn0HAT2JRDQ4Ljp';
+const ELEVENLABS_VOICE_ID_LENA = env(process.env.ELEVENLABS_VOICE_ID_LENA) || 'qWWAqFomnJ99VwQLREfT';
 const ELEVENLABS_VOICE_ID_FINN = env(process.env.ELEVENLABS_VOICE_ID_FINN) || 'cCwaxHZZF7rVaQK2aOys';
 const ELEVENLABS_VOICE_ID_BURT_RAYNALDS = env(process.env.ELEVENLABS_VOICE_ID_BURT_RAYNALDS) || '4YYIPFl9wE5c4L2eu2Gb';
 const flashcardEnsureAudioLocks = new Map();
@@ -11739,8 +11741,8 @@ function getFlashcardEnsureLanguageConfig(language) {
         errorLabel: 'mandarim',
         translationPrompt: [
           'You translate language-learning content into natural, modern, useful Mandarin Chinese.',
-          'Return Mandarin only as Hanyu Pinyin with tone marks.',
-          'Do not return Chinese characters, Hanzi, or English explanations.',
+          'Return Mandarin only in Simplified Chinese Hanzi.',
+          'Do not return Pinyin, romanization, English explanations, numbering, or extra commentary.',
           'Preserve the original meaning closely and prefer natural everyday Mandarin over literal awkward translations.'
         ]
       };
@@ -22871,14 +22873,6 @@ app.post('/api/stt/openai', async (req, res) => {
       return;
     }
 
-    if (language === 'zh' && containsHanScript(text)) {
-      try {
-        text = await transliterateMandarinTextToPinyin(text);
-      } catch (romanizeError) {
-        console.warn('Falha ao romanizar transcricao de mandarim:', romanizeError);
-      }
-    }
-
     res.json({
       success: true,
       text,
@@ -23004,6 +22998,8 @@ app.post('/api/tts/elevenlabs', async (req, res) => {
     paul: { voiceId: ELEVENLABS_VOICE_ID_PAUL, instructionsKey: 'ELEVENLABS_VOICE_ID_PAUL' },
     sami: { voiceId: ELEVENLABS_VOICE_ID_SAMI, instructionsKey: 'ELEVENLABS_VOICE_ID_SAMI' },
     cristina: { voiceId: ELEVENLABS_VOICE_ID_CRISTINA, instructionsKey: 'ELEVENLABS_VOICE_ID_CRISTINA' },
+    cassandra: { voiceId: ELEVENLABS_VOICE_ID_CASSANDRA, instructionsKey: 'ELEVENLABS_VOICE_ID_CASSANDRA' },
+    lena: { voiceId: ELEVENLABS_VOICE_ID_LENA, instructionsKey: 'ELEVENLABS_VOICE_ID_LENA' },
     finn: { voiceId: ELEVENLABS_VOICE_ID_FINN, instructionsKey: 'ELEVENLABS_VOICE_ID_FINN' },
     'burt-raynalds': { voiceId: ELEVENLABS_VOICE_ID_BURT_RAYNALDS, instructionsKey: 'ELEVENLABS_VOICE_ID_BURT_RAYNALDS' },
     burt: { voiceId: ELEVENLABS_VOICE_ID_BURT_RAYNALDS, instructionsKey: 'ELEVENLABS_VOICE_ID_BURT_RAYNALDS' }
@@ -23938,8 +23934,8 @@ app.post('/api/text/openai/translate', async (req, res) => {
       noItemsError: 'Nao ha textos em portugues aguardando traducao para mandarim.',
       systemPrompt: [
         'You translate Brazilian Portuguese learning content into natural, modern, useful Mandarin Chinese.',
-        'Return Mandarin only as Hanyu Pinyin with tone marks.',
-        'Do not return Chinese characters, Hanzi, or English explanations.',
+        'Return Mandarin only in Simplified Chinese Hanzi.',
+        'Do not return Pinyin, romanization, English explanations, numbering, or extra commentary.',
         'Preserve meaning, but prefer natural everyday Mandarin over literal awkward translations.'
       ]
     },

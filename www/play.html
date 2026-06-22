@@ -13577,6 +13577,14 @@
       }
 
       function normalizeText(value) {
+        const repaired = repairDisplayText(value);
+        if (/[\p{Script=Han}]/u.test(repaired)) {
+          return repaired
+            .replace(/[，。！？；：、“”"'‘’（）()\[\]{}<>《》【】,.!?;:/\\|@#$%^&*_+=~-]/gu, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+        }
         return repairDisplayText(value)
           .replace(/[’‘`´]/g, "'")
           .normalize('NFD')
@@ -25220,7 +25228,7 @@
       }
 
       function normalizeSpeechSequenceText(value) {
-        return String(value || '').replace(/[^a-z0-9]+/g, '');
+        return String(value || '').replace(/[^\p{Script=Han}a-z0-9]+/gu, '');
       }
 
       function findBestSpeechSequenceMatch(expected, spokenChunk, covered) {

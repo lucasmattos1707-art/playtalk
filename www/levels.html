@@ -334,8 +334,10 @@
           <option value="harry">Harry (Americano)</option>
           <option value="blonde">Blonde (Britanica)</option>
           <option value="paul">Paul (Frances)</option>
-          <option value="sami">Sami (Mandarim em Pinyin)</option>
+          <option value="sami">Sami (Mandarim em Ideogramas)</option>
           <option value="cristina">Cristina (Espanhol)</option>
+          <option value="cassandra">Cassandra (Espanhol)</option>
+          <option value="lena">Lena (Espanhol)</option>
           <option value="finn">Finn (Alemao)</option>
           <option value="marin">Marin</option>
           <option value="cedar">Cedar</option>
@@ -384,7 +386,7 @@
       <div id="flashcardTextFields">
         <div class="language-actions">
           <button id="addFrenchBtn" class="language-action language-action--fr" type="button"><div class="language-action__flag" aria-hidden="true"><img src="/arquivos-codex/icones/frances.svg" alt=""></div><div class="language-action__copy"><strong>Adicionar Frances</strong><span>Cria a traducao em frances para os cards selecionados ou para o deck atual.</span></div></button>
-          <button id="addMandarinBtn" class="language-action language-action--zh" type="button"><div class="language-action__flag" aria-hidden="true"><img src="/arquivos-codex/icones/mandarim.svg" alt=""></div><div class="language-action__copy"><strong>Adicionar Mandarim</strong><span>Cria o mandarim em Pinyin com tons para os cards selecionados ou para o deck atual.</span></div></button>
+          <button id="addMandarinBtn" class="language-action language-action--zh" type="button"><div class="language-action__flag" aria-hidden="true"><img src="/arquivos-codex/icones/mandarim.svg" alt=""></div><div class="language-action__copy"><strong>Adicionar Mandarim</strong><span>Cria o mandarim em ideogramas para os cards selecionados ou para o deck atual.</span></div></button>
           <button id="addSpanishBtn" class="language-action language-action--es" type="button"><div class="language-action__flag" aria-hidden="true"><img src="/arquivos-codex/icones/espanhol.svg" alt=""></div><div class="language-action__copy"><strong>Adicionar Espanhol</strong><span>Cria a traducao em espanhol para os cards selecionados ou para o deck atual.</span></div></button>
           <button id="addGermanBtn" class="language-action language-action--de" type="button"><div class="language-action__flag" aria-hidden="true"><img src="/arquivos-codex/icones/alemao.svg" alt=""></div><div class="language-action__copy"><strong>Adicionar Alemao</strong><span>Cria a traducao em alemao para os cards selecionados ou para o deck atual.</span></div></button>
         </div>
@@ -603,9 +605,9 @@
         spanish:{key:'es',label:'Espanhol',responseKey:'es'},
         german:{key:'de',label:'Alemao',responseKey:'de'}
       };
-      function normalizeTtsVoice(value){const normalized=String(value||'').trim().toLowerCase();if(['portuguese','harry','blonde','paul','sami','cristina','finn'].includes(normalized))return normalized;return OPENAI_NARRATION_VOICES.includes(normalized)?normalized:'harry'}
-      function voiceProvider(value){const normalized=normalizeTtsVoice(value);return ['portuguese','harry','blonde','paul','sami','cristina','finn'].includes(normalized)?'elevenlabs':'openai'}
-      function ttsVoiceLabel(value){const normalized=normalizeTtsVoice(value);const labels={portuguese:'Portugues (Harry)',harry:'Harry (Americano)',blonde:'Blonde (Britanica)',paul:'Paul (Frances)',sami:'Sami (Mandarim)',cristina:'Cristina (Espanhol)',finn:'Finn (Alemao)'};const pretty=labels[normalized]||`${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}`;return voiceProvider(normalized)==='elevenlabs'?`ElevenLabs - ${pretty}`:`OpenAI - ${pretty}`}
+      function normalizeTtsVoice(value){const normalized=String(value||'').trim().toLowerCase();if(['portuguese','harry','blonde','paul','sami','cristina','cassandra','lena','finn'].includes(normalized))return normalized;return OPENAI_NARRATION_VOICES.includes(normalized)?normalized:'harry'}
+      function voiceProvider(value){const normalized=normalizeTtsVoice(value);return ['portuguese','harry','blonde','paul','sami','cristina','cassandra','lena','finn'].includes(normalized)?'elevenlabs':'openai'}
+      function ttsVoiceLabel(value){const normalized=normalizeTtsVoice(value);const labels={portuguese:'Portugues (Harry)',harry:'Harry (Americano)',blonde:'Blonde (Britanica)',paul:'Paul (Frances)',sami:'Sami (Mandarim)',cristina:'Cristina (Espanhol)',cassandra:'Cassandra (Espanhol)',lena:'Lena (Espanhol)',finn:'Finn (Alemao)'};const pretty=labels[normalized]||`${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}`;return voiceProvider(normalized)==='elevenlabs'?`ElevenLabs - ${pretty}`:`OpenAI - ${pretty}`}
       function withNoCacheUrl(value){
         const text=safeText(value);
         if(!text)return '';
@@ -2362,6 +2364,8 @@
           paul:{kind:'fr',text:item=>String(item?.fr||'').trim(),fileSuffix:'-fr',hasAudio:item=>hasGeneratedAudio(item,'fr')},
           sami:{kind:'zh',text:item=>String(item?.zh||'').trim(),fileSuffix:'-zh',hasAudio:item=>hasGeneratedAudio(item,'zh')},
           cristina:{kind:'es',text:item=>String(item?.es||'').trim(),fileSuffix:'-es',hasAudio:item=>hasGeneratedAudio(item,'es')},
+          cassandra:{kind:'es',text:item=>String(item?.es||'').trim(),fileSuffix:'-es',hasAudio:item=>hasGeneratedAudio(item,'es')},
+          lena:{kind:'es',text:item=>String(item?.es||'').trim(),fileSuffix:'-es',hasAudio:item=>hasGeneratedAudio(item,'es')},
           finn:{kind:'de',text:item=>String(item?.de||'').trim(),fileSuffix:'-de',hasAudio:item=>hasGeneratedAudio(item,'de')}
         }[normalizedVoice]||{kind:'single',text:item=>String(item?.en||item?.pt||'').trim(),fileSuffix:'',hasAudio:item=>hasGeneratedAudio(item,'single')});
         const selectedEntries=selectedEntriesInView();
