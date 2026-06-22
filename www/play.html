@@ -5197,9 +5197,28 @@
     .watch.is-visible { display: flex; }
 
     .watch.is-albums-mode {
+      position: fixed;
       padding: 0;
-      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
+      background: #041226;
       backdrop-filter: none;
+    }
+
+    .watch-language-backdrop {
+      position: absolute;
+      inset: 0;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .watch-language-backdrop--base {
+      opacity: 1;
+    }
+
+    .watch-language-backdrop--fade {
+      transition: opacity 500ms ease;
     }
 
     .watch.is-albums-mode::before {
@@ -5210,6 +5229,7 @@
         radial-gradient(circle at top, rgba(55, 190, 255, 0.18), transparent 34%),
         var(--playtalk-global-bg-overlay);
       pointer-events: none;
+      z-index: 1;
     }
 
     .watch-shell {
@@ -5227,19 +5247,25 @@
 
     .watch.is-albums-mode .watch-shell {
       position: relative;
-      z-index: 1;
+      z-index: 2;
       width: min(100vw, 1200px);
       max-height: 100vh;
       height: 100vh;
       padding: clamp(18px, 3vw, 34px);
-      gap: 10px;
+      gap: 18px;
       overflow: hidden;
+      align-content: center;
+      justify-items: center;
     }
 
     .watch-head {
       display: flex;
       align-items: center;
       justify-content: flex-end;
+    }
+
+    .watch.is-albums-mode .watch-head {
+      justify-content: center;
     }
 
     .watch-card {
@@ -5250,6 +5276,15 @@
       border-radius: 34px;
       border: 0;
       background: transparent;
+    }
+
+    .watch.is-albums-mode .watch-card {
+      width: min(100%, 820px);
+      min-height: calc(100vh - 132px);
+      margin: 0 auto;
+      padding: 0;
+      display: grid;
+      place-items: center;
     }
 
     .watch-card__layout {
@@ -5264,7 +5299,7 @@
       grid-template-columns: 1fr;
       justify-items: center;
       align-content: center;
-      gap: 18px;
+      gap: 22px;
     }
 
     .watch-card__visual,
@@ -5288,7 +5323,7 @@
     }
 
     .watch.is-albums-mode .watch-card__visual {
-      width: min(82vw, 52vh);
+      width: min(68vw, 36vh);
       max-width: 520px;
       aspect-ratio: 1 / 1;
     }
@@ -5330,12 +5365,13 @@
     }
 
     .watch.is-albums-mode .watch-card__content {
-      width: min(92vw, 640px);
+      width: min(92vw, 720px);
       min-height: 0;
       padding: 0 8px;
-      gap: 12px;
-      align-content: start;
+      gap: 16px;
+      align-content: center;
       justify-items: center;
+      text-align: center;
     }
 
     .watch-word {
@@ -5352,6 +5388,10 @@
       line-height: 1.05;
       white-space: pre-line;
       text-wrap: balance;
+      color: #ffffff;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-weight: 400;
+      text-shadow: 0 10px 24px rgba(0, 0, 0, 0.36);
     }
 
     .watch-subword {
@@ -5362,10 +5402,98 @@
       min-height: 32px;
     }
 
-    .watch.is-albums-mode .watch-subword,
+    .watch.is-albums-mode .watch-subword {
+      display: block;
+      max-width: min(92vw, 560px);
+      min-height: 0;
+      color: rgba(255, 255, 255, 0.92);
+      font: 400 clamp(17px, 2.6vw, 24px)/1.35 "Exo 2", "Open Sans", Arial, sans-serif;
+      text-wrap: balance;
+      text-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+    }
+
     .watch.is-albums-mode .watch-stars,
     .watch.is-albums-mode .watch-footer {
       display: none;
+    }
+
+    .watch-home-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      background: rgba(6, 13, 28, 0.42);
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.22);
+      transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, opacity 180ms ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .watch-home-btn:hover,
+    .watch-home-btn:focus-visible {
+      transform: translateY(-1px) scale(1.03);
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.4);
+      outline: none;
+    }
+
+    .watch-home-btn svg {
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
+    }
+
+    .watch-language-switcher {
+      display: none;
+    }
+
+    .watch.is-albums-mode .watch-language-switcher {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: min(92vw, 620px);
+      margin: 2px auto 0;
+    }
+
+    .watch-language-chip {
+      width: clamp(44px, 6vw, 54px);
+      height: clamp(44px, 6vw, 54px);
+      padding: 0;
+      border: 0;
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      opacity: 0.6;
+      transform: scale(1);
+      transition: opacity 180ms ease, transform 180ms ease, filter 180ms ease;
+      filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.22));
+    }
+
+    .watch-language-chip:hover,
+    .watch-language-chip:focus-visible {
+      opacity: 0.86;
+      transform: translateY(-1px) scale(1.04);
+      outline: none;
+    }
+
+    .watch-language-chip.is-selected {
+      opacity: 1;
+      transform: scale(1.08);
+      filter: drop-shadow(0 12px 24px rgba(255, 255, 255, 0.18));
+    }
+
+    .watch-language-chip img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 999px;
     }
 
     .watch-stars {
@@ -5391,6 +5519,28 @@
 
       .watch-card__layout {
         grid-template-columns: 1fr;
+      }
+
+      .watch.is-albums-mode .watch-shell {
+        padding: 18px 14px 22px;
+      }
+
+      .watch.is-albums-mode .watch-card {
+        min-height: calc(100vh - 112px);
+        padding: 0;
+      }
+
+      .watch.is-albums-mode .watch-card__layout {
+        gap: 16px;
+      }
+
+      .watch.is-albums-mode .watch-card__visual {
+        width: min(72vw, 30vh);
+      }
+
+      .watch-home-btn {
+        width: 46px;
+        height: 46px;
       }
 
       .game-card {
@@ -11740,9 +11890,15 @@
     </section>
 
     <section class="watch" id="watch" aria-modal="true" role="dialog">
+      <div class="watch-language-backdrop watch-language-backdrop--base" id="watchBackdropBase" aria-hidden="true"></div>
+      <div class="watch-language-backdrop watch-language-backdrop--fade" id="watchBackdropFade" aria-hidden="true"></div>
       <div class="watch-shell">
         <div class="watch-head">
-          <button class="btn btn-close" id="exitWatchBtn" type="button" aria-label="Fechar">Ã—</button>
+          <button class="watch-home-btn" id="exitWatchBtn" type="button" aria-label="Voltar para a home">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3.2 3.5 10v10.2c0 .44.36.8.8.8h5.9c.44 0 .8-.36.8-.8v-5.4h2v5.4c0 .44.36.8.8.8h5.9c.44 0 .8-.36.8-.8V10L12 3.2z"/>
+            </svg>
+          </button>
         </div>
         <article class="watch-card">
           <div class="watch-card__layout">
@@ -11750,6 +11906,7 @@
             <div class="watch-card__content">
               <h3 class="watch-word" id="watchWord">Preparando...</h3>
               <p class="watch-subword" id="watchSubword"></p>
+              <div class="watch-language-switcher" id="watchLanguageSwitcher" aria-label="Trocar idioma da apresentação"></div>
               <div class="watch-stars" id="watchStars" aria-hidden="true"></div>
               <div class="watch-footer">
                 <button class="btn" id="stopWatchBtn" type="button">Parar</button>
@@ -11978,6 +12135,24 @@
       };
       const FLASHCARD_LANGUAGE_BADGE_ORDER = ['english', 'spanish', 'french', 'german', 'portuguese', 'mandarin'];
       const TARGET_LANGUAGE_DISPLAY_ORDER = ['english', 'spanish', 'french', 'german', 'portuguese', 'mandarin'];
+      const WATCH_PRESENTATION_LANGUAGE_ORDER = TARGET_LANGUAGE_DISPLAY_ORDER.slice();
+      const WATCH_PRESENTATION_BACKGROUND_MAP = {
+        english: {
+          american: '/arquivos-codex/backgrounds/languages/american.png',
+          british: '/arquivos-codex/backgrounds/languages/brittish.png'
+        },
+        spanish: '/arquivos-codex/backgrounds/languages/spanish.png',
+        french: '/arquivos-codex/backgrounds/languages/french.png',
+        german: '/arquivos-codex/backgrounds/languages/german.png',
+        portuguese: '/arquivos-codex/backgrounds/languages/portuguese.png',
+        mandarin: '/arquivos-codex/backgrounds/languages/chinese.png'
+      };
+      const WATCH_PRESENTATION_ICON_MAP = {
+        english: {
+          american: '/SVG/codex-icons/american.svg',
+          british: '/SVG/codex-icons/british.svg'
+        }
+      };
       const GAME_OPTION_VALUE_MAP = {
         difficulty: ['automatic'],
         speed: ['0.70', '0.80', '0.90', '1.00'],
@@ -12645,6 +12820,8 @@
           active: false,
           mode: 'default',
           scope: 'all',
+          albumsPreviewScope: 'mine',
+          albumsAccent: 'american',
           gapMs: 3000,
           music: 'on',
           albumsPlayNativeFirst: true,
@@ -12655,7 +12832,8 @@
           currentCardId: null,
           voiceAudio: null,
           musicAudio: null,
-          timer: null
+          timer: null,
+          sessionToken: 0
         },
         ui: {
           activeView: 'play',
@@ -12796,6 +12974,7 @@
 
       let secondStageWrongWords = null;
       let secondStageWrongWordsPromise = null;
+      let watchBackdropFadeTimer = 0;
 
       loadGameOptionsFromStorage();
 
@@ -13054,11 +13233,14 @@
         watchDeckGrid: document.getElementById('watchDeckGrid'),
         watchDeckSummary: document.getElementById('watchDeckSummary'),
         watch: document.getElementById('watch'),
+        watchBackdropBase: document.getElementById('watchBackdropBase'),
+        watchBackdropFade: document.getElementById('watchBackdropFade'),
         exitWatchBtn: document.getElementById('exitWatchBtn'),
         stopWatchBtn: document.getElementById('stopWatchBtn'),
         watchVisual: document.getElementById('watchVisual'),
         watchWord: document.getElementById('watchWord'),
         watchSubword: document.getElementById('watchSubword'),
+        watchLanguageSwitcher: document.getElementById('watchLanguageSwitcher'),
         watchStars: document.getElementById('watchStars'),
         usersPanel: document.getElementById('usersPanel'),
         usersFrame: document.getElementById('usersFrame'),
@@ -13224,6 +13406,117 @@
           targetLanguage: currentTargetLanguage(),
           accent: normalizeGameOptionValue('accent', state.options?.accent)
         });
+      }
+
+      function preferredWatchAlbumsAccent() {
+        const ratios = resolveAccentMixRatios();
+        return ratios.british > ratios.american ? 'british' : 'american';
+      }
+
+      function currentWatchAlbumsAccent() {
+        const stored = safeText(state.watch?.albumsAccent).toLowerCase();
+        if (stored === 'american' || stored === 'british') return stored;
+        return preferredWatchAlbumsAccent();
+      }
+
+      function watchPresentationLanguageIcon(language) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        if (normalizedLanguage === 'english') {
+          const accent = currentWatchAlbumsAccent();
+          return {
+            label: accent === 'british' ? 'Ingles britanico' : 'Ingles americano',
+            iconPath: WATCH_PRESENTATION_ICON_MAP.english[accent] || WATCH_PRESENTATION_ICON_MAP.english.american
+          };
+        }
+        const meta = FLASHCARD_LANGUAGE_OPTIONS[normalizedLanguage] || {};
+        return {
+          label: safeText(meta.label || normalizedLanguage),
+          iconPath: safeText(meta.iconPath || '')
+        };
+      }
+
+      function watchPresentationBackgroundPath(language = currentAlbumsLanguage()) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        if (normalizedLanguage === 'english') {
+          return WATCH_PRESENTATION_BACKGROUND_MAP.english[currentWatchAlbumsAccent()]
+            || WATCH_PRESENTATION_BACKGROUND_MAP.english.american;
+        }
+        return safeText(WATCH_PRESENTATION_BACKGROUND_MAP[normalizedLanguage] || WATCH_PRESENTATION_BACKGROUND_MAP.english.american);
+      }
+
+      function syncWatchAlbumsBackdrop({ immediate = false } = {}) {
+        if (!els.watchBackdropBase || !els.watchBackdropFade) return;
+        const nextPath = watchPresentationBackgroundPath();
+        if (!nextPath) return;
+        const currentPath = safeText(els.watchBackdropBase.dataset.path);
+        if (watchBackdropFadeTimer) {
+          window.clearTimeout(watchBackdropFadeTimer);
+          watchBackdropFadeTimer = 0;
+        }
+        if (immediate || !currentPath) {
+          els.watchBackdropBase.style.backgroundImage = `url("${nextPath}")`;
+          els.watchBackdropBase.dataset.path = nextPath;
+          els.watchBackdropFade.style.opacity = '0';
+          els.watchBackdropFade.style.backgroundImage = '';
+          els.watchBackdropFade.dataset.path = '';
+          return;
+        }
+        if (currentPath === nextPath) return;
+        els.watchBackdropFade.style.transition = 'none';
+        els.watchBackdropFade.style.backgroundImage = `url("${nextPath}")`;
+        els.watchBackdropFade.dataset.path = nextPath;
+        els.watchBackdropFade.style.opacity = '0';
+        void els.watchBackdropFade.offsetWidth;
+        els.watchBackdropFade.style.transition = 'opacity 500ms ease';
+        els.watchBackdropFade.style.opacity = '1';
+        watchBackdropFadeTimer = window.setTimeout(() => {
+          els.watchBackdropBase.style.backgroundImage = `url("${nextPath}")`;
+          els.watchBackdropBase.dataset.path = nextPath;
+          els.watchBackdropFade.style.opacity = '0';
+          els.watchBackdropFade.style.backgroundImage = '';
+          els.watchBackdropFade.dataset.path = '';
+          watchBackdropFadeTimer = 0;
+        }, 500);
+      }
+
+      function renderWatchLanguageSwitcher() {
+        if (!els.watchLanguageSwitcher) return;
+        if (state.watch.mode !== 'albums') {
+          els.watchLanguageSwitcher.innerHTML = '';
+          els.watchLanguageSwitcher.hidden = true;
+          return;
+        }
+        const selectedLanguage = currentAlbumsLanguage();
+        const currentAccent = currentWatchAlbumsAccent();
+        els.watchLanguageSwitcher.hidden = false;
+        els.watchLanguageSwitcher.innerHTML = WATCH_PRESENTATION_LANGUAGE_ORDER.map((language) => {
+          const meta = watchPresentationLanguageIcon(language);
+          const isSelected = language === selectedLanguage;
+          const selectionLabel = language === 'english'
+            ? (currentAccent === 'british' ? 'Ingles britanico' : 'Ingles americano')
+            : meta.label;
+          return `
+            <button
+              class="watch-language-chip${isSelected ? ' is-selected' : ''}"
+              type="button"
+              data-watch-language="${escapeHtml(language)}"
+              aria-pressed="${isSelected ? 'true' : 'false'}"
+              aria-label="${escapeHtml(selectionLabel)}"
+              title="${escapeHtml(selectionLabel)}"
+            >
+              <img src="${escapeHtml(meta.iconPath)}" alt="${escapeHtml(selectionLabel)}">
+            </button>
+          `;
+        }).join('');
+      }
+
+      function bumpWatchSessionToken() {
+        state.watch.sessionToken = Math.max(0, Number(state.watch.sessionToken) || 0) + 1;
+        return state.watch.sessionToken;
+      }
+
+      function isWatchSessionTokenActive(token) {
+        return state.watch.active && Number(state.watch.sessionToken || 0) === Number(token || 0);
       }
 
       function currentGameOptionSlides() {
@@ -20360,13 +20653,16 @@
         state.ui.albumsNarrationRunId = Math.max(0, Number(state.ui.albumsNarrationRunId) || 0) + 1;
       }
 
-      function resolveCardAudioUrlForLanguage(card, language = currentTargetLanguage()) {
+      function resolveCardAudioUrlForLanguage(card, language = currentTargetLanguage(), options = {}) {
         const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
         const targetAudio = resolveSourceLanguageAudio(card, normalizedLanguage);
         if (normalizedLanguage === 'english') {
           const primary = safeText(targetAudio?.primary || '');
           const british = safeText(targetAudio?.british || '');
-          const pickedAccent = pickCardAccent(card);
+          const preferredAccent = safeText(options?.accent).toLowerCase();
+          const pickedAccent = preferredAccent === 'american' || preferredAccent === 'british'
+            ? preferredAccent
+            : pickCardAccent(card);
           return pickedAccent === 'british' ? (british || primary) : (primary || british);
         }
         return safeText(targetAudio?.primary || targetAudio?.british || '');
@@ -20632,6 +20928,54 @@
             renderAlbumsFlashcards();
           }
         }
+      }
+
+      async function restartAlbumsWatchPreviewForCurrentLanguage() {
+        if (state.watch.mode !== 'albums') return;
+        const previewScope = safeText(state.watch.albumsPreviewScope || 'mine') || 'mine';
+        stopWatchTimer();
+        stopWatchVoice();
+        bumpWatchSessionToken();
+        state.watch.sourceCards = buildAlbumsPreviewSourceCards(previewScope);
+        state.watch.queue = buildWatchQueue(state.watch.sourceCards);
+        state.watch.currentCardId = null;
+        renderWatchLanguageSwitcher();
+        syncWatchAlbumsBackdrop();
+        if (!state.watch.sourceCards.length) {
+          els.watchVisual.innerHTML = '<div class="watch-card__fallback">Sem audio</div>';
+          els.watchWord.textContent = 'Nenhum flashcard com audio foi encontrado nesse idioma.';
+          els.watchSubword.textContent = 'Toque em outra bandeira ou volte para a home.';
+          els.watchSubword.style.display = '';
+          return;
+        }
+        if (state.watch.active) {
+          void runWatchCycle();
+        }
+      }
+
+      async function handleWatchLanguageSelection(language) {
+        if (state.watch.mode !== 'albums') return;
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        if (!normalizedLanguage) return;
+        let changed = false;
+        if (normalizedLanguage === 'english') {
+          if (currentAlbumsLanguage() === 'english') {
+            const nextAccent = currentWatchAlbumsAccent() === 'british' ? 'american' : 'british';
+            if (nextAccent !== currentWatchAlbumsAccent()) {
+              state.watch.albumsAccent = nextAccent;
+              changed = true;
+            }
+          } else {
+            state.watch.albumsAccent = 'american';
+            await setAlbumsLanguage('english');
+            changed = true;
+          }
+        } else if (currentAlbumsLanguage() !== normalizedLanguage) {
+          await setAlbumsLanguage(normalizedLanguage);
+          changed = true;
+        }
+        if (!changed) return;
+        await restartAlbumsWatchPreviewForCurrentLanguage();
       }
 
       function shouldUseLevelModeBufferedPool() {
@@ -28084,11 +28428,12 @@
         els.watchVisual.innerHTML = imageMarkup;
         const albumsMode = state.watch.mode === 'albums';
         if (albumsMode) {
-          const targetText = safeText(resolveSourceLanguageText(card, currentTargetLanguage())) || card?.english || card?.portuguese || card?.deckTitle || 'Preparando...';
+          const targetText = safeText(resolveSourceLanguageText(card, currentAlbumsLanguage())) || card?.english || card?.portuguese || card?.deckTitle || 'Preparando...';
           const nativeText = safeText(resolveSourceLanguageText(card, currentNativeLanguage()));
           els.watchWord.textContent = formatAlbumsPlayerWord(targetText);
           els.watchSubword.textContent = nativeText;
           els.watchSubword.style.display = nativeText ? '' : 'none';
+          renderWatchLanguageSwitcher();
           els.watchStars.innerHTML = '';
         } else {
           els.watchWord.textContent = card?.english || card?.portuguese || 'Preparando...';
@@ -28102,7 +28447,8 @@
         if (state.watch.mode !== 'albums') return;
         const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
         const text = safeText(resolveSourceLanguageText(card, normalizedLanguage)) || card?.deckTitle || 'Flashcard';
-        const languageLabel = FLASHCARD_LANGUAGE_OPTIONS[normalizedLanguage]?.label || normalizedLanguage;
+        const languageMeta = watchPresentationLanguageIcon(normalizedLanguage);
+        const languageLabel = safeText(languageMeta.label || FLASHCARD_LANGUAGE_OPTIONS[normalizedLanguage]?.label || normalizedLanguage);
         const roleLabel = role === 'native' ? 'Nativo' : 'Destino';
         els.watchWord.textContent = formatAlbumsPlayerWord(text);
         els.watchSubword.textContent = `${roleLabel}: ${languageLabel}`;
@@ -28369,9 +28715,11 @@
         }
       }
 
-      async function playWatchAudioForLanguage(card, language, rate) {
-        const src = resolveCardAudioUrlForLanguage(card, language);
-        if (!state.watch.active || !src) return;
+      async function playWatchAudioForLanguage(card, language, rate, sessionToken = state.watch.sessionToken) {
+        const src = resolveCardAudioUrlForLanguage(card, language, {
+          accent: state.watch.mode === 'albums' ? currentWatchAlbumsAccent() : ''
+        });
+        if (!isWatchSessionTokenActive(sessionToken) || !src) return;
         stopWatchVoice();
         const resolvedRate = Math.max(0.1, Math.min(2.5, Number(rate || 1) * resolveSelectedGameSpeed()));
         const audio = new Audio(src);
@@ -28383,20 +28731,31 @@
           await audio.play();
           addListeningCharsForCard(card);
         } catch (_error) {
-          state.watch.voiceAudio = null;
+          if (state.watch.voiceAudio === audio) {
+            state.watch.voiceAudio = null;
+          }
           return;
         }
         await new Promise(resolve => {
           audio.addEventListener('ended', resolve, { once: true });
           audio.addEventListener('error', resolve, { once: true });
         });
+        if (!isWatchSessionTokenActive(sessionToken)) {
+          try {
+            audio.pause();
+            audio.currentTime = 0;
+          } catch (_error) {
+            // ignore
+          }
+        }
         if (state.watch.voiceAudio === audio) {
           state.watch.voiceAudio = null;
         }
       }
 
       async function runWatchCycle() {
-        if (!state.watch.active) return;
+        const sessionToken = Number(state.watch.sessionToken || 0);
+        if (!isWatchSessionTokenActive(sessionToken)) return;
         if (!state.watch.queue.length) {
           state.watch.queue = buildWatchQueue(state.watch.sourceCards);
         }
@@ -28419,20 +28778,22 @@
         }
         if (state.watch.mode === 'albums') {
           await ensureFlashcardAssetsForLanguages([card], albumsNarrationLanguages());
+          if (!isWatchSessionTokenActive(sessionToken)) return;
           const refreshedCard = refreshCardFromState(card);
           renderWatchCard(refreshedCard);
+          syncWatchAlbumsBackdrop();
           await waitForWatchVisualReady();
-          if (!state.watch.active) return;
+          if (!isWatchSessionTokenActive(sessionToken)) return;
           for (const language of albumsNarrationLanguages()) {
-            if (!state.watch.active) return;
+            if (!isWatchSessionTokenActive(sessionToken)) return;
             renderAlbumsPreviewPlaybackState(
               refreshCardFromState(refreshedCard),
               language,
               normalizeGameOptionValue('targetLanguage', language) === currentNativeLanguage() ? 'native' : 'target'
             );
-            await playWatchAudioForLanguage(refreshCardFromState(refreshedCard), language, 1);
+            await playWatchAudioForLanguage(refreshCardFromState(refreshedCard), language, 1, sessionToken);
           }
-          if (!state.watch.active) return;
+          if (!isWatchSessionTokenActive(sessionToken)) return;
           stopWatchTimer();
           state.watch.timer = window.setTimeout(() => {
             runWatchCycle();
@@ -28440,11 +28801,11 @@
           return;
         }
         await playWatchAudio(card, 0.75);
-        if (!state.watch.active) return;
+        if (!isWatchSessionTokenActive(sessionToken)) return;
         await wait(3000);
-        if (!state.watch.active) return;
+        if (!isWatchSessionTokenActive(sessionToken)) return;
         await playWatchAudio(card, 1);
-        if (!state.watch.active) return;
+        if (!isWatchSessionTokenActive(sessionToken)) return;
         stopWatchTimer();
         state.watch.timer = window.setTimeout(() => {
           runWatchCycle();
@@ -28453,6 +28814,7 @@
 
       function stopWatch() {
         state.watch.active = false;
+        bumpWatchSessionToken();
         state.watch.mode = 'default';
         state.watch.currentCardId = null;
         state.watch.queue = [];
@@ -28460,6 +28822,15 @@
         stopWatchTimer();
         stopWatchVoice();
         stopWatchMusic();
+        if (watchBackdropFadeTimer) {
+          window.clearTimeout(watchBackdropFadeTimer);
+          watchBackdropFadeTimer = 0;
+        }
+        if (els.watchBackdropFade) {
+          els.watchBackdropFade.style.opacity = '0';
+          els.watchBackdropFade.style.backgroundImage = '';
+          els.watchBackdropFade.dataset.path = '';
+        }
         els.watch.classList.remove('is-visible');
         els.watch.classList.remove('is-albums-mode');
         closeWatchPopover();
@@ -28482,6 +28853,7 @@
         }
         state.watch.mode = 'default';
         state.watch.returnToAlbums = false;
+        bumpWatchSessionToken();
         state.watch.gapMs = Number(els.watchGapSelect.value) || 3000;
         state.watch.scope = els.watchScopeSelect.value === 'mine' ? 'mine' : 'all';
         state.watch.music = els.watchMusicSelect.value === 'off' ? 'off' : 'on';
@@ -28509,6 +28881,11 @@
         state.watch.mode = 'albums';
         state.watch.returnToAlbums = true;
         state.watch.scope = 'albums';
+        state.watch.albumsPreviewScope = safeText(scope).toLowerCase() || 'mine';
+        if (currentAlbumsLanguage() === 'english') {
+          state.watch.albumsAccent = 'american';
+        }
+        bumpWatchSessionToken();
         state.watch.music = 'off';
         state.watch.gapMs = 3000;
         state.watch.sourceCards = sourceCards;
@@ -28518,6 +28895,8 @@
         closeAlbumsModal();
         els.watch.classList.add('is-visible', 'is-albums-mode');
         document.body.classList.add('game-open');
+        renderWatchLanguageSwitcher();
+        syncWatchAlbumsBackdrop({ immediate: true });
         runWatchCycle();
       }
 
@@ -30097,7 +30476,20 @@
           if (!toggle) return;
           toggleWatchDeckSource(toggle.dataset.watchSource || '');
         });
-        els.exitWatchBtn?.addEventListener('click', stopWatch);
+        els.watchLanguageSwitcher?.addEventListener('click', async (event) => {
+          const button = event.target.closest('[data-watch-language]');
+          if (!button) return;
+          event.preventDefault();
+          event.stopPropagation();
+          await handleWatchLanguageSelection(button.getAttribute('data-watch-language') || '');
+        });
+        els.exitWatchBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          state.watch.returnToAlbums = false;
+          stopWatch();
+          switchMainView('play');
+        });
         els.stopWatchBtn?.addEventListener('click', stopWatch);
         els.startGameBtn?.addEventListener('click', openGameSetup);
         els.gameHomeBtn?.addEventListener('click', (event) => {
