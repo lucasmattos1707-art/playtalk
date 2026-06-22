@@ -5079,6 +5079,12 @@
       background: rgba(91, 196, 255, 0.1);
       box-shadow: inset 0 0 0 1px rgba(125, 203, 255, 0.2);
     }
+    .albums-player-option[disabled] {
+      opacity: 0.42;
+      cursor: not-allowed;
+      pointer-events: none;
+      filter: grayscale(0.2);
+    }
 
     .watch-decks {
       display: grid;
@@ -11040,6 +11046,27 @@
       color: rgba(203, 223, 242, 0.86);
       text-align: center;
       letter-spacing: 0.02em;
+    }
+    .albums-modal__empty-action {
+      margin-top: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(123, 216, 255, 0.5);
+      background: rgba(14, 31, 44, 0.92);
+      color: #eaf6ff;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.02em;
+    }
+    .albums-modal__empty-action:hover,
+    .albums-modal__empty-action:focus-visible {
+      border-color: rgba(123, 216, 255, 0.82);
+      background: rgba(20, 43, 61, 0.98);
+      transform: translateY(-1px);
     }
 
     .albums-modal__language-footer {
@@ -20340,7 +20367,7 @@
       function albumsNarrationLanguages() {
         const ordered = state.watch.albumsPlayNativeFirst
           ? [currentNativeLanguage(), currentAlbumsLanguage()]
-          : [currentAlbumsLanguage(), currentNativeLanguage()];
+          : [currentAlbumsLanguage()];
         return Array.from(new Set(ordered.filter(Boolean)));
       }
 
@@ -20450,7 +20477,12 @@
           return;
         }
         if (!items.length) {
-          renderAlbumsSlide(els.albumsFlashcardsStack, '<p class="albums-modal__empty">Nenhum flashcard disponivel no momento.</p>', direction);
+          renderAlbumsSlide(els.albumsFlashcardsStack, `
+            <div class="albums-modal__empty">
+              <p>Nenhum flashcard disponivel no momento.</p>
+              <button class="albums-modal__empty-action" type="button" data-albums-player-open>Ver cartas</button>
+            </div>
+          `, direction);
           return;
         }
         const maxIndex = items.length - 1;
@@ -27761,6 +27793,7 @@
 
       function openAlbumsPlayerPopover() {
         if (!els.albumsPlayerPopover) return;
+        syncAlbumsPlayerScopeAvailability();
         if (els.albumsNativeOrderToggleBtn) {
           els.albumsNativeOrderToggleBtn.classList.toggle('is-active', state.watch.albumsPlayNativeFirst !== false);
         }
@@ -27823,6 +27856,24 @@
           sourceCards = uniqueCardsById(userProgressCards().map((card) => ({ ...card })));
         }
         return sourceCards.filter((card) => canAlbumsSurfaceCard(card) && cardHasAlbumsPreviewAudio(card));
+      }
+
+      function hasAlbumsOwnedPreviewCards() {
+        return buildAlbumsPreviewSourceCards('mine').length > 0;
+      }
+
+      function syncAlbumsPlayerScopeAvailability() {
+        const mineButton = els.albumsPlayerOptions?.querySelector('[data-albums-player-scope="mine"]');
+        if (!mineButton) return;
+        const hasMineCards = hasAlbumsOwnedPreviewCards();
+        mineButton.disabled = !hasMineCards;
+        mineButton.setAttribute('aria-disabled', hasMineCards ? 'false' : 'true');
+        const copyNode = mineButton.querySelector('.albums-player-option__copy');
+        if (copyNode) {
+          copyNode.textContent = hasMineCards
+            ? 'Exibe somente os cards do usuário em ordem aleatória.'
+            : 'Indisponível enquanto você ainda não tiver cards com áudio nesse idioma.';
+        }
       }
 
       function formatAlbumsPlayerWord(text, maxCharsPerLine = 16, maxLines = 3) {
@@ -28037,6 +28088,17 @@
           els.watchSubword.style.display = card?.portuguese ? '' : 'none';
           renderWatchStars();
         }
+      }
+
+      function renderAlbumsPreviewPlaybackState(card, language, role = 'target') {
+        if (state.watch.mode !== 'albums') return;
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        const text = safeText(resolveSourceLanguageText(card, normalizedLanguage)) || card?.deckTitle || 'Flashcard';
+        const languageLabel = FLASHCARD_LANGUAGE_OPTIONS[normalizedLanguage]?.label || normalizedLanguage;
+        const roleLabel = role === 'native' ? 'Nativo' : 'Destino';
+        els.watchWord.textContent = formatAlbumsPlayerWord(text);
+        els.watchSubword.textContent = `${roleLabel}: ${languageLabel}`;
+        els.watchSubword.style.display = '';
       }
 
       function openWatchPopover() {
@@ -28355,6 +28417,11 @@
           if (!state.watch.active) return;
           for (const language of albumsNarrationLanguages()) {
             if (!state.watch.active) return;
+            renderAlbumsPreviewPlaybackState(
+              refreshCardFromState(refreshedCard),
+              language,
+              normalizeGameOptionValue('targetLanguage', language) === currentNativeLanguage() ? 'native' : 'target'
+            );
             await playWatchAudioForLanguage(refreshCardFromState(refreshedCard), language, 1);
           }
           if (!state.watch.active) return;
