@@ -11821,13 +11821,28 @@ function getFlashcardEnsureLanguageConfig(language) {
   }
 }
 
-function ensureSentenceFinalPeriod(value) {
+function ensureSentenceTerminalPunctuation(value) {
   const text = String(value || '').replace(/\s+/g, ' ').trim();
   if (!text) return '';
-  if (/[.!?…。．]\s*$/u.test(text)) {
-    return text.replace(/[!?…。．]+\s*$/u, '.');
+  if (/[?？]\s*$/u.test(text)) {
+    return text.replace(/[?？]+\s*$/u, '?');
+  }
+  if (/[!！]\s*$/u.test(text)) {
+    return text.replace(/[!！]+\s*$/u, '!');
+  }
+  if (/[.。．]\s*$/u.test(text)) {
+    return text.replace(/[.。．]+\s*$/u, '.');
   }
   return `${text}.`;
+}
+
+function formatElevenLabsTerminalPause(value) {
+  const normalized = ensureSentenceTerminalPunctuation(value);
+  if (!normalized) return '';
+  if (/\?\s*$/u.test(normalized)) {
+    return `${normalized} . `;
+  }
+  return normalized;
 }
 
 function buildPublishedFlashcardAudioUrl(sourceInfo, payload, sourceIndex, suffix = '', extension = '.mp3') {
@@ -11840,6 +11855,7 @@ function buildPublishedFlashcardAudioUrl(sourceInfo, payload, sourceIndex, suffi
 }
 
 async function generateElevenLabsAudioBuffer({ text, voiceId, languageCode = '' }) {
+  const speechText = formatElevenLabsTerminalPause(text);
   const upstreamResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
     method: 'POST',
     headers: {
@@ -11848,7 +11864,7 @@ async function generateElevenLabsAudioBuffer({ text, voiceId, languageCode = '' 
       'xi-api-key': ELEVENLABS_API_KEY
     },
     body: JSON.stringify({
-      text,
+      text: speechText,
       model_id: ELEVENLABS_MODEL_ID,
       ...(languageCode ? { language_code: languageCode } : {}),
       output_format: 'mp3_44100_128'
@@ -11902,7 +11918,9 @@ async function translateFlashcardItemsForLanguage(targetLanguage, targets, optio
     'Return only valid JSON.',
     'Keep the tone child-safe, practical, and faithful to the original flashcard meaning.',
     'Use the Portuguese text as the main source and the English text only as extra disambiguation when it exists.',
-    'Every translated sentence must always end with a final period.',
+    'Preserve the original sentence mood.',
+    'If the sentence is interrogative, it must end with a question mark.',
+    'If it is a statement, it must end with a final period.',
     'Do not add numbering, markdown, notes, or explanations.',
     'Output JSON with this exact shape:',
     `{"items":[{"index":0,"${config.outputKey}":"..."}]}`,
@@ -11919,7 +11937,7 @@ async function translateFlashcardItemsForLanguage(targetLanguage, targets, optio
     ? parsed.items
       .map((item) => ({
         index: Number.isInteger(item?.index) ? item.index : Number.parseInt(item?.index, 10),
-        text: ensureSentenceFinalPeriod(item?.[config.outputKey])
+        text: ensureSentenceTerminalPunctuation(item?.[config.outputKey])
       }))
       .filter((item) => Number.isInteger(item.index) && item.text)
     : [];
@@ -13441,6 +13459,7 @@ async function generateMiniBookSpeechWithElevenLabs(text, options = {}) {
     ? String(options.languageCode).toLowerCase()
     : '';
 
+  const speechText = formatElevenLabsTerminalPause(input);
   const upstreamResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
     method: 'POST',
     headers: {
@@ -13449,7 +13468,7 @@ async function generateMiniBookSpeechWithElevenLabs(text, options = {}) {
       'xi-api-key': ELEVENLABS_API_KEY
     },
     body: JSON.stringify({
-      text: input,
+      text: speechText,
       model_id: ELEVENLABS_MODEL_ID,
       ...(languageCode ? { language_code: languageCode } : {}),
       output_format: 'mp3_44100_128'
@@ -23009,6 +23028,7 @@ app.post('/api/tts/elevenlabs', async (req, res) => {
   const requestedLanguageCode = typeof req.body?.languageCode === 'string' ? req.body.languageCode.trim().toLowerCase() : '';
   const languageCode = /^[a-z]{2}$/.test(requestedLanguageCode) ? requestedLanguageCode : '';
   const normalizedRequestedVoice = requestedVoice.replace(/^elevenlabs:/, '');
+  const speechText = formatElevenLabsTerminalPause(text);
   const voiceConfigByKey = {
     harry: { voiceId: ELEVENLABS_VOICE_ID_HARRY, instructionsKey: 'ELEVENLABS_VOICE_ID_HARRY' },
     portuguese: { voiceId: ELEVENLABS_VOICE_ID_PORTUGUESE, instructionsKey: 'ELEVENLABS_VOICE_ID_PORTUGUESE' },
@@ -23047,7 +23067,7 @@ app.post('/api/tts/elevenlabs', async (req, res) => {
         'xi-api-key': ELEVENLABS_API_KEY
       },
       body: JSON.stringify({
-        text,
+        text: speechText,
         model_id: ELEVENLABS_MODEL_ID,
         ...(languageCode ? { language_code: languageCode } : {}),
         output_format: 'mp3_44100_128'
@@ -23566,6 +23586,9 @@ app.post('/api/text/openai/flashcards', async (req, res) => {
     'Use natural, everyday, child-safe language.',
     'Keep vocabulary useful and clear for educational flashcards.',
     'Portuguese and English must be faithful translations of each other.',
+    'Preserve sentence mood accurately across both languages.',
+    'If an item is a real question, both sentences must end with a question mark.',
+    'If an item is a statement, both sentences must end with a final period.',
     'Vary sentence structure and wording across items.',
     'Avoid numbering, emojis, explanations, markdown, or extra text.',
     'Output JSON with this exact shape:',
@@ -23619,8 +23642,8 @@ app.post('/api/text/openai/flashcards', async (req, res) => {
     const items = Array.isArray(parsed?.items)
       ? parsed.items
         .map(item => ({
-          pt: typeof item?.pt === 'string' ? item.pt.trim() : '',
-          en: typeof item?.en === 'string' ? item.en.trim() : ''
+          pt: ensureSentenceTerminalPunctuation(item?.pt),
+          en: ensureSentenceTerminalPunctuation(item?.en)
         }))
         .filter(item => item.pt && item.en)
       : [];
@@ -24024,7 +24047,9 @@ app.post('/api/text/openai/translate', async (req, res) => {
     'Return only valid JSON.',
     'Keep the tone child-safe and practical for a language-learning app.',
     'Do not invent extra context.',
-    'Every translated sentence must always end with a final period.',
+    'Preserve the original sentence mood.',
+    'If the sentence is interrogative, it must end with a question mark.',
+    'If it is a statement, it must end with a final period.',
     replaceExisting
       ? `Replace any existing ${targetConfig.errorLabel} text for the provided items.`
       : `Do not translate items that already have ${targetConfig.errorLabel} text.`,
@@ -24085,12 +24110,12 @@ app.post('/api/text/openai/translate', async (req, res) => {
         .map(item => ({
           index: Number.isInteger(item?.index) ? item.index : Number.parseInt(item?.index, 10),
           text: typeof item?.[targetConfig.outputKey] === 'string'
-            ? ensureSentenceFinalPeriod(item[targetConfig.outputKey])
+            ? ensureSentenceTerminalPunctuation(item[targetConfig.outputKey])
             : '',
           pinyinComTons: rawTargetLanguage === 'mandarin' && typeof item?.pinyinComTons === 'string'
-            ? ensureSentenceFinalPeriod(item.pinyinComTons)
+            ? ensureSentenceTerminalPunctuation(item.pinyinComTons)
             : rawTargetLanguage === 'mandarin' && typeof item?.pinyin === 'string'
-              ? ensureSentenceFinalPeriod(item.pinyin)
+              ? ensureSentenceTerminalPunctuation(item.pinyin)
               : ''
         }))
         .filter(item => Number.isInteger(item.index) && item.text)
@@ -24307,7 +24332,7 @@ app.post('/api/flashcards/ensure-audio', express.json({ limit: '1mb' }), async (
 
           const existingText = config.readText(item);
           if (existingText) {
-            const normalizedText = ensureSentenceFinalPeriod(existingText);
+            const normalizedText = ensureSentenceTerminalPunctuation(existingText);
             if (normalizedText !== existingText) {
               config.setText(item, normalizedText);
               changed = true;
@@ -24328,7 +24353,7 @@ app.post('/api/flashcards/ensure-audio', express.json({ limit: '1mb' }), async (
 
           translationTargets.push({
             index: card.sourceIndex,
-            pt: ensureSentenceFinalPeriod(basePortuguese),
+            pt: ensureSentenceTerminalPunctuation(basePortuguese),
             en: baseEnglish
           });
         }
@@ -24364,7 +24389,7 @@ app.post('/api/flashcards/ensure-audio', express.json({ limit: '1mb' }), async (
           const item = sourceEntry.items?.[card.sourceIndex];
           if (!item) continue;
 
-          const finalText = ensureSentenceFinalPeriod(config.readText(item));
+          const finalText = ensureSentenceTerminalPunctuation(config.readText(item));
           if (!finalText) {
             localFailed.push({
               source: card.source,
@@ -24404,7 +24429,7 @@ app.post('/api/flashcards/ensure-audio', express.json({ limit: '1mb' }), async (
           const item = sourceEntry.items?.[card.sourceIndex];
           if (!item) continue;
           const audioValue = config.readAudio(item);
-          const textValue = ensureSentenceFinalPeriod(config.readText(item));
+          const textValue = ensureSentenceTerminalPunctuation(config.readText(item));
           if (!audioValue || !textValue) continue;
           localEnsuredCards.push({
             source: card.source,
@@ -25206,6 +25231,7 @@ app.post('/api/admin/flashcards/fill-missing-audio', express.json({ limit: '2mb'
         const voiceId = target.languageCode === 'pt'
           ? ELEVENLABS_VOICE_ID_PORTUGUESE
           : ELEVENLABS_VOICE_ID_HARRY;
+        const speechText = formatElevenLabsTerminalPause(target.text);
         const upstreamResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
           method: 'POST',
           headers: {
@@ -25214,7 +25240,7 @@ app.post('/api/admin/flashcards/fill-missing-audio', express.json({ limit: '2mb'
             'xi-api-key': ELEVENLABS_API_KEY
           },
           body: JSON.stringify({
-            text: target.text,
+            text: speechText,
             model_id: ELEVENLABS_MODEL_ID,
             language_code: target.languageCode,
             output_format: 'mp3_44100_128'
