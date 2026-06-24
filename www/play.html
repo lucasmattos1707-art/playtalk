@@ -207,6 +207,12 @@
       display: none !important;
     }
 
+    body.welcome-active .flashcards-footer-nav {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
     button { font: inherit; color: inherit; cursor: pointer; border: 0; }
     img { display: block; max-width: 100%; }
 
@@ -1000,6 +1006,61 @@
       align-items: start;
       gap: 0;
       margin: 7vh auto 0;
+    }
+
+    .welcome-gate__language-dock {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 240;
+      min-height: 10vh;
+      padding:
+        12px
+        clamp(16px, 4vw, 28px)
+        calc(env(safe-area-inset-bottom, 0px) + 12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        linear-gradient(180deg, rgba(2, 8, 18, 0), rgba(2, 8, 18, 0.88) 34%, rgba(2, 8, 18, 0.96) 100%);
+    }
+
+    .welcome-gate__language-strip {
+      width: min(100%, 680px);
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: clamp(8px, 1.8vw, 16px);
+      align-items: center;
+    }
+
+    .welcome-gate__language-btn {
+      border: 0;
+      background: transparent;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      opacity: 0.65;
+      transition: opacity 180ms ease, transform 180ms ease, filter 180ms ease;
+      cursor: pointer;
+    }
+
+    .welcome-gate__language-btn img {
+      width: min(100%, 46px);
+      height: auto;
+      display: block;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.32));
+    }
+
+    .welcome-gate__language-btn.is-active {
+      opacity: 1;
+      transform: translateY(-1px) scale(1.02);
+    }
+
+    .welcome-gate__language-btn:hover,
+    .welcome-gate__language-btn:focus-visible {
+      opacity: 1;
     }
 
     .welcome-gate__action-btn {
@@ -5384,7 +5445,7 @@
 
     .watch.is-albums-mode .watch-word {
       max-width: min(92vw, 540px);
-      font-size: clamp(28px, 5vw, 48px);
+      font-size: clamp(22px, 4vw, 38px);
       line-height: 1.05;
       white-space: pre-line;
       text-wrap: balance;
@@ -5403,7 +5464,7 @@
     }
 
     .watch.is-albums-mode .watch-subword {
-      display: block;
+      display: none;
       max-width: min(92vw, 560px);
       min-height: 0;
       color: rgba(255, 255, 255, 0.92);
@@ -11337,6 +11398,9 @@
         </div>
         <p class="welcome-gate__blocked-note" id="welcomeBlockedNote" aria-live="polite" hidden>Mais energias amanhã</p>
       </div>
+      <div class="welcome-gate__language-dock" id="welcomeLanguageDock" aria-label="Trocar idioma destino">
+        <div class="welcome-gate__language-strip" id="welcomeLanguageStrip"></div>
+      </div>
       <p class="welcome-gate__admin-stats" id="welcomeAdminStats" hidden></p>
       <div class="welcome-gate__bg-admin" id="welcomeBgAdmin" hidden>
         <div class="welcome-gate__bg-actions" aria-label="Upload do background global">
@@ -13033,6 +13097,8 @@
         welcomeHeader: document.getElementById('welcomeHeader'),
         welcomeMissionBtn: document.getElementById('welcomeMissionBtn'),
         welcomeBooksBtn: document.getElementById('welcomeBooksBtn'),
+        welcomeLanguageDock: document.getElementById('welcomeLanguageDock'),
+        welcomeLanguageStrip: document.getElementById('welcomeLanguageStrip'),
         welcomeUserName: document.getElementById('welcomeUserName'),
         welcomeGreetingText: document.getElementById('welcomeGreetingText'),
         welcomeUserLevelLine: document.getElementById('welcomeUserLevelLine'),
@@ -13388,6 +13454,55 @@
 
       function currentNativeLanguageLabel() {
         return FLASHCARD_LANGUAGE_OPTIONS[currentNativeLanguage()]?.label || 'Portugues';
+      }
+
+      function renderWelcomeLanguageDock() {
+        if (!els.welcomeLanguageStrip) return;
+        const selectedLanguage = currentTargetLanguage();
+        els.welcomeLanguageStrip.innerHTML = TARGET_LANGUAGE_DISPLAY_ORDER.map((language) => {
+          const meta = FLASHCARD_LANGUAGE_OPTIONS[language] || {};
+          const iconPath = safeText(meta.iconPath || '');
+          if (!iconPath) return '';
+          const active = language === selectedLanguage;
+          return `
+            <button
+              class="welcome-gate__language-btn${active ? ' is-active' : ''}"
+              type="button"
+              data-welcome-language="${escapeHtml(language)}"
+              aria-pressed="${active ? 'true' : 'false'}"
+              aria-label="Trocar idioma para ${escapeHtml(meta.label || language)}"
+            >
+              <img src="${escapeHtml(iconPath)}" alt="">
+            </button>
+          `;
+        }).join('');
+      }
+
+      async function setWelcomeTargetLanguage(language) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        if (!normalizedLanguage || normalizedLanguage === currentTargetLanguage()) return;
+        const previousTargetLanguage = currentTargetLanguage();
+        state.options.targetLanguage = normalizedLanguage;
+        applySelectedLanguageProjectionToAllCards();
+        if (state.user?.id) {
+          if (state.flashcardsSyncTimer) {
+            window.clearTimeout(state.flashcardsSyncTimer);
+            state.flashcardsSyncTimer = 0;
+          }
+          await syncFlashcardCloudNow(previousTargetLanguage);
+          await loadFlashcardStateForLanguage(normalizedLanguage, { preserveStats: true });
+        } else {
+          persistUserProgressLocally(previousTargetLanguage);
+          persistUserCardLanguagesLocally();
+          persistHiddenCardIdsLocally();
+          await loadFlashcardStateForLanguage(normalizedLanguage, { preserveStats: true });
+        }
+        persistGameOptions();
+        renderWelcomeLanguageDock();
+        refreshLibrary();
+        renderMetrics();
+        updateGameChips();
+        syncWelcomeGate();
       }
 
       function currentTargetSpeechCode() {
@@ -14903,7 +15018,11 @@
         persistUserCardLanguagesLocally();
         persistHiddenCardIdsLocally();
         if (!options.skipCloudSync) {
-          scheduleFlashcardCloudSync();
+          if (options.immediateCloudSync) {
+            void syncFlashcardCloudNow(currentProgressLanguage(), { keepalive: options.keepalive === true });
+          } else {
+            scheduleFlashcardCloudSync(options.cloudSyncDelayMs);
+          }
         }
       }
 
@@ -16918,6 +17037,10 @@
         state.entry.welcomeVisible = visible;
         document.body.classList.toggle('welcome-active', visible);
         els.welcomeGate?.classList.toggle('is-visible', visible);
+        if (els.welcomeLanguageDock) {
+          els.welcomeLanguageDock.hidden = !visible;
+        }
+        renderWelcomeLanguageDock();
         syncWelcomeModeButtons();
         syncWelcomeStartButton();
         void refreshWelcomeEnergyState();
@@ -18662,7 +18785,7 @@
           sealImage: meta.sealPath
         });
         state.userCards.set(cardId, record);
-        saveUserProgress();
+        saveUserProgress({ immediateCloudSync: Boolean(state.user?.id), keepalive: true });
         return record;
       }
 
@@ -20567,12 +20690,14 @@
       function prefetchAlbumsFlashcards(items, startIndex) {
         if (!Array.isArray(items) || !items.length) return;
         const base = Math.max(0, Math.min(items.length - 1, Number(startIndex) || 0));
-        for (let offset = 1; offset <= 6; offset += 1) {
+        const requiredLanguages = albumsPreviewRequiredLanguages();
+        for (let offset = 1; offset <= 3; offset += 1) {
           const idx = base + offset;
           if (idx >= items.length) break;
           const entry = items[idx];
           preloadAlbumsImage(entry?.imageDisplayUrl || entry?.imageUrl);
           preloadAlbumsImage(entry?.progress?.sealImage || entry?.sealImage);
+          requiredLanguages.forEach((language) => preloadCardAudioForLanguage(entry, language));
         }
       }
 
@@ -25426,8 +25551,89 @@
         }
       }
 
+      function preloadAudioSource(src) {
+        if (isNoEnergyMediaLocked()) return;
+        const safeSrc = safeText(src);
+        if (!safeSrc || state.game.preloadAudios.has(safeSrc)) return;
+        try {
+          const audio = new Audio(safeSrc);
+          audio.preload = 'auto';
+          audio.load();
+          state.game.preloadAudios.set(safeSrc, audio);
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      function preloadCardAudioForLanguage(card, language) {
+        preloadAudioSource(resolveCardAudioUrlForLanguage(card, language, {
+          accent: state.watch.mode === 'albums' ? currentWatchAlbumsAccent() : ''
+        }));
+      }
+
+      function buildAlbumsPreviewBufferCards(limit = 3) {
+        const cards = [];
+        const seen = new Set();
+        const pushCard = (candidate) => {
+          const refreshed = refreshCardFromState(candidate);
+          const cardId = safeText(refreshed?.id);
+          if (!refreshed || !cardId || seen.has(cardId)) return;
+          seen.add(cardId);
+          cards.push(refreshed);
+        };
+        if (state.watch.mode === 'albums' && state.watch.currentCardId) {
+          pushCard(cardById(state.watch.currentCardId));
+        }
+        (Array.isArray(state.watch.queue) ? state.watch.queue : []).forEach((card) => {
+          if (cards.length >= limit) return;
+          pushCard(card);
+        });
+        return cards.slice(0, Math.max(1, Number(limit) || 3));
+      }
+
+      function primeAlbumsPreviewBuffer(sessionToken = state.watch.sessionToken) {
+        if (state.watch.mode !== 'albums' || !isWatchSessionTokenActive(sessionToken)) return;
+        const bufferCards = buildAlbumsPreviewBufferCards(3);
+        if (!bufferCards.length) return;
+        const languages = albumsNarrationLanguages();
+        void ensureFlashcardAssetsForLanguages(bufferCards, languages).then(() => {
+          if (!isWatchSessionTokenActive(sessionToken)) return;
+          bufferCards.forEach((card) => {
+            const refreshedCard = refreshCardFromState(card);
+            preloadCardImage(refreshedCard);
+            languages.forEach((language) => preloadCardAudioForLanguage(refreshedCard, language));
+          });
+        }).catch(() => {});
+      }
+
       function maintainFirstStageAudioBuffer() {
-        return;
+        const bufferedCards = [];
+        const seen = new Set();
+        const currentEntry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+        const pushEntryCard = (entry) => {
+          const cardId = safeText(entry?.id);
+          if (!entry || !cardId || seen.has(cardId)) return;
+          const card = cardById(cardId);
+          if (!card) return;
+          seen.add(cardId);
+          bufferedCards.push(card);
+        };
+        pushEntryCard(currentEntry);
+        (Array.isArray(state.game.queue) ? state.game.queue : []).forEach((cardId) => {
+          if (bufferedCards.length >= 3) return;
+          pushEntryCard(state.game.entries.get(cardId));
+        });
+        bufferedCards.forEach((card) => {
+          preloadCardImage(card);
+          preloadCardAudio(card);
+        });
+        void ensureUpcomingGameCardAudio(bufferedCards).then(() => {
+          bufferedCards.forEach((card) => {
+            const refreshedCard = refreshCardFromState(card);
+            preloadCardImage(refreshedCard);
+            preloadCardAudio(refreshedCard);
+          });
+        }).catch(() => {});
       }
 
       function queueFifthStageCoinsGainAudio(delayMs = 500) {
@@ -28228,7 +28434,7 @@
         }
       }
 
-      function formatAlbumsPlayerWord(text, maxCharsPerLine = 16, maxLines = 3) {
+      function formatAlbumsPlayerWord(text, maxCharsPerLine = 14, maxLines = 2) {
         const normalized = safeText(text).replace(/\s+/g, ' ').trim();
         if (!normalized) return 'Flashcard';
         const words = normalized.split(' ');
@@ -28429,10 +28635,9 @@
         const albumsMode = state.watch.mode === 'albums';
         if (albumsMode) {
           const targetText = safeText(resolveSourceLanguageText(card, currentAlbumsLanguage())) || card?.english || card?.portuguese || card?.deckTitle || 'Preparando...';
-          const nativeText = safeText(resolveSourceLanguageText(card, currentNativeLanguage()));
           els.watchWord.textContent = formatAlbumsPlayerWord(targetText);
-          els.watchSubword.textContent = nativeText;
-          els.watchSubword.style.display = nativeText ? '' : 'none';
+          els.watchSubword.textContent = '';
+          els.watchSubword.style.display = 'none';
           renderWatchLanguageSwitcher();
           els.watchStars.innerHTML = '';
         } else {
@@ -28447,12 +28652,9 @@
         if (state.watch.mode !== 'albums') return;
         const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
         const text = safeText(resolveSourceLanguageText(card, normalizedLanguage)) || card?.deckTitle || 'Flashcard';
-        const languageMeta = watchPresentationLanguageIcon(normalizedLanguage);
-        const languageLabel = safeText(languageMeta.label || FLASHCARD_LANGUAGE_OPTIONS[normalizedLanguage]?.label || normalizedLanguage);
-        const roleLabel = role === 'native' ? 'Nativo' : 'Destino';
         els.watchWord.textContent = formatAlbumsPlayerWord(text);
-        els.watchSubword.textContent = `${roleLabel}: ${languageLabel}`;
-        els.watchSubword.style.display = '';
+        els.watchSubword.textContent = '';
+        els.watchSubword.style.display = 'none';
       }
 
       function openWatchPopover() {
@@ -28764,6 +28966,9 @@
         state.watch.currentCardId = card.id;
         renderWatchCard(card);
         playWatchMusic();
+        if (state.watch.mode === 'albums') {
+          primeAlbumsPreviewBuffer(sessionToken);
+        }
         if ('mediaSession' in navigator) {
           try {
             navigator.mediaSession.metadata = new MediaMetadata({
@@ -28897,6 +29102,7 @@
         document.body.classList.add('game-open');
         renderWatchLanguageSwitcher();
         syncWatchAlbumsBackdrop({ immediate: true });
+        primeAlbumsPreviewBuffer(state.watch.sessionToken);
         runWatchCycle();
       }
 
@@ -30264,6 +30470,13 @@
         els.welcomeBooksBtn?.addEventListener('click', () => {
           void openAlbumsModal();
         });
+        els.welcomeLanguageStrip?.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-welcome-language]');
+          if (!button) return;
+          event.preventDefault();
+          event.stopPropagation();
+          void setWelcomeTargetLanguage(button.getAttribute('data-welcome-language') || '');
+        });
         els.albumsPrevSectionBtn?.addEventListener('click', () => {
           nudgeAlbumsSection(-1);
         });
@@ -30848,6 +31061,11 @@
           state.game.sessionClockActive = false;
           stopFlashcardSessionTick();
           void signalFlashcardSessionClock('out');
+        });
+        window.addEventListener('pagehide', () => {
+          if (state.user?.id) {
+            void syncFlashcardCloudNow(currentProgressLanguage(), { keepalive: true });
+          }
         });
         window.addEventListener('online', () => {
           if (state.entry.pendingFlashSessionOut) {
