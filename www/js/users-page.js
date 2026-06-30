@@ -21,6 +21,8 @@
     { slot: 4, key: 'level', label: 'Nível', valueLabel: '' }
   ];
 
+  RANKING_METRICS.splice(1);
+
   const els = {
     rankingTitle: document.getElementById('rankingTitle'),
     rankingStatus: document.getElementById('rankingStatus'),
@@ -105,6 +107,16 @@
     initialLoaderReleased: false,
     initialLoaderTimer: 0
   };
+
+  function pruneRankingMetricButtons() {
+    if (!els.rankingMetrics) return;
+    Array.from(els.rankingMetrics.querySelectorAll('[data-metric-key]')).forEach((button) => {
+      const metricKey = safeText(button.getAttribute('data-metric-key'));
+      if (metricKey !== 'flashcards') {
+        button.remove();
+      }
+    });
+  }
 
   function buildApiUrl(path) {
     if (window.PlaytalkApi && typeof window.PlaytalkApi.url === 'function') {
@@ -1597,6 +1609,7 @@
 
   (async () => {
     scheduleInitialUsersLoaderRelease();
+    pruneRankingMetricButtons();
     try {
       state.currentUser = await fetchSessionUser();
       syncAdminViewerUi();
@@ -1607,11 +1620,6 @@
       }
       await loadUsers('', { metricKey: 'flashcards', force: true, animate: false });
       releaseInitialUsersLoader();
-      RANKING_METRICS.forEach((metric) => {
-        if (metric.key !== 'flashcards') {
-          void preloadMetric(metric.key);
-        }
-      });
       if (!HAS_GLOBAL_CHALLENGE_POPUPS) {
         void pollChallenges();
       }

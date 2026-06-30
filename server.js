@@ -17120,26 +17120,9 @@ app.get('/api/users/flashcards', async (req, res) => {
     const limit = Number.isInteger(requestedLimit) && requestedLimit > 0
       ? Math.min(requestedLimit, 50)
       : 50;
-    const requestedMetric = String(req.query.metric || '').trim().toLowerCase();
-    const metricKey = requestedMetric === 'pronunciation'
-      ? 'pronunciation'
-      : requestedMetric === 'speed'
-        ? 'speed'
-        : requestedMetric === 'level'
-          ? 'level'
-          : 'flashcards';
-    const metricLabel = metricKey === 'pronunciation'
-      ? 'Pronuncia'
-      : metricKey === 'speed'
-        ? 'Velocidade'
-        : metricKey === 'level'
-          ? 'Level'
-          : 'Cards';
-    const metricValueLabel = metricKey === 'pronunciation'
-      ? '%'
-      : metricKey === 'speed'
-        ? '/h'
-        : '';
+    const metricKey = 'flashcards';
+    const metricLabel = 'Cards';
+    const metricValueLabel = '';
 
     const visibilityWhereClause = buildPublicUsersVisibilityWhereClause(requesterIsAdmin);
     const progressScoreSql = buildFlashcardProgressRankingScoreSql();
@@ -17157,40 +17140,11 @@ app.get('/api/users/flashcards', async (req, res) => {
          u.bot_config,
          u.bot_avatar_status,
          u.bot_avatar_error,
-         COALESCE(u.level, 1)::int AS user_level,
          overrides.flashcards_floor AS override_flashcards_floor,
          COALESCE(overrides.flashcards_delta, 0)::int AS override_flashcards_delta,
-         COALESCE(overrides.pronunciation_delta, 0)::int AS override_pronunciation_delta,
-         COALESCE(overrides.speed_delta, 0)::numeric AS override_speed_delta,
-         COALESCE(overrides.level_delta, 0)::int AS override_level_delta,
          COALESCE(presence.last_seen_at >= (now() - interval '${SPEAKING_CHALLENGE_ONLINE_WINDOW_SECONDS} seconds'), false) AS is_online,
          COALESCE(ranking.flashcards_count, ranking.all_time_count, progress.ranking_total, 0) AS flashcards_count,
-         COALESCE(u.battle, 0)::int AS battles_won,
-         GREATEST(
-           0,
-           LEAST(
-             100,
-             ROUND(
-               CASE
-                 WHEN (COALESCE(accurate.pronunciation_samples_count, 0) + COALESCE(books_speaking.pronunciation_samples_count, 0)) > 0
-                   THEN (
-                     (COALESCE(accurate.pronunciation_sum, 0)::numeric + COALESCE(books_speaking.pronunciation_sum, 0)::numeric)
-                     / (COALESCE(accurate.pronunciation_samples_count, 0)::numeric + COALESCE(books_speaking.pronunciation_samples_count, 0)::numeric)
-                   )
-                 ELSE 0
-               END
-             )::int
-           )
-         )::int AS pronunciation_percent,
-        CASE
-          WHEN COALESCE(speed_samples.sample_count, 0) >= 2
-            AND COALESCE(speed_samples.practice_window_ms, 0) >= ${FLASHCARD_SPEED_MIN_PRACTICE_WINDOW_MS}
-            AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
-            THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(speed_samples.practice_window_ms, 1)::numeric, 1)
-           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
-             THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
-           ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
-         END AS speed_flashcards_per_hour
+         COALESCE(u.battle, 0)::int AS battles_won
        FROM public.users u
        LEFT JOIN (
          SELECT
@@ -17220,31 +17174,6 @@ app.get('/api/users/flashcards', async (req, res) => {
          WHERE deduped.row_index = 1
        ) ranking
          ON ranking.user_id = u.id
-       LEFT JOIN public.user_flashcard_stats stats
-         ON stats.user_id = u.id
-       LEFT JOIN (
-          SELECT
-            user_id,
-            COALESCE(SUM(GREATEST(sample_value, 0)), 0)::numeric AS normalized_chars_count,
-            COUNT(*)::int AS sample_count,
-            GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
-         FROM (
-           SELECT
-              user_id,
-              sample_value,
-              practice_ms_total,
-              ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY sample_seq DESC, ctid DESC) AS row_index
-            FROM public.user_flashcard_speed_samples
-            WHERE sample_kind = 'speed'
-          ) ranked_speed_samples
-         WHERE ranked_speed_samples.row_index <= ${FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE}
-         GROUP BY user_id
-       ) speed_samples
-         ON speed_samples.user_id = u.id
-       LEFT JOIN public.flashcards_accurate accurate
-         ON accurate.user_id = u.id
-       LEFT JOIN public.user_books_speaking_stats books_speaking
-         ON books_speaking.user_id = u.id
        LEFT JOIN public.user_presence presence
          ON presence.user_id = u.id
        LEFT JOIN public.user_ranking_overrides overrides
@@ -17256,9 +17185,6 @@ app.get('/api/users/flashcards', async (req, res) => {
       const derived = buildBotDerivedStats(entry);
       const isBot = isBotUserRecord(entry);
       const baseFlashcardsCount = Math.max(0, Number(derived.flashcardsCount) || 0);
-      const basePronunciation = Math.max(0, Number(derived.pronunciationPercent) || 0);
-      const baseSpeed = Math.max(0, Number(derived.speedFlashcardsPerHour) || 0);
-      const baseLevel = Math.max(1, Math.min(200, Number(entry.user_level) || 1));
       const flashcardsFloor = Number.isFinite(Number(entry.override_flashcards_floor))
         ? Math.max(0, Number(entry.override_flashcards_floor))
         : 0;
@@ -17266,25 +17192,12 @@ app.get('/api/users/flashcards', async (req, res) => {
         flashcardsFloor,
         Math.max(0, baseFlashcardsCount + (Number(entry.override_flashcards_delta) || 0))
       );
-      const pronunciationPercent = Math.max(0, Math.min(100, basePronunciation + (Number(entry.override_pronunciation_delta) || 0)));
-      const speedFlashcardsPerHour = Math.max(0, Number((baseSpeed + (Number(entry.override_speed_delta) || 0)).toFixed(1)));
-      const level = Math.max(1, Math.min(200, baseLevel + (Number(entry.override_level_delta) || 0)));
-      const rankingValue = metricKey === 'pronunciation'
-        ? pronunciationPercent
-        : metricKey === 'speed'
-          ? speedFlashcardsPerHour
-          : metricKey === 'level'
-            ? level
-            : flashcardsCount;
       return {
         ...entry,
         is_online: isBot ? true : Boolean(entry.is_online),
         flashcards_count: flashcardsCount,
-        pronunciation_percent: pronunciationPercent,
-        speed_flashcards_per_hour: speedFlashcardsPerHour,
         battles_won: derived.battlesWon,
-        level_value: level,
-        ranking_value: rankingValue
+        ranking_value: flashcardsCount
       };
     }).sort((left, right) => {
       const primary = Number(right.ranking_value) - Number(left.ranking_value);
@@ -17316,10 +17229,7 @@ app.get('/api/users/flashcards', async (req, res) => {
         username: String(viewerEntry.username || '').trim() || 'Usuario',
         rank: Number(viewerEntry.rank_position) || 0,
         flashcardsCount: Number(viewerEntry.flashcards_count) || 0,
-        pronunciationPercent: Number(viewerEntry.pronunciation_percent) || 0,
-        speedFlashcardsPerHour: Number(viewerEntry.speed_flashcards_per_hour) || 0,
         battlesWon: Number(viewerEntry.battles_won) || 0,
-        level: Number(viewerEntry.level_value) || 1,
         rankingValue: Number(viewerEntry.ranking_value) || 0,
         isOnline: Boolean(viewerEntry.is_online),
         noEnergy: Boolean(viewerEntry.no_energy),
@@ -17336,10 +17246,7 @@ app.get('/api/users/flashcards', async (req, res) => {
         botConfig: parseBotConfig(entry.bot_config, { fallbackUsername: entry.username || '' }),
         rank: Number(entry.rank_position) || 0,
         flashcardsCount: Number(entry.flashcards_count) || 0,
-        pronunciationPercent: Number(entry.pronunciation_percent) || 0,
-        speedFlashcardsPerHour: Number(entry.speed_flashcards_per_hour) || 0,
         battlesWon: Number(entry.battles_won) || 0,
-        level: Number(entry.level_value) || 1,
         rankingValue: Number(entry.ranking_value) || 0,
         isOnline: Boolean(entry.is_online),
         premiumFullAccess: Boolean(entry.premium_full_access),
@@ -21277,7 +21184,6 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
     await ensureFlashcardUserStateTables();
     await ensureFlashcardRankingsTable();
     await ensureUserRankingOverridesTable();
-    await ensureUserFlashcardSpeedSamplesTable();
 
     const authUser = await readAuthenticatedUserFromRequest(req);
     if (!authUser?.id || !isAdminUserRecord(authUser)) {
@@ -21292,14 +21198,7 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
       return;
     }
 
-    const rawMetric = String(req.body?.metric || '').trim().toLowerCase();
-    const metricKey = rawMetric === 'pronunciation'
-      ? 'pronunciation'
-      : rawMetric === 'speed'
-        ? 'speed'
-        : rawMetric === 'level'
-          ? 'level'
-          : 'flashcards';
+    const metricKey = 'flashcards';
     const inputValue = Number(req.body?.value);
     if (!Number.isFinite(inputValue)) {
       res.status(400).json({ success: false, message: 'Valor invalido.' });
@@ -21310,35 +21209,7 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
     const result = await pool.query(
       `SELECT
          COALESCE(ranking.flashcards_count, ranking.all_time_count, progress.ranking_total, 0) AS flashcards_count,
-         COALESCE(progress.card_count, 0)::int AS progress_card_count,
-         COALESCE(accurate.pronunciation_samples_count, 0)::bigint AS flashcard_pronunciation_samples_count,
-         COALESCE(books_speaking.pronunciation_samples_count, 0)::bigint AS books_pronunciation_samples_count,
-         GREATEST(
-           0,
-           LEAST(
-             100,
-             ROUND(
-               CASE
-                 WHEN (COALESCE(accurate.pronunciation_samples_count, 0) + COALESCE(books_speaking.pronunciation_samples_count, 0)) > 0
-                   THEN (
-                     (COALESCE(accurate.pronunciation_sum, 0)::numeric + COALESCE(books_speaking.pronunciation_sum, 0)::numeric)
-                     / (COALESCE(accurate.pronunciation_samples_count, 0)::numeric + COALESCE(books_speaking.pronunciation_samples_count, 0)::numeric)
-                   )
-                 ELSE 0
-               END
-             )::int
-           )
-         )::int AS pronunciation_percent,
-        CASE
-          WHEN COALESCE(speed_samples.sample_count, 0) >= 2
-            AND COALESCE(speed_samples.practice_window_ms, 0) >= ${FLASHCARD_SPEED_MIN_PRACTICE_WINDOW_MS}
-            AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
-            THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(speed_samples.practice_window_ms, 1)::numeric, 1)
-           WHEN COALESCE(stats.training_time_ms, 0) > 0 AND COALESCE(speed_samples.normalized_chars_count, 0) > 0
-             THEN ROUND((COALESCE(speed_samples.normalized_chars_count, 0)::numeric * 3600000::numeric) / COALESCE(stats.training_time_ms, 1)::numeric, 1)
-           ELSE COALESCE(stats.admin_speed_flashcards_per_hour, 0)::numeric
-         END AS speed_flashcards_per_hour,
-         COALESCE(u.level, 1)::int AS user_level
+         COALESCE(progress.card_count, 0)::int AS progress_card_count
        FROM public.users u
        LEFT JOIN (
          SELECT
@@ -21366,27 +21237,6 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
          ) deduped
          WHERE deduped.row_index = 1
        ) ranking ON ranking.user_id = u.id
-       LEFT JOIN public.user_flashcard_stats stats ON stats.user_id = u.id
-       LEFT JOIN (
-          SELECT
-            user_id,
-            COALESCE(SUM(GREATEST(sample_value, 0)), 0)::numeric AS normalized_chars_count,
-            COUNT(*)::int AS sample_count,
-            GREATEST(0, COALESCE(MAX(practice_ms_total), 0) - COALESCE(MIN(practice_ms_total), 0))::bigint AS practice_window_ms
-         FROM (
-           SELECT
-             user_id,
-             sample_value,
-             practice_ms_total,
-             ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY sample_seq DESC, ctid DESC) AS row_index
-           FROM public.user_flashcard_speed_samples
-           WHERE sample_kind = 'speed'
-         ) ranked_speed_samples
-         WHERE ranked_speed_samples.row_index <= ${FLASHCARD_SPEED_SAMPLE_WINDOW_SIZE}
-         GROUP BY user_id
-       ) speed_samples ON speed_samples.user_id = u.id
-       LEFT JOIN public.flashcards_accurate accurate ON accurate.user_id = u.id
-       LEFT JOIN public.user_books_speaking_stats books_speaking ON books_speaking.user_id = u.id
        WHERE u.id = $1
        LIMIT 1`,
       [userId]
@@ -21398,80 +21248,10 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
     }
 
     const baseFlashcards = Math.max(0, Number(current.flashcards_count) || 0);
-    const basePronunciation = Math.max(0, Math.min(100, Number(current.pronunciation_percent) || 0));
-    const baseSpeed = Math.max(0, Number(current.speed_flashcards_per_hour) || 0);
-    const baseLevel = Math.max(1, Math.min(200, Number(current.user_level) || 1));
+    const targetValue = Math.max(0, Math.round(inputValue));
 
-    const targetValue = metricKey === 'pronunciation'
-      ? Math.max(0, Math.min(100, Math.round(inputValue)))
-      : metricKey === 'speed'
-        ? Math.max(0, Number(inputValue.toFixed(1)))
-        : metricKey === 'level'
-          ? Math.max(1, Math.min(200, Math.round(inputValue)))
-          : Math.max(0, Math.round(inputValue));
-
-    let flashcardsFloor = null;
-    let flashcardsDelta = 0;
-    let pronunciationDelta = 0;
-    let speedDelta = 0;
-    let levelDelta = 0;
-    if (metricKey === 'pronunciation') {
-      pronunciationDelta = 0;
-    } else if (metricKey === 'speed') {
-      speedDelta = Number((targetValue - baseSpeed).toFixed(1));
-    } else if (metricKey === 'level') {
-      levelDelta = targetValue - baseLevel;
-    } else {
-      flashcardsFloor = targetValue;
-      flashcardsDelta = targetValue - baseFlashcards;
-    }
-
-    if (metricKey === 'pronunciation') {
-      const manualSamples = Array.from(
-        { length: FLASHCARD_PRONUNCIATION_SAMPLE_LIMIT },
-        () => targetValue
-      );
-      await pool.query(
-        `INSERT INTO public.flashcards_accurate (
-           user_id,
-           pronunciation_tag,
-           pronunciation_samples,
-           pronunciation_sum,
-           pronunciation_samples_count,
-           latest_pronunciation_percent,
-           updated_at
-         )
-         VALUES ($1, 'flashcards-accurate', $2::jsonb, $3, $4, $5, now())
-         ON CONFLICT (user_id)
-         DO UPDATE SET
-           pronunciation_tag = EXCLUDED.pronunciation_tag,
-           pronunciation_samples = EXCLUDED.pronunciation_samples,
-           pronunciation_sum = EXCLUDED.pronunciation_sum,
-           pronunciation_samples_count = EXCLUDED.pronunciation_samples_count,
-           latest_pronunciation_percent = EXCLUDED.latest_pronunciation_percent,
-           updated_at = now()`,
-        [
-          userId,
-          JSON.stringify(manualSamples),
-          targetValue * manualSamples.length,
-          manualSamples.length,
-          targetValue
-        ]
-      );
-      await pool.query(
-        `INSERT INTO public.user_flashcard_stats (
-           user_id,
-           pronunciation_samples,
-           updated_at
-         )
-         VALUES ($1, $2::jsonb, now())
-         ON CONFLICT (user_id)
-         DO UPDATE SET
-           pronunciation_samples = EXCLUDED.pronunciation_samples,
-           updated_at = now()`,
-        [userId, JSON.stringify(manualSamples)]
-      );
-    }
+    const flashcardsFloor = targetValue;
+    const flashcardsDelta = targetValue - baseFlashcards;
 
     await pool.query(
       `INSERT INTO public.user_ranking_overrides (
@@ -21483,26 +21263,25 @@ app.post('/api/admin/users/:userId/ranking-metric', express.json({ limit: '32kb'
          level_delta,
          updated_by_user_id,
          updated_at
-       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, now())
-       ON CONFLICT (user_id)
-       DO UPDATE SET
-         flashcards_floor = CASE WHEN $8 = 'flashcards' THEN EXCLUDED.flashcards_floor ELSE public.user_ranking_overrides.flashcards_floor END,
-         flashcards_delta = CASE WHEN $8 = 'flashcards' THEN EXCLUDED.flashcards_delta ELSE public.user_ranking_overrides.flashcards_delta END,
-         pronunciation_delta = CASE WHEN $8 = 'pronunciation' THEN EXCLUDED.pronunciation_delta ELSE public.user_ranking_overrides.pronunciation_delta END,
-         speed_delta = CASE WHEN $8 = 'speed' THEN EXCLUDED.speed_delta ELSE public.user_ranking_overrides.speed_delta END,
-         level_delta = CASE WHEN $8 = 'level' THEN EXCLUDED.level_delta ELSE public.user_ranking_overrides.level_delta END,
-         updated_by_user_id = EXCLUDED.updated_by_user_id,
-         updated_at = now()`,
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+      ON CONFLICT (user_id)
+      DO UPDATE SET
+        flashcards_floor = EXCLUDED.flashcards_floor,
+        flashcards_delta = EXCLUDED.flashcards_delta,
+        pronunciation_delta = EXCLUDED.pronunciation_delta,
+        speed_delta = EXCLUDED.speed_delta,
+        level_delta = EXCLUDED.level_delta,
+        updated_by_user_id = EXCLUDED.updated_by_user_id,
+        updated_at = now()`,
       [
         userId,
         flashcardsFloor,
         flashcardsDelta,
-        pronunciationDelta,
-        speedDelta,
-        levelDelta,
-        Number(authUser.id) || null,
-        metricKey
+        0,
+        0,
+        0,
+        Number(authUser.id) || null
       ]
     );
 

@@ -12218,16 +12218,16 @@
         }
       };
       const GAME_OPTION_VALUE_MAP = {
-        difficulty: ['automatic'],
+        difficulty: ['manual'],
         speed: ['0.70', '0.80', '0.90', '1.00'],
         accent: ['mix_100_0', 'mix_90_10', 'mix_80_20', 'mix_70_30', 'mix_60_40', 'mix_50_50', 'mix_40_60', 'mix_30_70', 'mix_20_80', 'mix_10_90', 'mix_0_100'],
         fourthStageTyping: ['off', 'on'],
-        mode: ['training', 'journey'],
+        mode: ['training'],
         targetLanguage: TARGET_LANGUAGE_DISPLAY_ORDER.slice(),
         nativeLanguage: ['portuguese', 'english', 'french', 'mandarin', 'spanish', 'german']
       };
       const DEFAULT_GAME_OPTIONS = {
-        difficulty: 'automatic',
+        difficulty: 'manual',
         speed: '0.90',
         accent: 'mix_100_0',
         fourthStageTyping: 'off',
@@ -13355,16 +13355,16 @@
 
       function availableDifficultyValues() {
         const values = Array.isArray(GAME_OPTION_VALUE_MAP.difficulty) ? GAME_OPTION_VALUE_MAP.difficulty : [];
-        return values.length ? values : ['automatic'];
+        return values.length ? values : ['manual'];
       }
 
       function defaultDifficultyValue() {
-        return 'automatic';
+        return 'manual';
       }
 
       function normalizeDifficultyLevelValue(value) {
         const normalized = safeText(value).toLowerCase();
-        return normalized === 'manual' ? 'manual' : (normalized === 'automatic' ? 'automatic' : '');
+        return normalized === 'manual' ? 'manual' : '';
       }
 
       function parseDifficultyLevelNumber(value) {
@@ -13378,7 +13378,7 @@
         if (selectedGameLevel() > state.entry.sequenceContinuousMaxLevel) {
           state.ui.welcomeSelectedLevel = state.entry.sequenceContinuousMaxLevel;
         }
-        GAME_OPTION_VALUE_MAP.difficulty = ['automatic'];
+        GAME_OPTION_VALUE_MAP.difficulty = ['manual'];
         state.options.difficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
       }
 
@@ -13437,15 +13437,15 @@
       }
 
       function currentGameMode() {
-        return normalizeGameOptionValue('mode', state.options?.mode);
+        return 'manual';
       }
 
       function isJourneyGameMode() {
-        return currentGameMode() === 'journey';
+        return false;
       }
 
       function isJourneyLevelingLanguage() {
-        return isJourneyGameMode() && currentTargetLanguage() !== 'english';
+        return false;
       }
 
       function currentTargetLanguageLabel() {
@@ -13635,7 +13635,7 @@
       }
 
       function currentGameOptionSlides() {
-        const slides = ['mode', 'targetLanguage', 'nativeLanguage'];
+        const slides = ['difficulty', 'targetLanguage', 'nativeLanguage'];
         if (currentTargetLanguage() === 'english') {
           slides.push('accent');
         }
@@ -14346,31 +14346,6 @@
       }
 
       function normalizeStatsSnapshot(raw) {
-        const pronunciationSamples = Array.isArray(raw?.pronunciationSamples)
-          ? raw.pronunciationSamples
-          : Array.isArray(raw?.pronunciation_samples)
-            ? raw.pronunciation_samples
-            : [];
-        const normalizedPronunciationSamples = pronunciationSamples
-          .map((value) => Math.max(0, Math.min(100, Math.round(Number(value) || 0))))
-          .filter((value) => Number.isFinite(value))
-          .slice(-PRONUNCIATION_SAMPLE_LIMIT);
-        const trainingTimeMs = Math.max(
-          0,
-          Math.round(Number(raw?.trainingTimeMs ?? raw?.training_time_ms) || 0)
-        );
-        const pronunciationPercent = normalizedPronunciationSamples.length
-          ? Math.max(
-              0,
-              Math.min(
-                100,
-                Math.round(
-                  normalizedPronunciationSamples.reduce((sum, value) => sum + value, 0) / normalizedPronunciationSamples.length + 5
-                )
-              )
-            )
-          : 0;
-        const speedFlashcardsPerHour = Math.max(0, Number(raw?.speedFlashcardsPerHour ?? raw?.speed_flashcards_per_hour) || 0);
         const winsSequence = Math.max(0, Math.round(Number(raw?.winsSequence ?? raw?.wins_sequence) || 0));
         const booksEnergyXpTotal = Math.max(0, Math.round(Number(raw?.booksEnergyXpTotal ?? raw?.books_energy_xp_total) || 0));
         const booksEnergyXpDelta = Math.max(0, Math.round(Number(raw?.booksEnergyXpDelta ?? raw?.books_energy_xp_delta) || 0));
@@ -14379,14 +14354,14 @@
         const xpDelta = Math.max(0, Math.round(Number(raw?.xpDelta ?? raw?.xp_delta) || 0));
         return {
           playTimeMs: Math.max(0, Math.round(Number(raw?.playTimeMs) || 0)),
-          speakings: Math.max(0, Math.round(Number(raw?.speakings) || 0)),
-          listenings: Math.max(0, Math.round(Number(raw?.listenings) || 0)),
-          readings: Math.max(0, Math.round(Number(raw?.readings) || 0)),
+          speakings: 0,
+          listenings: 0,
+          readings: 0,
           secondStarErrorHeard: Boolean(raw?.secondStarErrorHeard || raw?.second_star_error_heard),
-          trainingTimeMs,
-          pronunciationSamples: normalizedPronunciationSamples,
-          pronunciationPercent,
-          speedFlashcardsPerHour: Math.round(speedFlashcardsPerHour * 10) / 10,
+          trainingTimeMs: 0,
+          pronunciationSamples: [],
+          pronunciationPercent: 0,
+          speedFlashcardsPerHour: 0,
           winsSequence,
           booksEnergyXpTotal,
           booksEnergyXpDelta,
@@ -14399,11 +14374,6 @@
       function hasMeaningfulStats(raw) {
         const stats = normalizeStatsSnapshot(raw);
         return stats.playTimeMs > 0
-          || stats.speakings > 0
-          || stats.listenings > 0
-          || stats.readings > 0
-          || stats.trainingTimeMs > 0
-          || stats.pronunciationSamples.length > 0
           || stats.winsSequence > 0;
       }
 
@@ -14572,75 +14542,22 @@
       }
 
       function addListeningCharsForCard(card) {
-        const chars = countMetricChars(card?.english || card?.portuguese || '');
-        if (chars <= 0) return 0;
-        state.stats = normalizeStatsSnapshot({
-          ...state.stats,
-          listenings: Number(state.stats.listenings || 0) + chars
-        });
-        saveUserStats();
-        void postImmediateEnergyConsumption({ listeningCharsDelta: chars });
-        return chars;
+        return 0;
       }
 
       function addReadingCharsForCard(entry, card, stageKey) {
-        const normalizedStageKey = safeText(stageKey);
-        if (!entry || !normalizedStageKey) return 0;
-        if (safeText(entry.lastReadingChargeKey) === normalizedStageKey) return 0;
-        const chars = countMetricChars(normalizedStageKey === 'second-star'
-          ? (card?.english || '')
-          : (card?.english || card?.portuguese || ''));
-        if (chars <= 0) return 0;
-        state.stats = normalizeStatsSnapshot({
-          ...state.stats,
-          readings: Number(state.stats.readings || 0) + chars
-        });
-        saveUserStats();
-        entry.lastReadingChargeKey = normalizedStageKey;
-        void postImmediateEnergyConsumption({ readingCharsDelta: chars });
-        return chars;
+        return 0;
       }
 
       function addSpeakingCharsFromTranscript(transcript) {
-        const chars = countMetricChars(transcript);
-        if (chars <= 0) return 0;
-        state.stats = normalizeStatsSnapshot({
-          ...state.stats,
-          speakings: Number(state.stats.speakings || 0) + chars
-        });
-        saveUserStats();
-        void postImmediateEnergyConsumption({ speakingCharsDelta: chars });
-        return chars;
+        return 0;
       }
 
       function pushPronunciationSample(percent) {
-        const numeric = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
-        const currentSamples = Array.isArray(state.stats.pronunciationSamples)
-          ? state.stats.pronunciationSamples.slice(-PRONUNCIATION_SAMPLE_LIMIT + 1)
-          : [];
-        currentSamples.push(numeric);
-        state.stats = normalizeStatsSnapshot({
-          ...state.stats,
-          pronunciationSamples: currentSamples
-        });
+        return 0;
       }
 
       function commitCurrentCardTrainingTime() {
-        const startedAt = Number(state.game.currentCardTrainingStartedAt) || 0;
-        if (!startedAt) {
-          state.game.currentCardTrainingId = '';
-          state.game.currentCardTrainingStartedAt = 0;
-          return;
-        }
-        const elapsedMs = Math.max(0, Date.now() - startedAt);
-        const creditedMs = Math.min(TRAINING_TIME_PER_CARD_LIMIT_MS, elapsedMs);
-        if (creditedMs > 0) {
-          state.stats = normalizeStatsSnapshot({
-            ...state.stats,
-            trainingTimeMs: Number(state.stats.trainingTimeMs || 0) + creditedMs
-          });
-          saveUserStats({ skipCloudSync: true });
-        }
         state.game.currentCardTrainingId = '';
         state.game.currentCardTrainingStartedAt = 0;
       }
@@ -15014,16 +14931,7 @@
       }
 
       function saveUserProgress(options = {}) {
-        persistUserProgressLocally();
-        persistUserCardLanguagesLocally();
-        persistHiddenCardIdsLocally();
-        if (!options.skipCloudSync) {
-          if (options.immediateCloudSync) {
-            void syncFlashcardCloudNow(currentProgressLanguage(), { keepalive: options.keepalive === true });
-          } else {
-            scheduleFlashcardCloudSync(options.cloudSyncDelayMs);
-          }
-        }
+        syncOwnedIdsFromProgress();
       }
 
       function buildApiUrl(path) {
@@ -15288,9 +15196,7 @@
       }
 
       function shouldGatePremiumAccess() {
-        return !isAdminUser()
-          && !isPremiumUser()
-          && accessibleFlashcardsCount() >= FLASHCARD_PREMIUM_GATE_LIMIT;
+        return false;
       }
 
       function syncAdminTheme() {
@@ -15312,8 +15218,7 @@
       }
 
       function accessibleFlashcardsCount() {
-        if (isAdminUser()) return userProgressCards().length;
-        return userProgressCards().length;
+        return 0;
       }
 
       function isCardHiddenForUser(cardId) {
@@ -15430,121 +15335,21 @@
       }
 
       async function syncFlashcardCloudNow(targetLanguage = currentProgressLanguage(), options = {}) {
-        if (!state.user?.id) return false;
-
-        if (state.flashcardsSyncInFlight) {
-          state.flashcardsSyncQueued = true;
-          return false;
-        }
-
-        state.flashcardsSyncInFlight = true;
-        try {
-          const coinsDeltaToSync = Math.max(0, Math.round(Number(state.stats?.coinsDelta) || 0));
-          const xpDeltaToSync = Math.max(0, Math.round(Number(state.stats?.xpDelta) || 0));
-          const payloadToSync = buildFlashcardCloudPayload(targetLanguage);
-          if (!state.entry.omitNextUserLevelSync) {
-            payloadToSync.userLevel = normalizeUserLevel(state.userLevel);
-          }
-          if (state.entry.forceProgressResetPending) {
-            payloadToSync.forceProgressReset = true;
-          }
-          if (payloadToSync?.stats && typeof payloadToSync.stats === 'object') {
-            payloadToSync.stats.coinsDelta = coinsDeltaToSync;
-            payloadToSync.stats.xpDelta = xpDeltaToSync;
-          }
-          const response = await fetch(buildApiUrl('/api/flashcards/state'), {
-            method: 'PUT',
-            headers: buildAuthHeaders({
-              'Content-Type': 'application/json'
-            }),
-            credentials: 'include',
-            keepalive: options?.keepalive === true,
-            body: JSON.stringify(payloadToSync)
-          });
-          const payload = await response.json().catch(() => ({}));
-          if (!response.ok || !payload?.success) {
-            if (response.status === 401) {
-              console.warn('Sessao recusada ao sincronizar flashcards; mantendo estado local.');
-              return false;
-            }
-            throw new Error(payload?.message || 'Falha ao salvar seus flashcards.');
-          }
-          if (payload?.stats && typeof payload.stats === 'object') {
-            const hadCoinsTotal = Object.prototype.hasOwnProperty.call(payload.stats, 'coinsTotal')
-              || Object.prototype.hasOwnProperty.call(payload.stats, 'coins_total');
-            const normalizedStats = normalizeStatsSnapshot(payload.stats);
-            const localCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
-            const localCoinsDelta = Math.max(0, Math.round(Number(state.stats?.coinsDelta) || 0));
-            const localXpDelta = Math.max(0, Math.round(Number(state.stats?.xpDelta) || 0));
-            const ackedCoinsDelta = Math.max(0, Math.min(coinsDeltaToSync, localCoinsDelta));
-            const ackedXpDelta = Math.max(0, Math.min(xpDeltaToSync, localXpDelta));
-            const pendingCoinsDelta = Math.max(0, localCoinsDelta - ackedCoinsDelta);
-            const pendingXpDelta = Math.max(0, localXpDelta - ackedXpDelta);
-            state.stats = {
-              ...state.stats,
-              ...normalizedStats,
-              // Nunca deixa total de moedas regredir no cliente por resposta atrasada.
-              coinsTotal: hadCoinsTotal ? Math.max(localCoinsTotal, normalizedStats.coinsTotal) : localCoinsTotal,
-              // Mantem apenas as moedas ainda nao confirmadas por este request.
-              coinsDelta: pendingCoinsDelta,
-              xpDelta: pendingXpDelta
-            };
-            state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
-            state.ui.fifthStarDisplayedCoinsTotal = state.ui.gameStatusLastCoinsTotal;
-            persistUserStatsLocally();
-            renderWelcomeEnergyMiniTicker();
-          }
-          if (Number.isFinite(Number(payload?.userLevel))) {
-            applyUserLevelState(payload.userLevel, {
-              updatedAt: payload.userLevelUpdatedAt || state.userLevelUpdatedAt,
-              allowTransition: true,
-              scheduleRefresh: true,
-              delayMs: 0
-            });
-          }
-          state.entry.omitNextUserLevelSync = false;
-          state.entry.forceProgressResetPending = false;
-          if (state.entry.dailyPlanMissionSnapshot) {
-            void refreshDailyPlanMissionSnapshot({ force: true }).then(() => {
-              updateSpeakingStarMicSealProgress();
-            });
-          }
-          return true;
-        } catch (error) {
-          console.warn('Falha ao sincronizar estado dos flashcards:', error);
-          return false;
-        } finally {
-          state.flashcardsSyncInFlight = false;
-          if (state.flashcardsSyncQueued) {
-            state.flashcardsSyncQueued = false;
-            scheduleFlashcardCloudSync(350);
-          }
-        }
+        return false;
       }
 
       function scheduleFlashcardCloudSync(delayMs = 900) {
-        if (!state.user?.id) return;
-        if (state.flashcardsSyncTimer) {
-          window.clearTimeout(state.flashcardsSyncTimer);
-        }
-        state.flashcardsSyncTimer = window.setTimeout(() => {
-          state.flashcardsSyncTimer = 0;
-          syncFlashcardCloudNow();
-        }, Math.max(0, Number(delayMs) || 0));
+        return;
       }
 
       function applyFlashcardStatePayloadForLanguage(cloudState, targetLanguage, options = {}) {
         const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
         const preserveStats = Boolean(options?.preserveStats);
         state.activeProgressLanguage = normalizedTargetLanguage;
-        state.userCardLanguages = normalizeConqueredLanguagesPayload(cloudState?.conqueredLanguages || cloudState?.meta?.conqueredLanguages || {});
-        state.userCards = Array.isArray(cloudState?.progress)
-          ? new Map(cloudState.progress.map(normalizeProgressRecord).filter(Boolean).map((record) => [record.cardId, record]))
-          : new Map();
-        state.hiddenCardIds = Array.isArray(cloudState?.meta?.hiddenCardIds)
-          ? new Set(cloudState.meta.hiddenCardIds.map((cardId) => safeText(cardId)).filter(Boolean))
-          : new Set();
-        state.game.persistedOnTable = Array.isArray(cloudState?.onTable) ? cloudState.onTable.slice(0, ON_TABLE_MAX_CARDS) : [];
+        state.userCardLanguages = new Map();
+        state.userCards = new Map();
+        state.hiddenCardIds = new Set();
+        state.game.persistedOnTable = [];
         if (!preserveStats && cloudState?.stats) {
           state.stats = normalizeStatsSnapshot(cloudState.stats);
           state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
@@ -15563,45 +15368,11 @@
 
       async function loadFlashcardStateForLanguage(targetLanguage, options = {}) {
         const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
-        const preserveStats = Boolean(options?.preserveStats);
-        if (state.user?.id) {
-          try {
-            const cloudState = await fetchFlashcardCloudState(normalizedTargetLanguage);
-            applyFlashcardStatePayloadForLanguage(cloudState, normalizedTargetLanguage, { preserveStats });
-            persistUserProgressLocally(normalizedTargetLanguage);
-            persistUserCardLanguagesLocally();
-            persistHiddenCardIdsLocally();
-            if (!preserveStats) {
-              persistUserStatsLocally();
-            }
-            return cloudState;
-          } catch (error) {
-            console.warn('Falha ao carregar estado do idioma; usando fallback local:', error);
-            const localMeta = readUserLanguageMetaForUser(state.user.id, normalizedTargetLanguage);
-            state.activeProgressLanguage = normalizedTargetLanguage;
-            state.userCards = readUserProgressForUser(state.user.id, normalizedTargetLanguage);
-            state.userCardLanguages = readUserCardLanguagesForUser(state.user.id);
-            state.hiddenCardIds = readHiddenCardIdsForUser(state.user.id);
-            state.game.persistedOnTable = [];
-            state.userLevel = normalizeUserLevel(localMeta.userLevel || 1);
-            if (state.user) {
-              state.user.level = state.userLevel;
-            }
-            state.userLevelUpdatedAt = safeText(localMeta.userLevelUpdatedAt);
-            syncOwnedIdsFromProgress();
-            persistUserLanguageMetaLocally(normalizedTargetLanguage);
-            return null;
-          }
-        }
-
-        const guestMeta = readUserLanguageMetaForUser(0, normalizedTargetLanguage);
         state.activeProgressLanguage = normalizedTargetLanguage;
-        state.userCards = readUserProgressForUser(0, normalizedTargetLanguage);
-        state.userCardLanguages = readUserCardLanguagesForUser(0);
-        state.hiddenCardIds = readHiddenCardIdsForUser(0);
+        state.userCards = new Map();
+        state.userCardLanguages = new Map();
+        state.hiddenCardIds = new Set();
         state.game.persistedOnTable = [];
-        state.userLevel = normalizeUserLevel(guestMeta.userLevel || 1);
-        state.userLevelUpdatedAt = safeText(guestMeta.userLevelUpdatedAt);
         syncOwnedIdsFromProgress();
         persistUserLanguageMetaLocally(normalizedTargetLanguage);
         return null;
@@ -18745,48 +18516,11 @@
       }
 
       function advanceReadyMemorizations() {
-        let changed = false;
-        const now = getNowMs();
-        state.userCards.forEach((record, cardId) => {
-          if (record.status !== 'memorizing') return;
-          if (now < (Number(record.availableAt) || 0)) return;
-          record.status = 'ready';
-          record.phaseIndex = Math.max(1, Math.min(REVIEW_PHASE_MAX, Number(record.targetPhaseIndex) || 1));
-          record.targetPhaseIndex = record.phaseIndex;
-          record.memorizingStartedAt = 0;
-          record.memorizingDurationMs = 0;
-          record.availableAt = now;
-          record.returnedAt = now;
-          record.sealImage = phaseMeta(record.phaseIndex).sealPath;
-          state.userCards.set(cardId, record);
-          changed = true;
-        });
-        if (changed) {
-          saveUserProgress();
-        } else {
-          syncOwnedIdsFromProgress();
-        }
+        syncOwnedIdsFromProgress();
       }
 
       function moveCardToMemorizing(cardId, targetPhaseIndex) {
-        const current = state.userCards.get(cardId) || createProgressRecord(cardId);
-        const nextPhase = Math.max(1, Math.min(REVIEW_PHASE_MAX, Number(targetPhaseIndex) || 1));
-        const meta = phaseMeta(nextPhase);
-        const now = getNowMs();
-        const record = createProgressRecord(cardId, {
-          ...current,
-          status: 'memorizing',
-          targetPhaseIndex: nextPhase,
-          memorizingStartedAt: now,
-          memorizingDurationMs: meta.durationMs,
-          availableAt: now + meta.durationMs,
-          returnedAt: 0,
-          createdAt: current.createdAt || now,
-          sealImage: meta.sealPath
-        });
-        state.userCards.set(cardId, record);
-        saveUserProgress({ immediateCloudSync: Boolean(state.user?.id), keepalive: true });
-        return record;
+        return createProgressRecord(cardId);
       }
 
       function userProgressCards() {
@@ -18798,21 +18532,7 @@
             progress: adminReadyProgressRecord(card.id)
             }));
         }
-        advanceReadyMemorizations();
-        return Array.from(state.userCards.values())
-          .map(record => {
-            const card = state.allCards.find(item => item.id === record.cardId);
-            if (!card) return null;
-            if (isCardHiddenForUser(card.id)) return null;
-            if (!hasCoreFlashcardText(card) || !hasPlayableFlashcardImage(card)) return null;
-            return { ...card, progress: record };
-          })
-          .filter(Boolean)
-          .sort((left, right) => {
-            const leftPin = left.progress.status === 'memorizing' ? Number(left.progress.availableAt) || 0 : Number(left.progress.returnedAt || left.progress.createdAt) || 0;
-            const rightPin = right.progress.status === 'memorizing' ? Number(right.progress.availableAt) || 0 : Number(right.progress.returnedAt || right.progress.createdAt) || 0;
-            return rightPin - leftPin;
-          });
+        return [];
       }
 
       function buildCardsFromProgressRecords(records) {
@@ -18841,15 +18561,7 @@
       }
 
       function readyReviewCards() {
-        if (isAdminUser()) {
-          return [];
-        }
-        advanceReadyMemorizations();
-        return Array.from(state.userCards.values())
-          .filter(record => record.status === 'ready' && (record.phaseIndex || 0) >= 1)
-          .sort((left, right) => (Number(left.returnedAt) || 0) - (Number(right.returnedAt) || 0))
-          .map(record => state.allCards.find(card => card.id === record.cardId))
-          .filter(card => card && !isCardHiddenForUser(card.id) && hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card) && isCardAllowedForUserLevel(card));
+        return [];
       }
 
       function totalGameAvailableCards() {
@@ -20237,12 +19949,11 @@
 
       function gameOptionSlideMeta() {
         return {
-          mode: {
-            name: 'Modo de jogo',
-            desc: 'Treinamento usa o fluxo atual. Jornada sobe por cartas ganhas no deck atual.',
+          difficulty: {
+            name: 'Nível',
+            desc: 'O jogo agora roda com seleção manual de nível.',
             values: {
-              training: { label: 'Treinamento', desc: 'Mantem o progresso atual baseado no fluxo normal do jogo.' },
-              journey: { label: 'Jornada', desc: 'Para idiomas nao ingleses, sobe 1 nivel a cada 25 cartas ganhas e limpa a mesa para iniciar o proximo deck.' }
+              manual: { label: 'Manual', desc: 'Escolha o nível do deck e mantenha as cartas girando livremente.' }
             }
           },
           targetLanguage: {
@@ -21180,12 +20891,12 @@
       }
 
       function currentBaseGameCount(level = currentUserLevel()) {
-        return 5;
+        return 6;
       }
 
       function currentGameActiveCardCap(level = currentUserLevel(), baseCount = currentBaseGameCount(level)) {
         const normalizedBaseCount = Math.max(MIN_GAME_CONTEXT_LIMIT, Number(baseCount) || 0);
-        return Math.min(ON_TABLE_MAX_CARDS, normalizedBaseCount + REVIEW_SLOT_LIMIT);
+        return Math.min(ON_TABLE_MAX_CARDS, normalizedBaseCount);
       }
 
       function activeCurrentLevelPriorityIds() {
@@ -21212,7 +20923,7 @@
       }
 
       function shouldUseTimedGameCardRelease() {
-        return state.game.active && !state.game.levelMode && !state.game.training.active;
+        return false;
       }
 
       function resetTimedGameCardRelease({ seedInitialCard = false } = {}) {
@@ -21955,14 +21666,7 @@
       }
 
       function advanceSelectedGameLevelIfNeeded() {
-        if (!isLevelModeActive()) return false;
-        const currentLevel = selectedGameLevel();
-        if (currentLevel <= 0) return false;
-        if (currentLevel >= maxSelectableGameLevel()) return false;
-        const levelProgress = Math.max(0, Number(state.ui.levelModeProgress?.[currentLevel]) || 0);
-        if (levelProgress < userLevelCardTarget(currentLevel)) return false;
-        setSelectedGameLevel(currentLevel + 1);
-        return true;
+        return false;
       }
 
       function updateLevelProgressBar() {
@@ -21994,12 +21698,15 @@
         if (isLevelModeActive()) {
           return buildLevelModeSourceCards(selectedGameLevel());
         }
-        if (isAdminUser()) {
-          return state.allCards.filter((card) => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card));
-        }
-        const lockedCards = state.allCards.filter(card => !state.userCards.has(card.id) && !isCardHiddenForUser(card.id));
-        const playableLockedCards = lockedCards.filter(card => hasCoreFlashcardText(card) && hasPlayableFlashcardImage(card) && isCardAllowedForUserLevel(card));
-        return applyDeckCardsLimit(playableLockedCards, currentUserLevel());
+        return applyDeckCardsLimit(
+          state.allCards.filter((card) => (
+            !isCardHiddenForUser(card.id)
+            && hasCoreFlashcardText(card)
+            && hasPlayableFlashcardImage(card)
+            && isCardAllowedForUserLevel(card)
+          )),
+          currentUserLevel()
+        );
       }
 
       function playableVisibleGameCards() {
@@ -22481,12 +22188,12 @@
       }
 
       function renderMetrics() {
-        const userCount = accessibleFlashcardsCount();
+        const availableCards = playableVisibleGameCards().length;
         const metrics = [
-          { label: isAdminUser() ? 'Flashcards liberados' : 'Meus flashcards', value: userCount },
+          { label: 'Flashcards do nivel', value: availableCards },
           { label: 'Tempo jogado', value: formatDuration(state.stats.playTimeMs) },
-          { label: 'Speakings', value: state.stats.speakings },
-          { label: 'Listenings', value: state.stats.listenings }
+          { label: 'Moedas', value: Math.max(0, Number(state.stats.coinsTotal) || 0) },
+          { label: 'Sequencia', value: Math.max(0, Number(state.stats.winsSequence) || 0) }
         ];
 
         els.metrics.innerHTML = metrics.map(metric => `
@@ -25607,6 +25314,7 @@
       }
 
       function maintainFirstStageAudioBuffer() {
+        const targetBufferedCards = 6;
         const bufferedCards = [];
         const seen = new Set();
         const currentEntry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
@@ -25620,7 +25328,7 @@
         };
         pushEntryCard(currentEntry);
         (Array.isArray(state.game.queue) ? state.game.queue : []).forEach((cardId) => {
-          if (bufferedCards.length >= 3) return;
+          if (bufferedCards.length >= targetBufferedCards) return;
           pushEntryCard(state.game.entries.get(cardId));
         });
         bufferedCards.forEach((card) => {
@@ -25892,17 +25600,25 @@
 
       function updateGameChips() {
         if (els.gameActiveValue) {
-          els.gameActiveValue.textContent = String(state.stats.speakings || 0);
+          els.gameActiveValue.textContent = String(state.game.entries.size || 0);
         }
         if (els.gameQueueValue) {
-          els.gameQueueValue.textContent = String(state.stats.listenings || 0);
+          els.gameQueueValue.textContent = String(Array.isArray(state.game.queue) ? state.game.queue.length : 0);
         }
         if (els.gameOwnedValue) {
-          els.gameOwnedValue.textContent = String(state.stats.readings || 0);
+          els.gameOwnedValue.textContent = String(getReserveGameCardsCount());
+        }
+        const activeLabel = els.gameActiveChip?.querySelector('.game-chip__label');
+        if (activeLabel) {
+          activeLabel.textContent = 'Mesa';
+        }
+        const queueLabel = els.gameQueueChip?.querySelector('.game-chip__label');
+        if (queueLabel) {
+          queueLabel.textContent = 'Fila';
         }
         const ownedLabel = els.gameOwnedChip?.querySelector('.game-chip__label');
         if (ownedLabel) {
-          ownedLabel.textContent = 'Readings';
+          ownedLabel.textContent = 'Reserva';
         }
         const activeCount = state.game.entries.size || 0;
         const targetCount = currentGameDisplayTargetCount();
@@ -28263,17 +27979,6 @@
         if (state.game.currentId === entry.id) {
           commitCurrentCardTrainingTime();
         }
-        const currentRecord = state.userCards.get(entry.id) || null;
-        const currentPhase = Math.max(0, Math.min(REVIEW_PHASE_MAX, Number(currentRecord?.phaseIndex) || 0));
-        const nextPhase = Math.max(1, Math.min(REVIEW_PHASE_MAX, currentPhase + 1));
-        markCardConqueredLanguage(entry.id, currentTargetLanguage(), {
-          phaseIndex: nextPhase,
-          targetPhaseIndex: nextPhase,
-          status: 'memorizing',
-          sealImage: phaseMeta(nextPhase).sealPath
-        });
-        moveCardToMemorizing(entry.id, nextPhase);
-        maybeAdvanceUserLevel();
         updateSpeakingStarMicSealProgress();
       }
 
@@ -28683,14 +28388,15 @@
       }
 
       function openGameSetup() {
-        if (shouldGatePremiumAccess()) {
-          openPremiumGate();
-          return;
-        }
-        if (accessibleFlashcardsCount() < 1) {
+        if (totalGameAvailableCards() < 1) {
           return;
         }
         resetTrainingRuntime();
+        state.game.levelMode = true;
+        state.game.levelScaleMode = false;
+        state.game.levelAudioMode = false;
+        state.game.levelTextMode = false;
+        state.game.levelTypingMode = false;
         state.game.selectedCount = currentBaseGameCount();
         beginGame();
       }
@@ -28728,14 +28434,14 @@
         if (els.gameSetupTitle) {
           els.gameSetupTitle.textContent = isTrainingSetup
             ? `Treino ${STAGES[pendingStage]?.badge || 'Flashcards'}`
-            : 'Jogar agora';
+            : 'Jogar no nivel';
         }
         if (els.gameSetupCopy) {
           const baseCount = currentBaseGameCount();
-          const activeLimit = currentGameActiveCardCap(currentUserLevel(), baseCount);
+          const activeLimit = currentGameActiveCardCap(selectedGameLevel() || currentUserLevel(), baseCount);
           els.gameSetupCopy.textContent = isTrainingSetup
             ? 'Escolha quantas cartas entram no ciclo. Elas passam embaralhadas e so voltam depois que o ciclo terminar.'
-            : `O jogo monta ${baseCount} flashcards base para o seu nivel atual. Cartas que voltam do memorizing continuam ocupando ate ${REVIEW_SLOT_LIMIT} slots extras, chegando a ${activeLimit} ativas.`;
+            : `O jogo monta ${baseCount} cartas para o nível selecionado e sempre repõe outra ao concluir uma, mantendo ${activeLimit} ativas em loop.`;
         }
         const defaultRoundButton = els.gameSetupOptions?.querySelector('[data-game-count]');
         if (defaultRoundButton) {
@@ -29380,57 +29086,13 @@
         state.game.fifthStarHintDismissed = false;
         clearPendingRewardSeal();
         resetGameOrderedPoolCursor();
-        advanceReadyMemorizations();
-        if (!hasTutorialPlanetUnlocked()) {
-          clearGameSessionLocally();
-        }
-        const restored = !isLevelModeActive() && restorePersistedOnTableEntries(
-          Math.min(
-            ON_TABLE_MAX_CARDS,
-            Math.max(
-              MIN_GAME_CONTEXT_LIMIT,
-              currentGameActiveCardCap(
-                currentUserLevel(),
-                Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount())
-              )
-            )
-          )
-        );
-        if (!restored) {
-          resetTutorialRuntime({ preserveCompletion: true });
-          if (isLevelModeActive()) {
-            if (isLevelScaleModeActive()) {
-              resetScaleBatchProgress();
-            }
-            seedLevelModeEntries();
-          } else {
-            resetTimedGameCardRelease({ seedInitialCard: true });
-            state.game.entries.clear();
-            state.game.queue = [];
-            resetGameOrderedPoolCursor();
-            state.game.currentId = null;
-            state.game.listening = false;
-            state.game.paused = false;
-            state.game.canListen = false;
-            state.game.active = true;
-            state.game.levelScaleMode = false;
-            state.game.levelAudioMode = false;
-            state.game.levelTextMode = false;
-            state.game.levelTypingMode = false;
-            resetScaleBatchProgress();
-            state.game.sessionStartedAt = Date.now();
-
-            const roundCount = Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount());
-            state.game.contextLimit = currentGameActiveCardCap(currentUserLevel(), roundCount);
-            state.game.selectedCount = roundCount;
-            const targetActiveLimit = Math.min(
-              ON_TABLE_MAX_CARDS,
-              Math.max(MIN_GAME_CONTEXT_LIMIT, Number(state.game.contextLimit) || roundCount)
-            );
-            refillGameEntry('base', targetActiveLimit);
-            persistGameSessionLocally();
-          }
-        }
+        state.game.levelMode = true;
+        state.game.levelScaleMode = false;
+        state.game.levelAudioMode = false;
+        state.game.levelTextMode = false;
+        state.game.levelTypingMode = false;
+        resetTutorialRuntime({ preserveCompletion: true });
+        seedLevelModeEntries();
 
         els.topbar.classList.add('is-hidden');
         els.catalog.classList.add('is-hidden');
@@ -29448,11 +29110,6 @@
 
         updateGameChips();
         scheduleGameIdleAutoPause();
-        scheduleFlashcardCloudSync(200);
-        if (restored && state.game.currentId) {
-          renderCurrentCard();
-          return;
-        }
         advanceToNextCard();
       }
 
