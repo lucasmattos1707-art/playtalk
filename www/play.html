@@ -4551,6 +4551,60 @@
       color: #bdf6ff;
     }
 
+    .final-challenge-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 3200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(6, 10, 18, 0.82);
+      backdrop-filter: blur(14px);
+    }
+
+    .final-challenge-modal.is-visible {
+      display: flex;
+    }
+
+    .final-challenge-modal__card {
+      width: min(420px, 100%);
+      border-radius: 28px;
+      padding: 24px;
+      background: linear-gradient(180deg, rgba(12, 24, 46, 0.98), rgba(7, 14, 28, 0.98));
+      border: 1px solid rgba(133, 185, 255, 0.26);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.42);
+      color: #f5f8ff;
+      display: grid;
+      gap: 14px;
+      text-align: center;
+    }
+
+    .final-challenge-modal__actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .final-challenge-modal__btn {
+      border: 0;
+      border-radius: 18px;
+      min-height: 52px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .final-challenge-modal__btn--primary {
+      background: linear-gradient(135deg, #7fe3a1, #2fb56c);
+      color: #062012;
+      font-weight: 700;
+    }
+
+    .final-challenge-modal__btn--ghost {
+      background: rgba(255, 255, 255, 0.08);
+      color: #f5f8ff;
+    }
+
     .game.is-medal-transition-active .game-stage-tutorial,
     .game.is-medal-transition-active .game-shell,
     .game.is-sequence-streak-active .game-stage-tutorial,
@@ -11710,6 +11764,17 @@
           <p class="sequence-streak-modal__copy" id="sequenceStreakCopy">Keep going</p>
         </div>
       </div>
+      <div class="final-challenge-modal" id="finalChallengeModal" aria-hidden="true">
+        <div class="final-challenge-modal__card">
+          <p class="sequence-streak-modal__eyebrow">Desafio final</p>
+          <p class="sequence-streak-modal__copy">Completar desafio final?</p>
+          <p>Vamos carregar 20 cartas deste nível, em 4 blocos de 5. Você precisa fechar cada bloco com média de pronúncia de 90% para avançar.</p>
+          <div class="final-challenge-modal__actions">
+            <button class="final-challenge-modal__btn final-challenge-modal__btn--ghost" id="finalChallengeCancelBtn" type="button">Agora não</button>
+            <button class="final-challenge-modal__btn final-challenge-modal__btn--primary" id="finalChallengeConfirmBtn" type="button">Começar</button>
+          </div>
+        </div>
+      </div>
       <div class="panel game-shell">
         <div class="game-head">
           <div id="gameHeadCopy">
@@ -12463,6 +12528,7 @@
       const TRAINING_MAX_CARD_COUNT = 500;
       const TRAINING_CARD_STEP = 10;
       const GAME_STAR_TARGET = 5;
+      const LEVEL_MODE_ACQUISITION_STAGE_SEQUENCE = [4, 1, 3];
       const GAME_STAGE_PROGRESS_WEIGHTS = Object.freeze([25, 25, 10, 25, 15]);
       const GAME_STAGE_PROGRESS_TOTAL = Math.max(
         1,
@@ -12828,6 +12894,14 @@
             hitStreak: 0,
             totalHits: 0
           },
+          finalChallenge: {
+            active: false,
+            level: 0,
+            cards: [],
+            blockIndex: 0,
+            blockScores: [],
+            totalScores: []
+          },
           journeyCardsWonLevel: 0,
           persistedOnTable: [],
           micUnlockStage: 0,
@@ -13133,6 +13207,9 @@
         sequenceStreakModal: document.getElementById('sequenceStreakModal'),
         sequenceStreakValue: document.getElementById('sequenceStreakValue'),
         sequenceStreakCopy: document.getElementById('sequenceStreakCopy'),
+        finalChallengeModal: document.getElementById('finalChallengeModal'),
+        finalChallengeConfirmBtn: document.getElementById('finalChallengeConfirmBtn'),
+        finalChallengeCancelBtn: document.getElementById('finalChallengeCancelBtn'),
         welcomeTrainingModes: document.getElementById('welcomeTrainingModes'),
         welcomeCopy: document.getElementById('welcomeCopy'),
         welcomeStartBtn: document.getElementById('welcomeStartBtn'),
@@ -14576,6 +14653,33 @@
         state.game.currentCardTrainingStartedAt = Date.now();
       }
 
+      function isLevelModeAcquisitionFlowActive() {
+        return Boolean(
+          isLevelModeActive()
+          && !isTrainingMode()
+          && !isLevelTextModeActive()
+          && !isLevelScaleModeActive()
+          && !isLevelTypingModeActive()
+        );
+      }
+
+      function currentGameStarTarget() {
+        return isLevelModeAcquisitionFlowActive()
+          ? LEVEL_MODE_ACQUISITION_STAGE_SEQUENCE.length
+          : GAME_STAR_TARGET;
+      }
+
+      function resolveLevelModeAcquisitionStage(stars = 0) {
+        const safeStars = Math.max(0, Math.min(LEVEL_MODE_ACQUISITION_STAGE_SEQUENCE.length - 1, Number(stars) || 0));
+        return LEVEL_MODE_ACQUISITION_STAGE_SEQUENCE[safeStars] || LEVEL_MODE_ACQUISITION_STAGE_SEQUENCE[0];
+      }
+
+      function resolveLevelModeInitialStage() {
+        return isLevelModeAcquisitionFlowActive()
+          ? resolveLevelModeAcquisitionStage(0)
+          : resolveLevelModeStage();
+      }
+
       function syncOwnedIdsFromProgress() {
         state.ownedIds = new Set(Array.from(state.userCards.keys()));
       }
@@ -15335,7 +15439,22 @@
       }
 
       async function syncFlashcardCloudNow(targetLanguage = currentProgressLanguage(), options = {}) {
-        return false;
+        if (!state.user?.id) return false;
+        const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
+        const response = await fetch(buildApiUrl('/api/flashcards/acquisition-state'), {
+          method: 'POST',
+          headers: buildAuthHeaders({
+            'Content-Type': 'application/json'
+          }),
+          credentials: 'include',
+          keepalive: Boolean(options?.keepalive),
+          body: JSON.stringify(buildFlashcardCloudPayload(normalizedTargetLanguage))
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success) {
+          throw new Error(payload?.message || 'Falha ao sincronizar o memorizing.');
+        }
+        return true;
       }
 
       function scheduleFlashcardCloudSync(delayMs = 900) {
@@ -15346,10 +15465,17 @@
         const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
         const preserveStats = Boolean(options?.preserveStats);
         state.activeProgressLanguage = normalizedTargetLanguage;
-        state.userCardLanguages = new Map();
-        state.userCards = new Map();
+        state.userCardLanguages = normalizeConqueredLanguagesPayload(cloudState?.conqueredLanguages || cloudState?.meta?.conqueredLanguages || {});
+        state.userCards = new Map(
+          (Array.isArray(cloudState?.progress) ? cloudState.progress : [])
+            .map(normalizeProgressRecord)
+            .filter(Boolean)
+            .map((record) => [record.cardId, record])
+        );
         state.hiddenCardIds = new Set();
-        state.game.persistedOnTable = [];
+        state.game.persistedOnTable = Array.isArray(cloudState?.onTable)
+          ? cloudState.onTable.map(normalizeOnTableEntry).filter(Boolean)
+          : [];
         if (!preserveStats && cloudState?.stats) {
           state.stats = normalizeStatsSnapshot(cloudState.stats);
           state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
@@ -15368,6 +15494,18 @@
 
       async function loadFlashcardStateForLanguage(targetLanguage, options = {}) {
         const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
+        if (state.user?.id) {
+          const response = await fetch(buildApiUrl(`/api/flashcards/acquisition-state?targetLanguage=${encodeURIComponent(normalizedTargetLanguage)}`), {
+            headers: buildAuthHeaders(),
+            credentials: 'include',
+            cache: 'no-store'
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (response.ok && payload?.success) {
+            applyFlashcardStatePayloadForLanguage(payload, normalizedTargetLanguage, options);
+            return payload;
+          }
+        }
         state.activeProgressLanguage = normalizedTargetLanguage;
         state.userCards = new Map();
         state.userCardLanguages = new Map();
@@ -18766,7 +18904,11 @@
       }
 
       function resolveEntryStageNumber(entry) {
-        if (isLevelModeActive() && !isTrainingMode()) {
+        if (
+          isLevelModeActive()
+          && !isTrainingMode()
+          && (isLevelTypingModeActive() || isLevelScaleModeActive() || isLevelTextModeActive())
+        ) {
           return resolveLevelModeStage();
         }
         return Number(entry?.stage) || 1;
@@ -23613,7 +23755,8 @@
         }
         els.gameStars.classList.remove('is-training-sequence');
         els.gameStars.innerHTML = '';
-        for (let index = 0; index < GAME_STAR_TARGET; index += 1) {
+        const starTarget = currentGameStarTarget();
+        for (let index = 0; index < starTarget; index += 1) {
           const star = document.createElement('img');
           star.className = `star${index < stars ? ' is-on' : ''}`;
           star.src = STAR_ICON_PATH;
@@ -23629,9 +23772,10 @@
         }
         els.gameStars.classList.remove('is-training-sequence');
         els.gameStars.innerHTML = '';
-        const safeInitialStars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(initialStars) || 0));
+        const starTarget = currentGameStarTarget();
+        const safeInitialStars = Math.max(0, Math.min(starTarget, Number(initialStars) || 0));
         const safeLostCount = Math.max(0, Math.min(safeInitialStars, Number(lostCount) || 0));
-        for (let index = 0; index < GAME_STAR_TARGET; index += 1) {
+        for (let index = 0; index < starTarget; index += 1) {
           const star = document.createElement('img');
           const isEarned = index < safeInitialStars;
           const isLost = isEarned && index >= (safeInitialStars - safeLostCount);
@@ -23972,17 +24116,32 @@
       }
 
       function resolveGameStageConfig(entry) {
-        if (isLevelModeActive() && !isTrainingMode()) {
+        if (
+          isLevelModeActive()
+          && !isTrainingMode()
+          && (isLevelTypingModeActive() || isLevelScaleModeActive() || isLevelTextModeActive())
+        ) {
           entry = { stage: resolveLevelModeStage() };
         }
         const baseConfig = STAGES[entry?.stage] || STAGES[1];
         const targetLabel = currentTargetLanguageLabel();
-        const localizedConfig = {
+        let localizedConfig = {
           ...baseConfig,
           instruction: baseConfig.inputMode === 'typing'
             ? `Escreva ${targetLabel}`
             : `Fale ${targetLabel}`
         };
+        if (isLevelModeAcquisitionFlowActive() && Number(entry?.stage) === 1) {
+          localizedConfig = {
+            ...localizedConfig,
+            showWord: true,
+            wordType: 'english',
+            subtitleType: 'none',
+            expected: 'english',
+            autoAudio: true,
+            instruction: `Fale ${targetLabel}`
+          };
+        }
         if (!hasStageTwoPortugueseOverlay(entry) || Number(entry?.stage) === 2) {
           return localizedConfig;
         }
@@ -24040,12 +24199,15 @@
       function renderFirstStarPhaseWordSwap(entry, card) {
         clearGameLanguageSwapTimer();
         if (!els.gamePhaseWord || !entry || entry.stage !== 1 || !card) return;
-        const portuguese = capitalizeWords(card.portuguese || card.english || card.deckTitle || '');
-        state.game.stageOneSwapShowsPortuguese = true;
+        const useTargetLanguage = isLevelModeAcquisitionFlowActive();
+        const primaryText = useTargetLanguage
+          ? capitalizeWords(card.english || card.portuguese || card.deckTitle || '')
+          : capitalizeWords(card.portuguese || card.english || card.deckTitle || '');
+        state.game.stageOneSwapShowsPortuguese = !useTargetLanguage;
         els.gamePhaseWord.classList.remove('is-fading');
-        renderChipText(els.gamePhaseWord, portuguese);
-        els.gamePhaseWord.classList.remove('is-english');
-        els.gamePhaseWord.classList.add('is-portuguese');
+        renderChipText(els.gamePhaseWord, primaryText);
+        els.gamePhaseWord.classList.remove('is-english', 'is-portuguese');
+        els.gamePhaseWord.classList.add(useTargetLanguage ? 'is-english' : 'is-portuguese');
       }
 
       function renderGameTouchButton(stageConfig, entry) {
@@ -25631,9 +25793,19 @@
                 isLevelTypingModeActive()
                   ? `${formatSelectedGameLevelLabel()} • typing livre • ${activeCount}/${targetCount} cartas ativas em loop.`
                   : (
+                    state.game.finalChallenge?.active
+                      ? `${formatSelectedGameLevelLabel()} • bloco ${Math.max(1, Number(state.game.finalChallenge.blockIndex || 0) + 1)}/4 • média geral ${Math.round((Array.isArray(state.game.finalChallenge.totalScores) && state.game.finalChallenge.totalScores.length
+                        ? state.game.finalChallenge.totalScores.reduce((sum, value) => sum + (Number(value) || 0), 0) / state.game.finalChallenge.totalScores.length
+                        : 0))}%`
+                      : (
+                    isLevelModeAcquisitionFlowActive()
+                      ? `${formatSelectedGameLevelLabel()} • ${currentLevelProgress} cartas conquistadas • deslize para cima para o desafio final.`
+                      : (
                     isLevelScaleModeActive()
                       ? `${formatSelectedGameLevelLabel()} • bloco ${Math.max(0, Math.min(5, Number(state.game.scaleBatchAttempts) || 0))}/5 • fale em ingles.`
                       : `${formatSelectedGameLevelLabel()} • ${currentLevelProgress}/${userLevelCardTarget(selectedGameLevel())} concluido • ${activeCount}/${targetCount} cartas ativas em loop.`
+                      )
+                      )
                   )
               )
           )
@@ -28524,6 +28696,10 @@
         if (triggerAdminSpeakingStarHitShortcut()) {
           return;
         }
+        if (isLevelModeAcquisitionFlowActive()) {
+          openFinalChallengeModal();
+          return;
+        }
         pauseGameToLibrary();
       }
 
@@ -28621,6 +28797,59 @@
         if (state.watch.voiceAudio === audio) {
           state.watch.voiceAudio = null;
         }
+      }
+
+      function closeFinalChallengeModal() {
+        if (!els.finalChallengeModal) return;
+        els.finalChallengeModal.classList.remove('is-visible');
+        els.finalChallengeModal.setAttribute('aria-hidden', 'true');
+      }
+
+      function openFinalChallengeModal() {
+        if (!els.finalChallengeModal) return;
+        els.finalChallengeModal.classList.add('is-visible');
+        els.finalChallengeModal.setAttribute('aria-hidden', 'false');
+      }
+
+      function resetFinalChallengeState() {
+        state.game.finalChallenge = {
+          active: false,
+          level: 0,
+          cards: [],
+          blockIndex: 0,
+          blockScores: [],
+          totalScores: []
+        };
+      }
+
+      function activeFinalChallengeBlockCards() {
+        const challenge = state.game.finalChallenge || {};
+        const start = Math.max(0, Number(challenge.blockIndex) || 0) * 5;
+        return Array.isArray(challenge.cards) ? challenge.cards.slice(start, start + 5) : [];
+      }
+
+      async function startFinalChallenge() {
+        const level = selectedGameLevel();
+        const sourceCards = shuffle(buildLevelModeSourceCards(level)).slice(0, 20);
+        closeFinalChallengeModal();
+        if (sourceCards.length < 5) {
+          setGameStatus('Nao ha cartas suficientes neste nivel para o desafio final.', 'live');
+          return;
+        }
+        state.game.finalChallenge = {
+          active: true,
+          level,
+          cards: sourceCards,
+          blockIndex: 0,
+          blockScores: [],
+          totalScores: []
+        };
+        state.game.levelTextMode = true;
+        state.game.levelScaleMode = false;
+        state.game.levelTypingMode = false;
+        state.game.levelAudioMode = false;
+        state.game.levelTextResponseLanguage = 'english';
+        await restartActiveLevelMode(level);
       }
 
       async function playWatchAudioForLanguage(card, language, rate, sessionToken = state.watch.sessionToken) {
@@ -28912,8 +29141,11 @@
         }, 1400);
 
         const level = selectedGameLevel();
-        const sourceCards = buildLevelModeSourceCards(level);
-        const roundCount = isAllLevelsSelected()
+        const challengeCards = state.game.finalChallenge?.active ? activeFinalChallengeBlockCards() : [];
+        const sourceCards = challengeCards.length ? challengeCards : buildLevelModeSourceCards(level);
+        const roundCount = challengeCards.length
+          ? challengeCards.length
+          : isAllLevelsSelected()
           ? Math.min(sourceCards.length, LEVEL_MODE_BUFFER_SIZE)
           : Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount(level));
         state.game.contextLimit = isAllLevelsSelected()
@@ -28923,7 +29155,7 @@
 
         buildOrderedDeckSelection(sourceCards, roundCount).forEach((card) => {
           const entry = createGameEntry(card, 'base');
-          entry.stage = resolveLevelModeStage();
+          entry.stage = resolveLevelModeInitialStage();
           entry.stars = 0;
           state.game.entries.set(entry.id, entry);
           state.game.queue.push(entry.id);
@@ -29061,6 +29293,7 @@
 
       function beginGame() {
         state.ui.gamePausedAtWelcome = false;
+        resetFinalChallengeState();
         if (isManualNoEnergyBlocked()) {
           clearGameSessionLocally();
           state.game.entries.clear();
@@ -29260,6 +29493,8 @@
 
       async function exitGame() {
         state.ui.gamePausedAtWelcome = false;
+        resetFinalChallengeState();
+        closeFinalChallengeModal();
         clearGameIdleAutoPauseTimer();
         state.game.sessionClockActive = false;
         stopFlashcardSessionTick();
@@ -29403,7 +29638,7 @@
           return;
         }
 
-        if (isLevelModeActive()) {
+        if (isLevelModeActive() && (isLevelTypingModeActive() || isLevelScaleModeActive() || isLevelTextModeActive())) {
           clearStageHintLoop({ clearStatus: true });
           clearFirstStageMicHint({ clearStatus: true });
           clearStageTwoHintTimer();
@@ -29425,6 +29660,11 @@
               state.game.scaleBatchHits = Math.max(0, Number(state.game.scaleBatchHits) || 0) + 1;
               els.gameStarCopy.textContent = formatSelectedGameLevelLabel();
               entry._removeAfterReward = true;
+            } else if (state.game.finalChallenge?.active) {
+              state.game.finalChallenge.blockScores.push(score);
+              state.game.finalChallenge.totalScores.push(score);
+              els.gameStarCopy.textContent = `Bloco ${Math.max(1, Number(state.game.finalChallenge.blockIndex || 0) + 1)}/4`;
+              entry._removeAfterReward = true;
             } else {
               const levelBefore = selectedGameLevel();
               state.ui.levelModeProgress[levelBefore] = Math.max(
@@ -29445,8 +29685,14 @@
             setGameStatus('', 'miss');
             if (scaleModeActive) {
               state.game.scaleBatchAttempts = Math.max(0, Number(state.game.scaleBatchAttempts) || 0) + 1;
+            } else if (state.game.finalChallenge?.active) {
+              state.game.finalChallenge.blockScores.push(score);
+              state.game.finalChallenge.totalScores.push(score);
+              entry._removeAfterReward = true;
+              setGameStatus('Pronuncia abaixo do alvo.', 'miss');
+            } else {
+              state.game.queue.push(entry.id);
             }
-            state.game.queue.push(entry.id);
           }
           let scaleBatchCompleted = false;
           if (scaleModeActive && (Number(state.game.scaleBatchAttempts) || 0) >= 5) {
@@ -29463,7 +29709,38 @@
           await wait(isHit ? 260 : 520);
           if (entry._removeAfterReward) {
             entry._removeAfterReward = false;
-            rotateLevelModeEntry(entry);
+            if (state.game.finalChallenge?.active) {
+              removeGameEntry(entry.id);
+            } else {
+              rotateLevelModeEntry(entry);
+            }
+          }
+          if (state.game.finalChallenge?.active) {
+            const blockScores = Array.isArray(state.game.finalChallenge.blockScores) ? state.game.finalChallenge.blockScores : [];
+            if (blockScores.length >= 5) {
+              const blockAverage = blockScores.reduce((sum, value) => sum + (Number(value) || 0), 0) / blockScores.length;
+              if (blockAverage < 90) {
+                const failedLevel = state.game.finalChallenge.level || selectedGameLevel();
+                resetFinalChallengeState();
+                state.game.levelTextMode = false;
+                await restartActiveLevelMode(failedLevel);
+                setGameStatus('Desafio final encerrado. Voce precisa de 90% por bloco.', 'miss');
+                return;
+              }
+              state.game.finalChallenge.blockIndex = Math.max(0, Number(state.game.finalChallenge.blockIndex) || 0) + 1;
+              state.game.finalChallenge.blockScores = [];
+              if (state.game.finalChallenge.blockIndex >= 4 || (state.game.finalChallenge.blockIndex * 5) >= state.game.finalChallenge.cards.length) {
+                const nextLevel = normalizeSelectableGameLevel((state.game.finalChallenge.level || selectedGameLevel()) + 1);
+                resetFinalChallengeState();
+                state.game.levelTextMode = false;
+                setSelectedGameLevel(nextLevel);
+                await restartActiveLevelMode(nextLevel);
+                setGameStatus(`${formatSelectedGameLevelLabel(nextLevel)} liberado.`, 'hit');
+                return;
+              }
+              await restartActiveLevelMode(state.game.finalChallenge.level || selectedGameLevel());
+              return;
+            }
           }
           if (scaleBatchCompleted && state.game.active && !state.game.paused) {
             await restartActiveLevelMode(selectedGameLevel());
@@ -29490,9 +29767,14 @@
           if (evaluatedStage === 5) {
         clearStageHintLoop({ clearStatus: true });
           }
+          const starTarget = currentGameStarTarget();
           entry.stars += 1;
           incrementWinsSequenceForStarGain();
-          entry.stage = Math.min(entry.stars + 1, GAME_STAR_TARGET);
+          if (isLevelModeAcquisitionFlowActive()) {
+            entry.stage = resolveLevelModeAcquisitionStage(entry.stars);
+          } else {
+            entry.stage = Math.min(entry.stars + 1, GAME_STAR_TARGET);
+          }
           entry.missesWithoutStars = 0;
           entry.typingMistakes = 0;
           updateSpeakingStarMicSealProgress();
@@ -29507,17 +29789,39 @@
           }
           renderImmediateHitFeedback(entry.stars);
 
-          if (entry.stars >= GAME_STAR_TARGET) {
+          if (entry.stars >= starTarget) {
             const rewardSealPhase = resolveRewardSealPhase(entry);
             setGameStatus('', 'hit');
-            renderStars(GAME_STAR_TARGET);
+            renderStars(starTarget);
             renderCurrentCard();
             if (!isFifthStarEntry(entry)) {
               triggerWinFlash();
             }
-            animateStarsCascade(GAME_STAR_TARGET);
+            animateStarsCascade(starTarget);
             schedulePendingRewardSeal(entry.id, rewardSealPhase);
             promoteCardFromWin(entry);
+            if (isLevelModeAcquisitionFlowActive()) {
+              const nextRecord = normalizeProgressRecord({
+                ...(state.userCards.get(entry.id) || createProgressRecord(entry.id)),
+                cardId: entry.id,
+                phaseIndex: 0,
+                targetPhaseIndex: 1,
+                status: 'memorizing',
+                memorizingStartedAt: getNowMs(),
+                memorizingDurationMs: REVIEW_PHASES[1].durationMs,
+                availableAt: getNowMs() + REVIEW_PHASES[1].durationMs,
+                sealImage: REVIEW_PHASES[1].sealPath
+              });
+              if (nextRecord) {
+                state.userCards.set(entry.id, nextRecord);
+                markCardConqueredLanguage(entry.id, currentTargetLanguage(), nextRecord);
+                syncOwnedIdsFromProgress();
+              }
+              state.ui.levelModeProgress[selectedGameLevel()] = Math.max(
+                0,
+                Number(state.ui.levelModeProgress?.[selectedGameLevel()]) || 0
+              ) + 1;
+            }
             if (!state.user?.onboardingNameCompleted
               && accessibleCountBeforeResolution < ONBOARDING_NAME_THRESHOLD
               && accessibleFlashcardsCount() >= ONBOARDING_NAME_THRESHOLD) {
@@ -29574,7 +29878,7 @@
           if (entry.stars > 0) {
             const starsBeforeMiss = entry.stars;
             entry.stars = 0;
-            entry.stage = 1;
+            entry.stage = isLevelModeAcquisitionFlowActive() ? resolveLevelModeInitialStage() : 1;
             resetWinsSequenceForCardLoss();
             entry.missesWithoutStars = 0;
             entry.typingMistakes = 0;
@@ -30118,6 +30422,17 @@
         els.welcomeMissionBtn?.addEventListener('click', () => {
           playStatusCueAudio(WELCOME_MISSION_SOUND_PATH);
           openDailyPlanModal();
+        });
+        els.finalChallengeModal?.addEventListener('click', (event) => {
+          if (event.target === els.finalChallengeModal) {
+            closeFinalChallengeModal();
+          }
+        });
+        els.finalChallengeCancelBtn?.addEventListener('click', () => {
+          closeFinalChallengeModal();
+        });
+        els.finalChallengeConfirmBtn?.addEventListener('click', () => {
+          void startFinalChallenge();
         });
         els.dailyPlanCloseBtn?.addEventListener('click', closeDailyPlanModal);
         els.dailyPlanSealProgressValue?.addEventListener('click', () => {

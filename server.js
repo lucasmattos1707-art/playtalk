@@ -335,6 +335,7 @@ function buildAuthErrorDetails(error, req) {
 let flashcardRankingsTableReadyPromise = null;
 let usersAvatarColumnReadyPromise = null;
 let flashcardUserStateTablesReadyPromise = null;
+let flashcardAcquisitionTableReadyPromise = null;
 let userDailyMissionStatsTableReadyPromise = null;
 let userFluencySealsTableReadyPromise = null;
 let userFluencySealsDailyTableReadyPromise = null;
@@ -2581,6 +2582,45 @@ const ensureFlashcardUserStateTables = async () => {
   }
 
   return flashcardUserStateTablesReadyPromise;
+};
+
+const ensureFlashcardAcquisitionTable = async () => {
+  if (!pool) return false;
+  if (!flashcardAcquisitionTableReadyPromise) {
+    flashcardAcquisitionTableReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_acquisitions (
+          id bigserial PRIMARY KEY,
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          card_id text NOT NULL,
+          target_language text NOT NULL DEFAULT 'english',
+          source_level integer NOT NULL DEFAULT 1,
+          phase_index integer NOT NULL DEFAULT 0,
+          target_phase_index integer NOT NULL DEFAULT 1,
+          status text NOT NULL DEFAULT 'memorizing',
+          type_portuguese boolean NOT NULL DEFAULT false,
+          memorizing_started_at timestamptz,
+          memorizing_duration_ms integer NOT NULL DEFAULT 0,
+          available_at timestamptz,
+          returned_at timestamptz,
+          card_chars integer NOT NULL DEFAULT 10,
+          seal_image text NOT NULL DEFAULT '',
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          acquired_at timestamptz NOT NULL DEFAULT now(),
+          CONSTRAINT user_flashcard_acquisitions_unique UNIQUE (user_id, card_id, target_language)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_acquisitions_user_idx
+        ON public.user_flashcard_acquisitions (user_id, target_language, updated_at DESC)
+      `);
+    })().catch((error) => {
+      flashcardAcquisitionTableReadyPromise = null;
+      throw error;
+    });
+  }
+  return flashcardAcquisitionTableReadyPromise;
 };
 
 const ensurePremiumAccessTables = async () => {
@@ -16323,6 +16363,184 @@ app.get('/api/flashcards/state', async (req, res) => {
         ? 'Usuario invalido.'
         : 'Erro ao carregar estado dos flashcards.'
     });
+  }
+});
+
+app.get('/api/flashcards/acquisition-state', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    await ensureFlashcardAcquisitionTable();
+    const targetLanguage = normalizeFlashcardTargetLanguage(req.query?.targetLanguage);
+    const result = await pool.query(
+      `SELECT
+         card_id,
+         target_language,
+         phase_index,
+         target_phase_index,
+         status,
+         type_portuguese,
+         memorizing_started_at,
+         memorizing_duration_ms,
+         available_at,
+         returned_at,
+         card_chars,
+         seal_image,
+         created_at,
+         source_level
+       FROM public.user_flashcard_acquisitions
+       WHERE user_id = $1
+         AND target_language = $2
+       ORDER BY updated_at DESC, acquired_at DESC`,
+      [Number(authUser.id), targetLanguage]
+    );
+    const progress = result.rows.map((row) => mapStoredFlashcardProgressRow(row)).filter(Boolean);
+    const conqueredLanguages = new Map();
+    result.rows.forEach((row) => {
+      const cardId = safeText(row?.card_id);
+      const language = normalizeFlashcardTargetLanguage(row?.target_language);
+      if (!cardId || !language) return;
+      if (!conqueredLanguages.has(cardId)) conqueredLanguages.set(cardId, {});
+      conqueredLanguages.get(cardId)[language] = {
+        phaseIndex: Math.max(0, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(row?.phase_index, 10) || 0)),
+        targetPhaseIndex: Math.max(1, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(row?.target_phase_index, 10) || 1)),
+        status: safeText(row?.status).toLowerCase() === 'ready' ? 'ready' : 'memorizing',
+        sealImage: safeText(row?.seal_image || resolveFlashcardSealImage(row || {}))
+      };
+    });
+    res.json({
+      success: true,
+      progress,
+      onTable: [],
+      conqueredLanguages: serializeFlashcardConqueredLanguages(conqueredLanguages),
+      stats: {},
+      meta: {
+        conqueredLanguages: serializeFlashcardConqueredLanguages(conqueredLanguages)
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao carregar aquisicoes de flashcards:', error);
+    res.status(500).json({ success: false, message: 'Erro ao carregar cartas conquistadas.' });
+  }
+});
+
+app.post('/api/flashcards/acquisition-state', express.json({ limit: '2mb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    await ensureFlashcardAcquisitionTable();
+    const targetLanguage = normalizeFlashcardTargetLanguage(req.body?.gameOptions?.targetLanguage || req.body?.targetLanguage);
+    const progress = Array.isArray(req.body?.progress)
+      ? req.body.progress.map((item) => normalizeFlashcardProgressRecord(item)).filter(Boolean)
+      : [];
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      if (progress.length) {
+        const cardIds = progress.map((item) => item.cardId);
+        await client.query(
+          `DELETE FROM public.user_flashcard_acquisitions
+           WHERE user_id = $1
+             AND target_language = $2
+             AND NOT (card_id = ANY($3::text[]))`,
+          [Number(authUser.id), targetLanguage, cardIds]
+        );
+        const values = [];
+        const params = [];
+        progress.forEach((item, index) => {
+          const offset = index * 15;
+          values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14}, $${offset + 15}, now(), now())`);
+          params.push(
+            Number(authUser.id),
+            item.cardId,
+            targetLanguage,
+            normalizeUserFlashcardLevel(req.body?.userLevel || 1),
+            item.phaseIndex,
+            item.targetPhaseIndex,
+            item.status,
+            Boolean(item.typePortuguese),
+            flashcardTimestampFromMillis(item.memorizingStartedAt),
+            item.memorizingDurationMs,
+            flashcardTimestampFromMillis(item.availableAt),
+            flashcardTimestampFromMillis(item.returnedAt),
+            Math.max(1, Math.round(Number(item.cardChars) || 10)),
+            item.sealImage,
+            flashcardTimestampFromMillis(item.createdAt)
+          );
+        });
+        await client.query(
+          `INSERT INTO public.user_flashcard_acquisitions (
+             user_id,
+             card_id,
+             target_language,
+             source_level,
+             phase_index,
+             target_phase_index,
+             status,
+             type_portuguese,
+             memorizing_started_at,
+             memorizing_duration_ms,
+             available_at,
+             returned_at,
+             card_chars,
+             seal_image,
+             created_at,
+             acquired_at,
+             updated_at
+           )
+           VALUES ${values.join(', ')}
+           ON CONFLICT (user_id, card_id, target_language)
+           DO UPDATE SET
+             source_level = EXCLUDED.source_level,
+             phase_index = EXCLUDED.phase_index,
+             target_phase_index = EXCLUDED.target_phase_index,
+             status = EXCLUDED.status,
+             type_portuguese = EXCLUDED.type_portuguese,
+             memorizing_started_at = EXCLUDED.memorizing_started_at,
+             memorizing_duration_ms = EXCLUDED.memorizing_duration_ms,
+             available_at = EXCLUDED.available_at,
+             returned_at = EXCLUDED.returned_at,
+             card_chars = EXCLUDED.card_chars,
+             seal_image = EXCLUDED.seal_image,
+             created_at = EXCLUDED.created_at,
+             updated_at = now()`,
+          params
+        );
+      } else {
+        await client.query(
+          `DELETE FROM public.user_flashcard_acquisitions
+           WHERE user_id = $1
+             AND target_language = $2`,
+          [Number(authUser.id), targetLanguage]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+    res.json({ success: true, saved: progress.length });
+  } catch (error) {
+    console.error('Erro ao salvar aquisicoes de flashcards:', error);
+    res.status(500).json({ success: false, message: 'Erro ao salvar cartas conquistadas.' });
   }
 });
 
