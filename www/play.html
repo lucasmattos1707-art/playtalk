@@ -11453,6 +11453,31 @@
       padding-bottom: 18px;
     }
 
+    .final-challenge-modal__hearts {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .final-challenge-modal__heart {
+      width: 22px;
+      height: 22px;
+      color: #ff4d5f;
+      opacity: 1;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .final-challenge-modal__heart.is-lost {
+      opacity: 0.3;
+      transform: scale(0.94);
+    }
+
+    .final-challenge-modal__heart svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+
     .final-challenge-modal__progress {
       margin: 0;
       text-align: center;
@@ -11474,6 +11499,7 @@
       min-height: 40dvh;
       padding-top: 10px;
       padding-bottom: 10px;
+      position: relative;
     }
 
     .final-challenge-modal__zone--text {
@@ -11501,6 +11527,19 @@
       position: relative;
       display: grid;
       place-items: center;
+    }
+
+    .final-challenge-modal__avatar-wrap {
+      position: relative;
+      display: inline-grid;
+      place-items: center;
+    }
+
+    .final-challenge-modal__avatar-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 2;
     }
 
     .final-challenge-modal__avatar-ring {
@@ -11549,9 +11588,38 @@
 
     .final-challenge-modal__percent-stack {
       display: grid;
-      gap: 8px;
+      gap: 14px;
       justify-items: center;
     }
+
+    .final-challenge-modal__score-row {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .final-challenge-modal__percent-gem {
+      width: clamp(38px, 10vw, 56px);
+      height: clamp(38px, 10vw, 56px);
+      color: #ffffff;
+      filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.26));
+    }
+
+    .final-challenge-modal__percent-gem svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+
+    .final-challenge-modal__percent-gem.is-diamond { color: #9fe7ff; }
+    .final-challenge-modal__percent-gem.is-gold { color: #ffcc4d; }
+    .final-challenge-modal__percent-gem.is-ruby { color: #ff5876; }
+    .final-challenge-modal__percent-gem.is-emerald { color: #45df95; }
+    .final-challenge-modal__percent-gem.is-sapphire { color: #59a2ff; }
+    .final-challenge-modal__percent-gem.is-silver { color: #d6d9e3; }
+    .final-challenge-modal__percent-gem.is-bronze { color: #c88549; }
+    .final-challenge-modal__percent-gem.is-blank { color: #f3f4f7; }
 
     .final-challenge-modal__percent-label {
       margin: 0;
@@ -11579,6 +11647,7 @@
       text-transform: uppercase;
       letter-spacing: 0.04em;
       color: rgba(245, 247, 251, 0.8);
+      min-height: 20px;
     }
 
     .final-challenge-modal__status.is-success {
@@ -11590,8 +11659,11 @@
     }
 
     .final-challenge-modal__confirm {
-      position: absolute;
-      inset: auto 18px 22px;
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(88vw, 360px);
       padding: 16px;
       border-radius: 18px;
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -11600,6 +11672,67 @@
       display: grid;
       gap: 12px;
       z-index: 3;
+    }
+
+    .final-challenge-modal__review {
+      position: fixed;
+      inset: 0;
+      z-index: 4;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(0, 0, 0, 0.76);
+    }
+
+    .final-challenge-modal__review.is-visible {
+      display: flex;
+    }
+
+    .final-challenge-modal__review-panel {
+      width: min(92vw, 420px);
+      padding: 22px 18px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: linear-gradient(180deg, rgba(17, 18, 24, 0.98), rgba(4, 4, 6, 0.98));
+      display: grid;
+      gap: 16px;
+      justify-items: center;
+      text-align: center;
+      box-shadow: 0 28px 60px rgba(0, 0, 0, 0.38);
+    }
+
+    .final-challenge-modal__review-media {
+      width: min(60vw, 220px);
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .final-challenge-modal__review-title {
+      margin: 0;
+      font: 800 18px/1.2 "Exo 2", "Open Sans", Arial, sans-serif;
+      text-transform: uppercase;
+      color: rgba(245, 247, 251, 0.74);
+    }
+
+    .final-challenge-modal__review-native {
+      margin: 0;
+      font: 800 clamp(24px, 7vw, 34px)/1.05 "Exo 2", "Open Sans", Arial, sans-serif;
+      text-transform: uppercase;
+      color: #f5f7fb;
+    }
+
+    .final-challenge-modal__review-target {
+      margin: 0;
+      font: 800 clamp(18px, 5vw, 24px)/1.15 "Exo 2", "Open Sans", Arial, sans-serif;
+      text-transform: uppercase;
+      color: rgba(245, 247, 251, 0.7);
+    }
+
+    .final-challenge-modal__review-close {
+      min-width: 160px;
     }
 
     .final-challenge-modal__confirm[hidden] {
@@ -11789,7 +11922,7 @@
         <div>
           <p class="final-challenge-modal__eyebrow">Desafio</p>
           <h2 class="final-challenge-modal__level" id="finalChallengeIntroLevel">Nivel 1</h2>
-          <p class="final-challenge-modal__intro-copy">Alcance 80% das 20 cartas para desbloquear o proximo nivel.</p>
+          <p class="final-challenge-modal__intro-copy">Alcance 80% das 25 cartas para desbloquear o proximo nivel.</p>
         </div>
         <div class="final-challenge-modal__intro-actions">
           <button class="final-challenge-modal__cta final-challenge-modal__cta--primary" id="finalChallengeStartBtn" type="button">Comecar agora</button>
@@ -11798,29 +11931,36 @@
       </div>
       <div class="final-challenge-modal__screen final-challenge-modal__run" id="finalChallengeRunScreen">
         <div class="final-challenge-modal__topbar">
-          <div style="width:42px;height:42px;" aria-hidden="true"></div>
-          <p class="final-challenge-modal__progress" id="finalChallengeProgressCopy">Carta 1 de 20</p>
-          <button class="final-challenge-modal__back final-challenge-modal__back--orange" id="finalChallengeExitRunBtn" type="button" aria-label="Voltar para a tela inicial do desafio">
-            <svg viewBox="0 0 24 24" focusable="false"><path d="M10.7 5.3a1 1 0 0 1 0 1.4L6.41 11H20a1 1 0 1 1 0 2H6.4l4.3 4.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
-          </button>
+          <div class="final-challenge-modal__hearts" id="finalChallengeHearts" aria-label="Vidas do desafio"></div>
+          <p class="final-challenge-modal__progress" id="finalChallengeProgressCopy" hidden></p>
         </div>
         <section class="final-challenge-modal__zone final-challenge-modal__zone--image">
-          <button class="final-challenge-modal__avatar-btn" id="finalChallengeSpeakBtn" type="button" aria-label="Tocar na imagem e falar a traducao">
-            <span class="final-challenge-modal__avatar-ring" aria-hidden="true"></span>
-            <img id="finalChallengeCardImage" src="/Avatar/profile-neon-blue.svg" alt="Imagem da carta do desafio">
-          </button>
+          <div class="final-challenge-modal__avatar-wrap">
+            <button class="final-challenge-modal__back final-challenge-modal__back--orange final-challenge-modal__avatar-close" id="finalChallengeExitRunBtn" type="button" aria-label="Voltar para a tela inicial do desafio">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M10.7 5.3a1 1 0 0 1 0 1.4L6.41 11H20a1 1 0 1 1 0 2H6.4l4.3 4.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
+            </button>
+            <button class="final-challenge-modal__avatar-btn" id="finalChallengeSpeakBtn" type="button" aria-label="Tocar na imagem e falar a traducao">
+              <span class="final-challenge-modal__avatar-ring" aria-hidden="true"></span>
+              <img id="finalChallengeCardImage" src="/Avatar/profile-neon-blue.svg" alt="Imagem da carta do desafio">
+            </button>
+          </div>
         </section>
         <section class="final-challenge-modal__zone final-challenge-modal__zone--text">
           <div>
             <p class="final-challenge-modal__native-text" id="finalChallengeNativeText">...</p>
-            <p class="final-challenge-modal__hint">Toque na imagem e fale a traducao em <span id="finalChallengeTargetLanguageLabel">ingles</span>.</p>
+            <p class="final-challenge-modal__hint" id="finalChallengeHint" hidden></p>
           </div>
         </section>
         <section class="final-challenge-modal__zone final-challenge-modal__zone--percent">
           <div class="final-challenge-modal__percent-stack">
-            <p class="final-challenge-modal__percent-label" id="finalChallengePercentLabel">Meta do nivel</p>
-            <p class="final-challenge-modal__percent-value" id="finalChallengePercentValue">16/20</p>
-            <p class="final-challenge-modal__percent-copy" id="finalChallengePercentCopy">Cada carta conta como correta quando sua fala passa de 60%.</p>
+            <div class="final-challenge-modal__score-row">
+              <span class="final-challenge-modal__percent-gem is-blank" id="finalChallengePercentGem" aria-hidden="true">
+                <svg viewBox="0 0 64 64" focusable="false"><path d="M20 10h24l10 14-22 30L10 24l10-14Zm4.8 4-6 8h10.4l2.8-8h-7.2Zm14.4 0 2.8 8h10.4l-6-8h-7.2ZM27.6 26l4.4 18.8L36.4 26h-8.8Z"></path></svg>
+              </span>
+              <p class="final-challenge-modal__percent-value" id="finalChallengePercentValue">0,0</p>
+            </div>
+            <p class="final-challenge-modal__percent-label" id="finalChallengePercentLabel" hidden></p>
+            <p class="final-challenge-modal__percent-copy" id="finalChallengePercentCopy" hidden></p>
             <p class="final-challenge-modal__status" id="finalChallengeStatus"></p>
           </div>
         </section>
@@ -11842,11 +11982,26 @@
         <div>
           <p class="final-challenge-modal__eyebrow">Resultado</p>
           <h2 class="final-challenge-modal__level" id="finalChallengeResultTitle">Voce passou de fase</h2>
-          <p class="final-challenge-modal__intro-copy" id="finalChallengeResultBody">Voce acertou 16 de 20 cartas.</p>
+          <p class="final-challenge-modal__intro-copy" id="finalChallengeResultBody">Voce acertou 20 de 25 cartas.</p>
         </div>
         <div class="final-challenge-modal__intro-actions">
           <button class="final-challenge-modal__cta final-challenge-modal__cta--primary" id="finalChallengeRetryBtn" type="button">Tentar de novo</button>
+          <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost" id="finalChallengeReviewBtn" type="button">
+            <span style="display:inline-flex;align-items:center;gap:10px;justify-content:center;">
+              <svg viewBox="0 0 24 24" focusable="false" style="width:18px;height:18px;fill:currentColor;"><path d="M8 5.5v13l10-6.5-10-6.5Z"/></svg>
+              <span>Revisar</span>
+            </span>
+          </button>
           <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost" id="finalChallengeMenuBtn" type="button">Voltar ao menu</button>
+        </div>
+      </div>
+      <div class="final-challenge-modal__review" id="finalChallengeReviewModal" aria-hidden="true">
+        <div class="final-challenge-modal__review-panel">
+          <p class="final-challenge-modal__review-title">Revisao</p>
+          <img class="final-challenge-modal__review-media" id="finalChallengeReviewImage" src="/Avatar/profile-neon-blue.svg" alt="Carta para revisar">
+          <p class="final-challenge-modal__review-native" id="finalChallengeReviewNative">...</p>
+          <p class="final-challenge-modal__review-target" id="finalChallengeReviewTarget">...</p>
+          <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost final-challenge-modal__review-close" id="finalChallengeReviewCloseBtn" type="button">Fechar</button>
         </div>
       </div>
     </div>
@@ -13013,7 +13168,7 @@
         { key: 'hide-card', label: 'Nao quero ver isso' }
       ];
       const FLASHCARD_REPORT_LABELS = Object.fromEntries(FLASHCARD_REPORT_TYPES.map((item) => [item.key, item.label]));
-      const FINAL_CHALLENGE_CARD_COUNT = 20;
+      const FINAL_CHALLENGE_CARD_COUNT = 25;
       const FINAL_CHALLENGE_CARD_PASS_PERCENT = 60;
       const FINAL_CHALLENGE_PASS_PERCENT = 80;
       const FLASHCARD_REPORT_ICONS = {
@@ -13451,6 +13606,13 @@
           finalChallengeBusy: false,
           finalChallengePercentVisible: false,
           finalChallengeExitConfirmOpen: false,
+          finalChallengeLivesLost: 0,
+          finalChallengeWrongCards: [],
+          finalChallengeCorrectionTargetVisible: false,
+          finalChallengeForcedGameOver: false,
+          finalChallengeReviewOpen: false,
+          finalChallengeReviewIndex: 0,
+          finalChallengeReviewToken: 0,
           finalChallengeResultPassed: false
         },
         options: {
@@ -13491,10 +13653,13 @@
         finalChallengeExitRunBtn: document.getElementById('finalChallengeExitRunBtn'),
         finalChallengeIntroLevel: document.getElementById('finalChallengeIntroLevel'),
         finalChallengeProgressCopy: document.getElementById('finalChallengeProgressCopy'),
+        finalChallengeHearts: document.getElementById('finalChallengeHearts'),
         finalChallengeSpeakBtn: document.getElementById('finalChallengeSpeakBtn'),
         finalChallengeCardImage: document.getElementById('finalChallengeCardImage'),
         finalChallengeNativeText: document.getElementById('finalChallengeNativeText'),
+        finalChallengeHint: document.getElementById('finalChallengeHint'),
         finalChallengeTargetLanguageLabel: document.getElementById('finalChallengeTargetLanguageLabel'),
+        finalChallengePercentGem: document.getElementById('finalChallengePercentGem'),
         finalChallengePercentLabel: document.getElementById('finalChallengePercentLabel'),
         finalChallengePercentValue: document.getElementById('finalChallengePercentValue'),
         finalChallengePercentCopy: document.getElementById('finalChallengePercentCopy'),
@@ -13505,8 +13670,14 @@
         finalChallengeResultTitle: document.getElementById('finalChallengeResultTitle'),
         finalChallengeResultBody: document.getElementById('finalChallengeResultBody'),
         finalChallengeRetryBtn: document.getElementById('finalChallengeRetryBtn'),
+        finalChallengeReviewBtn: document.getElementById('finalChallengeReviewBtn'),
         finalChallengeMenuBtn: document.getElementById('finalChallengeMenuBtn'),
         finalChallengeResultBackBtn: document.getElementById('finalChallengeResultBackBtn'),
+        finalChallengeReviewModal: document.getElementById('finalChallengeReviewModal'),
+        finalChallengeReviewImage: document.getElementById('finalChallengeReviewImage'),
+        finalChallengeReviewNative: document.getElementById('finalChallengeReviewNative'),
+        finalChallengeReviewTarget: document.getElementById('finalChallengeReviewTarget'),
+        finalChallengeReviewCloseBtn: document.getElementById('finalChallengeReviewCloseBtn'),
         dailyPlanModal: document.getElementById('dailyPlanModal'),
         dailyPlanCloseBtn: document.getElementById('dailyPlanCloseBtn'),
         albumsModal: document.getElementById('albumsModal'),
@@ -29384,12 +29555,47 @@
         state.ui.finalChallengeBusy = false;
         state.ui.finalChallengePercentVisible = false;
         state.ui.finalChallengeExitConfirmOpen = false;
+        state.ui.finalChallengeLivesLost = 0;
+        state.ui.finalChallengeWrongCards = [];
+        state.ui.finalChallengeCorrectionTargetVisible = false;
+        state.ui.finalChallengeForcedGameOver = false;
         state.ui.finalChallengeResultPassed = false;
       }
 
       function currentFinalChallengeCorrectCount() {
         const scores = Array.isArray(state.ui.finalChallengeScores) ? state.ui.finalChallengeScores : [];
         return scores.reduce((total, score) => total + (Number(score) > FINAL_CHALLENGE_CARD_PASS_PERCENT ? 1 : 0), 0);
+      }
+
+      function currentFinalChallengeNotePercent() {
+        const attemptCount = Math.max(0, Number(state.ui.finalChallengeScores?.length) || 0);
+        if (!attemptCount) return 0;
+        return Math.round((currentFinalChallengeCorrectCount() / attemptCount) * 100);
+      }
+
+      function formatFinalChallengeNote(percent) {
+        const normalized = Math.max(0, Math.min(100, Number(percent) || 0));
+        return (normalized / 10).toFixed(1).replace('.', ',');
+      }
+
+      function finalChallengeGemTier(percent) {
+        const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
+        if (safePercent >= 90) return { key: 'diamond', label: 'Diamante' };
+        if (safePercent >= 80) return { key: 'gold', label: 'Ouro' };
+        if (safePercent >= 70) return { key: 'ruby', label: 'Rubi' };
+        if (safePercent >= 60) return { key: 'emerald', label: 'Esmeralda' };
+        if (safePercent >= 50) return { key: 'sapphire', label: 'Safira' };
+        if (safePercent >= 40) return { key: 'silver', label: 'Prata' };
+        if (safePercent >= 30) return { key: 'bronze', label: 'Bronze' };
+        return { key: 'blank', label: 'Selo branco' };
+      }
+
+      function syncFinalChallengeHeartsUi() {
+        if (!els.finalChallengeHearts) return;
+        const lostHearts = Math.max(0, Math.min(5, Number(state.ui.finalChallengeLivesLost) || 0));
+        els.finalChallengeHearts.innerHTML = Array.from({ length: 5 }, (_unused, index) => (
+          `<span class="final-challenge-modal__heart${index < lostHearts ? ' is-lost' : ''}" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 21.35 10.55 20C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09A6 6 0 0 1 16.5 3C19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35Z"></path></svg></span>`
+        )).join('');
       }
 
       function currentFinalChallengeCard() {
@@ -29424,41 +29630,112 @@
         }
       }
 
+      function renderFinalChallengeReviewCard() {
+        const wrongCards = Array.isArray(state.ui.finalChallengeWrongCards) ? state.ui.finalChallengeWrongCards : [];
+        const card = wrongCards[state.ui.finalChallengeReviewIndex] || wrongCards[0] || null;
+        if (els.finalChallengeReviewImage) {
+          els.finalChallengeReviewImage.src = safeText(card?.imageUrl) || '/Avatar/profile-neon-blue.svg';
+        }
+        if (els.finalChallengeReviewNative) {
+          els.finalChallengeReviewNative.textContent = safeText(resolveSourceLanguageText(card, currentNativeLanguage())) || 'Sem frase';
+        }
+        if (els.finalChallengeReviewTarget) {
+          els.finalChallengeReviewTarget.textContent = safeText(resolveSourceLanguageText(card, currentTargetLanguage())) || 'Sem traducao';
+        }
+      }
+
+      async function runFinalChallengeReviewLoop(sessionToken) {
+        const wrongCards = Array.isArray(state.ui.finalChallengeWrongCards) ? state.ui.finalChallengeWrongCards : [];
+        if (!wrongCards.length) return;
+        while (state.ui.finalChallengeReviewOpen && state.ui.finalChallengeReviewToken === sessionToken) {
+          const totalCards = wrongCards.length;
+          if (!totalCards) return;
+          state.ui.finalChallengeReviewIndex = state.ui.finalChallengeReviewIndex % totalCards;
+          const card = wrongCards[state.ui.finalChallengeReviewIndex] || null;
+          renderFinalChallengeReviewCard();
+          if (card) {
+            preloadCardImage(card);
+            preloadCardAudioForLanguage(card, currentTargetLanguage());
+            await playPromptAudio(card, { rate: 0.9, enableMicDuringPlayback: false }).catch(() => false);
+          }
+          await wait(320);
+          if (!state.ui.finalChallengeReviewOpen || state.ui.finalChallengeReviewToken !== sessionToken) return;
+          state.ui.finalChallengeReviewIndex = (state.ui.finalChallengeReviewIndex + 1) % totalCards;
+        }
+      }
+
+      function openFinalChallengeReviewModal() {
+        if (!els.finalChallengeReviewModal) return;
+        if (!Array.isArray(state.ui.finalChallengeWrongCards) || !state.ui.finalChallengeWrongCards.length) return;
+        state.ui.finalChallengeReviewOpen = true;
+        state.ui.finalChallengeReviewIndex = 0;
+        state.ui.finalChallengeReviewToken += 1;
+        els.finalChallengeReviewModal.classList.add('is-visible');
+        els.finalChallengeReviewModal.setAttribute('aria-hidden', 'false');
+        renderFinalChallengeReviewCard();
+        void runFinalChallengeReviewLoop(state.ui.finalChallengeReviewToken);
+      }
+
+      function closeFinalChallengeReviewModal() {
+        state.ui.finalChallengeReviewOpen = false;
+        state.ui.finalChallengeReviewToken += 1;
+        if (!els.finalChallengeReviewModal) return;
+        els.finalChallengeReviewModal.classList.remove('is-visible');
+        els.finalChallengeReviewModal.setAttribute('aria-hidden', 'true');
+      }
+
       function syncFinalChallengeRunUi() {
         const card = currentFinalChallengeCard();
         const totalCards = Array.isArray(state.ui.finalChallengeCards) ? state.ui.finalChallengeCards.length : 0;
         const index = Math.max(0, Number(state.ui.finalChallengeIndex) || 0);
-        const correctCount = currentFinalChallengeCorrectCount();
-        const attemptCount = Math.max(0, Number(state.ui.finalChallengeScores?.length) || 0);
-        const levelGoalCount = Math.round(FINAL_CHALLENGE_PASS_PERCENT * FINAL_CHALLENGE_CARD_COUNT / 100);
+        const notePercent = currentFinalChallengeNotePercent();
+        const gemTier = finalChallengeGemTier(notePercent);
         if (els.finalChallengeProgressCopy) {
-          els.finalChallengeProgressCopy.textContent = totalCards
-            ? `Carta ${Math.min(totalCards, index + 1)} de ${totalCards}`
-            : 'Carta 0 de 0';
+          els.finalChallengeProgressCopy.textContent = '';
+          els.finalChallengeProgressCopy.hidden = true;
         }
         if (els.finalChallengeCardImage) {
           els.finalChallengeCardImage.src = safeText(card?.imageUrl) || '/Avatar/profile-neon-blue.svg';
         }
         if (els.finalChallengeNativeText) {
-          els.finalChallengeNativeText.textContent = safeText(resolveSourceLanguageText(card, currentNativeLanguage())) || 'Sem frase';
+          const correctionText = state.ui.finalChallengeCorrectionTargetVisible
+            ? resolveSourceLanguageText(card, currentTargetLanguage())
+            : resolveSourceLanguageText(card, currentNativeLanguage());
+          els.finalChallengeNativeText.textContent = safeText(correctionText) || 'Sem frase';
         }
         if (els.finalChallengeTargetLanguageLabel) {
           els.finalChallengeTargetLanguageLabel.textContent = currentTargetLanguageLabel();
+        }
+        if (els.finalChallengeHint) {
+          els.finalChallengeHint.hidden = true;
+          els.finalChallengeHint.textContent = '';
         }
         if (els.finalChallengeSpeakBtn) {
           els.finalChallengeSpeakBtn.classList.toggle('is-listening', Boolean(state.ui.finalChallengeListening));
           els.finalChallengeSpeakBtn.disabled = Boolean(state.ui.finalChallengeBusy || state.ui.finalChallengeExitConfirmOpen || !card);
         }
+        if (els.finalChallengePercentGem) {
+          els.finalChallengePercentGem.className = `final-challenge-modal__percent-gem is-${gemTier.key}`;
+          els.finalChallengePercentGem.setAttribute('title', gemTier.label);
+        }
         if (els.finalChallengePercentLabel) {
-          els.finalChallengePercentLabel.textContent = attemptCount > 0 ? 'Acertos atuais' : 'Meta do nivel';
+          els.finalChallengePercentLabel.hidden = true;
+          els.finalChallengePercentLabel.textContent = '';
         }
         if (els.finalChallengePercentValue) {
-          els.finalChallengePercentValue.textContent = attemptCount > 0 ? `${correctCount}/${Math.max(totalCards, FINAL_CHALLENGE_CARD_COUNT)}` : `${levelGoalCount}/${FINAL_CHALLENGE_CARD_COUNT}`;
+          els.finalChallengePercentValue.textContent = formatFinalChallengeNote(notePercent);
         }
         if (els.finalChallengePercentCopy) {
-          els.finalChallengePercentCopy.textContent = attemptCount > 0
-            ? `Voce precisa fechar ${levelGoalCount} de ${FINAL_CHALLENGE_CARD_COUNT} cartas para passar de fase.`
-            : 'Cada carta conta como correta quando sua fala passa de 60%.';
+          els.finalChallengePercentCopy.hidden = true;
+          els.finalChallengePercentCopy.textContent = '';
+        }
+        syncFinalChallengeHeartsUi();
+        preloadCardImage(card);
+        preloadCardAudioForLanguage(card, currentTargetLanguage());
+        const nextCard = totalCards > (index + 1) ? state.ui.finalChallengeCards[index + 1] : null;
+        if (nextCard) {
+          preloadCardImage(nextCard);
+          preloadCardAudioForLanguage(nextCard, currentTargetLanguage());
         }
         setFinalChallengeExitConfirmOpen(Boolean(state.ui.finalChallengeExitConfirmOpen));
       }
@@ -29480,6 +29757,7 @@
         state.ui.finalChallengeBusy = false;
         state.ui.finalChallengeRunOpen = false;
         state.ui.finalChallengeExitConfirmOpen = false;
+        closeFinalChallengeReviewModal();
         if (!els.finalChallengeModal) return;
         els.finalChallengeModal.classList.remove('is-visible');
         els.finalChallengeModal.setAttribute('aria-hidden', 'true');
@@ -29490,6 +29768,7 @@
         cleanupGameRecognition();
         state.ui.finalChallengeListening = false;
         state.ui.finalChallengeBusy = false;
+        closeFinalChallengeReviewModal();
         resetFinalChallengeRunState();
         setFinalChallengeStatus('');
         setFinalChallengeScreen('intro');
@@ -29588,6 +29867,7 @@
       async function finishFinalChallengeRun() {
         const correctCount = currentFinalChallengeCorrectCount();
         const accuracyPercent = Math.round((correctCount / Math.max(1, FINAL_CHALLENGE_CARD_COUNT)) * 100);
+        const notePercent = currentFinalChallengeNotePercent();
         const passTarget = Math.round(FINAL_CHALLENGE_PASS_PERCENT * FINAL_CHALLENGE_CARD_COUNT / 100);
         const passed = accuracyPercent >= FINAL_CHALLENGE_PASS_PERCENT;
         state.ui.finalChallengeResultPassed = passed;
@@ -29615,18 +29895,24 @@
         }
         syncFinalChallengeLevelCopy();
         if (els.finalChallengeResultTitle) {
-          els.finalChallengeResultTitle.textContent = passed ? 'Voce passou de fase' : 'Voce nao passou de fase';
+          els.finalChallengeResultTitle.textContent = passed
+            ? 'Voce passou de fase'
+            : (state.ui.finalChallengeForcedGameOver ? 'Game over' : 'Voce nao passou de fase');
         }
         if (els.finalChallengeResultBody) {
           els.finalChallengeResultBody.textContent = passed
-            ? `Voce acertou ${correctCount} de ${FINAL_CHALLENGE_CARD_COUNT} cartas (${accuracyPercent}%). O proximo nivel ja foi liberado.`
-            : `Voce acertou ${correctCount} de ${FINAL_CHALLENGE_CARD_COUNT} cartas (${accuracyPercent}%). Alcance pelo menos ${passTarget} cartas corretas para subir de nivel.`;
+            ? `Nota final ${formatFinalChallengeNote(notePercent)}. Voce acertou ${correctCount} de ${FINAL_CHALLENGE_CARD_COUNT} cartas e o proximo nivel ja foi liberado.`
+            : `Nota final ${formatFinalChallengeNote(notePercent)}. Voce acertou ${correctCount} de ${FINAL_CHALLENGE_CARD_COUNT} cartas. Meta para subir: ${passTarget} corretas.`;
+        }
+        if (els.finalChallengeReviewBtn) {
+          els.finalChallengeReviewBtn.hidden = !Array.isArray(state.ui.finalChallengeWrongCards) || !state.ui.finalChallengeWrongCards.length;
         }
         setFinalChallengeScreen('result');
       }
 
       async function advanceFinalChallengeCard() {
         state.ui.finalChallengeIndex += 1;
+        state.ui.finalChallengeCorrectionTargetVisible = false;
         if (state.ui.finalChallengeIndex >= state.ui.finalChallengeCards.length) {
           await finishFinalChallengeRun();
           return;
@@ -29640,6 +29926,7 @@
         const card = currentFinalChallengeCard();
         if (!card) return;
         state.ui.finalChallengeBusy = true;
+        state.ui.finalChallengeCorrectionTargetVisible = false;
         state.ui.finalChallengeListening = true;
         syncFinalChallengeRunUi();
         setFinalChallengeStatus('Ouvindo...');
@@ -29662,10 +29949,22 @@
           syncFinalChallengeRunUi();
           if (passedCard) {
             playSuccessAudio();
-            setFinalChallengeStatus(`Carta aprovada com ${score}%.`, 'success');
+            setFinalChallengeStatus('', 'success');
           } else {
-            setFinalChallengeStatus(`Carta nao aprovada com ${score}%. Repetindo o audio.`, 'error');
+            if (!Array.isArray(state.ui.finalChallengeWrongCards)) {
+              state.ui.finalChallengeWrongCards = [];
+            }
+            state.ui.finalChallengeWrongCards.push(card);
+            state.ui.finalChallengeLivesLost = Math.max(0, Number(state.ui.finalChallengeLivesLost) || 0) + 1;
+            state.ui.finalChallengeCorrectionTargetVisible = true;
+            syncFinalChallengeRunUi();
             await playPromptAudio(card, { rate: 0.9, enableMicDuringPlayback: false }).catch(() => false);
+            if (state.ui.finalChallengeLivesLost > 5) {
+              state.ui.finalChallengeForcedGameOver = true;
+              await wait(480);
+              await finishFinalChallengeRun();
+              return;
+            }
           }
           await wait(passedCard ? 380 : 620);
           await advanceFinalChallengeCard();
@@ -29686,18 +29985,22 @@
             els.finalChallengeResultTitle.textContent = 'Desafio indisponivel agora';
           }
           if (els.finalChallengeResultBody) {
-            els.finalChallengeResultBody.textContent = `Ainda nao existem 20 cartas completas no Nivel ${challengeLevel} para ${currentTargetLanguageLabel()}.`;
+            els.finalChallengeResultBody.textContent = `Ainda nao existem 25 cartas completas no Nivel ${challengeLevel} para ${currentTargetLanguageLabel()}.`;
+          }
+          if (els.finalChallengeReviewBtn) {
+            els.finalChallengeReviewBtn.hidden = true;
           }
           setFinalChallengeScreen('result');
           return;
         }
+        closeFinalChallengeReviewModal();
         resetFinalChallengeRunState();
         state.ui.finalChallengeCards = cards;
         state.ui.finalChallengeIndex = 0;
         state.ui.finalChallengePercentVisible = false;
         setFinalChallengeExitConfirmOpen(false);
         setFinalChallengeScreen('run');
-        setFinalChallengeStatus('Toque na imagem para falar.');
+        setFinalChallengeStatus('');
         syncFinalChallengeRunUi();
       }
 
@@ -31385,6 +31688,11 @@
         });
         els.finalChallengeModal?.addEventListener('click', (event) => {
           if (event.target === els.finalChallengeModal) {
+            if (state.ui.finalChallengeScreen === 'run') {
+              setFinalChallengeExitConfirmOpen(true);
+              syncFinalChallengeRunUi();
+              return;
+            }
             closeFinalChallengeModal();
           }
         });
@@ -31415,6 +31723,12 @@
         });
         els.finalChallengeRetryBtn?.addEventListener('click', () => {
           void startFinalChallengeRun();
+        });
+        els.finalChallengeReviewBtn?.addEventListener('click', () => {
+          openFinalChallengeReviewModal();
+        });
+        els.finalChallengeReviewCloseBtn?.addEventListener('click', () => {
+          closeFinalChallengeReviewModal();
         });
         els.finalChallengeMenuBtn?.addEventListener('click', () => {
           closeFinalChallengeModal();
