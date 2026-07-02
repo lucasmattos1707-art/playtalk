@@ -5,8 +5,8 @@
   const PROTECTED_ROUTE_KEYS = new Set(['play', 'allcards', 'users', 'account', 'books', 'flashcards', 'mycards', 'premium', 'speaking', 'admin', 'fluency-plan', 'avataradd', 'password', 'username']);
   const ROUTES = {
     auth: { webPath: '/entrar', localPath: '/auth.html' },
-    play: { webPath: '/play', localPath: '/flashcards.html' },
-    flashcards: { webPath: '/flashcards', localPath: '/flashcards.html' },
+    play: { webPath: '/play', localPath: '/play.html' },
+    flashcards: { webPath: '/flashcards', localPath: '/play.html' },
     allcards: { webPath: '/allcards', localPath: '/allcards.html' },
     mycards: { webPath: '/mycards', localPath: '/mycards.html' },
     users: { webPath: '/users', localPath: '/users.html' },

@@ -1,6 +1,6 @@
 (function initPlaytalkApiConfig() {
-  const DEFAULT_REMOTE_API_BASE_URL = 'https://www.fluentlevelup.com';
-  const DEFAULT_REMOTE_API_HOSTNAME = 'www.fluentlevelup.com';
+  const DEFAULT_REMOTE_API_BASE_URL = 'https://fluentlevelup.com';
+  const DEFAULT_REMOTE_API_HOSTNAME = 'fluentlevelup.com';
   const LEGACY_REMOTE_API_HOSTNAMES = new Set([
     'fluentlevelup.com',
     'www.fluentlevelup.com'

@@ -11,8 +11,8 @@
     <img class="auth-logo" src="/arquivos-codex/welcome-gate/levelup.png" alt="Fluent LevelUp">
 
     <div class="auth-switch" role="tablist" aria-label="Modo de acesso">
-      <button class="auth-switch__btn" id="authModeLogin" type="button" data-auth-mode="login">Entrar</button>
-      <button class="auth-switch__btn is-active" id="authModeRegister" type="button" data-auth-mode="register">Cadastrar</button>
+      <button class="auth-switch__btn is-active" id="authModeLogin" type="button" data-auth-mode="login">Entrar</button>
+      <button class="auth-switch__btn" id="authModeRegister" type="button" data-auth-mode="register">Cadastrar</button>
     </div>
 
     <form class="auth-form" id="authForm" autocomplete="on">
@@ -81,6 +81,43 @@
         return '';
       }
 
+      function applyResolvedApiBaseUrl(nextBaseUrl) {
+        var normalized = String(nextBaseUrl || '').trim().replace(/\/+$/, '');
+        if (!normalized) {
+          return false;
+        }
+        if (window.PlaytalkApi && typeof window.PlaytalkApi.setBaseUrl === 'function') {
+          return window.PlaytalkApi.setBaseUrl(normalized);
+        }
+        window.PLAYTALK_API_BASE_URL = normalized;
+        return true;
+      }
+
+      function buildRedirectRetryUrl(response) {
+        if (!response || typeof response.status !== 'number') {
+          return '';
+        }
+        if (response.status !== 301 && response.status !== 302 && response.status !== 307 && response.status !== 308) {
+          return '';
+        }
+        var locationHeader = '';
+        try {
+          locationHeader = String(response.headers && response.headers.get('location') || '').trim();
+        } catch (_error) {
+          locationHeader = '';
+        }
+        if (!locationHeader) {
+          return '';
+        }
+        try {
+          var resolvedUrl = new URL(locationHeader, currentApiBaseUrl() || undefined);
+          applyResolvedApiBaseUrl(resolvedUrl.origin);
+          return resolvedUrl.toString();
+        } catch (_error) {
+          return '';
+        }
+      }
+
       async function postAuthJson(endpoint, payloadBody) {
         var primaryUrl = buildApiUrl(endpoint);
         var requestOptions = {
@@ -91,7 +128,12 @@
         };
 
         try {
-          return await fetch(primaryUrl, requestOptions);
+          var primaryResponse = await fetch(primaryUrl, requestOptions);
+          var redirectRetryUrl = buildRedirectRetryUrl(primaryResponse);
+          if (redirectRetryUrl) {
+            return await fetch(redirectRetryUrl, requestOptions);
+          }
+          return primaryResponse;
         } catch (primaryError) {
           if (!isNativeRuntime() || !isFetchNetworkError(primaryError)) {
             throw primaryError;
@@ -100,13 +142,14 @@
           if (!fallbackBase) {
             throw primaryError;
           }
-          if (window.PlaytalkApi && typeof window.PlaytalkApi.setBaseUrl === 'function') {
-            window.PlaytalkApi.setBaseUrl(fallbackBase);
-          } else {
-            window.PLAYTALK_API_BASE_URL = fallbackBase;
-          }
+          applyResolvedApiBaseUrl(fallbackBase);
           var fallbackUrl = fallbackBase + endpoint;
-          return fetch(fallbackUrl, requestOptions);
+          var fallbackResponse = await fetch(fallbackUrl, requestOptions);
+          var fallbackRedirectRetryUrl = buildRedirectRetryUrl(fallbackResponse);
+          if (fallbackRedirectRetryUrl) {
+            return await fetch(fallbackRedirectRetryUrl, requestOptions);
+          }
+          return fallbackResponse;
         }
       }
 
@@ -123,6 +166,74 @@
         } catch (_error) {
           return { payload: {}, rawText: rawText };
         }
+      }
+
+      function compactText(value, maxLength) {
+        var normalized = String(value || '').replace(/\s+/g, ' ').trim();
+        if (!normalized) return '';
+        var size = Math.max(24, Number(maxLength) || 0);
+        if (normalized.length <= size) {
+          return normalized;
+        }
+        return normalized.slice(0, Math.max(0, size - 3)).trim() + '...';
+      }
+
+      function extractRawResponseSnippet(rawText) {
+        var normalized = String(rawText || '').trim();
+        if (!normalized) return '';
+        if (normalized.charAt(0) === '<') {
+          normalized = normalized
+            .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+            .replace(/<[^>]+>/g, ' ');
+        }
+        return compactText(normalized, 220);
+      }
+
+      function buildServerAuthErrorMessage(response, parsed, endpoint) {
+        var payload = parsed && parsed.payload ? parsed.payload : {};
+        var rawText = parsed && typeof parsed.rawText === 'string' ? parsed.rawText : '';
+        var baseUrl = currentApiBaseUrl() || 'base-url-indefinida';
+        var targetUrl = baseUrl + endpoint;
+        var statusCode = response && typeof response.status === 'number' ? response.status : 0;
+        var redirectLocation = '';
+        try {
+          redirectLocation = compactText(response && response.headers && response.headers.get('location'), 220);
+        } catch (_error) {
+          redirectLocation = '';
+        }
+        var messageText = compactText(payload && payload.message, 220);
+        var detailsText = compactText(payload && (payload.details || payload.error), 260);
+        var rawSnippet = extractRawResponseSnippet(rawText);
+
+        if ((statusCode === 301 || statusCode === 302 || statusCode === 307 || statusCode === 308) && redirectLocation) {
+          return 'O servidor redirecionou esta tentativa para ' + redirectLocation + ' (HTTP ' + statusCode + ', ' + targetUrl + ')';
+        }
+
+        if (messageText && detailsText && detailsText !== messageText) {
+          return messageText + ' Detalhes: ' + detailsText + ' (HTTP ' + statusCode + ', ' + targetUrl + ')';
+        }
+        if (messageText) {
+          return messageText + ' (HTTP ' + statusCode + ', ' + targetUrl + ')';
+        }
+        if (detailsText) {
+          return 'Falha ao falar com o servidor. ' + detailsText + ' (HTTP ' + statusCode + ', ' + targetUrl + ')';
+        }
+        if (rawSnippet) {
+          return 'Falha ao falar com o servidor. Resposta recebida: ' + rawSnippet + ' (HTTP ' + statusCode + ', ' + targetUrl + ')';
+        }
+        return 'Falha ao falar com o servidor. O servidor nao enviou uma mensagem util. (HTTP ' + statusCode + ', ' + targetUrl + ')';
+      }
+
+      async function tryAlternateAuthRoute(endpoint, username, password) {
+        var response = await postAuthJson(endpoint, { username: username, password: password });
+        var parsed = await readResponsePayload(response);
+        return {
+          endpoint: endpoint,
+          response: response,
+          parsed: parsed,
+          payload: parsed.payload || {}
+        };
       }
 
       function safeReturnPath() {
@@ -181,10 +292,10 @@
           return normalized;
         }
         if (/^\/play(?:[/?#]|$)/i.test(normalized)) {
-          return '/flashcards.html';
+          return '/play.html';
         }
         if (/^\/flashcards(?:[/?#]|$)/i.test(normalized)) {
-          return '/flashcards.html';
+          return '/play.html';
         }
         if (/^\/(?:entrar|auth|auth\.html)(?:[/?#]|$)/i.test(normalized)) {
           return '/auth.html?return=%2Fplay';
@@ -309,13 +420,27 @@
 
           if ((!response.ok || !payload.success) && isNativeRuntime()) {
             try {
-              var homeAuthResponse = await postAuthJson('/api/books/home-auth', { username: username, password: password });
-              var homeParsed = await readResponsePayload(homeAuthResponse);
-              if (homeAuthResponse.ok && homeParsed.payload && homeParsed.payload.success) {
-                response = homeAuthResponse;
-                payload = homeParsed.payload;
-              } else if (!response.ok && !payload.message && homeParsed.payload && homeParsed.payload.message) {
-                payload = homeParsed.payload;
+              var fallbackAttempts = [];
+              if (endpoint !== '/login') {
+                fallbackAttempts.push('/login');
+              }
+              fallbackAttempts.push('/api/books/home-auth');
+
+              for (var i = 0; i < fallbackAttempts.length; i += 1) {
+                var fallback = await tryAlternateAuthRoute(fallbackAttempts[i], username, password);
+                if (fallback.response.ok && fallback.payload && fallback.payload.success) {
+                  response = fallback.response;
+                  parsed = fallback.parsed;
+                  payload = fallback.payload;
+                  endpoint = fallback.endpoint;
+                  break;
+                }
+                if (!response.ok && !payload.message && fallback.payload && fallback.payload.message) {
+                  response = fallback.response;
+                  parsed = fallback.parsed;
+                  payload = fallback.payload;
+                  endpoint = fallback.endpoint;
+                }
               }
             } catch (_homeAuthError) {
               // keep original response error handling below
@@ -327,9 +452,9 @@
               throw new Error('Esse usuario ja existe. Toque em Entrar e use sua senha.');
             }
             if (payload && payload.message) {
-              throw new Error(String(payload.message));
+              throw new Error(buildServerAuthErrorMessage(response, parsed, endpoint));
             }
-            throw new Error('Nao foi possivel liberar a entrada.');
+            throw new Error(buildServerAuthErrorMessage(response, parsed, endpoint));
           }
           persistAuthToken(payload.token || '');
           setMessage('Entrada liberada. Bora jogar.', 'success');
