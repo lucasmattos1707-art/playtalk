@@ -22357,6 +22357,8 @@
         const sourceKey = safeText(options.sourceKey || fileName) || fileName;
         const idSource = safeText(options.idSource || fileName) || fileName;
         const deckLevel = normalizeDeckLevel(options.deckLevel);
+        const manifestDeckLevel = normalizeDeckLevel(options.manifestDeckLevel ?? options.deckLevel);
+        const sequenceDeckLevel = normalizeDeckLevel(options.sequenceDeckLevel);
         const items = Array.isArray(payload)
           ? payload
           : Array.isArray(payload?.items)
@@ -22382,6 +22384,8 @@
             sourceIndex: index,
             deckTitle: title,
             deckLevel,
+            manifestDeckLevel,
+            sequenceDeckLevel,
             imageUrl: safeText(item?.imagem || item?.image),
             sourceEnglish,
             sourceEnglishAnswers: collectAcceptedAnswers(
@@ -22759,6 +22763,8 @@
             sourceKey,
             idSource: sourceKey,
             count: file.count,
+            manifestLevel,
+            sequenceDeckLevel: sequenceLevel,
             deckLevel: sequenceLevel ?? manifestLevel
           };
         });
@@ -22775,7 +22781,9 @@
           const cards = flattenPayload(file.name || file.path, payload, {
             sourceKey: file.sourceKey,
             idSource: file.idSource,
-            deckLevel: file.deckLevel
+            deckLevel: file.deckLevel,
+            manifestDeckLevel: file.manifestLevel,
+            sequenceDeckLevel: file.sequenceDeckLevel
           });
           return {
             cards,
@@ -29326,6 +29334,21 @@
         );
       }
 
+      function finalChallengeDeckLevel(card) {
+        const manifestLevel = normalizeDeckLevel(card?.manifestDeckLevel);
+        if (manifestLevel !== null) return manifestLevel;
+        return cardDeckLevel(card);
+      }
+
+      function buildFinalChallengeSourceCards(level = currentFinalChallengeLevel()) {
+        const targetLevel = normalizeUserLevel(Number(level) > 0 ? level : currentFinalChallengeLevel());
+        const allPlayableCards = state.allCards.filter(isCardPlayableInLevelMode);
+        return applyDeckCardsLimit(
+          allPlayableCards.filter((card) => finalChallengeDeckLevel(card) === targetLevel),
+          targetLevel
+        );
+      }
+
       function finalChallengeExpectedAnswersForCard(card) {
         return uniqueAnswerList(
           resolveSourceLanguageAnswers(
@@ -29347,7 +29370,7 @@
       }
 
       function buildFinalChallengeDeck(level = currentFinalChallengeLevel()) {
-        const exactLevelCards = buildExactLevelModeSourceCards(level)
+        const exactLevelCards = buildFinalChallengeSourceCards(level)
           .filter((card) => isCardEligibleForFinalChallenge(card));
         return buildOrderedDeckSelection(exactLevelCards, FINAL_CHALLENGE_CARD_COUNT);
       }
