@@ -19009,12 +19009,16 @@
       }
 
       function resolveLevelModeStage() {
+        if (isFinalChallengeActive()) return 1;
         if (isLevelTypingModeActive()) return 2;
         if (isLevelScaleModeActive()) return 3;
         return 1;
       }
 
       function resolveEntryStageNumber(entry) {
+        if (isFinalChallengeActive()) {
+          return 1;
+        }
         if (
           isLevelModeActive()
           && !isTrainingMode()
@@ -24253,6 +24257,7 @@
             : `Fale ${targetLabel}`
         };
         if (isFinalChallengeActive()) {
+          const targetLanguage = currentTargetLanguage();
           localizedConfig = {
             ...localizedConfig,
             key: 'first-star',
@@ -24261,7 +24266,7 @@
             showWord: true,
             wordType: 'portuguese',
             subtitleType: 'none',
-            expected: 'english',
+            expected: targetLanguage,
             autoAudio: false,
             inputMode: 'speech',
             revealOnHit: false,
@@ -25897,10 +25902,9 @@
         const card = cardById(entry.id);
         const stageConfig = STAGES[entry.stage] || STAGES[1];
         if (isFinalChallengeActive()) {
-          const challengeAnswers = Array.isArray(card?.englishAnswers) && card.englishAnswers.length
-            ? card.englishAnswers
-            : [card?.english || ''];
-          return uniqueAnswerList(challengeAnswers.map(repairDisplayText).map(item => safeText(item)).filter(Boolean));
+          const targetLanguage = currentTargetLanguage();
+          const challengeText = resolveSourceLanguageText(card, targetLanguage);
+          return resolveSourceLanguageAnswers(card, targetLanguage, challengeText);
         }
         if (isLevelTextModeActive()) {
           const textModeAnswers = selectedLevelTextResponseLanguage() === 'portuguese'
@@ -26469,6 +26473,7 @@
       }
 
       function isTypingStage(entry) {
+        if (isFinalChallengeActive()) return false;
         const stageConfig = STAGES[resolveEntryStageNumber(entry)] || STAGES[1];
         return stageConfig.inputMode === 'typing';
       }
@@ -27959,6 +27964,9 @@
           state.game.currentId = state.game.queue.shift() || Array.from(state.game.entries.keys())[0] || null;
           renderCurrentCard(options);
           return;
+        }
+        if (isFinalChallengeActive() && entry.stage !== 1) {
+          entry.stage = 1;
         }
         const stageConfig = resolveGameStageConfig(entry);
         els.game.dataset.phaseKey = stageConfig.key || '';
