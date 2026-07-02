@@ -2514,6 +2514,32 @@ const ensureFlashcardUserStateTables = async () => {
         ON public.user_flashcard_language_levels (user_id, updated_at DESC)
       `);
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_final_challenge_levels (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          target_language text NOT NULL,
+          current_level integer NOT NULL DEFAULT 1,
+          best_percent integer NOT NULL DEFAULT 0,
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, target_language)
+        )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_levels
+        ADD COLUMN IF NOT EXISTS current_level integer NOT NULL DEFAULT 1
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_levels
+        ADD COLUMN IF NOT EXISTS best_percent integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_levels
+        ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_final_challenge_levels_user_idx
+        ON public.user_flashcard_final_challenge_levels (user_id, updated_at DESC)
+      `);
+      await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_language_cards (
           user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
           card_id text NOT NULL,
@@ -7309,6 +7335,79 @@ const saveFlashcardStateForUser = async (userId, payload, userRecord = null) => 
     userLevel: persistedUserLevel,
     userLevelUpdatedAt: persistedUserLevelUpdatedAt,
     rankingRecord
+  };
+};
+
+const readFinalChallengeLevelForUser = async (userId, targetLanguage) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+  await ensureFlashcardUserStateTables();
+  const normalizedUserId = Number.parseInt(userId, 10);
+  const normalizedTargetLanguage = normalizeFlashcardTargetLanguage(targetLanguage);
+  const result = await pool.query(
+    `INSERT INTO public.user_flashcard_final_challenge_levels (
+       user_id,
+       target_language,
+       current_level,
+       best_percent,
+       updated_at
+     )
+     VALUES ($1, $2, 1, 0, now())
+     ON CONFLICT (user_id, target_language) DO NOTHING
+     RETURNING user_id`,
+    [normalizedUserId, normalizedTargetLanguage]
+  );
+  void result;
+  const rowResult = await pool.query(
+    `SELECT current_level, best_percent, updated_at
+     FROM public.user_flashcard_final_challenge_levels
+     WHERE user_id = $1
+       AND target_language = $2
+     LIMIT 1`,
+    [normalizedUserId, normalizedTargetLanguage]
+  );
+  const row = rowResult.rows[0] || {};
+  return {
+    targetLanguage: normalizedTargetLanguage,
+    level: normalizeUserFlashcardLevel(row.current_level || 1),
+    bestPercent: Math.max(0, Math.min(100, Number(row.best_percent) || 0)),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null
+  };
+};
+
+const saveFinalChallengeLevelForUser = async (userId, targetLanguage, payload = {}) => {
+  if (!pool) {
+    throw new Error('DATABASE_URL nao configurada.');
+  }
+  await ensureFlashcardUserStateTables();
+  const normalizedUserId = Number.parseInt(userId, 10);
+  const normalizedTargetLanguage = normalizeFlashcardTargetLanguage(targetLanguage);
+  const requestedLevel = normalizeUserFlashcardLevel(payload?.level || 1);
+  const requestedBestPercent = Math.max(0, Math.min(100, Math.round(Number(payload?.bestPercent) || 0)));
+  const result = await pool.query(
+    `INSERT INTO public.user_flashcard_final_challenge_levels (
+       user_id,
+       target_language,
+       current_level,
+       best_percent,
+       updated_at
+     )
+     VALUES ($1, $2, $3, $4, now())
+     ON CONFLICT (user_id, target_language)
+     DO UPDATE SET
+       current_level = GREATEST(public.user_flashcard_final_challenge_levels.current_level, EXCLUDED.current_level),
+       best_percent = GREATEST(public.user_flashcard_final_challenge_levels.best_percent, EXCLUDED.best_percent),
+       updated_at = now()
+     RETURNING current_level, best_percent, updated_at`,
+    [normalizedUserId, normalizedTargetLanguage, requestedLevel, requestedBestPercent]
+  );
+  const row = result.rows[0] || {};
+  return {
+    targetLanguage: normalizedTargetLanguage,
+    level: normalizeUserFlashcardLevel(row.current_level || requestedLevel),
+    bestPercent: Math.max(0, Math.min(100, Number(row.best_percent) || requestedBestPercent)),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null
   };
 };
 
@@ -16432,6 +16531,62 @@ app.get('/api/flashcards/acquisition-state', async (req, res) => {
   }
 });
 
+app.get('/api/flashcards/final-challenge-state', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    const state = await readFinalChallengeLevelForUser(authUser.id, req.query?.targetLanguage);
+    res.json({
+      success: true,
+      targetLanguage: state.targetLanguage,
+      level: state.level,
+      bestPercent: state.bestPercent,
+      updatedAt: state.updatedAt
+    });
+  } catch (error) {
+    console.error('Erro ao carregar estado do desafio final:', error);
+    res.status(500).json({ success: false, message: 'Erro ao carregar desafio final.' });
+  }
+});
+
+app.put('/api/flashcards/final-challenge-state', express.json({ limit: '256kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    const saved = await saveFinalChallengeLevelForUser(
+      authUser.id,
+      req.body?.targetLanguage,
+      req.body
+    );
+    res.json({
+      success: true,
+      targetLanguage: saved.targetLanguage,
+      level: saved.level,
+      bestPercent: saved.bestPercent,
+      updatedAt: saved.updatedAt
+    });
+  } catch (error) {
+    console.error('Erro ao salvar estado do desafio final:', error);
+    res.status(500).json({ success: false, message: 'Erro ao salvar desafio final.' });
+  }
+});
+
 app.post('/api/flashcards/acquisition-state', express.json({ limit: '2mb' }), async (req, res) => {
   try {
     if (!pool) {
@@ -16446,6 +16601,7 @@ app.post('/api/flashcards/acquisition-state', express.json({ limit: '2mb' }), as
     }
     await ensureFlashcardAcquisitionTable();
     const targetLanguage = normalizeFlashcardTargetLanguage(req.body?.gameOptions?.targetLanguage || req.body?.targetLanguage);
+    const allowProgressReset = req.body?.forceProgressReset === true;
     const progress = Array.isArray(req.body?.progress)
       ? req.body.progress.map((item) => normalizeFlashcardProgressRecord(item)).filter(Boolean)
       : [];
@@ -16453,14 +16609,6 @@ app.post('/api/flashcards/acquisition-state', express.json({ limit: '2mb' }), as
     try {
       await client.query('BEGIN');
       if (progress.length) {
-        const cardIds = progress.map((item) => item.cardId);
-        await client.query(
-          `DELETE FROM public.user_flashcard_acquisitions
-           WHERE user_id = $1
-             AND target_language = $2
-             AND NOT (card_id = ANY($3::text[]))`,
-          [Number(authUser.id), targetLanguage, cardIds]
-        );
         const values = [];
         const params = [];
         progress.forEach((item, index) => {
@@ -16522,7 +16670,7 @@ app.post('/api/flashcards/acquisition-state', express.json({ limit: '2mb' }), as
              updated_at = now()`,
           params
         );
-      } else {
+      } else if (allowProgressReset) {
         await client.query(
           `DELETE FROM public.user_flashcard_acquisitions
            WHERE user_id = $1
