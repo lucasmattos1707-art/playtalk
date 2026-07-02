@@ -14710,6 +14710,15 @@
         return Boolean(state.game?.finalChallenge?.active);
       }
 
+      function canOpenFinalChallengeFromSwipe() {
+        return Boolean(
+          state.game?.active
+          && isLevelModeActive()
+          && !isFinalChallengeActive()
+          && !isTrainingMode()
+        );
+      }
+
       function getFinalChallengeCards() {
         return Array.isArray(state.game?.finalChallenge?.cards) ? state.game.finalChallenge.cards : [];
       }
@@ -25924,8 +25933,8 @@
                     state.game.finalChallenge?.active
                       ? `${formatSelectedGameLevelLabel()} • desafio final • etapa ${getFinalChallengeCurrentStageNumber()}/${getFinalChallengeCards().length || FINAL_CHALLENGE_CARD_COUNT} • media ${getFinalChallengeAveragePercent()}%`
                       : (
-                    isLevelModeAcquisitionFlowActive()
-                      ? `${formatSelectedGameLevelLabel()} • ${currentLevelProgress} cartas conquistadas • deslize para cima para o desafio final.`
+                    canOpenFinalChallengeFromSwipe()
+                      ? `${formatSelectedGameLevelLabel()} • ${currentLevelProgress}/${userLevelCardTarget(selectedGameLevel())} concluido • deslize para cima para abrir o desafio final a qualquer momento.`
                       : (
                     isLevelScaleModeActive()
                       ? `${formatSelectedGameLevelLabel()} • bloco ${Math.max(0, Math.min(5, Number(state.game.scaleBatchAttempts) || 0))}/5 • fale em ingles.`
@@ -28837,7 +28846,7 @@
         if (triggerAdminSpeakingStarHitShortcut()) {
           return;
         }
-        if (isLevelModeAcquisitionFlowActive()) {
+        if (canOpenFinalChallengeFromSwipe()) {
           openFinalChallengeModal();
           return;
         }
