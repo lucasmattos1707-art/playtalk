@@ -8701,7 +8701,7 @@
       font-weight: 800;
       line-height: 1.15;
       letter-spacing: 0;
-      text-transform: none;
+      text-transform: uppercase;
       background: transparent;
       border: 0;
       color: #f6fcff;
@@ -8718,7 +8718,7 @@
       font-family: "Exo 2", "Open Sans", Arial, sans-serif !important;
       font-weight: 800 !important;
       letter-spacing: 0 !important;
-      text-transform: none !important;
+      text-transform: uppercase !important;
     }
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key.is-correct-hit,
@@ -11356,6 +11356,7 @@
       display: none;
       flex-direction: column;
       padding: 20px 18px 28px;
+      position: relative;
     }
 
     .final-challenge-modal__screen.is-active {
@@ -11380,6 +11381,13 @@
       display: grid;
       place-items: center;
       cursor: pointer;
+    }
+
+    .final-challenge-modal__back--orange {
+      border-color: rgba(255, 153, 51, 0.46);
+      background: linear-gradient(135deg, rgba(255, 157, 66, 0.96), rgba(233, 108, 17, 0.94));
+      color: #fff6ea;
+      box-shadow: 0 10px 24px rgba(233, 108, 17, 0.26);
     }
 
     .final-challenge-modal__back svg {
@@ -11448,7 +11456,9 @@
     .final-challenge-modal__progress {
       margin: 0;
       text-align: center;
-      font: 700 14px/1.4 "Open Sans", Arial, sans-serif;
+      font: 800 14px/1.4 "Exo 2", "Open Sans", Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
       color: rgba(245, 247, 251, 0.76);
     }
 
@@ -11545,7 +11555,7 @@
 
     .final-challenge-modal__percent-label {
       margin: 0;
-      font: 700 13px/1.2 "Open Sans", Arial, sans-serif;
+      font: 800 13px/1.2 "Exo 2", "Open Sans", Arial, sans-serif;
       letter-spacing: 0.16em;
       text-transform: uppercase;
       color: rgba(245, 247, 251, 0.48);
@@ -11565,7 +11575,9 @@
 
     .final-challenge-modal__status {
       margin: 0;
-      font: 700 14px/1.45 "Open Sans", Arial, sans-serif;
+      font: 800 14px/1.45 "Exo 2", "Open Sans", Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
       color: rgba(245, 247, 251, 0.8);
     }
 
@@ -11575,6 +11587,56 @@
 
     .final-challenge-modal__status.is-error {
       color: #ff8f8f;
+    }
+
+    .final-challenge-modal__confirm {
+      position: absolute;
+      inset: auto 18px 22px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: linear-gradient(180deg, rgba(29, 31, 39, 0.96), rgba(10, 11, 14, 0.98));
+      box-shadow: 0 22px 46px rgba(0, 0, 0, 0.34);
+      display: grid;
+      gap: 12px;
+      z-index: 3;
+    }
+
+    .final-challenge-modal__confirm[hidden] {
+      display: none;
+    }
+
+    .final-challenge-modal__confirm-title {
+      margin: 0;
+      font: 800 16px/1.25 "Exo 2", "Open Sans", Arial, sans-serif;
+      text-transform: uppercase;
+      color: #f5f7fb;
+    }
+
+    .final-challenge-modal__confirm-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .final-challenge-modal__confirm-btn {
+      min-height: 46px;
+      border-radius: 14px;
+      border: 0;
+      font: 800 14px/1 "Exo 2", "Open Sans", Arial, sans-serif;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .final-challenge-modal__confirm-btn--danger {
+      background: linear-gradient(135deg, #ff9d42, #e96c11);
+      color: #fff5ea;
+    }
+
+    .final-challenge-modal__confirm-btn--ghost {
+      background: rgba(255, 255, 255, 0.08);
+      color: #f5f7fb;
+      border: 1px solid rgba(255, 255, 255, 0.12);
     }
 
     @media (max-width: 540px) {
@@ -11727,7 +11789,7 @@
         <div>
           <p class="final-challenge-modal__eyebrow">Desafio</p>
           <h2 class="final-challenge-modal__level" id="finalChallengeIntroLevel">Nivel 1</h2>
-          <p class="final-challenge-modal__intro-copy">Alcance 90% para desbloquear proximo nivel.</p>
+          <p class="final-challenge-modal__intro-copy">Alcance 80% das 20 cartas para desbloquear o proximo nivel.</p>
         </div>
         <div class="final-challenge-modal__intro-actions">
           <button class="final-challenge-modal__cta final-challenge-modal__cta--primary" id="finalChallengeStartBtn" type="button">Comecar agora</button>
@@ -11736,11 +11798,11 @@
       </div>
       <div class="final-challenge-modal__screen final-challenge-modal__run" id="finalChallengeRunScreen">
         <div class="final-challenge-modal__topbar">
-          <button class="final-challenge-modal__back" id="finalChallengeExitRunBtn" type="button" aria-label="Voltar para a tela inicial do desafio">
+          <div style="width:42px;height:42px;" aria-hidden="true"></div>
+          <p class="final-challenge-modal__progress" id="finalChallengeProgressCopy">Carta 1 de 20</p>
+          <button class="final-challenge-modal__back final-challenge-modal__back--orange" id="finalChallengeExitRunBtn" type="button" aria-label="Voltar para a tela inicial do desafio">
             <svg viewBox="0 0 24 24" focusable="false"><path d="M10.7 5.3a1 1 0 0 1 0 1.4L6.41 11H20a1 1 0 1 1 0 2H6.4l4.3 4.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
           </button>
-          <p class="final-challenge-modal__progress" id="finalChallengeProgressCopy">Carta 1 de 20</p>
-          <div style="width:42px;height:42px;"></div>
         </div>
         <section class="final-challenge-modal__zone final-challenge-modal__zone--image">
           <button class="final-challenge-modal__avatar-btn" id="finalChallengeSpeakBtn" type="button" aria-label="Tocar na imagem e falar a traducao">
@@ -11756,13 +11818,20 @@
         </section>
         <section class="final-challenge-modal__zone final-challenge-modal__zone--percent">
           <div class="final-challenge-modal__percent-stack">
-            <p class="final-challenge-modal__percent-label" id="finalChallengePercentLabel" hidden>Media atual</p>
-            <p class="final-challenge-modal__percent-value" id="finalChallengePercentValue" hidden>0%</p>
-            <p class="final-challenge-modal__percent-copy" id="finalChallengePercentCopy">A porcentagem aparece depois da primeira tentativa.</p>
+            <p class="final-challenge-modal__percent-label" id="finalChallengePercentLabel">Meta do nivel</p>
+            <p class="final-challenge-modal__percent-value" id="finalChallengePercentValue">16/20</p>
+            <p class="final-challenge-modal__percent-copy" id="finalChallengePercentCopy">Cada carta conta como correta quando sua fala passa de 60%.</p>
             <p class="final-challenge-modal__status" id="finalChallengeStatus"></p>
           </div>
         </section>
         <section class="final-challenge-modal__zone final-challenge-modal__zone--spacer"></section>
+        <div class="final-challenge-modal__confirm" id="finalChallengeExitConfirm" hidden>
+          <p class="final-challenge-modal__confirm-title">Finalizar desafio atual?</p>
+          <div class="final-challenge-modal__confirm-actions">
+            <button class="final-challenge-modal__confirm-btn final-challenge-modal__confirm-btn--danger" id="finalChallengeExitConfirmYes" type="button">Sim</button>
+            <button class="final-challenge-modal__confirm-btn final-challenge-modal__confirm-btn--ghost" id="finalChallengeExitConfirmNo" type="button">Voltar</button>
+          </div>
+        </div>
       </div>
       <div class="final-challenge-modal__screen" id="finalChallengeResultScreen">
         <div class="final-challenge-modal__topbar">
@@ -11773,7 +11842,7 @@
         <div>
           <p class="final-challenge-modal__eyebrow">Resultado</p>
           <h2 class="final-challenge-modal__level" id="finalChallengeResultTitle">Voce passou de fase</h2>
-          <p class="final-challenge-modal__intro-copy" id="finalChallengeResultBody">Sua media final foi de 90%.</p>
+          <p class="final-challenge-modal__intro-copy" id="finalChallengeResultBody">Voce acertou 16 de 20 cartas.</p>
         </div>
         <div class="final-challenge-modal__intro-actions">
           <button class="final-challenge-modal__cta final-challenge-modal__cta--primary" id="finalChallengeRetryBtn" type="button">Tentar de novo</button>
@@ -12607,13 +12676,15 @@
       const SECOND_STAGE_LONG_WORD_SOLO_THRESHOLD = 12;
       const SECOND_STAGE_ROW_MIN_CHARS = 9;
       const SECOND_STAGE_ROW_MAX_CHARS = 11;
-      const SECOND_STAGE_WRONG_WORD_MAX_LENGTH = 6;
-      const SECOND_STAGE_WRONG_WORD_PATHS = [
-        'Writing/micro_words.json',
-        'Writing/verbs.json',
-        'Writing/nouns.json',
-        'Writing/adjectives_adverbs.json'
-      ];
+      const SECOND_STAGE_WRONG_WORD_MAX_LENGTH = 12;
+      const SECOND_STAGE_WRONG_WORD_PATHS_BY_LANGUAGE = {
+        english: ['Writing/common_words_english.json'],
+        spanish: ['Writing/common_words_spanish.json'],
+        french: ['Writing/common_words_french.json'],
+        german: ['Writing/common_words_german.json'],
+        portuguese: ['Writing/common_words_portuguese.json'],
+        mandarin: ['Writing/common_words_mandarin.json']
+      };
       const SECOND_STAGE_WRONG_WORD_FALLBACK = [
         'a', 'an', 'the', 'to', 'of', 'in', 'on', 'with', 'for', 'from', 'at', 'by', 'and', 'or', 'but', 'so', 'if', 'as', 'that',
         'be', 'have', 'go', 'play', 'make', 'see', 'like', 'want', 'need', 'learn', 'write', 'read', 'speak', 'listen',
@@ -12943,7 +13014,8 @@
       ];
       const FLASHCARD_REPORT_LABELS = Object.fromEntries(FLASHCARD_REPORT_TYPES.map((item) => [item.key, item.label]));
       const FINAL_CHALLENGE_CARD_COUNT = 20;
-      const FINAL_CHALLENGE_PASS_PERCENT = 90;
+      const FINAL_CHALLENGE_CARD_PASS_PERCENT = 60;
+      const FINAL_CHALLENGE_PASS_PERCENT = 80;
       const FLASHCARD_REPORT_ICONS = {
         'blurred-image': '<svg class="game-report-menu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v10H4z"></path><circle cx="9" cy="11" r="1.8"></circle><path d="M12 15l2.5-2.5L18 16"></path></svg>',
         'weak-association': '<svg class="game-report-menu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7l-2 2a3 3 0 0 0 0 4 3 3 0 0 0 4 0l2-2"></path><path d="M14 17l2-2a3 3 0 0 0 0-4 3 3 0 0 0-4 0l-2 2"></path><line x1="9" y1="15" x2="15" y2="9"></line></svg>',
@@ -13378,6 +13450,7 @@
           finalChallengeListening: false,
           finalChallengeBusy: false,
           finalChallengePercentVisible: false,
+          finalChallengeExitConfirmOpen: false,
           finalChallengeResultPassed: false
         },
         options: {
@@ -13391,8 +13464,8 @@
         }
       };
 
-      let secondStageWrongWords = null;
-      let secondStageWrongWordsPromise = null;
+      let secondStageWrongWordsByLanguage = {};
+      let secondStageWrongWordsPromiseByLanguage = {};
       let watchBackdropFadeTimer = 0;
 
       loadGameOptionsFromStorage();
@@ -13426,6 +13499,9 @@
         finalChallengePercentValue: document.getElementById('finalChallengePercentValue'),
         finalChallengePercentCopy: document.getElementById('finalChallengePercentCopy'),
         finalChallengeStatus: document.getElementById('finalChallengeStatus'),
+        finalChallengeExitConfirm: document.getElementById('finalChallengeExitConfirm'),
+        finalChallengeExitConfirmYes: document.getElementById('finalChallengeExitConfirmYes'),
+        finalChallengeExitConfirmNo: document.getElementById('finalChallengeExitConfirmNo'),
         finalChallengeResultTitle: document.getElementById('finalChallengeResultTitle'),
         finalChallengeResultBody: document.getElementById('finalChallengeResultBody'),
         finalChallengeRetryBtn: document.getElementById('finalChallengeRetryBtn'),
@@ -27337,22 +27413,29 @@
           });
       }
 
-      function getSecondStageSupplementalWrongWords() {
-        if (Array.isArray(secondStageWrongWords)) return secondStageWrongWords;
-        if (!secondStageWrongWordsPromise) {
-          secondStageWrongWordsPromise = Promise.all(
-            SECOND_STAGE_WRONG_WORD_PATHS.map((path) => fetch(path)
+      function getSecondStageSupplementalWrongWords(language = currentTargetLanguage()) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        if (!normalizedLanguage) {
+          return normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
+        }
+        if (Array.isArray(secondStageWrongWordsByLanguage[normalizedLanguage])) {
+          return secondStageWrongWordsByLanguage[normalizedLanguage];
+        }
+        if (!secondStageWrongWordsPromiseByLanguage[normalizedLanguage]) {
+          const languagePaths = SECOND_STAGE_WRONG_WORD_PATHS_BY_LANGUAGE[normalizedLanguage] || [];
+          secondStageWrongWordsPromiseByLanguage[normalizedLanguage] = Promise.all(
+            languagePaths.map((path) => fetch(path)
               .then((response) => (response.ok ? response.json() : []))
               .catch(() => []))
           ).then((groups) => {
-            secondStageWrongWords = normalizeSecondStageWrongWordList(groups.flat());
-            if (!secondStageWrongWords.length) {
-              secondStageWrongWords = normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
-            }
-            return secondStageWrongWords;
+            const normalizedWords = normalizeSecondStageWrongWordList(groups.flat());
+            secondStageWrongWordsByLanguage[normalizedLanguage] = normalizedWords.length
+              ? normalizedWords
+              : normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
+            return secondStageWrongWordsByLanguage[normalizedLanguage];
           }).catch(() => {
-            secondStageWrongWords = normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
-            return secondStageWrongWords;
+            secondStageWrongWordsByLanguage[normalizedLanguage] = normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
+            return secondStageWrongWordsByLanguage[normalizedLanguage];
           });
         }
         return normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
@@ -27376,19 +27459,18 @@
 
       function getSecondStageWrongWords(typingState) {
         const useNativePool = safeText(typingState?.typingMode) === 'portuguese';
+        const supplementalLanguage = useNativePool ? currentNativeLanguage() : currentTargetLanguage();
         const dynamicWords = collectSecondStageWrongWordsFromCards(
           useNativePool ? 'portugueseAnswers' : 'englishAnswers',
           useNativePool ? 'portuguese' : 'english'
         );
-        const supplementalWords = useNativePool ? [] : getSecondStageSupplementalWrongWords();
+        const supplementalWords = getSecondStageSupplementalWrongWords(supplementalLanguage);
         const combined = normalizeSecondStageWrongWordList([
           ...dynamicWords,
           ...supplementalWords
         ]);
         if (combined.length) return combined;
-        return useNativePool
-          ? dynamicWords
-          : normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
+        return normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
       }
 
       function countSecondStageBlockChars(option) {
@@ -27677,10 +27759,14 @@
           clearTypingSkipAutomation();
           clearTypingPromptLoop();
           clearSecondStarIdleHintTimers();
-          const shouldRefreshDistractors = !Array.isArray(secondStageWrongWords);
+          const distractorLanguage = normalizeGameOptionValue(
+            'targetLanguage',
+            typingState?.typingMode === 'portuguese' ? currentNativeLanguage() : currentTargetLanguage()
+          );
+          const shouldRefreshDistractors = !Array.isArray(secondStageWrongWordsByLanguage[distractorLanguage]);
           const blockState = buildSecondStageWordBlockState(typingState, card);
-          if (shouldRefreshDistractors && secondStageWrongWordsPromise) {
-            secondStageWrongWordsPromise.then(() => {
+          if (shouldRefreshDistractors && secondStageWrongWordsPromiseByLanguage[distractorLanguage]) {
+            secondStageWrongWordsPromiseByLanguage[distractorLanguage].then(() => {
               const livePhaseKey = safeText(els.game?.dataset?.phaseKey || '');
               const liveIsWordBlocks = livePhaseKey === 'second-star'
                 || (livePhaseKey === 'fourth-star' && isFourthStarUsingSecondStarBlocks());
@@ -29274,14 +29360,13 @@
         state.ui.finalChallengeListening = false;
         state.ui.finalChallengeBusy = false;
         state.ui.finalChallengePercentVisible = false;
+        state.ui.finalChallengeExitConfirmOpen = false;
         state.ui.finalChallengeResultPassed = false;
       }
 
-      function currentFinalChallengeAverage() {
+      function currentFinalChallengeCorrectCount() {
         const scores = Array.isArray(state.ui.finalChallengeScores) ? state.ui.finalChallengeScores : [];
-        if (!scores.length) return 0;
-        const total = scores.reduce((sum, score) => sum + Math.max(0, Math.min(100, Number(score) || 0)), 0);
-        return Math.round(total / scores.length);
+        return scores.reduce((total, score) => total + (Number(score) > FINAL_CHALLENGE_CARD_PASS_PERCENT ? 1 : 0), 0);
       }
 
       function currentFinalChallengeCard() {
@@ -29309,10 +29394,20 @@
         }
       }
 
+      function setFinalChallengeExitConfirmOpen(isOpen) {
+        state.ui.finalChallengeExitConfirmOpen = Boolean(isOpen);
+        if (els.finalChallengeExitConfirm) {
+          els.finalChallengeExitConfirm.hidden = !state.ui.finalChallengeExitConfirmOpen;
+        }
+      }
+
       function syncFinalChallengeRunUi() {
         const card = currentFinalChallengeCard();
         const totalCards = Array.isArray(state.ui.finalChallengeCards) ? state.ui.finalChallengeCards.length : 0;
         const index = Math.max(0, Number(state.ui.finalChallengeIndex) || 0);
+        const correctCount = currentFinalChallengeCorrectCount();
+        const attemptCount = Math.max(0, Number(state.ui.finalChallengeScores?.length) || 0);
+        const levelGoalCount = Math.round(FINAL_CHALLENGE_PASS_PERCENT * FINAL_CHALLENGE_CARD_COUNT / 100);
         if (els.finalChallengeProgressCopy) {
           els.finalChallengeProgressCopy.textContent = totalCards
             ? `Carta ${Math.min(totalCards, index + 1)} de ${totalCards}`
@@ -29329,22 +29424,20 @@
         }
         if (els.finalChallengeSpeakBtn) {
           els.finalChallengeSpeakBtn.classList.toggle('is-listening', Boolean(state.ui.finalChallengeListening));
-          els.finalChallengeSpeakBtn.disabled = Boolean(state.ui.finalChallengeBusy || !card);
+          els.finalChallengeSpeakBtn.disabled = Boolean(state.ui.finalChallengeBusy || state.ui.finalChallengeExitConfirmOpen || !card);
         }
-        const average = currentFinalChallengeAverage();
-        const showPercent = Boolean(state.ui.finalChallengePercentVisible && state.ui.finalChallengeAttempts > 0);
         if (els.finalChallengePercentLabel) {
-          els.finalChallengePercentLabel.hidden = !showPercent;
+          els.finalChallengePercentLabel.textContent = attemptCount > 0 ? 'Acertos atuais' : 'Meta do nivel';
         }
         if (els.finalChallengePercentValue) {
-          els.finalChallengePercentValue.hidden = !showPercent;
-          els.finalChallengePercentValue.textContent = `${average}%`;
+          els.finalChallengePercentValue.textContent = attemptCount > 0 ? `${correctCount}/${Math.max(totalCards, FINAL_CHALLENGE_CARD_COUNT)}` : `${levelGoalCount}/${FINAL_CHALLENGE_CARD_COUNT}`;
         }
         if (els.finalChallengePercentCopy) {
-          els.finalChallengePercentCopy.textContent = showPercent
-            ? `Media geral da pronuncia nas ${Math.max(1, Number(state.ui.finalChallengeScores?.length) || 0)} carta${(Number(state.ui.finalChallengeScores?.length) || 0) === 1 ? '' : 's'}.`
-            : 'A porcentagem aparece depois da primeira tentativa.';
+          els.finalChallengePercentCopy.textContent = attemptCount > 0
+            ? `Voce precisa fechar ${levelGoalCount} de ${FINAL_CHALLENGE_CARD_COUNT} cartas para passar de fase.`
+            : 'Cada carta conta como correta quando sua fala passa de 60%.';
         }
+        setFinalChallengeExitConfirmOpen(Boolean(state.ui.finalChallengeExitConfirmOpen));
       }
 
       function openFinalChallengeModal() {
@@ -29363,10 +29456,21 @@
         state.ui.finalChallengeListening = false;
         state.ui.finalChallengeBusy = false;
         state.ui.finalChallengeRunOpen = false;
+        state.ui.finalChallengeExitConfirmOpen = false;
         if (!els.finalChallengeModal) return;
         els.finalChallengeModal.classList.remove('is-visible');
         els.finalChallengeModal.setAttribute('aria-hidden', 'true');
         setFinalChallengeScreen('intro');
+      }
+
+      function cancelFinalChallengeRunToIntro() {
+        cleanupGameRecognition();
+        state.ui.finalChallengeListening = false;
+        state.ui.finalChallengeBusy = false;
+        resetFinalChallengeRunState();
+        setFinalChallengeStatus('');
+        setFinalChallengeScreen('intro');
+        syncFinalChallengeRunUi();
       }
 
       async function captureChallengeSpeechTranscript(language) {
@@ -29459,26 +29563,28 @@
       }
 
       async function finishFinalChallengeRun() {
-        const average = currentFinalChallengeAverage();
-        const passed = average >= FINAL_CHALLENGE_PASS_PERCENT;
+        const correctCount = currentFinalChallengeCorrectCount();
+        const accuracyPercent = Math.round((correctCount / Math.max(1, FINAL_CHALLENGE_CARD_COUNT)) * 100);
+        const passTarget = Math.round(FINAL_CHALLENGE_PASS_PERCENT * FINAL_CHALLENGE_CARD_COUNT / 100);
+        const passed = accuracyPercent >= FINAL_CHALLENGE_PASS_PERCENT;
         state.ui.finalChallengeResultPassed = passed;
         if (passed) {
           const nextLevel = normalizeUserLevel(currentFinalChallengeLevel() + 1);
-          setStoredFinalChallengeState(currentFinalChallengeLanguage(), nextLevel, Math.max(currentFinalChallengeBestPercent(), average));
+          setStoredFinalChallengeState(currentFinalChallengeLanguage(), nextLevel, Math.max(currentFinalChallengeBestPercent(), accuracyPercent));
           try {
             await persistFinalChallengeStateForLanguage(currentFinalChallengeLanguage(), {
               level: nextLevel,
-              bestPercent: average
+              bestPercent: accuracyPercent
             });
           } catch (error) {
             console.warn('Falha ao atualizar nivel do desafio final:', error);
           }
         } else {
-          setStoredFinalChallengeState(currentFinalChallengeLanguage(), currentFinalChallengeLevel(), Math.max(currentFinalChallengeBestPercent(), average));
+          setStoredFinalChallengeState(currentFinalChallengeLanguage(), currentFinalChallengeLevel(), Math.max(currentFinalChallengeBestPercent(), accuracyPercent));
           try {
             await persistFinalChallengeStateForLanguage(currentFinalChallengeLanguage(), {
               level: currentFinalChallengeLevel(),
-              bestPercent: average
+              bestPercent: accuracyPercent
             });
           } catch (error) {
             console.warn('Falha ao salvar resultado do desafio final:', error);
@@ -29490,8 +29596,8 @@
         }
         if (els.finalChallengeResultBody) {
           els.finalChallengeResultBody.textContent = passed
-            ? `Sua media final foi de ${average}%. O proximo nivel ja foi liberado.`
-            : `Sua media final foi de ${average}%. Alcance 90% para desbloquear o proximo nivel.`;
+            ? `Voce acertou ${correctCount} de ${FINAL_CHALLENGE_CARD_COUNT} cartas (${accuracyPercent}%). O proximo nivel ja foi liberado.`
+            : `Voce acertou ${correctCount} de ${FINAL_CHALLENGE_CARD_COUNT} cartas (${accuracyPercent}%). Alcance pelo menos ${passTarget} cartas corretas para subir de nivel.`;
         }
         setFinalChallengeScreen('result');
       }
@@ -29526,18 +29632,19 @@
           setFinalChallengeStatus('Analisando...');
           const evaluation = evaluateAcceptedAnswers(finalChallengeExpectedAnswersForCard(card), transcript);
           const score = Math.max(0, Math.min(100, Math.round(Number(evaluation?.score) || 0)));
+          const passedCard = score > FINAL_CHALLENGE_CARD_PASS_PERCENT;
           state.ui.finalChallengeAttempts += 1;
           state.ui.finalChallengeScores.push(score);
           state.ui.finalChallengePercentVisible = true;
           syncFinalChallengeRunUi();
-          if (score >= FINAL_CHALLENGE_PASS_PERCENT) {
+          if (passedCard) {
             playSuccessAudio();
-            setFinalChallengeStatus(`Acerto de ${score}%.`, 'success');
+            setFinalChallengeStatus(`Carta aprovada com ${score}%.`, 'success');
           } else {
-            setFinalChallengeStatus(`Pronuncia em ${score}%. Repetindo o audio.`, 'error');
+            setFinalChallengeStatus(`Carta nao aprovada com ${score}%. Repetindo o audio.`, 'error');
             await playPromptAudio(card, { rate: 0.9, enableMicDuringPlayback: false }).catch(() => false);
           }
-          await wait(score >= FINAL_CHALLENGE_PASS_PERCENT ? 380 : 620);
+          await wait(passedCard ? 380 : 620);
           await advanceFinalChallengeCard();
         } catch (error) {
           state.ui.finalChallengeListening = false;
@@ -29565,6 +29672,7 @@
         state.ui.finalChallengeCards = cards;
         state.ui.finalChallengeIndex = 0;
         state.ui.finalChallengePercentVisible = false;
+        setFinalChallengeExitConfirmOpen(false);
         setFinalChallengeScreen('run');
         setFinalChallengeStatus('Toque na imagem para falar.');
         syncFinalChallengeRunUi();
@@ -31259,11 +31367,14 @@
         });
         els.finalChallengeCloseBtn?.addEventListener('click', closeFinalChallengeModal);
         els.finalChallengeExitRunBtn?.addEventListener('click', () => {
-          cleanupGameRecognition();
-          state.ui.finalChallengeListening = false;
-          state.ui.finalChallengeBusy = false;
-          setFinalChallengeScreen('intro');
-          setFinalChallengeStatus('');
+          setFinalChallengeExitConfirmOpen(true);
+          syncFinalChallengeRunUi();
+        });
+        els.finalChallengeExitConfirmYes?.addEventListener('click', () => {
+          cancelFinalChallengeRunToIntro();
+        });
+        els.finalChallengeExitConfirmNo?.addEventListener('click', () => {
+          setFinalChallengeExitConfirmOpen(false);
           syncFinalChallengeRunUi();
         });
         els.finalChallengeResultBackBtn?.addEventListener('click', closeFinalChallengeModal);
