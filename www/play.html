@@ -29178,9 +29178,26 @@
         state.game.levelTypingMode = false;
         state.game.levelAudioMode = false;
         state.game.levelTextResponseLanguage = 'english';
+        state.ui.gamePausedAtWelcome = false;
+        resetTrainingRuntime();
+        hideWelcomeGate();
+        clearScheduledOnboardingGate();
+        cleanupGameRecognition();
+        stopActiveAudio();
+        clearGameLanguageSwapTimer();
         clearTypingSkipAutomation();
         clearTypingPromptLoop();
         clearSecondStarIdleHintTimers();
+        clearStageTutorialReminder();
+        hideGameStageTutorial({ resume: false });
+        clearStageTwoHintTimer();
+        clearFirstStageIdleTimer();
+        clearFirstStageMicHint({ clearStatus: true });
+        clearStageHintLoop({ clearStatus: true });
+        state.game.fifthStarHintDismissed = false;
+        clearPendingRewardSeal();
+        resetTutorialRuntime({ preserveCompletion: true });
+        state.game.levelMode = true;
         clearGameVisualTypingDisplays();
         if (els.gameTypingKeyboard) {
           els.gameTypingKeyboard.innerHTML = '';
@@ -29188,7 +29205,25 @@
           els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
         }
         syncFinalChallengeModeUi();
-        await restartActiveLevelMode(level);
+        setSelectedGameLevel(level);
+        seedLevelModeEntries();
+
+        els.topbar.classList.add('is-hidden');
+        els.catalog.classList.add('is-hidden');
+        closeGameSetup();
+        document.body.classList.add('game-open');
+        document.body.classList.add('gameplay-active');
+        els.game.classList.add('is-visible');
+        window.requestAnimationFrame(() => els.game.classList.add('is-active'));
+        updateLevelProgressBar();
+
+        if (!state.game.entries.size) {
+          renderCurrentCard();
+          return;
+        }
+        updateGameChips();
+        scheduleGameIdleAutoPause();
+        await advanceToNextCard();
       }
 
       async function playWatchAudioForLanguage(card, language, rate, sessionToken = state.watch.sessionToken) {
