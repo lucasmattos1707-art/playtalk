@@ -29221,9 +29221,17 @@
           renderCurrentCard();
           return;
         }
+        state.ui.gameEventModalOpen = false;
+        resetGameEventModalEntry();
+        state.game.transitioning = false;
         updateGameChips();
         scheduleGameIdleAutoPause();
-        await advanceToNextCard();
+        state.game.currentId = state.game.queue.shift() || Array.from(state.game.entries.keys())[0] || null;
+        if (!state.game.sessionClockActive) {
+          void signalFlashcardSessionClock('in');
+        }
+        persistGameSessionLocally();
+        renderCurrentCard();
       }
 
       async function playWatchAudioForLanguage(card, language, rate, sessionToken = state.watch.sessionToken) {
