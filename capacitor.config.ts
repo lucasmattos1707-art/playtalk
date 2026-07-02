@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   bundledWebRuntime: false,
   server: {
-    hostname: 'localhost',
+    hostname: 'app',
     androidScheme: 'https',
     allowNavigation: ['www.fluentlevelup.com', 'fluentlevelup.com']
   },

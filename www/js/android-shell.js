@@ -56,7 +56,7 @@
     const port = String(window.location?.port || '').trim();
 
     return protocol === 'file:'
-      || ((hostname === 'localhost' || hostname === '127.0.0.1') && !port);
+      || ((hostname === 'localhost' || hostname === '127.0.0.1' || hostname === 'app') && !port);
   }
 
   function normalizePathname(pathname) {

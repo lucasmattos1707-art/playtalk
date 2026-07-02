@@ -4814,6 +4814,25 @@
       background: #000000;
     }
 
+    .game.is-final-challenge-mode {
+      background: #000000;
+    }
+
+    .game.is-final-challenge-mode .game-shell,
+    .game.is-final-challenge-mode .game-card,
+    .game.is-final-challenge-mode .game-head,
+    .game.is-final-challenge-mode .game-status-slot,
+    .game.is-final-challenge-mode .game-chip-row,
+    .game.is-final-challenge-mode .game-footer-slot {
+      background: transparent;
+    }
+
+    .game.is-final-challenge-mode::before,
+    .game.is-final-challenge-mode .game-shell::before {
+      background: none !important;
+      opacity: 0 !important;
+    }
+
     .game.is-level-text-mode .game-shell,
     .game.is-level-text-mode .game-card,
     .game.is-level-text-mode .game-status-slot,
@@ -14774,6 +14793,15 @@
         els.gameStarCopy.textContent = `Etapa ${currentStage}/${totalCards} • media atual ${average}%`;
       }
 
+      function syncFinalChallengeModeUi() {
+        const active = Boolean(state.game?.active && isFinalChallengeActive());
+        els.game?.classList.toggle('is-final-challenge-mode', active);
+        if (els.gameMissionBtn) {
+          els.gameMissionBtn.hidden = active;
+          els.gameMissionBtn.disabled = active;
+        }
+      }
+
       function currentGameStarTarget() {
         return isLevelModeAcquisitionFlowActive()
           ? LEVEL_MODE_ACQUISITION_STAGE_SEQUENCE.length
@@ -18661,7 +18689,7 @@
         const hostname = String(window.location?.hostname || '').toLowerCase();
         const port = String(window.location?.port || '').trim();
         return protocol === 'file:'
-          || ((hostname === 'localhost' || hostname === '127.0.0.1') && !port);
+          || ((hostname === 'localhost' || hostname === '127.0.0.1' || hostname === 'app') && !port);
       }
 
       function resolveUsersHref() {
@@ -27898,6 +27926,7 @@
         cleanupGameRecognition();
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) {
+          syncFinalChallengeModeUi();
           clearRememberButtonRevealTimer();
           state.game.rememberReadyEntryKey = '';
           state.game.sessionClockStagePrimeKey = '';
@@ -27969,6 +27998,7 @@
           entry.stage = 1;
         }
         const stageConfig = resolveGameStageConfig(entry);
+        syncFinalChallengeModeUi();
         els.game.dataset.phaseKey = stageConfig.key || '';
         enforceBottomInfoContainersLayout();
         if (stageConfig.key === 'second-star' && isTypingStage(entry)) {
@@ -29086,6 +29116,7 @@
           resultPercent: 0,
           requiredPercent: FINAL_CHALLENGE_PASS_PERCENT
         };
+        syncFinalChallengeModeUi();
       }
 
       function activeFinalChallengeBlockCards() {
@@ -30989,6 +31020,7 @@
         els.gameMissionBtn?.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
+          if (isFinalChallengeActive()) return;
           openGameOptionsModal();
           pauseFlashcardsGameToWelcome();
         });

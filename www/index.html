@@ -42,7 +42,8 @@
   </style>
   <script>
     (function redirectToEntrar() {
-      var isNativeLikeHost = String(window.location.hostname || '').toLowerCase() === 'localhost';
+      var hostname = String(window.location.hostname || '').toLowerCase();
+      var isNativeLikeHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === 'app';
       var entryPath = isNativeLikeHost ? '/auth.html' : '/entrar';
       var targetUrl = new URL(entryPath, window.location.origin);
       targetUrl.searchParams.set('return', '/play');

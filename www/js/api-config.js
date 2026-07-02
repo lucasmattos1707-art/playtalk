@@ -67,7 +67,7 @@
 
     const protocol = String(window.location?.protocol || '').toLowerCase();
     const hostname = String(window.location?.hostname || '').toLowerCase();
-    return protocol === 'file:' || hostname === 'localhost' || hostname === '127.0.0.1';
+    return protocol === 'file:' || hostname === 'localhost' || hostname === '127.0.0.1' || hostname === 'app';
   }
 
   function normalizeBaseUrl(value) {
@@ -177,13 +177,14 @@
       const parsedUrl = new URL(normalizeBaseUrl(value));
       const hostname = parsedUrl.hostname.toLowerCase();
       const currentHostname = String(window.location?.hostname || '').toLowerCase();
-      if (isNativeRuntime() && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+      if (isNativeRuntime() && (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === 'app')) {
         return true;
       }
       return !LEGACY_REMOTE_API_HOSTNAMES.has(hostname)
         && hostname !== currentHostname
         && hostname !== 'localhost'
-        && hostname !== '127.0.0.1';
+        && hostname !== '127.0.0.1'
+        && hostname !== 'app';
     } catch (_error) {
       return false;
     }
@@ -227,7 +228,7 @@
     }
 
     const { hostname, origin, protocol, port } = window.location;
-    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === 'app';
 
     if (protocol === 'file:') {
       return DEFAULT_REMOTE_API_BASE_URL;

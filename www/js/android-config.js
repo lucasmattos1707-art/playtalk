@@ -37,7 +37,7 @@
 
     const protocol = String(window.location?.protocol || '').toLowerCase();
     const hostname = String(window.location?.hostname || '').toLowerCase();
-    return protocol === 'file:' || hostname === 'localhost' || hostname === '127.0.0.1';
+    return protocol === 'file:' || hostname === 'localhost' || hostname === '127.0.0.1' || hostname === 'app';
   }
 
   if (!isNativeRuntime()) {
