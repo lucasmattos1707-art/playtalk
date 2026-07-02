@@ -24034,6 +24034,7 @@
       }
 
       function resolveStageTutorialKind(entry) {
+        if (isFinalChallengeActive()) return '';
         if (!ENABLE_STAGE_TUTORIALS) return '';
         if (isFirstStageTutorialEligible(entry)) return 'first';
         if (isSecondStageTutorialEligible(entry)) return 'second';
@@ -28014,9 +28015,12 @@
         if (maybeShowStageTutorialBeforeCard(entry, options)) {
           return;
         }
-        const isSimpleStarPhase = stageConfig.key === 'first-star'
+        const forceFinalChallengeSpeechLayout = isFinalChallengeActive();
+        const isSimpleStarPhase = !forceFinalChallengeSpeechLayout && (
+          stageConfig.key === 'first-star'
           || stageConfig.key === 'third-star'
-          || stageConfig.key === 'fifth-star';
+          || stageConfig.key === 'fifth-star'
+        );
         const typingStage = isTypingStage(entry);
         scheduleRememberButtonEntrance(stageConfig, entry);
         clearGameMicUnlockTimer();
@@ -28087,7 +28091,11 @@
         }
         const stageOneSwapActive = !isSimpleStarPhase && entry.stage === 1 && Boolean(subword);
         if (els.gamePhaseWord) {
-          if (isSimpleStarPhase) {
+          if (forceFinalChallengeSpeechLayout) {
+            clearGameLanguageSwapTimer();
+            els.gamePhaseWord.textContent = '';
+            els.gamePhaseWord.classList.remove('is-visible', 'is-english', 'is-portuguese', 'is-fading');
+          } else if (isSimpleStarPhase) {
             if (stageConfig.key === 'first-star') {
               renderFirstStarPhaseWordSwap(entry, card);
               els.gamePhaseWord.classList.add('is-visible');
@@ -28120,7 +28128,12 @@
         els.gameWord.classList.remove('is-stage-swap-hidden');
         els.gameSubword.classList.remove('is-stage-swap-hidden');
         els.gameWord.parentElement?.classList.toggle('is-stage-one-swap', stageOneSwapActive);
-        if (stageOneSwapActive) {
+        if (forceFinalChallengeSpeechLayout) {
+          els.gameWord.className = 'game-word is-chip';
+          els.gameSubword.className = 'game-subword is-hidden';
+          els.gameWord.style.display = '';
+          els.gameSubword.style.display = 'none';
+        } else if (stageOneSwapActive) {
           els.gameWord.className = 'game-word is-chip';
           els.gameSubword.className = 'game-subword is-chip';
           els.gameWord.style.display = '';
@@ -28154,7 +28167,14 @@
         els.gameTouchBtn.classList.toggle('is-busy', state.game.listening);
         renderTypingKeyboard(entry, card);
         renderFifthStarPortugueseDisplay(card, stageConfig.key);
-        if (isSimpleStarPhase && !textOnlyMode) {
+        if (forceFinalChallengeSpeechLayout) {
+          els.gameWord.parentElement?.classList.remove('is-stage-one-swap');
+          els.gameWord.classList.remove('is-hidden', 'is-stage-swap-hidden');
+          els.gameSubword.classList.add('is-hidden');
+          els.gameSubword.classList.remove('is-stage-swap-hidden');
+          els.gameWord.style.display = '';
+          els.gameSubword.style.display = 'none';
+        } else if (isSimpleStarPhase && !textOnlyMode) {
           els.gameWord.parentElement?.classList.remove('is-stage-one-swap');
           els.gameWord.classList.remove('is-stage-swap-hidden');
           els.gameSubword.classList.remove('is-stage-swap-hidden');
@@ -29152,11 +29172,22 @@
           resultPercent: 0,
           requiredPercent: FINAL_CHALLENGE_PASS_PERCENT
         };
+        state.game.paused = false;
         state.game.levelTextMode = false;
         state.game.levelScaleMode = false;
         state.game.levelTypingMode = false;
         state.game.levelAudioMode = false;
         state.game.levelTextResponseLanguage = 'english';
+        clearTypingSkipAutomation();
+        clearTypingPromptLoop();
+        clearSecondStarIdleHintTimers();
+        clearGameVisualTypingDisplays();
+        if (els.gameTypingKeyboard) {
+          els.gameTypingKeyboard.innerHTML = '';
+          els.gameTypingKeyboard.classList.remove('is-visible', 'is-portuguese');
+          els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
+        }
+        syncFinalChallengeModeUi();
         await restartActiveLevelMode(level);
       }
 
@@ -29463,7 +29494,7 @@
 
         buildOrderedDeckSelection(sourceCards, roundCount).forEach((card) => {
           const entry = createGameEntry(card, 'base');
-          entry.stage = resolveLevelModeInitialStage();
+          entry.stage = isFinalChallengeActive() ? 1 : resolveLevelModeInitialStage();
           entry.stars = 0;
           state.game.entries.set(entry.id, entry);
           state.game.queue.push(entry.id);
@@ -29950,7 +29981,7 @@
           clearStageHintLoop({ clearStatus: true });
           clearFirstStageMicHint({ clearStatus: true });
           clearStageTwoHintTimer();
-          entry.stage = resolveLevelModeStage();
+          entry.stage = isFinalChallengeActive() ? 1 : resolveLevelModeStage();
           entry.stars = 0;
           entry.typingMistakes = 0;
           const scaleModeActive = isLevelScaleModeActive();
