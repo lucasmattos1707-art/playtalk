@@ -29342,11 +29342,11 @@
 
       function buildFinalChallengeSourceCards(level = currentFinalChallengeLevel()) {
         const targetLevel = normalizeUserLevel(Number(level) > 0 ? level : currentFinalChallengeLevel());
-        const allPlayableCards = state.allCards.filter(isCardPlayableInLevelMode);
-        return applyDeckCardsLimit(
-          allPlayableCards.filter((card) => finalChallengeDeckLevel(card) === targetLevel),
-          targetLevel
-        );
+        return uniqueCardsById((Array.isArray(state.allCards) ? state.allCards : []).filter((card) => {
+          if (!card) return false;
+          if (isCardHiddenForUser(card?.id)) return false;
+          return finalChallengeDeckLevel(card) === targetLevel;
+        }));
       }
 
       function finalChallengeExpectedAnswersForCard(card) {
