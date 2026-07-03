@@ -12159,6 +12159,25 @@
       border-color: rgba(91, 239, 174, 0.32);
     }
 
+    .final-challenge-modal__downloads-progress {
+      grid-column: 1 / -1;
+      width: 100%;
+      height: 3px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.09);
+    }
+
+    .final-challenge-modal__downloads-progress-fill {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #20d879, #75ffc0);
+      box-shadow: 0 0 10px rgba(61, 239, 151, 0.62);
+      transition: width 220ms ease-out;
+    }
+
     .final-challenge-modal__downloads-meta {
       display: grid;
       gap: 6px;
@@ -12428,7 +12447,6 @@ para liberar desafio</p>
         <div class="final-challenge-modal__intro-actions">
           <button class="final-challenge-modal__cta final-challenge-modal__cta--primary" id="finalChallengePracticeBtn" type="button"><span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>Iniciar treino</button>
           <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost" id="finalChallengeStartBtn" type="button"><span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m12 3 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 16.53l-5.3 2.78 1.01-5.9-4.29-4.18 5.93-.86L12 3Z"></path></svg></span>Desafio final</button>
-          <button class="final-challenge-modal__inline-link" id="finalChallengeContinueWithoutBtn" type="button" hidden>Continuar sem desafio</button>
         </div>
       </div>
       <div class="final-challenge-modal__screen final-challenge-modal__run" id="finalChallengeRunScreen">
@@ -13334,13 +13352,14 @@ para liberar desafio</p>
           complete_training_unlock: 'Complete o treino\npara liberar desafio',
           training_complete_unlock: 'Treino completo\nDesafio liberado',
           challenge_unavailable: 'Desafio indisponivel agora',
-          continue_without_challenge: 'Continuar sem desafio',
           final_challenge_complete: 'Desafio completo',
           note_label: 'Nota',
           time_label: 'Tempo',
           downloads: 'Downloads',
           level_audio_downloads: 'Audios do nivel',
           downloaded: 'Baixado',
+          download_available: 'Download disponível',
+          download_complete: 'Download concluído',
           download_audio: 'Baixar',
           download_update: 'Atualizar',
           download_ready: 'Pronto para uso offline leve',
@@ -13390,13 +13409,14 @@ para liberar desafio</p>
           complete_training_unlock: 'Complete the training\nto unlock the challenge',
           training_complete_unlock: 'Training complete\nChallenge unlocked',
           challenge_unavailable: 'Challenge unavailable right now',
-          continue_without_challenge: 'Continue without challenge',
           final_challenge_complete: 'Challenge complete',
           note_label: 'Score',
           time_label: 'Time',
           downloads: 'Downloads',
           level_audio_downloads: 'Level audio',
           downloaded: 'Downloaded',
+          download_available: 'Download available',
+          download_complete: 'Download complete',
           download_audio: 'Download',
           download_update: 'Refresh',
           download_ready: 'Ready for smoother offline play',
@@ -13446,13 +13466,14 @@ para liberar desafio</p>
           complete_training_unlock: 'Completa el entrenamiento\npara liberar el desafio',
           training_complete_unlock: 'Entrenamiento completo\nDesafio liberado',
           challenge_unavailable: 'Desafio no disponible ahora',
-          continue_without_challenge: 'Continuar sin desafio',
           final_challenge_complete: 'Desafio completo',
           note_label: 'Nota',
           time_label: 'Tiempo',
           downloads: 'Descargas',
           level_audio_downloads: 'Audios del nivel',
           downloaded: 'Descargado',
+          download_available: 'Descarga disponible',
+          download_complete: 'Descarga completa',
           download_audio: 'Descargar',
           download_update: 'Actualizar',
           download_ready: 'Listo para jugar con menos carga',
@@ -13502,13 +13523,14 @@ para liberar desafio</p>
           complete_training_unlock: 'Complete l entrainement\npour debloquer le defi',
           training_complete_unlock: 'Entrainement termine\nDefi debloque',
           challenge_unavailable: 'Defi indisponible maintenant',
-          continue_without_challenge: 'Continuer sans defi',
           final_challenge_complete: 'Defi termine',
           note_label: 'Note',
           time_label: 'Temps',
           downloads: 'Telechargements',
           level_audio_downloads: 'Audios du niveau',
           downloaded: 'Telecharge',
+          download_available: 'Telechargement disponible',
+          download_complete: 'Telechargement termine',
           download_audio: 'Telecharger',
           download_update: 'Actualiser',
           download_ready: 'Pret pour un jeu plus fluide',
@@ -13558,13 +13580,14 @@ para liberar desafio</p>
           complete_training_unlock: 'Schliesse das Training ab,\num die Herausforderung freizuschalten',
           training_complete_unlock: 'Training abgeschlossen\nHerausforderung freigeschaltet',
           challenge_unavailable: 'Herausforderung gerade nicht verfugbar',
-          continue_without_challenge: 'Ohne Herausforderung fortfahren',
           final_challenge_complete: 'Herausforderung abgeschlossen',
           note_label: 'Note',
           time_label: 'Zeit',
           downloads: 'Downloads',
           level_audio_downloads: 'Level-Audios',
           downloaded: 'Geladen',
+          download_available: 'Download verfugbar',
+          download_complete: 'Download abgeschlossen',
           download_audio: 'Laden',
           download_update: 'Aktualisieren',
           download_ready: 'Bereit fur flussigeres Spiel',
@@ -13614,13 +13637,14 @@ para liberar desafio</p>
           complete_training_unlock: 'Wancheng xunlian\njiesuo tiaozhan',
           training_complete_unlock: 'Xunlian wancheng\nTiaozhan yijiesuo',
           challenge_unavailable: 'Dangqian wufa kaishi tiaozhan',
-          continue_without_challenge: 'Bujinru tiaozhan jixu',
           final_challenge_complete: 'Tiaozhan yi wancheng',
           note_label: 'Fenshu',
           time_label: 'Shijian',
           downloads: 'Xiazai',
           level_audio_downloads: 'Dengji yuyin',
           downloaded: 'Yi xiazai',
+          download_available: 'Ke xiazai',
+          download_complete: 'Xiazai wancheng',
           download_audio: 'Xiazai',
           download_update: 'Gengxin',
           download_ready: 'Yi zhunbei hao geng shun chang de bofang',
@@ -14243,7 +14267,9 @@ para liberar desafio</p>
           reportAudio: null,
           preloadImages: new Map(),
           preloadAudios: new Map(),
+          preloadAudioPromises: new Map(),
           runtimeAudioUrls: new Map(),
+          runtimeAudioSourcePromises: new Map(),
           pendingEnsureAudioKeys: new Set(),
           contextLimit: DEFAULT_GAME_CONTEXT_LIMIT,
           selectedCount: null,
@@ -14509,6 +14535,8 @@ para liberar desafio</p>
           finalChallengeSessionStartedAt: 0,
           finalChallengeDownloadsOpen: false,
           finalChallengeDownloadsBusyLevel: 0,
+          finalChallengeDownloadsCompletedCount: 0,
+          finalChallengeDownloadsTotalCount: 0,
           finalChallengeDownloadsStatus: '',
           finalChallengeDownloadsStatusTone: ''
         },
@@ -14553,7 +14581,6 @@ para liberar desafio</p>
         finalChallengeDownloadsBtn: document.getElementById('finalChallengeDownloadsBtn'),
         finalChallengeStartBtn: document.getElementById('finalChallengeStartBtn'),
         finalChallengePracticeBtn: document.getElementById('finalChallengePracticeBtn'),
-        finalChallengeContinueWithoutBtn: document.getElementById('finalChallengeContinueWithoutBtn'),
         finalChallengeIntroFeedback: document.getElementById('finalChallengeIntroFeedback'),
         finalChallengeLevelPrevBtn: document.getElementById('finalChallengeLevelPrevBtn'),
         finalChallengeLevelNextBtn: document.getElementById('finalChallengeLevelNextBtn'),
@@ -15336,6 +15363,18 @@ para liberar desafio</p>
         return safeText(state.game?.runtimeAudioUrls?.get(safeSrc) || safeSrc);
       }
 
+      function audioElementUsesSource(audio, src) {
+        const safeSrc = safeText(src);
+        if (!audio || !safeSrc) return false;
+        let absoluteSrc = safeSrc;
+        try {
+          absoluteSrc = new URL(safeSrc, document.baseURI).href;
+        } catch (_error) {
+          // keep the original source
+        }
+        return [audio.currentSrc, audio.src].some((candidate) => safeText(candidate) === absoluteSrc);
+      }
+
       async function cacheRuntimeAudioBlob(src, response) {
         const safeSrc = safeText(src);
         if (!safeSrc || !response || typeof response.clone !== 'function' || !finalChallengeAudioCacheSupported()) return safeSrc;
@@ -15352,6 +15391,16 @@ para liberar desafio</p>
             }
           }
           state.game.runtimeAudioUrls.set(safeSrc, nextUrl);
+          state.game.preloadAudioPromises.delete(safeSrc);
+          const staleAudio = state.game.preloadAudios.get(safeSrc);
+          if (staleAudio && !audioElementUsesSource(staleAudio, nextUrl)) {
+            try {
+              staleAudio.pause();
+            } catch (_error) {
+              // ignore
+            }
+            state.game.preloadAudios.delete(safeSrc);
+          }
           return nextUrl;
         } catch (_error) {
           return safeSrc;
@@ -15363,14 +15412,27 @@ para liberar desafio</p>
         if (!safeSrc || !finalChallengeAudioCacheSupported()) return safeSrc;
         const existing = safeText(state.game?.runtimeAudioUrls?.get(safeSrc) || '');
         if (existing) return existing;
-        try {
-          const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
-          const cachedResponse = await cache.match(safeSrc);
-          if (!cachedResponse) return safeSrc;
-          return await cacheRuntimeAudioBlob(safeSrc, cachedResponse);
-        } catch (_error) {
-          return safeSrc;
-        }
+        const pending = state.game.runtimeAudioSourcePromises.get(safeSrc);
+        if (pending) return pending;
+        const sourcePromise = (async () => {
+          try {
+            const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
+            let availableResponse = await cache.match(safeSrc);
+            if (!availableResponse) {
+              const networkResponse = await fetch(safeSrc, { cache: 'force-cache' });
+              if (!networkResponse.ok) return safeSrc;
+              await cache.put(safeSrc, networkResponse.clone());
+              availableResponse = networkResponse;
+            }
+            return await cacheRuntimeAudioBlob(safeSrc, availableResponse);
+          } catch (_error) {
+            return safeSrc;
+          } finally {
+            state.game.runtimeAudioSourcePromises.delete(safeSrc);
+          }
+        })();
+        state.game.runtimeAudioSourcePromises.set(safeSrc, sourcePromise);
+        return sourcePromise;
       }
 
       function setFinalChallengeDownloadsStatus(message = '', tone = '') {
@@ -15383,6 +15445,69 @@ para liberar desafio</p>
           els.finalChallengeDownloadsStatus.classList.add('is-success');
         } else if (tone === 'error') {
           els.finalChallengeDownloadsStatus.classList.add('is-error');
+        }
+      }
+
+      function setFinalChallengeDownloadProgress(completedCount = 0, totalCount = 0) {
+        const total = Math.max(0, Number(totalCount) || 0);
+        const completed = Math.max(0, Math.min(total, Number(completedCount) || 0));
+        state.ui.finalChallengeDownloadsCompletedCount = completed;
+        state.ui.finalChallengeDownloadsTotalCount = total;
+        const busyLevel = Math.max(0, Number(state.ui.finalChallengeDownloadsBusyLevel) || 0);
+        if (!busyLevel) return;
+        const progress = total ? (completed / total) * 100 : 0;
+        const row = els.finalChallengeDownloadsList?.querySelector(`[data-download-level="${busyLevel}"]`);
+        const progressNode = row?.querySelector('.final-challenge-modal__downloads-progress');
+        const fill = row?.querySelector('.final-challenge-modal__downloads-progress-fill');
+        const note = row?.querySelector('.final-challenge-modal__downloads-note');
+        if (progressNode) progressNode.setAttribute('aria-valuenow', String(Math.round(progress)));
+        if (fill) fill.style.width = `${progress.toFixed(2)}%`;
+        if (note) note.textContent = `${nativeUiText(progress >= 100 ? 'download_complete' : 'download_available')} • ${Math.round(progress)}%`;
+      }
+
+      function setFinalChallengeDownloadRowState(row, percent = 0) {
+        if (!row) return;
+        const progress = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+        const complete = progress >= 100;
+        const note = row.querySelector('.final-challenge-modal__downloads-note');
+        const button = row.querySelector('.final-challenge-modal__downloads-btn');
+        row.classList.toggle('is-downloaded', complete);
+        if (note) {
+          note.textContent = `${nativeUiText(complete ? 'download_complete' : 'download_available')} • ${progress}%`;
+        }
+        if (button && !state.ui.finalChallengeDownloadsBusyLevel) {
+          button.classList.toggle('is-downloaded', complete);
+          button.innerHTML = complete
+            ? '<svg viewBox="0 0 24 24" focusable="false"><path d="M5 12.5 9.5 17 19 7.5"></path></svg>'
+            : '<svg viewBox="0 0 24 24" focusable="false"><path d="M12 4v9"></path><path d="m8.5 10.5 3.5 3.5 3.5-3.5"></path><path d="M5 18h14"></path></svg>';
+        }
+      }
+
+      async function refreshFinalChallengeDownloadCacheProgress() {
+        if (!finalChallengeAudioCacheSupported() || !els.finalChallengeDownloadsList) return;
+        const list = els.finalChallengeDownloadsList;
+        try {
+          const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
+          const requests = await cache.keys();
+          const cachedUrls = new Set(requests.map((request) => safeText(request?.url)).filter(Boolean));
+          Array.from(list.querySelectorAll('[data-download-level]')).forEach((row) => {
+            if (!row.isConnected || row.parentElement !== list) return;
+            const level = normalizeUserLevel(row.dataset.downloadLevel);
+            const urls = finalChallengeDownloadPayload(level).audioUrls;
+            if (!urls.length) return;
+            const cachedCount = urls.reduce((count, src) => {
+              let absoluteSrc = safeText(src);
+              try {
+                absoluteSrc = new URL(src, document.baseURI).href;
+              } catch (_error) {
+                // keep the original source
+              }
+              return count + (cachedUrls.has(absoluteSrc) ? 1 : 0);
+            }, 0);
+            setFinalChallengeDownloadRowState(row, (cachedCount / urls.length) * 100);
+          });
+        } catch (_error) {
+          // Keep the download modal usable when Cache Storage is unavailable.
         }
       }
 
@@ -15429,6 +15554,7 @@ para liberar desafio</p>
           const downloaded = Boolean(downloadedRecord?.completed && Number(downloadedRecord?.audioCount) === payload.audioUrls.length && payload.audioUrls.length > 0);
           const row = document.createElement('div');
           row.className = 'final-challenge-modal__downloads-row';
+          row.dataset.downloadLevel = String(level);
           if (level === selectedLevel) row.classList.add('is-active');
           if (downloaded) row.classList.add('is-downloaded');
           const meta = document.createElement('div');
@@ -15439,13 +15565,13 @@ para liberar desafio</p>
           const note = document.createElement('p');
           note.className = 'final-challenge-modal__downloads-note';
           note.textContent = payload.audioUrls.length
-            ? (downloaded ? `${nativeUiText('downloaded')} • ${payload.audioUrls.length} audios` : `${payload.audioUrls.length} audios • ${nativeUiText('download_ready')}`)
+            ? `${nativeUiText(downloaded ? 'download_complete' : 'download_available')} • ${downloaded ? 100 : 0}%`
             : nativeUiText('download_unavailable');
           meta.append(title, note);
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'final-challenge-modal__downloads-btn';
-          button.disabled = !payload.audioUrls.length || busyLevel === level;
+          button.disabled = !payload.audioUrls.length || busyLevel > 0;
           if (downloaded) button.classList.add('is-downloaded');
           button.setAttribute('aria-label', `${downloaded ? nativeUiText('download_update') : nativeUiText('download_audio')} ${nativeUiText('level')} ${level}`);
           button.innerHTML = downloaded
@@ -15455,8 +15581,26 @@ para liberar desafio</p>
             void downloadFinalChallengeLevelAudio(level);
           });
           row.append(meta, button);
+          if (busyLevel === level) {
+            const total = Math.max(0, Number(state.ui.finalChallengeDownloadsTotalCount) || payload.audioUrls.length);
+            const completed = Math.max(0, Math.min(total, Number(state.ui.finalChallengeDownloadsCompletedCount) || 0));
+            const progress = total ? (completed / total) * 100 : 0;
+            const progressTrack = document.createElement('div');
+            progressTrack.className = 'final-challenge-modal__downloads-progress';
+            progressTrack.setAttribute('role', 'progressbar');
+            progressTrack.setAttribute('aria-label', nativeUiText('downloading_level', { level }));
+            progressTrack.setAttribute('aria-valuemin', '0');
+            progressTrack.setAttribute('aria-valuemax', '100');
+            progressTrack.setAttribute('aria-valuenow', String(Math.round(progress)));
+            const progressFill = document.createElement('span');
+            progressFill.className = 'final-challenge-modal__downloads-progress-fill';
+            progressFill.style.width = `${progress.toFixed(2)}%`;
+            progressTrack.appendChild(progressFill);
+            row.appendChild(progressTrack);
+          }
           els.finalChallengeDownloadsList.appendChild(row);
         }
+        void refreshFinalChallengeDownloadCacheProgress();
       }
 
       function openFinalChallengeDownloadsModal() {
@@ -15483,17 +15627,20 @@ para liberar desafio</p>
           return;
         }
         state.ui.finalChallengeDownloadsBusyLevel = normalizedLevel;
+        setFinalChallengeDownloadProgress(0, payload.audioUrls.length);
         setFinalChallengeDownloadsStatus(nativeUiText('downloading_level', { level: normalizedLevel }), '');
         renderFinalChallengeDownloadsModal();
         try {
           const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
-          for (const src of payload.audioUrls) {
+          for (let index = 0; index < payload.audioUrls.length; index += 1) {
+            const src = payload.audioUrls[index];
             const response = await fetch(src, { cache: 'force-cache' });
             if (!response.ok) {
               throw new Error(`download-failed:${response.status}`);
             }
             await cache.put(src, response.clone());
             await cacheRuntimeAudioBlob(src, response);
+            setFinalChallengeDownloadProgress(index + 1, payload.audioUrls.length);
           }
           writeFinalChallengeDownloadRecord(normalizedLevel, {
             completed: true,
@@ -15505,24 +15652,10 @@ para liberar desafio</p>
           setFinalChallengeDownloadsStatus(nativeUiText('download_unavailable'), 'error');
         } finally {
           state.ui.finalChallengeDownloadsBusyLevel = 0;
+          state.ui.finalChallengeDownloadsCompletedCount = 0;
+          state.ui.finalChallengeDownloadsTotalCount = 0;
           renderFinalChallengeDownloadsModal();
         }
-      }
-
-      function continueWithoutFinalChallenge() {
-        const selectedLevel = currentFinalChallengeLevel();
-        setSelectedGameLevel(selectedLevel);
-        closeFinalChallengeModal();
-        state.game.levelMode = true;
-        state.game.levelScaleMode = true;
-        state.game.levelAudioMode = false;
-        state.game.levelTextMode = false;
-        state.game.levelTypingMode = false;
-        state.game.levelTextResponseLanguage = 'english';
-        state.game.levelTextHitStreak = 0;
-        resetScaleBatchProgress();
-        state.entry.welcomeStartRequested = true;
-        void openAudioCheck();
       }
 
       function finalChallengeSelectionRecordKey(language = currentFinalChallengeLanguage(), level = currentFinalChallengeLevel()) {
@@ -27369,10 +27502,10 @@ para liberar desafio</p>
           const unlockDelayMs = Number(options.unlockDelayMs);
           setLevelTextModeWaveformActive(true);
           return finishPromptReflection((async () => {
-            await ensureRuntimeAudioSource(selectedAudioUrl);
+            await prepareRuntimeAudioSource(selectedAudioUrl);
             const runtimeSrc = runtimeAudioSourceFor(selectedAudioUrl);
             let audio = state.game.preloadAudios.get(selectedAudioUrl);
-            if (!audio || safeText(audio.src || '') !== safeText(runtimeSrc)) {
+            if (!audio || !audioElementUsesSource(audio, runtimeSrc)) {
               audio = new Audio(runtimeSrc);
               state.game.preloadAudios.set(selectedAudioUrl, audio);
             }
@@ -27581,37 +27714,22 @@ para liberar desafio</p>
         if (!src || state.game.preloadImages.has(src)) return;
         const image = new Image();
         image.src = src;
+        image.decode?.().catch(() => {});
         state.game.preloadImages.set(src, image);
       }
 
       function preloadCardAudio(card) {
         if (isNoEnergyMediaLocked()) return;
         const src = resolveCardAudioUrl(card);
-        if (!src || state.game.preloadAudios.has(src)) return;
-        void ensureRuntimeAudioSource(src);
-        try {
-          const audio = new Audio(runtimeAudioSourceFor(src));
-          audio.preload = 'auto';
-          audio.load();
-          state.game.preloadAudios.set(src, audio);
-        } catch (_error) {
-          // ignore
-        }
+        if (!src) return;
+        void prepareRuntimeAudioSource(src);
       }
 
       function preloadAudioSource(src) {
         if (isNoEnergyMediaLocked()) return;
         const safeSrc = safeText(src);
-        if (!safeSrc || state.game.preloadAudios.has(safeSrc)) return;
-        void ensureRuntimeAudioSource(safeSrc);
-        try {
-          const audio = new Audio(runtimeAudioSourceFor(safeSrc));
-          audio.preload = 'auto';
-          audio.load();
-          state.game.preloadAudios.set(safeSrc, audio);
-        } catch (_error) {
-          // ignore
-        }
+        if (!safeSrc) return;
+        void prepareRuntimeAudioSource(safeSrc);
       }
 
       function preloadCardAudioForLanguage(card, language) {
@@ -27653,6 +27771,27 @@ para liberar desafio</p>
         });
       }
 
+      function prepareRuntimeAudioSource(src, timeoutMs = 3200) {
+        const safeSrc = safeText(src);
+        if (!safeSrc) return Promise.resolve(null);
+        const pending = state.game.preloadAudioPromises.get(safeSrc);
+        if (pending) return pending;
+        const preparePromise = (async () => {
+          await ensureRuntimeAudioSource(safeSrc);
+          const runtimeSrc = runtimeAudioSourceFor(safeSrc);
+          let audio = state.game.preloadAudios.get(safeSrc);
+          if (!audio || !audioElementUsesSource(audio, runtimeSrc)) {
+            audio = new Audio(runtimeSrc);
+            audio.preload = 'auto';
+            state.game.preloadAudios.set(safeSrc, audio);
+          }
+          await waitForAudioCanPlay(audio, timeoutMs);
+          return audio;
+        })().catch(() => null);
+        state.game.preloadAudioPromises.set(safeSrc, preparePromise);
+        return preparePromise;
+      }
+
       function buildAlbumsPreviewBufferCards(limit = 3) {
         const cards = [];
         const seen = new Set();
@@ -27689,6 +27828,7 @@ para liberar desafio</p>
       }
 
       function maintainFirstStageAudioBuffer() {
+        if (state.ui.finalChallengeRunOpen) return;
         const targetBufferedCards = 6;
         const bufferedCards = [];
         const seen = new Set();
@@ -31341,13 +31481,27 @@ para liberar desafio</p>
         state.ui.finalChallengePromptAudio = null;
       }
 
-      function bufferFinalChallengePracticeAudios(card, nextCard = null) {
+      function primeFinalChallengeCardBuffer(startIndex = state.ui.finalChallengeIndex, includeNativeAudio = false) {
+        const cards = Array.isArray(state.ui.finalChallengeCards) ? state.ui.finalChallengeCards : [];
+        const firstIndex = Math.max(0, Number(startIndex) || 0);
+        cards.slice(firstIndex, firstIndex + 3).forEach((bufferCard) => {
+          preloadCardImage(bufferCard);
+          preloadFinalChallengeCardAudioForLanguage(bufferCard, currentTargetLanguage());
+          if (includeNativeAudio) {
+            preloadFinalChallengeCardAudioForLanguage(bufferCard, currentNativeLanguage());
+          }
+        });
+      }
+
+      function preloadFinalChallengeCardAudioForLanguage(card, language) {
+        preloadAudioSource(resolveCardAudioUrlForLanguage(card, language, {
+          accent: language === 'english' ? currentLanguageBackgroundAccent() : ''
+        }));
+      }
+
+      function bufferFinalChallengePracticeAudios(card) {
         if (!card) return;
-        preloadCardAudioForLanguage(card, currentTargetLanguage());
-        preloadCardAudioForLanguage(card, currentNativeLanguage());
-        if (nextCard) {
-          preloadCardAudioForLanguage(nextCard, currentTargetLanguage());
-        }
+        primeFinalChallengeCardBuffer(state.ui.finalChallengeIndex, true);
       }
 
       async function playFinalChallengeAudioForLanguage(card, language, options = {}) {
@@ -31356,10 +31510,10 @@ para liberar desafio</p>
         });
         if (!src) return false;
         stopFinalChallengePromptAudio();
-        await ensureRuntimeAudioSource(src);
+        await prepareRuntimeAudioSource(src);
         const runtimeSrc = runtimeAudioSourceFor(src);
         const cachedAudio = state.game.preloadAudios.get(src);
-        const shouldReplaceCachedAudio = !cachedAudio || safeText(cachedAudio.src || '') !== safeText(runtimeSrc);
+        const shouldReplaceCachedAudio = !cachedAudio || !audioElementUsesSource(cachedAudio, runtimeSrc);
         const audio = shouldReplaceCachedAudio
           ? new Audio(runtimeSrc)
           : cachedAudio;
@@ -31452,10 +31606,6 @@ para liberar desafio</p>
         }
         if (els.finalChallengePracticeBtn) {
           els.finalChallengePracticeBtn.disabled = !hasDeck;
-        }
-        if (els.finalChallengeContinueWithoutBtn) {
-          els.finalChallengeContinueWithoutBtn.hidden = !challengeUnlocked;
-          els.finalChallengeContinueWithoutBtn.textContent = nativeUiText('continue_without_challenge');
         }
         if (els.finalChallengeLevelPrevBtn) {
           els.finalChallengeLevelPrevBtn.disabled = selectedLevel <= 1;
@@ -31584,8 +31734,8 @@ para liberar desafio</p>
                 ? state.ui.finalChallengeCards[(Number(state.ui.finalChallengeIndex) || 0) + 1] || null
                 : null;
               if (nextCard) {
-                preloadCardAudioForLanguage(nextCard, currentNativeLanguage());
-                preloadCardAudioForLanguage(nextCard, currentTargetLanguage());
+                preloadFinalChallengeCardAudioForLanguage(nextCard, currentNativeLanguage());
+                preloadFinalChallengeCardAudioForLanguage(nextCard, currentTargetLanguage());
               }
             }
             if (wordBlockSequenceIsComplete(blockState.targetSequences, selectedWords)) {
@@ -31720,18 +31870,10 @@ para liberar desafio</p>
           els.finalChallengeSkipBtn.disabled = Boolean(state.ui.finalChallengeBusy || state.ui.finalChallengeExitConfirmOpen || !card);
         }
         syncFinalChallengeHeartsUi();
-        preloadCardImage(card);
-        const nextCard = totalCards > (index + 1) ? state.ui.finalChallengeCards[index + 1] : null;
         if (isPracticeMode) {
-          bufferFinalChallengePracticeAudios(card, nextCard);
+          bufferFinalChallengePracticeAudios(card);
         } else {
-          preloadCardAudioForLanguage(card, currentTargetLanguage());
-          if (nextCard) {
-            preloadCardAudioForLanguage(nextCard, currentTargetLanguage());
-          }
-        }
-        if (nextCard) {
-          preloadCardImage(nextCard);
+          primeFinalChallengeCardBuffer(index, false);
         }
         setFinalChallengeExitConfirmOpen(Boolean(state.ui.finalChallengeExitConfirmOpen));
       }
@@ -32077,7 +32219,7 @@ para liberar desafio</p>
             state.ui.finalChallengeLivesLost = Math.max(0, Number(state.ui.finalChallengeLivesLost) || 0) + 1;
             state.ui.finalChallengeCorrectionTargetVisible = true;
             syncFinalChallengeRunUi();
-            await playPromptAudio(card, { rate: 0.9, enableMicDuringPlayback: false }).catch(() => false);
+            await playFinalChallengeAudioForLanguage(card, currentTargetLanguage(), { rate: 0.9, waitForEnd: true }).catch(() => false);
             if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
               state.ui.finalChallengeForcedGameOver = true;
               await wait(480);
@@ -32108,7 +32250,7 @@ para liberar desafio</p>
         state.ui.finalChallengeCorrectionTargetVisible = true;
         syncFinalChallengeRunUi();
         setFinalChallengeStatus('Pulada', 'error');
-        await playPromptAudio(card, { rate: 0.9, enableMicDuringPlayback: false }).catch(() => false);
+        await playFinalChallengeAudioForLanguage(card, currentTargetLanguage(), { rate: 0.9, waitForEnd: true }).catch(() => false);
         if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
           state.ui.finalChallengeForcedGameOver = true;
           state.ui.finalChallengeBusy = false;
@@ -33933,9 +34075,6 @@ para liberar desafio</p>
         });
         els.finalChallengeLevelNextBtn?.addEventListener('click', () => {
           nudgeFinalChallengeLevel(1);
-        });
-        els.finalChallengeContinueWithoutBtn?.addEventListener('click', () => {
-          continueWithoutFinalChallenge();
         });
         els.finalChallengeReviewBtn?.addEventListener('click', () => {
           openFinalChallengeReviewModal();
