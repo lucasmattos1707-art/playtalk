@@ -11556,6 +11556,7 @@
     }
 
     .final-challenge-modal__avatar-btn {
+      --challenge-color-progress: 0;
       width: min(72vw, 280px);
       aspect-ratio: 1;
       border-radius: 999px;
@@ -11620,14 +11621,14 @@
       height: 100%;
       object-fit: cover;
       border-radius: 999px;
-      filter: grayscale(1);
+      filter: grayscale(calc(1 - var(--challenge-color-progress))) saturate(calc(0.75 + (var(--challenge-color-progress) * 0.55)));
       border: 2px solid rgba(255, 255, 255, 0.16);
       box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
       transition: filter 180ms ease, transform 180ms ease, border-color 180ms ease;
     }
 
     .final-challenge-modal__avatar-btn.is-listening img {
-      filter: grayscale(0);
+      filter: grayscale(0) saturate(1.15);
       transform: scale(1.02);
       border-color: rgba(57, 217, 138, 0.62);
     }
@@ -11660,31 +11661,31 @@
     }
 
     .final-challenge-modal__block {
-      min-width: min(30vw, 140px);
-      min-height: 58px;
-      padding: 12px 18px;
-      border-radius: 20px;
-      border: 1px solid rgba(83, 213, 255, 0.42);
-      background: linear-gradient(145deg, #071a44 0%, #0f2f73 55%, #173f95 100%);
+      min-width: min(24vw, 128px);
+      min-height: 48px;
+      padding: 8px 12px;
+      border-radius: 0;
+      border: none;
+      background: transparent;
       color: #f5f7fb;
       font: 800 clamp(18px, 4.8vw, 26px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
       text-transform: uppercase;
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+      box-shadow: none;
       cursor: pointer;
-      transition: transform 160ms ease, opacity 160ms ease, border-color 160ms ease, background 160ms ease;
+      transition: transform 160ms ease, opacity 160ms ease, color 160ms ease;
     }
 
-    .final-challenge-modal__block.is-selected,
+    .final-challenge-modal__block.is-selected {
+      opacity: 0.38;
+      color: rgba(245, 247, 251, 0.68);
+    }
+
     .final-challenge-modal__block.is-correct {
-      background: linear-gradient(145deg, #0f7b46 0%, #18b364 55%, #39d98a 100%);
-      border-color: rgba(101, 255, 170, 0.68);
-      color: #041b12;
+      color: #4df5a6;
     }
 
     .final-challenge-modal__block.is-error {
-      background: linear-gradient(145deg, #7e1725 0%, #b72438 55%, #ff5a73 100%);
-      border-color: rgba(255, 140, 160, 0.72);
-      color: #fff5f7;
+      color: #ff6b82;
     }
 
     .final-challenge-modal__block:disabled {
@@ -13749,6 +13750,7 @@
           finalChallengeResultAction: 'retry-voice',
           finalChallengePromptAudio: null,
           finalChallengePromptCardId: '',
+          finalChallengeAvatarColorProgress: 0,
           finalChallengeReviewOpen: false,
           finalChallengeReviewIndex: 0,
           finalChallengeReviewToken: 0,
@@ -13769,6 +13771,7 @@
       let secondStageWrongWordsPromiseByLanguage = {};
       let watchBackdropFadeTimer = 0;
       let welcomeLanguageBackdropFadeTimer = 0;
+      let finalChallengePromptCleanup = null;
 
       loadGameOptionsFromStorage();
 
@@ -29840,6 +29843,7 @@
         state.ui.finalChallengeForcedGameOver = false;
         state.ui.finalChallengeResultAction = 'retry-voice';
         state.ui.finalChallengePromptCardId = '';
+        state.ui.finalChallengeAvatarColorProgress = 0;
         state.ui.finalChallengeResultPassed = false;
       }
 
@@ -29871,10 +29875,21 @@
         return { key: 'blank', label: 'Selo branco' };
       }
 
+      function finalChallengeMaxLives() {
+        return state.ui.finalChallengeMode === 'practice' ? 3 : 5;
+      }
+
+      function setFinalChallengeAvatarColorProgress(progress = 0) {
+        const safeProgress = Math.max(0, Math.min(1, Number(progress) || 0));
+        state.ui.finalChallengeAvatarColorProgress = safeProgress;
+        els.finalChallengeSpeakBtn?.style.setProperty('--challenge-color-progress', safeProgress.toFixed(3));
+      }
+
       function syncFinalChallengeHeartsUi() {
         if (!els.finalChallengeHearts) return;
-        const lostHearts = Math.max(0, Math.min(5, Number(state.ui.finalChallengeLivesLost) || 0));
-        els.finalChallengeHearts.innerHTML = Array.from({ length: 5 }, (_unused, index) => (
+        const totalHearts = finalChallengeMaxLives();
+        const lostHearts = Math.max(0, Math.min(totalHearts, Number(state.ui.finalChallengeLivesLost) || 0));
+        els.finalChallengeHearts.innerHTML = Array.from({ length: totalHearts }, (_unused, index) => (
           `<span class="final-challenge-modal__heart${index < lostHearts ? ' is-lost' : ''}" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 21.35 10.55 20C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09A6 6 0 0 1 16.5 3C19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35Z"></path></svg></span>`
         )).join('');
       }
@@ -29912,6 +29927,14 @@
       }
 
       function stopFinalChallengePromptAudio() {
+        if (typeof finalChallengePromptCleanup === 'function') {
+          try {
+            finalChallengePromptCleanup();
+          } catch (_error) {
+            // ignore
+          }
+        }
+        finalChallengePromptCleanup = null;
         const current = state.ui.finalChallengePromptAudio;
         if (current) {
           try {
@@ -29922,6 +29945,15 @@
           }
         }
         state.ui.finalChallengePromptAudio = null;
+      }
+
+      function bufferFinalChallengePracticeAudios(card, nextCard = null) {
+        if (!card) return;
+        preloadCardAudioForLanguage(card, currentTargetLanguage());
+        preloadCardAudioForLanguage(card, currentNativeLanguage());
+        if (nextCard) {
+          preloadCardAudioForLanguage(nextCard, currentTargetLanguage());
+        }
       }
 
       async function playFinalChallengeAudioForLanguage(card, language, options = {}) {
@@ -29935,6 +29967,30 @@
         audio.playbackRate = Math.max(0.1, Math.min(2.5, Number(options.rate || 1) * resolveSelectedGameSpeed()));
         audio.defaultPlaybackRate = audio.playbackRate;
         audio.preservesPitch = true;
+        const resetColorProgress = () => {
+          if (options.audioProgressVisual) {
+            setFinalChallengeAvatarColorProgress(0);
+          }
+        };
+        const finalizePlayback = () => {
+          if (state.ui.finalChallengePromptAudio === audio) {
+            state.ui.finalChallengePromptAudio = null;
+          }
+          finalChallengePromptCleanup = null;
+          if (options.audioProgressVisual) {
+            setFinalChallengeAvatarColorProgress(1);
+          }
+        };
+        if (options.audioProgressVisual) {
+          setFinalChallengeAvatarColorProgress(0);
+          audio.addEventListener('timeupdate', () => {
+            const duration = Number(audio.duration) || 0;
+            if (duration > 0) {
+              setFinalChallengeAvatarColorProgress(audio.currentTime / duration);
+            }
+          });
+        }
+        finalChallengePromptCleanup = resetColorProgress;
         state.ui.finalChallengePromptAudio = audio;
         try {
           await audio.play();
@@ -29942,18 +29998,24 @@
           if (state.ui.finalChallengePromptAudio === audio) {
             state.ui.finalChallengePromptAudio = null;
           }
+          resetColorProgress();
+          finalChallengePromptCleanup = null;
           return false;
         }
-        audio.addEventListener('ended', () => {
-          if (state.ui.finalChallengePromptAudio === audio) {
-            state.ui.finalChallengePromptAudio = null;
-          }
-        }, { once: true });
+        audio.addEventListener('ended', finalizePlayback, { once: true });
         audio.addEventListener('error', () => {
           if (state.ui.finalChallengePromptAudio === audio) {
             state.ui.finalChallengePromptAudio = null;
           }
+          finalChallengePromptCleanup = null;
+          resetColorProgress();
         }, { once: true });
+        if (options.waitForEnd) {
+          await new Promise((resolve) => {
+            audio.addEventListener('ended', resolve, { once: true });
+            audio.addEventListener('error', resolve, { once: true });
+          });
+        }
         return true;
       }
 
@@ -30016,8 +30078,9 @@
           activeButton?.classList.add('is-error');
           playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
           setFinalChallengeStatus('Erro', 'error');
-          await wait(520);
-          if (state.ui.finalChallengeLivesLost > 5) {
+          await playFinalChallengeAudioForLanguage(card, currentNativeLanguage(), { rate: 0.92, waitForEnd: true });
+          await wait(220);
+          if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
             state.ui.finalChallengeForcedGameOver = true;
             await finishFinalChallengeRun();
             return;
@@ -30030,7 +30093,13 @@
           state.ui.finalChallengeScores.push(100);
           setFinalChallengeStatus('Certo', 'success');
           playSuccessAudio();
-          await wait(320);
+          buttons.forEach((button) => {
+            if (button.classList.contains('is-selected')) {
+              button.classList.add('is-correct');
+            }
+          });
+          await playFinalChallengeAudioForLanguage(card, currentNativeLanguage(), { rate: 0.92, waitForEnd: true });
+          await wait(160);
           await advanceFinalChallengeCard();
         };
         const appendBlock = (block, rowNode) => {
@@ -30050,7 +30119,6 @@
             button.disabled = true;
             button.classList.add('is-selected');
             if (wordBlockSequenceIsComplete(blockState.targetSequences, selectedWords)) {
-              button.classList.add('is-correct');
               disableAll(true);
               await markCorrect();
             }
@@ -30154,6 +30222,9 @@
           els.finalChallengeSpeakBtn.disabled = Boolean(state.ui.finalChallengeBusy || state.ui.finalChallengeExitConfirmOpen || !card);
           els.finalChallengeSpeakBtn.setAttribute('aria-label', isPracticeMode ? 'Repetir audio da carta' : 'Tocar na imagem e falar a traducao');
         }
+        if (!isPracticeMode) {
+          setFinalChallengeAvatarColorProgress(0);
+        }
         const avatarRing = els.finalChallengeSpeakBtn?.querySelector('.final-challenge-modal__avatar-ring');
         if (avatarRing) {
           avatarRing.style.setProperty('--progress', `${progressPercent.toFixed(2)}%`);
@@ -30180,11 +30251,17 @@
         }
         syncFinalChallengeHeartsUi();
         preloadCardImage(card);
-        preloadCardAudioForLanguage(card, isPracticeMode ? currentNativeLanguage() : currentTargetLanguage());
         const nextCard = totalCards > (index + 1) ? state.ui.finalChallengeCards[index + 1] : null;
+        if (isPracticeMode) {
+          bufferFinalChallengePracticeAudios(card, nextCard);
+        } else {
+          preloadCardAudioForLanguage(card, currentTargetLanguage());
+          if (nextCard) {
+            preloadCardAudioForLanguage(nextCard, currentTargetLanguage());
+          }
+        }
         if (nextCard) {
           preloadCardImage(nextCard);
-          preloadCardAudioForLanguage(nextCard, isPracticeMode ? currentNativeLanguage() : currentTargetLanguage());
         }
         setFinalChallengeExitConfirmOpen(Boolean(state.ui.finalChallengeExitConfirmOpen));
       }
@@ -30398,7 +30475,7 @@
         const nextCard = currentFinalChallengeCard();
         if (state.ui.finalChallengeMode === 'practice' && nextCard) {
           state.ui.finalChallengePromptCardId = safeText(nextCard?.id);
-          void playFinalChallengeAudioForLanguage(nextCard, currentNativeLanguage(), { rate: 0.9 });
+          void playFinalChallengeAudioForLanguage(nextCard, currentTargetLanguage(), { rate: 0.9, audioProgressVisual: true });
         }
       }
 
@@ -30407,7 +30484,7 @@
           const card = currentFinalChallengeCard();
           if (!card) return;
           state.ui.finalChallengePromptCardId = safeText(card?.id);
-          await playFinalChallengeAudioForLanguage(card, currentNativeLanguage(), { rate: 0.9 });
+          await playFinalChallengeAudioForLanguage(card, currentTargetLanguage(), { rate: 0.9, audioProgressVisual: true });
           return;
         }
         if (!state.ui.finalChallengeRunOpen || state.ui.finalChallengeBusy) return;
@@ -30447,7 +30524,7 @@
             state.ui.finalChallengeCorrectionTargetVisible = true;
             syncFinalChallengeRunUi();
             await playPromptAudio(card, { rate: 0.9, enableMicDuringPlayback: false }).catch(() => false);
-            if (state.ui.finalChallengeLivesLost > 5) {
+            if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
               state.ui.finalChallengeForcedGameOver = true;
               await wait(480);
               await finishFinalChallengeRun();
@@ -30478,7 +30555,7 @@
         syncFinalChallengeRunUi();
         setFinalChallengeStatus('Pulada', 'error');
         await playPromptAudio(card, { rate: 0.9, enableMicDuringPlayback: false }).catch(() => false);
-        if (state.ui.finalChallengeLivesLost > 5) {
+        if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
           state.ui.finalChallengeForcedGameOver = true;
           state.ui.finalChallengeBusy = false;
           await finishFinalChallengeRun();
@@ -30543,7 +30620,7 @@
         const firstCard = currentFinalChallengeCard();
         if (firstCard) {
           state.ui.finalChallengePromptCardId = safeText(firstCard?.id);
-          void playFinalChallengeAudioForLanguage(firstCard, currentNativeLanguage(), { rate: 0.9 });
+          void playFinalChallengeAudioForLanguage(firstCard, currentTargetLanguage(), { rate: 0.9, audioProgressVisual: true });
         }
       }
 
