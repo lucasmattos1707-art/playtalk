@@ -11687,6 +11687,47 @@
       border-color: rgba(57, 217, 138, 0.62);
     }
 
+    .final-challenge-modal__phase-overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(4, 18, 38, 0.42);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 3;
+    }
+
+    .final-challenge-modal__phase-overlay[hidden] {
+      display: none;
+    }
+
+    .final-challenge-modal__phase-overlay-card {
+      width: min(86vw, 440px);
+      padding: 24px 22px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(7, 15, 28, 0.86);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.36);
+      text-align: center;
+    }
+
+    .final-challenge-modal__phase-overlay-kicker {
+      margin: 0 0 10px;
+      font: 800 clamp(18px, 5vw, 24px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #ffb457;
+    }
+
+    .final-challenge-modal__phase-overlay-copy {
+      margin: 0;
+      font: 700 clamp(16px, 4.6vw, 22px)/1.35 "Exo 2", "Open Sans", Arial, sans-serif;
+      color: #f5f7fb;
+      text-transform: uppercase;
+    }
+
     @keyframes finalChallengeRingSpin {
       from {
         transform: rotate(0deg);
@@ -12152,6 +12193,12 @@ para liberar desafio</p>
               <span class="final-challenge-modal__avatar-ring" aria-hidden="true"></span>
               <img id="finalChallengeCardImage" src="/Avatar/profile-neon-blue.svg" alt="Imagem da carta do desafio">
             </button>
+          </div>
+          <div class="final-challenge-modal__phase-overlay" id="finalChallengePhaseOverlay" hidden>
+            <div class="final-challenge-modal__phase-overlay-card">
+              <p class="final-challenge-modal__phase-overlay-kicker" id="finalChallengePhaseOverlayKicker">Fase 2</p>
+              <p class="final-challenge-modal__phase-overlay-copy" id="finalChallengePhaseOverlayCopy">Agora toque nos blocos em portugues.</p>
+            </div>
           </div>
         </section>
         <section class="final-challenge-modal__zone final-challenge-modal__zone--text">
@@ -12969,6 +13016,274 @@ para liberar desafio</p>
         german: { label: 'Alemao', speechCode: 'de-DE', iconPath: '/arquivos-codex/icones/alemao.svg' },
         portuguese: { label: 'Portugues', speechCode: 'pt-BR', iconPath: '/arquivos-codex/icones/brazil.svg' },
         mandarin: { label: 'Mandarim', speechCode: 'zh-CN', iconPath: '/arquivos-codex/icones/mandarim.svg' }
+      };
+      const UI_LANGUAGE_LABELS = {
+        portuguese: { english: 'Ingles', spanish: 'Espanhol', french: 'Frances', german: 'Alemao', portuguese: 'Portugues', mandarin: 'Mandarim' },
+        english: { english: 'English', spanish: 'Spanish', french: 'French', german: 'German', portuguese: 'Portuguese', mandarin: 'Mandarin' },
+        spanish: { english: 'Ingles', spanish: 'Espanol', french: 'Frances', german: 'Aleman', portuguese: 'Portugues', mandarin: 'Mandarin' },
+        french: { english: 'Anglais', spanish: 'Espagnol', french: 'Francais', german: 'Allemand', portuguese: 'Portugais', mandarin: 'Mandarin' },
+        german: { english: 'Englisch', spanish: 'Spanisch', french: 'Franzosisch', german: 'Deutsch', portuguese: 'Portugiesisch', mandarin: 'Mandarin' },
+        mandarin: { english: 'Yingyu', spanish: 'Xibanyayu', french: 'Fayu', german: 'Deyu', portuguese: 'Putaoyaoyu', mandarin: 'Putonghua' }
+      };
+      const NATIVE_UI_TEXT = {
+        portuguese: {
+          feedback: 'Feedback',
+          result: 'Resultado',
+          start_training: 'Iniciar treino',
+          final_challenge: 'Desafio final',
+          menu_back: 'Voltar ao menu',
+          review: 'Revisar',
+          close: 'Fechar',
+          options: 'Opcoes',
+          continue: 'Continuar',
+          flashcards: 'FlashCards',
+          seals: 'Selos',
+          loading_flashcards: 'Carregando flashcards...',
+          no_flashcards: 'Nenhum flashcard disponivel no momento.',
+          view_cards: 'Ver cartas',
+          no_seals: 'Nenhum selo disponivel ainda. Continue treinando para desbloquear.',
+          swipe_flashcards: 'Deslize para cima ou para baixo para ver o proximo item.',
+          swipe_seals: 'Deslize para cima ou para baixo para navegar pelos dias.',
+          my_cards: 'Minhas cartas',
+          my_cards_copy: 'Exibe somente os cards do usuario em ordem aleatoria.',
+          all_cards: 'Todas as cartas',
+          all_cards_copy: 'Exibe todos os cards do jogo de forma aleatoria.',
+          my_level_cards: 'Cartas do meu nivel',
+          my_level_cards_copy: 'Exibe a janela real do seu nivel, como o jogo provavelmente vai sortear.',
+          native_order: 'Ordem nativa -> destino',
+          native_order_active: 'Ativo: toca primeiro a lingua nativa e depois a lingua destino.',
+          native_order_inactive: 'Desativado: toca primeiro a lingua destino.',
+          level: 'Nivel',
+          language: 'Idioma',
+          native_language: 'Lingua nativa',
+          accent: 'Sotaque',
+          typing: 'Digitacao',
+          manual: 'Manual',
+          by_word: 'Por palavra',
+          by_letter: 'Por letra',
+          complete_training_unlock: 'Complete o treino\npara liberar desafio',
+          training_complete_unlock: 'Treino completo\nDesafio liberado',
+          challenge_unavailable: 'Desafio indisponivel agora',
+          phase_2: 'Fase 2',
+          phase_2_copy: 'Agora toque nos blocos em {language}.',
+          phase_2_banner: 'FASE 2',
+          day: 'Dia'
+        },
+        english: {
+          feedback: 'Feedback',
+          result: 'Result',
+          start_training: 'Start training',
+          final_challenge: 'Final challenge',
+          menu_back: 'Back to menu',
+          review: 'Review',
+          close: 'Close',
+          options: 'Options',
+          continue: 'Continue',
+          flashcards: 'Flashcards',
+          seals: 'Seals',
+          loading_flashcards: 'Loading flashcards...',
+          no_flashcards: 'No flashcards available right now.',
+          view_cards: 'View cards',
+          no_seals: 'No seals available yet. Keep training to unlock them.',
+          swipe_flashcards: 'Swipe up or down to see the next item.',
+          swipe_seals: 'Swipe up or down to browse the days.',
+          my_cards: 'My cards',
+          my_cards_copy: 'Shows only the user cards in random order.',
+          all_cards: 'All cards',
+          all_cards_copy: 'Shows all game cards in random order.',
+          my_level_cards: 'My level cards',
+          my_level_cards_copy: 'Shows the real window of your level, as the game will likely draw.',
+          native_order: 'Native -> target order',
+          native_order_active: 'On: plays the native language first and then the target language.',
+          native_order_inactive: 'Off: plays the target language first.',
+          level: 'Level',
+          language: 'Language',
+          native_language: 'Native language',
+          accent: 'Accent',
+          typing: 'Typing',
+          manual: 'Manual',
+          by_word: 'By word',
+          by_letter: 'By letter',
+          complete_training_unlock: 'Complete the training\nto unlock the challenge',
+          training_complete_unlock: 'Training complete\nChallenge unlocked',
+          challenge_unavailable: 'Challenge unavailable right now',
+          phase_2: 'Phase 2',
+          phase_2_copy: 'Now tap the blocks in {language}.',
+          phase_2_banner: 'PHASE 2',
+          day: 'Day'
+        },
+        spanish: {
+          feedback: 'Feedback',
+          result: 'Resultado',
+          start_training: 'Iniciar entrenamiento',
+          final_challenge: 'Desafio final',
+          menu_back: 'Volver al menu',
+          review: 'Revisar',
+          close: 'Cerrar',
+          options: 'Opciones',
+          continue: 'Continuar',
+          flashcards: 'Tarjetas',
+          seals: 'Sellos',
+          loading_flashcards: 'Cargando tarjetas...',
+          no_flashcards: 'No hay tarjetas disponibles en este momento.',
+          view_cards: 'Ver cartas',
+          no_seals: 'Todavia no hay sellos. Sigue entrenando para desbloquearlos.',
+          swipe_flashcards: 'Desliza hacia arriba o abajo para ver el siguiente elemento.',
+          swipe_seals: 'Desliza hacia arriba o abajo para recorrer los dias.',
+          my_cards: 'Mis cartas',
+          my_cards_copy: 'Muestra solo las cartas del usuario en orden aleatorio.',
+          all_cards: 'Todas las cartas',
+          all_cards_copy: 'Muestra todas las cartas del juego en orden aleatorio.',
+          my_level_cards: 'Cartas de mi nivel',
+          my_level_cards_copy: 'Muestra la ventana real de tu nivel, como el juego probablemente sorteara.',
+          native_order: 'Orden nativo -> destino',
+          native_order_active: 'Activo: reproduce primero la lengua nativa y despues la lengua destino.',
+          native_order_inactive: 'Desactivado: reproduce primero la lengua destino.',
+          level: 'Nivel',
+          language: 'Idioma',
+          native_language: 'Idioma nativo',
+          accent: 'Acento',
+          typing: 'Escritura',
+          manual: 'Manual',
+          by_word: 'Por palabra',
+          by_letter: 'Por letra',
+          complete_training_unlock: 'Completa el entrenamiento\npara liberar el desafio',
+          training_complete_unlock: 'Entrenamiento completo\nDesafio liberado',
+          challenge_unavailable: 'Desafio no disponible ahora',
+          phase_2: 'Fase 2',
+          phase_2_copy: 'Ahora toca los bloques en {language}.',
+          phase_2_banner: 'FASE 2',
+          day: 'Dia'
+        },
+        french: {
+          feedback: 'Retour',
+          result: 'Resultat',
+          start_training: 'Demarrer entrainement',
+          final_challenge: 'Defi final',
+          menu_back: 'Retour au menu',
+          review: 'Revoir',
+          close: 'Fermer',
+          options: 'Options',
+          continue: 'Continuer',
+          flashcards: 'Cartes',
+          seals: 'Sceaux',
+          loading_flashcards: 'Chargement des cartes...',
+          no_flashcards: 'Aucune carte disponible pour le moment.',
+          view_cards: 'Voir les cartes',
+          no_seals: 'Aucun sceau disponible pour le moment. Continue a t entrainer pour les debloquer.',
+          swipe_flashcards: 'Glisse vers le haut ou le bas pour voir l element suivant.',
+          swipe_seals: 'Glisse vers le haut ou le bas pour parcourir les jours.',
+          my_cards: 'Mes cartes',
+          my_cards_copy: 'Affiche seulement les cartes de l utilisateur dans un ordre aleatoire.',
+          all_cards: 'Toutes les cartes',
+          all_cards_copy: 'Affiche toutes les cartes du jeu dans un ordre aleatoire.',
+          my_level_cards: 'Cartes de mon niveau',
+          my_level_cards_copy: 'Affiche la vraie fenetre de ton niveau, comme le jeu va probablement tirer.',
+          native_order: 'Ordre natif -> cible',
+          native_order_active: 'Actif : joue d abord la langue native puis la langue cible.',
+          native_order_inactive: 'Desactive : joue d abord la langue cible.',
+          level: 'Niveau',
+          language: 'Langue',
+          native_language: 'Langue native',
+          accent: 'Accent',
+          typing: 'Saisie',
+          manual: 'Manuel',
+          by_word: 'Par mot',
+          by_letter: 'Par lettre',
+          complete_training_unlock: 'Complete l entrainement\npour debloquer le defi',
+          training_complete_unlock: 'Entrainement termine\nDefi debloque',
+          challenge_unavailable: 'Defi indisponible maintenant',
+          phase_2: 'Phase 2',
+          phase_2_copy: 'Maintenant touche les blocs en {language}.',
+          phase_2_banner: 'PHASE 2',
+          day: 'Jour'
+        },
+        german: {
+          feedback: 'Feedback',
+          result: 'Ergebnis',
+          start_training: 'Training starten',
+          final_challenge: 'Finale Herausforderung',
+          menu_back: 'Zuruck zum Menu',
+          review: 'Prufen',
+          close: 'Schliessen',
+          options: 'Optionen',
+          continue: 'Weiter',
+          flashcards: 'Karten',
+          seals: 'Siegel',
+          loading_flashcards: 'Karten werden geladen...',
+          no_flashcards: 'Im Moment sind keine Karten verfugbar.',
+          view_cards: 'Karten ansehen',
+          no_seals: 'Noch keine Siegel verfugbar. Trainiere weiter, um sie freizuschalten.',
+          swipe_flashcards: 'Wische nach oben oder unten, um das nachste Element zu sehen.',
+          swipe_seals: 'Wische nach oben oder unten, um die Tage zu durchsuchen.',
+          my_cards: 'Meine Karten',
+          my_cards_copy: 'Zeigt nur die Karten des Benutzers in zufalliger Reihenfolge.',
+          all_cards: 'Alle Karten',
+          all_cards_copy: 'Zeigt alle Spielkarten in zufalliger Reihenfolge.',
+          my_level_cards: 'Karten meines Levels',
+          my_level_cards_copy: 'Zeigt das echte Fenster deines Levels, wie das Spiel wahrscheinlich ziehen wird.',
+          native_order: 'Nativ -> Zielsprache',
+          native_order_active: 'Aktiv: spielt zuerst die Muttersprache und dann die Zielsprache ab.',
+          native_order_inactive: 'Deaktiviert: spielt zuerst die Zielsprache ab.',
+          level: 'Level',
+          language: 'Sprache',
+          native_language: 'Muttersprache',
+          accent: 'Akzent',
+          typing: 'Tippen',
+          manual: 'Manuell',
+          by_word: 'Nach Wort',
+          by_letter: 'Nach Buchstabe',
+          complete_training_unlock: 'Schliesse das Training ab,\num die Herausforderung freizuschalten',
+          training_complete_unlock: 'Training abgeschlossen\nHerausforderung freigeschaltet',
+          challenge_unavailable: 'Herausforderung gerade nicht verfugbar',
+          phase_2: 'Phase 2',
+          phase_2_copy: 'Tippe jetzt die Blöcke auf {language}.',
+          phase_2_banner: 'PHASE 2',
+          day: 'Tag'
+        },
+        mandarin: {
+          feedback: 'Fankui',
+          result: 'Jieguo',
+          start_training: 'Kaishi xunlian',
+          final_challenge: 'Zuizhong tiaozhan',
+          menu_back: 'Fanhuicaidan',
+          review: 'Fuxi',
+          close: 'Guanbi',
+          options: 'Xuanxiang',
+          continue: 'Jixu',
+          flashcards: 'Kapiandeng',
+          seals: 'Yinzhang',
+          loading_flashcards: 'Zhengzai jiazai kapiandeng...',
+          no_flashcards: 'Dangqian mei you kapiandeng.',
+          view_cards: 'Chakan kapiandeng',
+          no_seals: 'Hai meiyou yinzhang. Jixu xunlian lai jiesuo.',
+          swipe_flashcards: 'Shanghua huo xiahua yi chakan xia yi ge neirong.',
+          swipe_seals: 'Shanghua huo xiahua yi liulan meitians.',
+          my_cards: 'Wo de kapiandeng',
+          my_cards_copy: 'Zhanshi yonghu de suiji kapiandeng.',
+          all_cards: 'Suoyou kapiandeng',
+          all_cards_copy: 'Suiji zhanshi youxi de quanbu kapiandeng.',
+          my_level_cards: 'Wo de dengji kapiandeng',
+          my_level_cards_copy: 'Zhanshi ni dangqian dengji de zhenshi chouqu fanwei.',
+          native_order: 'Mu yu -> mubiao',
+          native_order_active: 'Kaiqi: xian bofang muyu, zai bofang mubiao yuyan.',
+          native_order_inactive: 'Guanbi: xian bofang mubiao yuyan.',
+          level: 'Dengji',
+          language: 'Yuyan',
+          native_language: 'Muyu',
+          accent: 'Kouyin',
+          typing: 'Shuru',
+          manual: 'Shoudong',
+          by_word: 'An ci',
+          by_letter: 'An zi mu',
+          complete_training_unlock: 'Wancheng xunlian\njiesuo tiaozhan',
+          training_complete_unlock: 'Xunlian wancheng\nTiaozhan yijiesuo',
+          challenge_unavailable: 'Dangqian wufa kaishi tiaozhan',
+          phase_2: 'Di er jie duan',
+          phase_2_copy: 'Xianzai qing dianji {language} yukuai.',
+          phase_2_banner: 'DI ER JIE DUAN',
+          day: 'Di'
+        }
       };
       const FLASHCARD_LANGUAGE_BADGE_ORDER = ['english', 'spanish', 'french', 'german', 'portuguese', 'mandarin'];
       const TARGET_LANGUAGE_DISPLAY_ORDER = ['english', 'spanish', 'french', 'german', 'portuguese', 'mandarin'];
@@ -13882,6 +14197,9 @@ para liberar desafio</p>
         finalChallengeHearts: document.getElementById('finalChallengeHearts'),
         finalChallengeSpeakBtn: document.getElementById('finalChallengeSpeakBtn'),
         finalChallengeCardImage: document.getElementById('finalChallengeCardImage'),
+        finalChallengePhaseOverlay: document.getElementById('finalChallengePhaseOverlay'),
+        finalChallengePhaseOverlayKicker: document.getElementById('finalChallengePhaseOverlayKicker'),
+        finalChallengePhaseOverlayCopy: document.getElementById('finalChallengePhaseOverlayCopy'),
         finalChallengeNativeText: document.getElementById('finalChallengeNativeText'),
         finalChallengeBlocks: document.getElementById('finalChallengeBlocks'),
         finalChallengeHint: document.getElementById('finalChallengeHint'),
@@ -14284,6 +14602,19 @@ para liberar desafio</p>
         return normalizeGameOptionValue('targetLanguage', state.ui?.albumsLanguage || state.options?.targetLanguage);
       }
 
+      function currentNativeUiLanguage() {
+        return normalizeGameOptionValue('nativeLanguage', state.options?.nativeLanguage);
+      }
+
+      function uiLanguageLabel(language, uiLanguage = currentNativeUiLanguage()) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        const normalizedUi = normalizeGameOptionValue('nativeLanguage', uiLanguage);
+        return UI_LANGUAGE_LABELS[normalizedUi]?.[normalizedLanguage]
+          || UI_LANGUAGE_LABELS.portuguese?.[normalizedLanguage]
+          || FLASHCARD_LANGUAGE_OPTIONS[normalizedLanguage]?.label
+          || normalizedLanguage;
+      }
+
       function currentNativeLanguage() {
         return normalizeGameOptionValue('nativeLanguage', state.options?.nativeLanguage);
       }
@@ -14301,11 +14632,20 @@ para liberar desafio</p>
       }
 
       function currentTargetLanguageLabel() {
-        return FLASHCARD_LANGUAGE_OPTIONS[currentTargetLanguage()]?.label || 'Ingles padrao';
+        return uiLanguageLabel(currentTargetLanguage());
       }
 
       function currentNativeLanguageLabel() {
-        return FLASHCARD_LANGUAGE_OPTIONS[currentNativeLanguage()]?.label || 'Portugues';
+        return uiLanguageLabel(currentNativeLanguage());
+      }
+
+      function nativeUiText(key, replacements = {}) {
+        const normalizedUi = currentNativeUiLanguage();
+        let template = NATIVE_UI_TEXT[normalizedUi]?.[key];
+        if (!template) {
+          template = NATIVE_UI_TEXT.portuguese?.[key] || key;
+        }
+        return String(template).replace(/\{(\w+)\}/g, (_match, token) => safeText(replacements?.[token] ?? ''));
       }
 
       function currentFinalChallengeLanguage() {
@@ -21106,37 +21446,37 @@ para liberar desafio</p>
       function gameOptionSlideMeta() {
         return {
           difficulty: {
-            name: 'Nível',
-            desc: 'O jogo agora roda com seleção manual de nível.',
+            name: nativeUiText('level'),
+            desc: '',
             values: {
-              manual: { label: 'Manual', desc: 'Escolha o nível do deck e mantenha as cartas girando livremente.' }
+              manual: { label: nativeUiText('manual'), desc: '' }
             }
           },
           targetLanguage: {
-            name: 'Idioma',
-            desc: 'Define o idioma alvo das cartas do jogo.',
+            name: nativeUiText('language'),
+            desc: '',
             values: Object.fromEntries((GAME_OPTION_VALUE_MAP.targetLanguage || []).map((value) => [
               value,
               {
-                label: FLASHCARD_LANGUAGE_OPTIONS[value]?.label || value,
-                desc: value === 'english' ? 'Usa Ingles padrao com controle de sotaque.' : 'Troca o idioma alvo do jogo.'
+                label: uiLanguageLabel(value),
+                desc: ''
               }
             ]))
           },
           nativeLanguage: {
-            name: 'Lingua nativa',
-            desc: 'Troca a lingua-base do apoio visual sem resetar seu nivel.',
+            name: nativeUiText('native_language'),
+            desc: '',
             values: Object.fromEntries((GAME_OPTION_VALUE_MAP.nativeLanguage || []).map((value) => [
               value,
               {
-                label: FLASHCARD_LANGUAGE_OPTIONS[value]?.label || value,
-                desc: 'Substitui o Portugues como lingua nativa nas cartas.'
+                label: uiLanguageLabel(value),
+                desc: ''
               }
             ]))
           },
           accent: {
-            name: 'Sotaque',
-            desc: 'Cada toque muda 10% entre Americano e Britânico.',
+            name: nativeUiText('accent'),
+            desc: '',
             values: Object.fromEntries((GAME_OPTION_VALUE_MAP.accent || []).map((value) => {
               const match = /^mix_(\d{1,3})_(\d{1,3})$/.exec(String(value || ''));
               const american = match ? Math.max(0, Math.min(100, Number.parseInt(match[1], 10) || 0)) : 100;
@@ -21145,11 +21485,11 @@ para liberar desafio</p>
             }))
           },
           fourthStageTyping: {
-            name: 'Digitação',
-            desc: 'Troca entre blocos e teclado de 9 letras.',
+            name: nativeUiText('typing'),
+            desc: '',
             values: {
-              off: { label: 'Por palavra', desc: 'Mantém o modo de blocos no fourth-stage.' },
-              on: { label: 'Por letra', desc: 'Força o teclado de 9 letras no fourth-stage.' }
+              off: { label: nativeUiText('by_word'), desc: '' },
+              on: { label: nativeUiText('by_letter'), desc: '' }
             }
           }
         };
@@ -21185,7 +21525,7 @@ para liberar desafio</p>
         const currentValue = normalizeGameOptionValue('targetLanguage', state.options?.targetLanguage);
         const items = TARGET_LANGUAGE_DISPLAY_ORDER.map((value) => {
           const meta = FLASHCARD_LANGUAGE_OPTIONS[value] || {};
-          const label = safeText(meta.label || value);
+          const label = safeText(uiLanguageLabel(value) || meta.label || value);
           const iconPath = safeText(meta.iconPath || '');
           return `
             <button
@@ -21203,8 +21543,8 @@ para liberar desafio</p>
         }).join('');
         return `
           <article class="game-options-modal__item game-options-modal__item--language" data-game-option-key="targetLanguage">
-            <h3 class="game-options-modal__name">${gameOptionIconMarkup('targetLanguage')}Idioma</h3>
-            <p class="game-options-modal__copy">Escolha o idioma alvo do jogo.</p>
+            <h3 class="game-options-modal__name">${gameOptionIconMarkup('targetLanguage')}${escapeHtml(nativeUiText('language'))}</h3>
+            <p class="game-options-modal__copy">${escapeHtml(nativeUiText('language'))}</p>
             <div class="game-options-modal__language-grid">${items}</div>
           </article>
         `;
@@ -21212,6 +21552,7 @@ para liberar desafio</p>
 
       function renderGameOptionsModal() {
         if (!els.gameOptionsModal || !els.gameOptionsDeck) return;
+        syncNativeUiStaticCopy();
         state.options.difficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
         const cards = currentGameOptionSlides().map((key) => {
           if (key === 'targetLanguage') {
@@ -21774,14 +22115,14 @@ para liberar desafio</p>
         const items = albumFlashcardsItems();
         renderAlbumsLanguageFooter();
         if (state.ui.albumsLanguageLoading && !items.length) {
-          renderAlbumsSlide(els.albumsFlashcardsStack, '<p class="albums-modal__empty">Carregando flashcards...</p>', direction);
+          renderAlbumsSlide(els.albumsFlashcardsStack, `<p class="albums-modal__empty">${escapeHtml(nativeUiText('loading_flashcards'))}</p>`, direction);
           return;
         }
         if (!items.length) {
           renderAlbumsSlide(els.albumsFlashcardsStack, `
             <div class="albums-modal__empty">
-              <p>Nenhum flashcard disponivel no momento.</p>
-              <button class="albums-modal__empty-action" type="button" data-albums-player-open>Ver cartas</button>
+              <p>${escapeHtml(nativeUiText('no_flashcards'))}</p>
+              <button class="albums-modal__empty-action" type="button" data-albums-player-open>${escapeHtml(nativeUiText('view_cards'))}</button>
             </div>
           `, direction);
           return;
@@ -21820,13 +22161,13 @@ para liberar desafio</p>
         if (!els.albumsSealsStack) return;
         const timeline = normalizeDaySealTimeline(state.ui.albumsSealsPayload);
         if (!timeline.length) {
-          renderAlbumsSlide(els.albumsSealsStack, '<p class="albums-modal__empty">Nenhum selo disponivel ainda. Continue treinando para desbloquear.</p>', direction);
+          renderAlbumsSlide(els.albumsSealsStack, `<p class="albums-modal__empty">${escapeHtml(nativeUiText('no_seals'))}</p>`, direction);
           return;
         }
         const maxIndex = timeline.length - 1;
         state.ui.albumsSealIndex = Math.max(0, Math.min(maxIndex, Number(state.ui.albumsSealIndex) || 0));
         const entry = timeline[state.ui.albumsSealIndex];
-        const dayLabel = `Day ${entry.day}`;
+        const dayLabel = `${nativeUiText('day')} ${entry.day}`;
         renderAlbumsSlide(els.albumsSealsStack, `
             <article class="albums-modal__seal-card">
               <p class="albums-modal__seal-day">${escapeHtml(dayLabel)}</p>
@@ -21841,7 +22182,7 @@ para liberar desafio</p>
         stopAlbumsNarrationAudio();
         const section = ALBUMS_SECTIONS[Math.max(0, Math.min(ALBUMS_SECTIONS.length - 1, state.ui.albumsSectionIndex))] || ALBUMS_SECTIONS[0];
         if (els.albumsSectionTitle) {
-          els.albumsSectionTitle.textContent = section.label;
+          els.albumsSectionTitle.textContent = nativeUiText(section.key === 'seals' ? 'seals' : 'flashcards');
         }
         els.albumsFlashcardsStage?.classList.toggle('is-active', section.key === 'flashcards');
         els.albumsSealsStage?.classList.toggle('is-active', section.key === 'seals');
@@ -21863,6 +22204,7 @@ para liberar desafio</p>
       }
 
       async function openAlbumsModal() {
+        syncNativeUiStaticCopy();
         state.ui.albumsOpen = true;
         state.ui.albumsSectionIndex = 0;
         state.ui.albumsLanguage = currentTargetLanguage();
@@ -28129,10 +28471,13 @@ para liberar desafio</p>
       }
 
       function buildSecondStageWordBlockState(typingState, card) {
+        const supplementalAnswers = safeText(typingState?.typingMode) === 'portuguese'
+          ? []
+          : (Array.isArray(card?.englishAnswers) ? card.englishAnswers : []);
         const answerCandidates = uniqueAnswerList([
           typingState?.acceptedAnswer,
           typingState?.sourceText,
-          ...(Array.isArray(card?.englishAnswers) ? card.englishAnswers : [])
+          ...supplementalAnswers
         ].map(repairDisplayText).map(item => safeText(item)).filter(Boolean));
         const targetSequences = answerCandidates
           .map((answer) => tokenizeWordBlocks(answer))
@@ -29283,13 +29628,27 @@ para liberar desafio</p>
       function openAlbumsPlayerPopover() {
         if (!els.albumsPlayerPopover) return;
         syncAlbumsPlayerScopeAvailability();
+        const mineTitle = els.albumsPlayerOptions?.querySelector('[data-albums-player-scope="mine"] .albums-player-option__title');
+        const mineCopy = els.albumsPlayerOptions?.querySelector('[data-albums-player-scope="mine"] .albums-player-option__copy');
+        const allTitle = els.albumsPlayerOptions?.querySelector('[data-albums-player-scope="all"] .albums-player-option__title');
+        const allCopy = els.albumsPlayerOptions?.querySelector('[data-albums-player-scope="all"] .albums-player-option__copy');
+        const levelTitle = els.albumsPlayerOptions?.querySelector('[data-albums-player-scope="level"] .albums-player-option__title');
+        const levelCopy = els.albumsPlayerOptions?.querySelector('[data-albums-player-scope="level"] .albums-player-option__copy');
+        const nativeOrderTitle = els.albumsNativeOrderToggleBtn?.querySelector('.albums-player-option__title');
+        if (mineTitle) mineTitle.textContent = nativeUiText('my_cards');
+        if (mineCopy) mineCopy.textContent = nativeUiText('my_cards_copy');
+        if (allTitle) allTitle.textContent = nativeUiText('all_cards');
+        if (allCopy) allCopy.textContent = nativeUiText('all_cards_copy');
+        if (levelTitle) levelTitle.textContent = nativeUiText('my_level_cards');
+        if (levelCopy) levelCopy.textContent = nativeUiText('my_level_cards_copy');
+        if (nativeOrderTitle) nativeOrderTitle.textContent = nativeUiText('native_order');
         if (els.albumsNativeOrderToggleBtn) {
           els.albumsNativeOrderToggleBtn.classList.toggle('is-active', state.watch.albumsPlayNativeFirst !== false);
         }
         if (els.albumsNativeOrderToggleCopy) {
           els.albumsNativeOrderToggleCopy.textContent = state.watch.albumsPlayNativeFirst !== false
-            ? 'Ativo: toca primeiro a língua nativa e depois a língua destino.'
-            : 'Desativado: toca primeiro a língua destino.';
+            ? nativeUiText('native_order_active')
+            : nativeUiText('native_order_inactive');
         }
         els.albumsPlayerPopover.classList.add('is-visible');
         window.requestAnimationFrame(() => els.albumsPlayerPopover.classList.add('is-active'));
@@ -30041,6 +30400,65 @@ para liberar desafio</p>
         }
       }
 
+      function syncNativeUiStaticCopy() {
+        const introEyebrow = els.finalChallengeIntroScreen?.querySelector('.final-challenge-modal__eyebrow');
+        if (introEyebrow) {
+          introEyebrow.textContent = nativeUiText('feedback');
+        }
+        const resultEyebrow = els.finalChallengeResultScreen?.querySelector('.final-challenge-modal__eyebrow');
+        if (resultEyebrow) {
+          resultEyebrow.textContent = nativeUiText('result');
+        }
+        if (els.finalChallengePracticeBtn) {
+          els.finalChallengePracticeBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>${escapeHtml(nativeUiText('start_training'))}`;
+        }
+        if (els.finalChallengeStartBtn) {
+          els.finalChallengeStartBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m12 3 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 16.53l-5.3 2.78 1.01-5.9-4.29-4.18 5.93-.86L12 3Z"></path></svg></span>${escapeHtml(nativeUiText('final_challenge'))}`;
+        }
+        if (els.finalChallengeMenuBtn) {
+          els.finalChallengeMenuBtn.textContent = nativeUiText('menu_back');
+        }
+        if (els.finalChallengeReviewBtn) {
+          const label = nativeUiText('review');
+          els.finalChallengeReviewBtn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:10px;justify-content:center;"><svg viewBox="0 0 24 24" focusable="false" style="width:18px;height:18px;fill:currentColor;"><path d="M8 5.5v13l10-6.5-10-6.5Z"/></svg><span>${escapeHtml(label)}</span></span>`;
+        }
+        if (els.finalChallengeReviewCloseBtn) {
+          els.finalChallengeReviewCloseBtn.textContent = nativeUiText('close');
+        }
+        const reviewTitle = els.finalChallengeReviewModal?.querySelector('.final-challenge-modal__review-title');
+        if (reviewTitle) {
+          reviewTitle.textContent = nativeUiText('review');
+        }
+        const gameOptionsTitle = els.gameOptionsModal?.querySelector('.game-options-modal__title');
+        if (gameOptionsTitle) {
+          gameOptionsTitle.textContent = nativeUiText('options');
+        }
+        if (els.gameOptionsContinueBtn) {
+          els.gameOptionsContinueBtn.textContent = nativeUiText('continue');
+        }
+        if (els.albumsFlashcardsStage) {
+          els.albumsFlashcardsStage.setAttribute('aria-label', nativeUiText('flashcards'));
+        }
+        if (els.albumsSealsStage) {
+          els.albumsSealsStage.setAttribute('aria-label', nativeUiText('seals'));
+        }
+        const albumsHints = els.albumsModal?.querySelectorAll('.albums-modal__hint') || [];
+        if (albumsHints[0]) albumsHints[0].textContent = nativeUiText('swipe_flashcards');
+        if (albumsHints[1]) albumsHints[1].textContent = nativeUiText('swipe_seals');
+      }
+
+      function setFinalChallengePhaseOverlay(visible, copy = '') {
+        if (els.finalChallengePhaseOverlay) {
+          els.finalChallengePhaseOverlay.hidden = !visible;
+        }
+        if (els.finalChallengePhaseOverlayKicker) {
+          els.finalChallengePhaseOverlayKicker.textContent = nativeUiText('phase_2');
+        }
+        if (els.finalChallengePhaseOverlayCopy) {
+          els.finalChallengePhaseOverlayCopy.textContent = safeText(copy) || nativeUiText('phase_2_copy', { language: currentNativeLanguageLabel() });
+        }
+      }
+
       function setFinalChallengeExitConfirmOpen(isOpen) {
         state.ui.finalChallengeExitConfirmOpen = Boolean(isOpen);
         if (els.finalChallengeExitConfirm) {
@@ -30169,8 +30587,8 @@ para liberar desafio</p>
         }
         if (els.finalChallengeIntroFeedback) {
           els.finalChallengeIntroFeedback.textContent = hasDeck
-            ? (unlocked ? 'Treino completo\nDesafio liberado' : 'Complete o treino\npara liberar desafio')
-            : `Ainda nao existem 25 cartas completas\nno Nivel ${currentFinalChallengeLevel()} para ${currentTargetLanguageLabel()}.`;
+            ? (unlocked ? nativeUiText('training_complete_unlock') : nativeUiText('complete_training_unlock'))
+            : `${nativeUiText('challenge_unavailable')}\n${nativeUiText('level')} ${currentFinalChallengeLevel()} • ${currentTargetLanguageLabel()}`;
         }
       }
 
@@ -30425,6 +30843,7 @@ para liberar desafio</p>
         if (!els.finalChallengeModal) return;
         resetFinalChallengeRunState();
         state.ui.finalChallengeRunOpen = true;
+        syncNativeUiStaticCopy();
         syncFinalChallengeBackground();
         els.finalChallengeModal.classList.add('is-visible');
         els.finalChallengeModal.setAttribute('aria-hidden', 'false');
@@ -30437,6 +30856,7 @@ para liberar desafio</p>
       function closeFinalChallengeModal() {
         cleanupGameRecognition();
         stopFinalChallengePromptAudio();
+        setFinalChallengePhaseOverlay(false);
         state.ui.finalChallengeListening = false;
         state.ui.finalChallengeBusy = false;
         state.ui.finalChallengeRunOpen = false;
@@ -30451,6 +30871,7 @@ para liberar desafio</p>
       function cancelFinalChallengeRunToIntro() {
         cleanupGameRecognition();
         stopFinalChallengePromptAudio();
+        setFinalChallengePhaseOverlay(false);
         state.ui.finalChallengeListening = false;
         state.ui.finalChallengeBusy = false;
         closeFinalChallengeReviewModal();
@@ -30567,9 +30988,11 @@ para liberar desafio</p>
           state.ui.finalChallengeWrongCards = [];
           state.ui.finalChallengeCorrectionTargetVisible = false;
           state.ui.finalChallengeForcedGameOver = false;
-          setFinalChallengeStatus('FASE 2');
+          setFinalChallengeStatus(nativeUiText('phase_2_banner'));
           syncFinalChallengeRunUi();
-          await wait(900);
+          setFinalChallengePhaseOverlay(true, nativeUiText('phase_2_copy', { language: currentNativeLanguageLabel() }));
+          await wait(1500);
+          setFinalChallengePhaseOverlay(false);
           setFinalChallengeStatus('');
           const firstPhaseTwoCard = currentFinalChallengeCard();
           if (firstPhaseTwoCard) {
@@ -30641,6 +31064,7 @@ para liberar desafio</p>
       async function advanceFinalChallengeCard() {
         state.ui.finalChallengeIndex += 1;
         state.ui.finalChallengeCorrectionTargetVisible = false;
+        setFinalChallengePhaseOverlay(false);
         if (state.ui.finalChallengeIndex >= state.ui.finalChallengeCards.length) {
           await finishFinalChallengeRun();
           return;
@@ -30752,10 +31176,10 @@ para liberar desafio</p>
         }
         if (cards.length < FINAL_CHALLENGE_CARD_COUNT) {
           if (els.finalChallengeResultTitle) {
-            els.finalChallengeResultTitle.textContent = 'Desafio indisponivel agora';
+            els.finalChallengeResultTitle.textContent = nativeUiText('challenge_unavailable');
           }
           if (els.finalChallengeResultBody) {
-            els.finalChallengeResultBody.textContent = `Ainda nao existem 25 cartas completas no Nivel ${challengeLevel} para ${currentTargetLanguageLabel()}.`;
+            els.finalChallengeResultBody.textContent = `${nativeUiText('level')} ${challengeLevel} • ${currentTargetLanguageLabel()}`;
           }
           if (els.finalChallengeReviewBtn) {
             els.finalChallengeReviewBtn.hidden = true;
@@ -30769,6 +31193,7 @@ para liberar desafio</p>
         state.ui.finalChallengeCards = cards;
         state.ui.finalChallengeIndex = 0;
         state.ui.finalChallengePercentVisible = false;
+        setFinalChallengePhaseOverlay(false);
         setFinalChallengeExitConfirmOpen(false);
         setFinalChallengeScreen('run');
         setFinalChallengeStatus('');
@@ -30789,6 +31214,7 @@ para liberar desafio</p>
         state.ui.finalChallengePracticePhase = 1;
         state.ui.finalChallengeCards = cards;
         state.ui.finalChallengeIndex = 0;
+        setFinalChallengePhaseOverlay(false);
         setFinalChallengeExitConfirmOpen(false);
         setFinalChallengeScreen('run');
         setFinalChallengeStatus('');
