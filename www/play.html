@@ -31738,6 +31738,12 @@ para liberar desafio</p>
 
       function openFinalChallengeModal() {
         if (!els.finalChallengeModal) return;
+        state.entry.pendingPlayStart = false;
+        state.entry.welcomeStartRequested = false;
+        state.entry.flashStartInFlight = false;
+        state.entry.welcomeFlashStartAt = 0;
+        window.PlaytalkLoader?.hide?.('welcome-flash-start', { force: true });
+        window.PlaytalkLoader?.hide?.('page-init', { force: true });
         resetFinalChallengeRunState();
         state.ui.finalChallengeRunOpen = true;
         state.ui.finalChallengeIntroStatsStep = 0;
@@ -33689,6 +33695,12 @@ para liberar desafio</p>
             playStatusCueAudio(WELCOME_PLAY_SOUND_PATH);
             event.preventDefault();
             event.stopPropagation();
+            state.entry.pendingPlayStart = false;
+            state.entry.welcomeStartRequested = false;
+            state.entry.flashStartInFlight = false;
+            state.entry.welcomeFlashStartAt = 0;
+            window.PlaytalkLoader?.hide?.('welcome-flash-start', { force: true });
+            window.PlaytalkLoader?.hide?.('page-init', { force: true });
             if (!state.user?.id) {
               setAuthStatus('Entre para liberar treino e desafio.', 'error');
               return;
