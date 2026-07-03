@@ -27927,16 +27927,8 @@
       function getSecondStageWrongWords(typingState) {
         const useNativePool = safeText(typingState?.typingMode) === 'portuguese';
         const supplementalLanguage = useNativePool ? currentNativeLanguage() : currentTargetLanguage();
-        const dynamicWords = collectSecondStageWrongWordsFromCards(
-          useNativePool ? 'portugueseAnswers' : 'englishAnswers',
-          useNativePool ? 'portuguese' : 'english'
-        );
         const supplementalWords = getSecondStageSupplementalWrongWords(supplementalLanguage);
-        const combined = normalizeSecondStageWrongWordList([
-          ...dynamicWords,
-          ...supplementalWords
-        ]);
-        if (combined.length) return combined;
+        if (supplementalWords.length) return supplementalWords;
         return normalizeSecondStageWrongWordList(SECOND_STAGE_WRONG_WORD_FALLBACK);
       }
 
