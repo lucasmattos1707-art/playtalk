@@ -11381,6 +11381,18 @@
       display: flex;
     }
 
+    #finalChallengeIntroScreen {
+      justify-content: center;
+      gap: 26px;
+    }
+
+    #finalChallengeIntroScreen .final-challenge-modal__topbar {
+      position: absolute;
+      top: 20px;
+      left: 18px;
+      right: 18px;
+    }
+
     .final-challenge-modal__topbar {
       display: flex;
       align-items: center;
@@ -11417,7 +11429,7 @@
 
     .final-challenge-modal__eyebrow {
       margin: 0;
-      font: 700 12px/1.2 "Exo 2", "Open Sans", Arial, sans-serif;
+      font: 800 12px/1.2 "Exo 2", "Open Sans", Arial, sans-serif;
       letter-spacing: 0.22em;
       text-transform: uppercase;
       color: rgba(255, 255, 255, 0.54);
@@ -11425,8 +11437,9 @@
 
     .final-challenge-modal__level {
       margin: 6px 0 0;
-      font: 800 clamp(30px, 7vw, 44px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
+      font: 800 clamp(39px, 9.1vw, 57px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
       text-transform: uppercase;
+      text-align: center;
     }
 
     .final-challenge-modal__intro-copy {
@@ -11435,17 +11448,28 @@
       color: rgba(245, 247, 251, 0.82);
     }
 
+    .final-challenge-modal__intro-header {
+      display: grid;
+      gap: 10px;
+      justify-items: center;
+      text-align: center;
+    }
+
     .final-challenge-modal__intro-actions {
       display: grid;
       gap: 14px;
-      margin-top: auto;
+      width: min(100%, 420px);
+      align-self: center;
     }
 
     .final-challenge-modal__intro-feedback {
-      margin: 2px 0 0;
-      font: 700 14px/1.4 "Open Sans", Arial, sans-serif;
+      margin: 0;
+      font: 800 clamp(16px, 4vw, 20px)/1.25 "Exo 2", "Open Sans", Arial, sans-serif;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
       color: rgba(245, 247, 251, 0.92);
       text-align: center;
+      white-space: pre-line;
     }
 
     .final-challenge-modal__cta {
@@ -11455,6 +11479,11 @@
       font: 800 18px/1 "Exo 2", "Open Sans", Arial, sans-serif;
       cursor: pointer;
       transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      text-transform: uppercase;
     }
 
     .final-challenge-modal__cta:hover,
@@ -11471,14 +11500,31 @@
     }
 
     .final-challenge-modal__cta--primary {
-      background: linear-gradient(135deg, #39d98a, #0f9f63);
-      color: #041b12;
+      background: linear-gradient(135deg, #ffab4a, #e96c11);
+      color: #fff8f1;
     }
 
     .final-challenge-modal__cta--ghost {
-      background: rgba(255, 255, 255, 0.07);
+      background: rgba(255, 255, 255, 0.09);
       color: #f5f7fb;
       border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .final-challenge-modal__cta-icon {
+      width: 20px;
+      height: 20px;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+
+    .final-challenge-modal__cta-icon svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     .final-challenge-modal__run {
@@ -12081,14 +12127,15 @@
             <svg viewBox="0 0 24 24" focusable="false"><path d="M10.7 5.3a1 1 0 0 1 0 1.4L6.41 11H20a1 1 0 1 1 0 2H6.4l4.3 4.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
           </button>
         </div>
-        <div>
-          <p class="final-challenge-modal__eyebrow">Desafio</p>
+        <div class="final-challenge-modal__intro-header">
+          <p class="final-challenge-modal__eyebrow">Feedback</p>
+          <p class="final-challenge-modal__intro-feedback" id="finalChallengeIntroFeedback">Complete o treino
+para liberar desafio</p>
           <h2 class="final-challenge-modal__level" id="finalChallengeIntroLevel">Nivel 1</h2>
         </div>
         <div class="final-challenge-modal__intro-actions">
-          <button class="final-challenge-modal__cta final-challenge-modal__cta--primary" id="finalChallengeStartBtn" type="button">Comecar agora</button>
-          <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost" id="finalChallengePracticeBtn" type="button">Praticar mais</button>
-          <p class="final-challenge-modal__intro-feedback" id="finalChallengeIntroFeedback">Complete o treino para liberar desafio</p>
+          <button class="final-challenge-modal__cta final-challenge-modal__cta--primary" id="finalChallengePracticeBtn" type="button"><span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>Iniciar treino</button>
+          <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost" id="finalChallengeStartBtn" type="button"><span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m12 3 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 16.53l-5.3 2.78 1.01-5.9-4.29-4.18 5.93-.86L12 3Z"></path></svg></span>Desafio final</button>
         </div>
       </div>
       <div class="final-challenge-modal__screen final-challenge-modal__run" id="finalChallengeRunScreen">
@@ -26420,6 +26467,39 @@
         }));
       }
 
+      function waitForAudioCanPlay(audio, timeoutMs = 1800) {
+        if (!audio) return Promise.resolve(false);
+        if (audio.readyState >= 3) return Promise.resolve(true);
+        return new Promise((resolve) => {
+          let finished = false;
+          const finish = (value) => {
+            if (finished) return;
+            finished = true;
+            cleanup();
+            resolve(value);
+          };
+          const cleanup = () => {
+            audio.removeEventListener('canplay', onReady);
+            audio.removeEventListener('canplaythrough', onReady);
+            audio.removeEventListener('loadeddata', onReady);
+            audio.removeEventListener('error', onError);
+            window.clearTimeout(timer);
+          };
+          const onReady = () => finish(true);
+          const onError = () => finish(false);
+          const timer = window.setTimeout(() => finish(audio.readyState >= 2), Math.max(200, Number(timeoutMs) || 1800));
+          audio.addEventListener('canplay', onReady);
+          audio.addEventListener('canplaythrough', onReady);
+          audio.addEventListener('loadeddata', onReady);
+          audio.addEventListener('error', onError);
+          try {
+            audio.load();
+          } catch (_error) {
+            finish(false);
+          }
+        });
+      }
+
       function buildAlbumsPreviewBufferCards(limit = 3) {
         const cards = [];
         const seen = new Set();
@@ -30004,8 +30084,17 @@
         });
         if (!src) return false;
         stopFinalChallengePromptAudio();
-        const audio = new Audio(src);
+        const cachedAudio = state.game.preloadAudios.get(src);
+        const audio = cachedAudio || new Audio(src);
         audio.preload = 'auto';
+        if (!cachedAudio) {
+          try {
+            audio.load();
+            state.game.preloadAudios.set(src, audio);
+          } catch (_error) {
+            // ignore
+          }
+        }
         audio.playbackRate = Math.max(0.1, Math.min(2.5, Number(options.rate || 1) * resolveSelectedGameSpeed()));
         audio.defaultPlaybackRate = audio.playbackRate;
         audio.preservesPitch = true;
@@ -30034,6 +30123,13 @@
         }
         finalChallengePromptCleanup = resetColorProgress;
         state.ui.finalChallengePromptAudio = audio;
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+        } catch (_error) {
+          // ignore
+        }
+        await waitForAudioCanPlay(audio, 1800);
         try {
           await audio.play();
         } catch (_error) {
@@ -30072,10 +30168,9 @@
           els.finalChallengePracticeBtn.disabled = !hasDeck;
         }
         if (els.finalChallengeIntroFeedback) {
-          els.finalChallengeIntroFeedback.hidden = unlocked || !hasDeck;
           els.finalChallengeIntroFeedback.textContent = hasDeck
-            ? 'Complete o treino para liberar desafio'
-            : `Ainda nao existem 25 cartas completas no Nivel ${currentFinalChallengeLevel()} para ${currentTargetLanguageLabel()}.`;
+            ? (unlocked ? 'Treino completo\nDesafio liberado' : 'Complete o treino\npara liberar desafio')
+            : `Ainda nao existem 25 cartas completas\nno Nivel ${currentFinalChallengeLevel()} para ${currentTargetLanguageLabel()}.`;
         }
       }
 
@@ -30116,6 +30211,7 @@
         };
         const markIncorrect = async (activeButton) => {
           resolved = true;
+          state.ui.finalChallengeBusy = true;
           state.ui.finalChallengeAttempts += 1;
           state.ui.finalChallengeScores.push(0);
           state.ui.finalChallengeLivesLost = Math.max(0, Number(state.ui.finalChallengeLivesLost) || 0) + 1;
@@ -30127,13 +30223,16 @@
           await wait(220);
           if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
             state.ui.finalChallengeForcedGameOver = true;
+            state.ui.finalChallengeBusy = false;
             await finishFinalChallengeRun();
             return;
           }
+          state.ui.finalChallengeBusy = false;
           await advanceFinalChallengeCard();
         };
         const markCorrect = async () => {
           resolved = true;
+          state.ui.finalChallengeBusy = true;
           state.ui.finalChallengeAttempts += 1;
           state.ui.finalChallengeScores.push(100);
           setFinalChallengeStatus('');
@@ -30145,6 +30244,7 @@
           });
           await playFinalChallengeAudioForLanguage(card, currentNativeLanguage(), { rate: 0.92, waitForEnd: true });
           await wait(160);
+          state.ui.finalChallengeBusy = false;
           await advanceFinalChallengeCard();
         };
         const appendBlock = (block, rowNode) => {
@@ -30170,6 +30270,7 @@
                 : null;
               if (nextCard) {
                 preloadCardAudioForLanguage(nextCard, currentNativeLanguage());
+                preloadCardAudioForLanguage(nextCard, currentTargetLanguage());
               }
             }
             if (wordBlockSequenceIsComplete(blockState.targetSequences, selectedWords)) {
