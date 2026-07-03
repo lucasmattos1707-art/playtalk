@@ -11577,6 +11577,38 @@
       box-shadow: 0 16px 34px rgba(15, 91, 219, 0.3);
     }
 
+    .final-challenge-modal__cta.is-downloading {
+      --download-progress: 0%;
+      position: relative;
+      overflow: hidden;
+      color: #f8fffb;
+      border: 1px solid rgba(146, 255, 220, 0.46);
+      background:
+        linear-gradient(90deg, rgba(22, 126, 255, 0.98), rgba(60, 231, 158, 0.96)) 0 0 / var(--download-progress) 100% no-repeat,
+        linear-gradient(135deg, rgba(13, 38, 64, 0.96), rgba(11, 87, 70, 0.9));
+      box-shadow: 0 18px 36px rgba(18, 147, 255, 0.24), 0 0 26px rgba(60, 231, 158, 0.2);
+      transition: background-size 180ms ease, background 520ms ease, box-shadow 520ms ease, filter 520ms ease;
+    }
+
+    .final-challenge-modal__cta.is-downloading::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.2) 42%, transparent 70%);
+      transform: translateX(-100%);
+      animation: finalChallengeDownloadSweep 1.2s linear infinite;
+      pointer-events: none;
+    }
+
+    .final-challenge-modal__cta.is-downloading > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    @keyframes finalChallengeDownloadSweep {
+      to { transform: translateX(100%); }
+    }
+
     .final-challenge-modal__cta-icon {
       width: 20px;
       height: 20px;
@@ -12166,13 +12198,19 @@
 
     .final-challenge-modal__practice-meter {
       min-width: 0;
+      display: inline-grid;
+      justify-items: center;
+      gap: 5px;
+      color: #67f0ad;
+      text-align: center;
+      text-shadow: 0 0 12px rgba(103, 240, 173, 0.44);
+    }
+
+    .final-challenge-modal__practice-meter-core {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 9px;
-      color: #67f0ad;
-      text-align: left;
-      text-shadow: 0 0 12px rgba(103, 240, 173, 0.44);
     }
 
     .final-challenge-modal__practice-meter[hidden] {
@@ -12209,11 +12247,24 @@
 
     .final-challenge-modal__practice-meter-label {
       margin: 0;
-      max-width: min(34vw, 138px);
+      max-width: min(82vw, 320px);
       font: 800 11px/1.05 "Exo 2", "Open Sans", Arial, sans-serif;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: rgba(245, 247, 251, 0.54);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .final-challenge-modal__practice-meter-label.is-feedback {
+      width: min(82vw, 360px);
+      font: 700 11px/1.25 "Open Sans", Arial, sans-serif;
+      letter-spacing: 0.04em;
+      text-transform: none;
+      color: rgba(232, 247, 255, 0.82);
+      white-space: normal;
+      text-shadow: 0 0 12px rgba(79, 183, 255, 0.26);
     }
 
     .final-challenge-modal__score-row {
@@ -12805,8 +12856,10 @@ para liberar desafio</p>
         <section class="final-challenge-modal__zone final-challenge-modal__zone--percent">
           <div class="final-challenge-modal__percent-stack">
             <div class="final-challenge-modal__practice-meter" id="finalChallengePracticeMeter" hidden>
-              <span class="final-challenge-modal__practice-meter-icon" id="finalChallengePracticeMeterIcon" aria-hidden="true"></span>
-              <p class="final-challenge-modal__practice-meter-value" id="finalChallengePracticeMeterValue">0</p>
+              <div class="final-challenge-modal__practice-meter-core">
+                <span class="final-challenge-modal__practice-meter-icon" id="finalChallengePracticeMeterIcon" aria-hidden="true"></span>
+                <p class="final-challenge-modal__practice-meter-value" id="finalChallengePracticeMeterValue">0</p>
+              </div>
               <p class="final-challenge-modal__practice-meter-label" id="finalChallengePracticeMeterLabel">Frases montadas</p>
             </div>
             <div class="final-challenge-modal__score-row">
@@ -13706,7 +13759,7 @@ para liberar desafio</p>
           note_label: 'Nota',
           time_label: 'Tempo',
           downloads: 'Downloads',
-          level_audio_downloads: 'Audios do nivel',
+          level_audio_downloads: 'Pacote do nivel',
           downloaded: 'Baixado',
           download_available: 'Download disponível',
           download_complete: 'Download concluído',
@@ -13764,7 +13817,7 @@ para liberar desafio</p>
           note_label: 'Score',
           time_label: 'Time',
           downloads: 'Downloads',
-          level_audio_downloads: 'Level audio',
+          level_audio_downloads: 'Level package',
           downloaded: 'Downloaded',
           download_available: 'Download available',
           download_complete: 'Download complete',
@@ -13822,7 +13875,7 @@ para liberar desafio</p>
           note_label: 'Nota',
           time_label: 'Tiempo',
           downloads: 'Descargas',
-          level_audio_downloads: 'Audios del nivel',
+          level_audio_downloads: 'Paquete del nivel',
           downloaded: 'Descargado',
           download_available: 'Descarga disponible',
           download_complete: 'Descarga completa',
@@ -13880,7 +13933,7 @@ para liberar desafio</p>
           note_label: 'Note',
           time_label: 'Temps',
           downloads: 'Telechargements',
-          level_audio_downloads: 'Audios du niveau',
+          level_audio_downloads: 'Pack du niveau',
           downloaded: 'Telecharge',
           download_available: 'Telechargement disponible',
           download_complete: 'Telechargement termine',
@@ -13938,7 +13991,7 @@ para liberar desafio</p>
           note_label: 'Note',
           time_label: 'Zeit',
           downloads: 'Downloads',
-          level_audio_downloads: 'Level-Audios',
+          level_audio_downloads: 'Level-Paket',
           downloaded: 'Geladen',
           download_available: 'Download verfugbar',
           download_complete: 'Download abgeschlossen',
@@ -13996,7 +14049,7 @@ para liberar desafio</p>
           note_label: 'Fenshu',
           time_label: 'Shijian',
           downloads: 'Xiazai',
-          level_audio_downloads: 'Dengji yuyin',
+          level_audio_downloads: 'Dengji wenjian bao',
           downloaded: 'Yi xiazai',
           download_available: 'Ke xiazai',
           download_complete: 'Xiazai wancheng',
@@ -14629,6 +14682,8 @@ para liberar desafio</p>
           preloadAudios: new Map(),
           preloadAudioPromises: new Map(),
           runtimeAudioUrls: new Map(),
+          runtimeImageUrls: new Map(),
+          runtimeImageSourcePromises: new Map(),
           runtimeAudioSourcePromises: new Map(),
           pendingEnsureAudioKeys: new Set(),
           contextLimit: DEFAULT_GAME_CONTEXT_LIMIT,
@@ -14912,8 +14967,12 @@ para liberar desafio</p>
           finalChallengeDownloadsBusyLevel: 0,
           finalChallengeDownloadsCompletedCount: 0,
           finalChallengeDownloadsTotalCount: 0,
+          finalChallengeDownloadsCompletedBytes: 0,
+          finalChallengeDownloadsTotalBytes: 0,
           finalChallengeDownloadsStatus: '',
-          finalChallengeDownloadsStatusTone: ''
+          finalChallengeDownloadsStatusTone: '',
+          finalChallengeDownloadLaunchMode: '',
+          finalChallengeFlowFeedback: ''
         },
         options: {
           difficulty: DEFAULT_GAME_OPTIONS.difficulty,
@@ -14932,6 +14991,7 @@ para liberar desafio</p>
       let welcomeLanguageBackdropFadeTimer = 0;
       let finalChallengePromptCleanup = null;
       let finalChallengePhaseOverlayResolver = null;
+      let finalChallengeFlowFeedbackTimer = 0;
 
       loadGameOptionsFromStorage();
 
@@ -15863,6 +15923,66 @@ para liberar desafio</p>
         return sourcePromise;
       }
 
+      function runtimeImageSourceFor(src) {
+        const safeSrc = safeText(src);
+        return safeText(state.game?.runtimeImageUrls?.get(safeSrc) || safeSrc);
+      }
+
+      async function cacheRuntimeImageBlob(src, response) {
+        const safeSrc = safeText(src);
+        if (!safeSrc || !response || typeof response.clone !== 'function' || !finalChallengeAudioCacheSupported()) return safeSrc;
+        try {
+          const existing = safeText(state.game?.runtimeImageUrls?.get(safeSrc) || '');
+          const blob = await response.clone().blob();
+          if (!blob || !blob.size) return safeSrc;
+          const nextUrl = window.URL.createObjectURL(blob);
+          if (existing && existing.startsWith('blob:') && existing !== nextUrl) {
+            try {
+              window.URL.revokeObjectURL(existing);
+            } catch (_error) {
+              // ignore
+            }
+          }
+          state.game.runtimeImageUrls.set(safeSrc, nextUrl);
+          state.game.runtimeImageSourcePromises.delete(safeSrc);
+          state.game.preloadImages.delete(safeSrc);
+          return nextUrl;
+        } catch (_error) {
+          return safeSrc;
+        }
+      }
+
+      async function ensureRuntimeImageSource(src) {
+        const safeSrc = safeText(src);
+        if (!safeSrc || !finalChallengeAudioCacheSupported()) return safeSrc;
+        const existing = safeText(state.game?.runtimeImageUrls?.get(safeSrc) || '');
+        if (existing) return existing;
+        const pending = state.game.runtimeImageSourcePromises.get(safeSrc);
+        if (pending) return pending;
+        const sourcePromise = (async () => {
+          try {
+            const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
+            const availableResponse = await cache.match(safeSrc);
+            if (availableResponse) {
+              return await cacheRuntimeImageBlob(safeSrc, availableResponse);
+            }
+            if (navigator.onLine !== false) {
+              const networkResponse = await fetch(safeSrc, { cache: 'force-cache' });
+              if (!networkResponse.ok) return safeSrc;
+              await cache.put(safeSrc, networkResponse.clone());
+              return await cacheRuntimeImageBlob(safeSrc, networkResponse);
+            }
+            return safeSrc;
+          } catch (_error) {
+            return safeSrc;
+          } finally {
+            state.game.runtimeImageSourcePromises.delete(safeSrc);
+          }
+        })();
+        state.game.runtimeImageSourcePromises.set(safeSrc, sourcePromise);
+        return sourcePromise;
+      }
+
       function setFinalChallengeDownloadsStatus(message = '', tone = '') {
         state.ui.finalChallengeDownloadsStatus = safeText(message);
         state.ui.finalChallengeDownloadsStatusTone = safeText(tone);
@@ -15876,12 +15996,58 @@ para liberar desafio</p>
         }
       }
 
-      function setFinalChallengeDownloadProgress(completedCount = 0, totalCount = 0) {
-        const total = Math.max(0, Number(totalCount) || 0);
-        const completed = Math.max(0, Math.min(total, Number(completedCount) || 0));
+      function normalizeFinalChallengeDownloadUrl(src) {
+        const safeSrc = safeText(src);
+        if (!safeSrc) return '';
+        try {
+          return new URL(safeSrc, document.baseURI).href;
+        } catch (_error) {
+          return safeSrc;
+        }
+      }
+
+      function finalChallengeDownloadCardId(card) {
+        const source = safeText(card?.source);
+        const sourceIndex = Math.max(0, Number.parseInt(card?.sourceIndex, 10) || 0);
+        return source ? `${source}#${sourceIndex}` : safeText(card?.id);
+      }
+
+      function arraysHaveSameOrderedValues(left = [], right = []) {
+        if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+        return left.every((value, index) => safeText(value) === safeText(right[index]));
+      }
+
+      function finalChallengeDownloadPercent() {
+        const total = Math.max(0, Number(state.ui.finalChallengeDownloadsTotalBytes) || Number(state.ui.finalChallengeDownloadsTotalCount) || 0);
+        const completed = Math.max(0, Math.min(total, Number(state.ui.finalChallengeDownloadsCompletedBytes) || Number(state.ui.finalChallengeDownloadsCompletedCount) || 0));
+        return total ? Math.max(0, Math.min(100, (completed / total) * 100)) : 0;
+      }
+
+      function syncFinalChallengeInlineDownloadButton() {
+        const mode = safeText(state.ui.finalChallengeDownloadLaunchMode);
+        const percent = finalChallengeDownloadPercent();
+        [els.finalChallengePracticeBtn, els.finalChallengeStartBtn].forEach((button) => {
+          if (!button) return;
+          button.classList.remove('is-downloading');
+          button.style.removeProperty('--download-progress');
+        });
+        const button = mode === 'voice' ? els.finalChallengeStartBtn : mode === 'practice' ? els.finalChallengePracticeBtn : null;
+        if (!button || !state.ui.finalChallengeDownloadsBusyLevel) return;
+        button.disabled = true;
+        button.classList.add('is-downloading');
+        button.style.setProperty('--download-progress', `${percent.toFixed(2)}%`);
+        button.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 4v9"></path><path d="m8.5 10.5 3.5 3.5 3.5-3.5"></path><path d="M5 18h14"></path></svg></span><span>Baixando ${Math.round(percent)}%</span>`;
+      }
+
+      function setFinalChallengeDownloadProgress(completedBytes = 0, totalBytes = 0) {
+        const total = Math.max(0, Number(totalBytes) || 0);
+        const completed = Math.max(0, Math.min(total || Number.MAX_SAFE_INTEGER, Number(completedBytes) || 0));
+        state.ui.finalChallengeDownloadsCompletedBytes = completed;
+        state.ui.finalChallengeDownloadsTotalBytes = total;
         state.ui.finalChallengeDownloadsCompletedCount = completed;
         state.ui.finalChallengeDownloadsTotalCount = total;
         const busyLevel = Math.max(0, Number(state.ui.finalChallengeDownloadsBusyLevel) || 0);
+        syncFinalChallengeInlineDownloadButton();
         if (!busyLevel) return;
         const progress = total ? (completed / total) * 100 : 0;
         const row = els.finalChallengeDownloadsList?.querySelector(`[data-download-level="${busyLevel}"]`);
@@ -15915,24 +16081,21 @@ para liberar desafio</p>
         if (!finalChallengeAudioCacheSupported() || !els.finalChallengeDownloadsList) return;
         const list = els.finalChallengeDownloadsList;
         try {
-          const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
-          const requests = await cache.keys();
-          const cachedUrls = new Set(requests.map((request) => safeText(request?.url)).filter(Boolean));
           Array.from(list.querySelectorAll('[data-download-level]')).forEach((row) => {
-            if (!row.isConnected || row.parentElement !== list) return;
-            const level = normalizeUserLevel(row.dataset.downloadLevel);
-            const urls = finalChallengeDownloadPayload(level).audioUrls;
-            if (!urls.length) return;
-            const cachedCount = urls.reduce((count, src) => {
-              let absoluteSrc = safeText(src);
-              try {
-                absoluteSrc = new URL(src, document.baseURI).href;
-              } catch (_error) {
-                // keep the original source
-              }
-              return count + (cachedUrls.has(absoluteSrc) ? 1 : 0);
-            }, 0);
-            setFinalChallengeDownloadRowState(row, (cachedCount / urls.length) * 100);
+            void (async () => {
+              if (!row.isConnected || row.parentElement !== list) return;
+              const level = normalizeUserLevel(row.dataset.downloadLevel);
+              const payload = finalChallengeDownloadPayload(level);
+              const downloadUrls = [...payload.audioUrls, ...payload.imageUrls];
+              if (!downloadUrls.length) return;
+              const record = readFinalChallengeDownloadRecord(level);
+              const cacheInfo = await finalChallengeCachedAudioBytes(downloadUrls).catch(() => ({ cachedBytes: 0, cachedCount: 0 }));
+              const totalBytes = Math.max(0, Number(record?.totalBytes) || 0);
+              const percent = totalBytes > 0
+                ? (cacheInfo.cachedBytes / totalBytes) * 100
+                : (cacheInfo.cachedCount / downloadUrls.length) * 100;
+              setFinalChallengeDownloadRowState(row, percent);
+            })();
           });
         } catch (_error) {
           // Keep the download modal usable when Cache Storage is unavailable.
@@ -15944,7 +16107,10 @@ para liberar desafio</p>
         const cards = Array.isArray(selection.cards) ? selection.cards : [];
         const languages = Array.from(new Set([currentNativeLanguage(), currentTargetLanguage()]));
         const urls = [];
+        const imageUrls = [];
         cards.forEach((card) => {
+          const imageUrl = safeText(card?.imageDisplayUrl || card?.imageUrl);
+          if (imageUrl) imageUrls.push(imageUrl);
           languages.forEach((language) => {
             const audioUrl = resolveCardAudioUrlForLanguage(card, language, {
               accent: language === 'english' ? currentLanguageBackgroundAccent() : ''
@@ -15956,8 +16122,52 @@ para liberar desafio</p>
         });
         return {
           cards,
-          audioUrls: Array.from(new Set(urls))
+          cardIds: cards.map(finalChallengeDownloadCardId).filter(Boolean),
+          audioUrls: Array.from(new Set(urls)).map(normalizeFinalChallengeDownloadUrl).filter(Boolean),
+          imageUrls: Array.from(new Set(imageUrls)).map(normalizeFinalChallengeDownloadUrl).filter(Boolean)
         };
+      }
+
+      function finalChallengeDownloadRecordMatches(level, payload = finalChallengeDownloadPayload(level)) {
+        const record = readFinalChallengeDownloadRecord(level);
+        if (!record?.completed || !payload?.audioUrls?.length || !payload?.imageUrls?.length) return false;
+        const recordUrls = Array.isArray(record.audioUrls)
+          ? record.audioUrls.map(normalizeFinalChallengeDownloadUrl).filter(Boolean)
+          : [];
+        const recordImageUrls = Array.isArray(record.imageUrls)
+          ? record.imageUrls.map(normalizeFinalChallengeDownloadUrl).filter(Boolean)
+          : [];
+        const recordCardIds = Array.isArray(record.cardIds)
+          ? record.cardIds.map((id) => safeText(id)).filter(Boolean)
+          : [];
+        return Number(record.audioCount) === payload.audioUrls.length
+          && Number(record.imageCount) === payload.imageUrls.length
+          && arraysHaveSameOrderedValues(recordUrls, payload.audioUrls)
+          && arraysHaveSameOrderedValues(recordImageUrls, payload.imageUrls)
+          && arraysHaveSameOrderedValues(recordCardIds, payload.cardIds);
+      }
+
+      async function finalChallengeCachedAudioBytes(audioUrls = []) {
+        if (!finalChallengeAudioCacheSupported()) return { cachedBytes: 0, cachedCount: 0 };
+        const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
+        let cachedBytes = 0;
+        let cachedCount = 0;
+        for (const src of audioUrls) {
+          const response = await cache.match(src);
+          if (!response) continue;
+          const blob = await response.clone().blob().catch(() => null);
+          if (!blob || !blob.size) continue;
+          cachedBytes += blob.size;
+          cachedCount += 1;
+        }
+        return { cachedBytes, cachedCount };
+      }
+
+      async function finalChallengeDownloadRecordIsReady(level, payload = finalChallengeDownloadPayload(level)) {
+        if (!finalChallengeDownloadRecordMatches(level, payload)) return false;
+        const downloadUrls = [...payload.audioUrls, ...payload.imageUrls];
+        const cacheInfo = await finalChallengeCachedAudioBytes(downloadUrls).catch(() => ({ cachedCount: 0 }));
+        return cacheInfo.cachedCount === downloadUrls.length;
       }
 
       function renderFinalChallengeDownloadsModal() {
@@ -15979,7 +16189,7 @@ para liberar desafio</p>
         for (let level = 1; level <= maxLevel; level += 1) {
           const payload = finalChallengeDownloadPayload(level);
           const downloadedRecord = readFinalChallengeDownloadRecord(level);
-          const downloaded = Boolean(downloadedRecord?.completed && Number(downloadedRecord?.audioCount) === payload.audioUrls.length && payload.audioUrls.length > 0);
+          const downloaded = finalChallengeDownloadRecordMatches(level, payload);
           const row = document.createElement('div');
           row.className = 'final-challenge-modal__downloads-row';
           row.dataset.downloadLevel = String(level);
@@ -15992,7 +16202,8 @@ para liberar desafio</p>
           title.textContent = `${nativeUiText('level')} ${level}`;
           const note = document.createElement('p');
           note.className = 'final-challenge-modal__downloads-note';
-          note.textContent = payload.audioUrls.length
+          const assetCount = payload.audioUrls.length + payload.imageUrls.length;
+          note.textContent = assetCount
             ? `${nativeUiText(downloaded ? 'download_complete' : 'download_available')} • ${downloaded ? 100 : 0}%`
             : `${nativeUiText('download_available')} • 0%`;
           meta.append(title, note);
@@ -16010,8 +16221,8 @@ para liberar desafio</p>
           });
           row.append(meta, button);
           if (busyLevel === level) {
-            const total = Math.max(0, Number(state.ui.finalChallengeDownloadsTotalCount) || payload.audioUrls.length);
-            const completed = Math.max(0, Math.min(total, Number(state.ui.finalChallengeDownloadsCompletedCount) || 0));
+            const total = Math.max(0, Number(state.ui.finalChallengeDownloadsTotalBytes) || Number(downloadedRecord?.totalBytes) || 0);
+            const completed = Math.max(0, Math.min(total || Number.MAX_SAFE_INTEGER, Number(state.ui.finalChallengeDownloadsCompletedBytes) || 0));
             const progress = total ? (completed / total) * 100 : 0;
             const progressTrack = document.createElement('div');
             progressTrack.className = 'final-challenge-modal__downloads-progress';
@@ -16046,54 +16257,182 @@ para liberar desafio</p>
         els.finalChallengeDownloadsModal.setAttribute('aria-hidden', 'true');
       }
 
-      async function downloadFinalChallengeLevelAudio(level) {
+      async function estimateFinalChallengeDownloadBytes(audioUrls = []) {
+        let totalBytes = 0;
+        const sizes = new Map();
+        if (!finalChallengeAudioCacheSupported()) return { totalBytes, sizes };
+        const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
+        for (const src of audioUrls) {
+          const cachedResponse = await cache.match(src).catch(() => null);
+          if (cachedResponse) {
+            const blob = await cachedResponse.clone().blob().catch(() => null);
+            if (blob?.size) {
+              sizes.set(src, blob.size);
+              totalBytes += blob.size;
+              continue;
+            }
+          }
+          try {
+            const headResponse = await fetch(src, { method: 'HEAD', cache: 'force-cache' });
+            const contentLength = Math.max(0, Number.parseInt(headResponse.headers.get('content-length') || '0', 10) || 0);
+            if (contentLength > 0) {
+              sizes.set(src, contentLength);
+              totalBytes += contentLength;
+            }
+          } catch (_error) {
+            // Some static hosts do not allow HEAD; the GET stream will still update bytes.
+          }
+        }
+        return { totalBytes, sizes };
+      }
+
+      async function fetchFinalChallengeAssetIntoCache(cache, src, kind = 'audio', onProgress) {
+        const cachedResponse = await cache.match(src).catch(() => null);
+        if (cachedResponse) {
+          const blob = await cachedResponse.clone().blob().catch(() => null);
+          if (blob?.size) {
+            if (kind === 'image') {
+              await cacheRuntimeImageBlob(src, cachedResponse);
+            } else {
+              await cacheRuntimeAudioBlob(src, cachedResponse);
+            }
+            onProgress?.(blob.size, blob.size);
+            return blob.size;
+          }
+        }
+        const response = await fetch(src, { cache: 'force-cache' });
+        if (!response.ok) {
+          throw new Error(`download-failed:${response.status}`);
+        }
+        const contentType = response.headers.get('content-type') || 'audio/mpeg';
+        const expectedBytes = Math.max(0, Number.parseInt(response.headers.get('content-length') || '0', 10) || 0);
+        if (!response.body?.getReader) {
+          const blob = await response.clone().blob();
+          await cache.put(src, response.clone());
+          if (kind === 'image') {
+            await cacheRuntimeImageBlob(src, response);
+          } else {
+            await cacheRuntimeAudioBlob(src, response);
+          }
+          onProgress?.(blob.size || expectedBytes, expectedBytes || blob.size || 0);
+          return blob.size || expectedBytes || 0;
+        }
+        const reader = response.body.getReader();
+        const chunks = [];
+        let receivedBytes = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (!value) continue;
+          chunks.push(value);
+          receivedBytes += value.byteLength || value.length || 0;
+          onProgress?.(receivedBytes, expectedBytes);
+        }
+        const blob = new Blob(chunks, { type: contentType });
+        const cached = new Response(blob, {
+          headers: {
+            'Content-Type': contentType,
+            'Content-Length': String(blob.size)
+          }
+        });
+        await cache.put(src, cached.clone());
+        if (kind === 'image') {
+          await cacheRuntimeImageBlob(src, cached);
+        } else {
+          await cacheRuntimeAudioBlob(src, cached);
+        }
+        onProgress?.(blob.size, expectedBytes || blob.size);
+        return blob.size;
+      }
+
+      async function downloadFinalChallengeLevelAudio(level, options = {}) {
         const normalizedLevel = normalizeUserLevel(level);
         const maxDownloadableLevel = currentDownloadableFinalChallengeLevel();
         if (normalizedLevel > maxDownloadableLevel) {
           setFinalChallengeDownloadsStatus(nativeUiText('download_unavailable'), 'error');
           renderFinalChallengeDownloadsModal();
-          return;
+          if (options.throwOnError) throw new Error(nativeUiText('download_unavailable'));
+          return false;
         }
         if (!finalChallengeAudioCacheSupported()) {
           setFinalChallengeDownloadsStatus(nativeUiText('download_unavailable'), 'error');
           renderFinalChallengeDownloadsModal();
-          return;
+          if (options.throwOnError) throw new Error(nativeUiText('download_unavailable'));
+          return false;
         }
         state.ui.finalChallengeDownloadsBusyLevel = normalizedLevel;
+        state.ui.finalChallengeDownloadLaunchMode = safeText(options.launchMode);
         setFinalChallengeDownloadProgress(0, 0);
+        setFinalChallengeFlowFeedback('Calculando tamanho real dos arquivos...', 1800);
         setFinalChallengeDownloadsStatus(nativeUiText('downloading_level', { level: normalizedLevel }), '');
         renderFinalChallengeDownloadsModal();
         try {
           await ensureFinalChallengeSelection(normalizedLevel);
           const payload = finalChallengeDownloadPayload(normalizedLevel);
-          if (!payload.audioUrls.length) {
+          const downloadAssets = [
+            ...payload.audioUrls.map((src) => ({ src, kind: 'audio' })),
+            ...payload.imageUrls.map((src) => ({ src, kind: 'image' }))
+          ];
+          if (!payload.audioUrls.length || !payload.imageUrls.length || !downloadAssets.length) {
             throw new Error('download-selection-empty');
           }
-          setFinalChallengeDownloadProgress(0, payload.audioUrls.length);
+          const downloadUrls = downloadAssets.map((asset) => asset.src);
+          const estimate = await estimateFinalChallengeDownloadBytes(downloadUrls);
+          let completedBytes = 0;
+          let totalBytes = Math.max(0, Number(estimate.totalBytes) || 0);
+          setFinalChallengeDownloadProgress(0, totalBytes);
           const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
-          for (let index = 0; index < payload.audioUrls.length; index += 1) {
-            const src = payload.audioUrls[index];
-            const response = await fetch(src, { cache: 'force-cache' });
-            if (!response.ok) {
-              throw new Error(`download-failed:${response.status}`);
+          for (let index = 0; index < downloadAssets.length; index += 1) {
+            const { src, kind } = downloadAssets[index];
+            const label = kind === 'image' ? 'imagem' : 'MP3';
+            setFinalChallengeFlowFeedback(`Baixando ${label} ${index + 1} de ${downloadAssets.length}...`, 0);
+            const plannedBytes = Math.max(0, Number(estimate.sizes.get(src)) || 0);
+            let adjustedExpectedBytes = plannedBytes;
+            let lastBytesForFile = 0;
+            const downloadedBytes = await fetchFinalChallengeAssetIntoCache(cache, src, kind, (currentFileBytes, expectedFileBytes) => {
+              const expected = Math.max(adjustedExpectedBytes, Math.max(0, Number(expectedFileBytes) || 0));
+              if (expected > adjustedExpectedBytes) {
+                totalBytes += expected - adjustedExpectedBytes;
+                adjustedExpectedBytes = expected;
+              }
+              lastBytesForFile = Math.max(lastBytesForFile, Math.max(0, Number(currentFileBytes) || 0));
+              const visibleTotal = Math.max(totalBytes, completedBytes + lastBytesForFile);
+              setFinalChallengeDownloadProgress(completedBytes + lastBytesForFile, visibleTotal);
+            });
+            if (!plannedBytes && downloadedBytes > 0) {
+              totalBytes += downloadedBytes;
             }
-            await cache.put(src, response.clone());
-            await cacheRuntimeAudioBlob(src, response);
-            setFinalChallengeDownloadProgress(index + 1, payload.audioUrls.length);
+            completedBytes += Math.max(downloadedBytes, plannedBytes);
+            setFinalChallengeDownloadProgress(completedBytes, Math.max(totalBytes, completedBytes));
           }
           writeFinalChallengeDownloadRecord(normalizedLevel, {
             completed: true,
             audioCount: payload.audioUrls.length,
+            imageCount: payload.imageUrls.length,
+            cardIds: payload.cardIds,
+            audioUrls: payload.audioUrls,
+            imageUrls: payload.imageUrls,
+            totalBytes: Math.max(0, Math.round(Math.max(totalBytes, completedBytes))),
             updatedAt: Date.now()
           });
+          setFinalChallengeDownloadProgress(Math.max(totalBytes, completedBytes), Math.max(totalBytes, completedBytes));
+          setFinalChallengeFlowFeedback('Download concluido. Rodada liberada.', 1200);
           setFinalChallengeDownloadsStatus(nativeUiText('download_done', { level: normalizedLevel }), 'success');
+          return true;
         } catch (error) {
+          setFinalChallengeFlowFeedback('Falha no download. A rodada nao vai iniciar sem cache.', 2400);
           setFinalChallengeDownloadsStatus(error?.message || nativeUiText('download_unavailable'), 'error');
+          if (options.throwOnError) throw error;
+          return false;
         } finally {
           state.ui.finalChallengeDownloadsBusyLevel = 0;
           state.ui.finalChallengeDownloadsCompletedCount = 0;
           state.ui.finalChallengeDownloadsTotalCount = 0;
+          state.ui.finalChallengeDownloadsCompletedBytes = 0;
+          state.ui.finalChallengeDownloadsTotalBytes = 0;
+          state.ui.finalChallengeDownloadLaunchMode = '';
           renderFinalChallengeDownloadsModal();
+          syncFinalChallengeIntroUi();
         }
       }
 
@@ -28244,9 +28583,14 @@ para liberar desafio</p>
         const src = safeText(card?.imageUrl);
         if (!src || state.game.preloadImages.has(src)) return;
         const image = new Image();
-        image.src = src;
+        image.src = runtimeImageSourceFor(src);
         image.decode?.().catch(() => {});
         state.game.preloadImages.set(src, image);
+        void ensureRuntimeImageSource(src).then((runtimeSrc) => {
+          if (!runtimeSrc || image.src === runtimeSrc) return;
+          image.src = runtimeSrc;
+          image.decode?.().catch(() => {});
+        }).catch(() => {});
       }
 
       function preloadCardAudio(card) {
@@ -31814,6 +32158,22 @@ para liberar desafio</p>
         state.ui.finalChallengeCurrentStreak = 0;
       }
 
+      function setFinalChallengeFlowFeedback(message = '', ttlMs = 0) {
+        state.ui.finalChallengeFlowFeedback = safeText(message);
+        if (finalChallengeFlowFeedbackTimer) {
+          window.clearTimeout(finalChallengeFlowFeedbackTimer);
+          finalChallengeFlowFeedbackTimer = 0;
+        }
+        if (ttlMs > 0 && state.ui.finalChallengeFlowFeedback) {
+          finalChallengeFlowFeedbackTimer = window.setTimeout(() => {
+            state.ui.finalChallengeFlowFeedback = '';
+            finalChallengeFlowFeedbackTimer = 0;
+            syncFinalChallengePracticeMeter();
+          }, Math.max(250, Number(ttlMs) || 0));
+        }
+        syncFinalChallengePracticeMeter();
+      }
+
       function syncFinalChallengePracticeMeter() {
         if (!els.finalChallengePracticeMeter) return;
         const isPracticeMode = state.ui.finalChallengeMode === 'practice';
@@ -31836,9 +32196,11 @@ para liberar desafio</p>
           els.finalChallengePracticeMeterValue.textContent = String(showStreak ? currentStreak : builtSentencesTotal);
         }
         if (els.finalChallengePracticeMeterLabel) {
-          els.finalChallengePracticeMeterLabel.textContent = showStreak
+          const feedback = safeText(state.ui.finalChallengeFlowFeedback);
+          els.finalChallengePracticeMeterLabel.classList.toggle('is-feedback', Boolean(feedback));
+          els.finalChallengePracticeMeterLabel.textContent = feedback || (showStreak
             ? 'Sequencia de acertos'
-            : 'Frases montadas';
+            : 'Frases montadas');
         }
       }
 
@@ -31998,6 +32360,11 @@ para liberar desafio</p>
         state.ui.finalChallengeEarnedLetters = 0;
         state.ui.finalChallengeResultPersisted = false;
         state.ui.finalChallengeSessionStartedAt = 0;
+        state.ui.finalChallengeFlowFeedback = '';
+        if (finalChallengeFlowFeedbackTimer) {
+          window.clearTimeout(finalChallengeFlowFeedbackTimer);
+          finalChallengeFlowFeedbackTimer = 0;
+        }
         clearFinalChallengeSessionState();
       }
 
@@ -32279,6 +32646,7 @@ para liberar desafio</p>
         if (!src) return false;
         stopFinalChallengePromptAudio();
         const playbackToken = Math.max(0, Number(state.ui.finalChallengeAudioToken) || 0);
+        setFinalChallengeFlowFeedback('Lendo cache local do MP3...', 1200);
         const immediateRuntimeSrc = await resolveCachedRuntimeAudioSource(src, 140);
         if (playbackToken !== Math.max(0, Number(state.ui.finalChallengeAudioToken) || 0)) return false;
         const runtimeSrc = safeText(immediateRuntimeSrc) || runtimeAudioSourceFor(src);
@@ -32295,6 +32663,7 @@ para liberar desafio</p>
             // ignore
           }
         }
+        setFinalChallengeFlowFeedback('Disparando audio da carta...', 1200);
         void prepareRuntimeAudioSource(src, options.waitForEnd ? 900 : 650);
         audio.playbackRate = Math.max(0.1, Math.min(2.5, Number(options.rate || 1) * resolveSelectedGameSpeed()));
         audio.defaultPlaybackRate = audio.playbackRate;
@@ -32333,6 +32702,7 @@ para liberar desafio</p>
         try {
           await audio.play();
         } catch (_error) {
+          setFinalChallengeFlowFeedback('O navegador segurou o play do MP3.', 2200);
           if (state.ui.finalChallengePromptAudio === audio) {
             state.ui.finalChallengePromptAudio = null;
           }
@@ -32351,6 +32721,7 @@ para liberar desafio</p>
         }
         audio.addEventListener('ended', finalizePlayback, { once: true });
         audio.addEventListener('error', () => {
+          setFinalChallengeFlowFeedback('Erro do elemento de audio ao tocar MP3.', 2200);
           if (state.ui.finalChallengePromptAudio === audio) {
             state.ui.finalChallengePromptAudio = null;
           }
@@ -32358,6 +32729,7 @@ para liberar desafio</p>
           resetColorProgress();
         }, { once: true });
         if (options.waitForEnd) {
+          setFinalChallengeFlowFeedback('Aguardando MP3 terminar antes da proxima carta...', 0);
           await new Promise((resolve) => {
             if (audio.ended) {
               resolve();
@@ -32387,6 +32759,7 @@ para liberar desafio</p>
             audio.addEventListener('ended', () => finish('ended'), { once: true });
             audio.addEventListener('error', () => finish('error'), { once: true });
           });
+          setFinalChallengeFlowFeedback('', 0);
         }
         return true;
       }
@@ -32394,21 +32767,34 @@ para liberar desafio</p>
       function syncFinalChallengeIntroUi() {
         const selection = resolveStoredFinalChallengeSelection();
         const hasDeck = selection.cards.length >= FINAL_CHALLENGE_CARD_COUNT;
-        const challengeUnlocked = hasDeck && selection.practiceComplete;
         const selectedLevel = currentFinalChallengeLevel();
+        const payload = finalChallengeDownloadPayload(selectedLevel);
+        const hasDownloadRecord = finalChallengeDownloadRecordMatches(selectedLevel, payload);
+        const challengeUnlocked = hasDeck && selection.practiceComplete;
         const unlockedLevel = currentUnlockedFinalChallengeLevel();
         const record = currentFinalChallengeRecord(selectedLevel);
+        const busyLevel = Math.max(0, Number(state.ui.finalChallengeDownloadsBusyLevel) || 0);
+        if (!busyLevel) {
+          syncFinalChallengeInlineDownloadButton();
+        }
         if (els.finalChallengeStartBtn) {
-          els.finalChallengeStartBtn.disabled = !challengeUnlocked;
+          els.finalChallengeStartBtn.disabled = Boolean(busyLevel) || !challengeUnlocked;
           els.finalChallengeStartBtn.classList.toggle('final-challenge-modal__cta--challenge-complete', Boolean(record.completed));
-          if (record.completed) {
+          if (busyLevel && state.ui.finalChallengeDownloadLaunchMode === 'voice') {
+            syncFinalChallengeInlineDownloadButton();
+          } else if (record.completed) {
             els.finalChallengeStartBtn.innerHTML = buildFinalChallengeCompleteButtonMarkup(record);
           } else {
             els.finalChallengeStartBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m12 3 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 16.53l-5.3 2.78 1.01-5.9-4.29-4.18 5.93-.86L12 3Z"></path></svg></span>${escapeHtml(nativeUiText('final_challenge'))}`;
           }
         }
         if (els.finalChallengePracticeBtn) {
-          els.finalChallengePracticeBtn.disabled = !hasDeck;
+          els.finalChallengePracticeBtn.disabled = Boolean(busyLevel) || !state.user?.id;
+          if (busyLevel && state.ui.finalChallengeDownloadLaunchMode === 'practice') {
+            syncFinalChallengeInlineDownloadButton();
+          } else {
+            els.finalChallengePracticeBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>${escapeHtml(nativeUiText(hasDownloadRecord ? 'start_training' : 'download_audio'))}`;
+          }
         }
         if (els.finalChallengeLevelPrevBtn) {
           els.finalChallengeLevelPrevBtn.disabled = selectedLevel <= 1;
@@ -32422,7 +32808,9 @@ para liberar desafio</p>
           els.finalChallengeIntroLevel.textContent = `Nivel ${selectedLevel}`;
         }
         if (els.finalChallengeIntroFeedback) {
-          els.finalChallengeIntroFeedback.textContent = hasDeck
+          els.finalChallengeIntroFeedback.textContent = !hasDownloadRecord
+            ? `${nativeUiText('download_to_draw')}\n${nativeUiText('level')} ${selectedLevel} • ${currentTargetLanguageLabel()}`
+            : hasDeck
             ? (challengeUnlocked ? nativeUiText('training_complete_unlock') : nativeUiText('complete_training_unlock'))
             : `${nativeUiText('download_to_draw')}\n${nativeUiText('level')} ${selectedLevel} • ${currentTargetLanguageLabel()}`;
         }
@@ -32448,6 +32836,36 @@ para liberar desafio</p>
           acceptedAnswer: answer,
           sourceText: answer
         };
+      }
+
+      async function ensureFinalChallengeDownloadedForPlay(level = currentFinalChallengeLevel(), launchMode = 'practice') {
+        const challengeLevel = normalizeUserLevel(level);
+        setFinalChallengeFlowFeedback('Verificando pacote baixado das 25 cartas...', 1800);
+        let selection = resolveStoredFinalChallengeSelection(challengeLevel);
+        if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
+          setFinalChallengeFlowFeedback('Sorteando as 25 cartas deste nivel no servidor...', 2200);
+          await ensureFinalChallengeSelection(challengeLevel);
+          selection = resolveStoredFinalChallengeSelection(challengeLevel);
+        }
+        const payload = finalChallengeDownloadPayload(challengeLevel);
+        setFinalChallengeFlowFeedback('Conferindo se os MP3s existem no cache local...', 2200);
+        const ready = await finalChallengeDownloadRecordIsReady(challengeLevel, payload);
+        if (!ready) {
+          setFinalChallengeFlowFeedback('Baixando imagens e audios para evitar travas...', 0);
+          setFinalChallengeDownloadsStatus(nativeUiText('downloading_level', { level: challengeLevel }), '');
+          await downloadFinalChallengeLevelAudio(challengeLevel, {
+            launchMode,
+            throwOnError: true
+          });
+          selection = resolveStoredFinalChallengeSelection(challengeLevel);
+        }
+        const verifiedPayload = finalChallengeDownloadPayload(challengeLevel);
+        const verified = await finalChallengeDownloadRecordIsReady(challengeLevel, verifiedPayload);
+        if (!verified || selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
+          throw new Error(nativeUiText('download_unavailable'));
+        }
+        setFinalChallengeFlowFeedback('', 0);
+        return selection;
       }
 
       function renderFinalChallengePracticeBlocks(card) {
@@ -32485,6 +32903,7 @@ para liberar desafio</p>
           activeButton?.classList.add('is-error');
           playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
           setFinalChallengeStatus('');
+          setFinalChallengeFlowFeedback('Erro detectado. Tocando frase correta nativa...', 0);
           await playFinalChallengeAudioForLanguage(card, currentNativeLanguage(), { rate: 0.92, waitForEnd: true });
           await wait(220);
           if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
@@ -32514,6 +32933,7 @@ para liberar desafio</p>
           const successPlaybackLanguage = isFinalChallengePracticePhaseTwo()
             ? currentTargetLanguage()
             : currentNativeLanguage();
+          setFinalChallengeFlowFeedback('Acerto registrado. Tocando feedback da frase...', 0);
           await playFinalChallengeAudioForLanguage(card, successPlaybackLanguage, { rate: 0.92, waitForEnd: true });
           await wait(160);
           state.ui.finalChallengeBusy = false;
@@ -32628,7 +33048,15 @@ para liberar desafio</p>
           els.finalChallengeProgressCopy.hidden = true;
         }
         if (els.finalChallengeCardImage) {
-          els.finalChallengeCardImage.src = safeText(card?.imageUrl) || '/Avatar/profile-neon-blue.svg';
+          const imageSrc = safeText(card?.imageDisplayUrl || card?.imageUrl);
+          const fallbackImage = '/Avatar/profile-neon-blue.svg';
+          els.finalChallengeCardImage.src = imageSrc ? runtimeImageSourceFor(imageSrc) : fallbackImage;
+          if (imageSrc) {
+            void ensureRuntimeImageSource(imageSrc).then((runtimeSrc) => {
+              if (currentFinalChallengeCard() !== card) return;
+              els.finalChallengeCardImage.src = safeText(runtimeSrc) || imageSrc;
+            }).catch(() => {});
+          }
         }
         if (els.finalChallengeNativeText) {
           const correctionText = state.ui.finalChallengeCorrectionTargetVisible
@@ -33039,6 +33467,7 @@ para liberar desafio</p>
       }
 
       async function advanceFinalChallengeCard() {
+        setFinalChallengeFlowFeedback('Preparando proxima carta e seus audios...', 1400);
         state.ui.finalChallengeIndex += 1;
         state.ui.finalChallengeCorrectionTargetVisible = false;
         setFinalChallengePhaseOverlay(false);
@@ -33145,14 +33574,22 @@ para liberar desafio</p>
 
       async function startFinalChallengeRun() {
         const challengeLevel = currentFinalChallengeLevel();
-        const selection = resolveStoredFinalChallengeSelection(challengeLevel);
-        const cards = selection.cards;
         stopFinalChallengeIntroStatsRotation();
+        let selection = resolveStoredFinalChallengeSelection(challengeLevel);
         if (!selection.practiceComplete) {
           syncFinalChallengeIntroUi();
           setFinalChallengeScreen('intro');
           return;
         }
+        try {
+          selection = await ensureFinalChallengeDownloadedForPlay(challengeLevel, 'voice');
+        } catch (error) {
+          setFinalChallengeDownloadsStatus(error?.message || nativeUiText('download_unavailable'), 'error');
+          syncFinalChallengeIntroUi();
+          setFinalChallengeScreen('intro');
+          return;
+        }
+        const cards = selection.cards;
         if (cards.length < FINAL_CHALLENGE_CARD_COUNT) {
           if (els.finalChallengeResultTitle) {
             els.finalChallengeResultTitle.textContent = nativeUiText('challenge_unavailable');
@@ -33191,10 +33628,17 @@ para liberar desafio</p>
 
       async function startFinalChallengePracticeRun() {
         const challengeLevel = currentFinalChallengeLevel();
-        const selection = resolveStoredFinalChallengeSelection(challengeLevel);
-        const cards = selection.cards;
+        let selection = resolveStoredFinalChallengeSelection(challengeLevel);
         stopFinalChallengeIntroStatsRotation();
-        if (cards.length < FINAL_CHALLENGE_CARD_COUNT) {
+        try {
+          selection = await ensureFinalChallengeDownloadedForPlay(challengeLevel, 'practice');
+        } catch (error) {
+          setFinalChallengeDownloadsStatus(error?.message || nativeUiText('download_unavailable'), 'error');
+          syncFinalChallengeIntroUi();
+          return;
+        }
+        const verifiedCards = selection.cards;
+        if (verifiedCards.length < FINAL_CHALLENGE_CARD_COUNT) {
           syncFinalChallengeIntroUi();
           return;
         }
@@ -33203,7 +33647,7 @@ para liberar desafio</p>
         state.ui.finalChallengeMode = 'practice';
         state.ui.finalChallengeRunId = createFinalChallengeRunId();
         state.ui.finalChallengePracticePhase = 1;
-        state.ui.finalChallengeCards = cards;
+        state.ui.finalChallengeCards = verifiedCards;
         state.ui.finalChallengeIndex = 0;
         setFinalChallengePhaseOverlay(false);
         setFinalChallengeExitConfirmOpen(false);
