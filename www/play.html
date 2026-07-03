@@ -11728,6 +11728,11 @@
       text-transform: uppercase;
     }
 
+    .final-challenge-modal__phase-overlay-btn {
+      margin-top: 20px;
+      min-width: min(220px, 100%);
+    }
+
     @keyframes finalChallengeRingSpin {
       from {
         transform: rotate(0deg);
@@ -12198,6 +12203,7 @@ para liberar desafio</p>
             <div class="final-challenge-modal__phase-overlay-card">
               <p class="final-challenge-modal__phase-overlay-kicker" id="finalChallengePhaseOverlayKicker">Fase 2</p>
               <p class="final-challenge-modal__phase-overlay-copy" id="finalChallengePhaseOverlayCopy">Agora toque nos blocos em portugues.</p>
+              <button class="final-challenge-modal__cta final-challenge-modal__cta--primary final-challenge-modal__phase-overlay-btn" id="finalChallengePhaseOverlayContinueBtn" type="button">Continuar</button>
             </div>
           </div>
         </section>
@@ -14167,6 +14173,7 @@ para liberar desafio</p>
       let watchBackdropFadeTimer = 0;
       let welcomeLanguageBackdropFadeTimer = 0;
       let finalChallengePromptCleanup = null;
+      let finalChallengePhaseOverlayResolver = null;
 
       loadGameOptionsFromStorage();
 
@@ -14200,6 +14207,7 @@ para liberar desafio</p>
         finalChallengePhaseOverlay: document.getElementById('finalChallengePhaseOverlay'),
         finalChallengePhaseOverlayKicker: document.getElementById('finalChallengePhaseOverlayKicker'),
         finalChallengePhaseOverlayCopy: document.getElementById('finalChallengePhaseOverlayCopy'),
+        finalChallengePhaseOverlayContinueBtn: document.getElementById('finalChallengePhaseOverlayContinueBtn'),
         finalChallengeNativeText: document.getElementById('finalChallengeNativeText'),
         finalChallengeBlocks: document.getElementById('finalChallengeBlocks'),
         finalChallengeHint: document.getElementById('finalChallengeHint'),
@@ -30425,6 +30433,9 @@ para liberar desafio</p>
         if (els.finalChallengeReviewCloseBtn) {
           els.finalChallengeReviewCloseBtn.textContent = nativeUiText('close');
         }
+        if (els.finalChallengePhaseOverlayContinueBtn) {
+          els.finalChallengePhaseOverlayContinueBtn.textContent = nativeUiText('continue');
+        }
         const reviewTitle = els.finalChallengeReviewModal?.querySelector('.final-challenge-modal__review-title');
         if (reviewTitle) {
           reviewTitle.textContent = nativeUiText('review');
@@ -30451,11 +30462,35 @@ para liberar desafio</p>
         if (els.finalChallengePhaseOverlay) {
           els.finalChallengePhaseOverlay.hidden = !visible;
         }
+        if (els.finalChallengePhaseOverlayContinueBtn) {
+          els.finalChallengePhaseOverlayContinueBtn.disabled = !visible;
+        }
         if (els.finalChallengePhaseOverlayKicker) {
           els.finalChallengePhaseOverlayKicker.textContent = nativeUiText('phase_2');
         }
         if (els.finalChallengePhaseOverlayCopy) {
           els.finalChallengePhaseOverlayCopy.textContent = safeText(copy) || nativeUiText('phase_2_copy', { language: currentNativeLanguageLabel() });
+        }
+      }
+
+      function waitForFinalChallengePhaseOverlayContinue() {
+        if (!els.finalChallengePhaseOverlayContinueBtn) {
+          return Promise.resolve();
+        }
+        return new Promise((resolve) => {
+          finalChallengePhaseOverlayResolver = () => {
+            finalChallengePhaseOverlayResolver = null;
+            resolve();
+          };
+          els.finalChallengePhaseOverlayContinueBtn.focus({ preventScroll: true });
+        });
+      }
+
+      function resolveFinalChallengePhaseOverlayContinue() {
+        if (typeof finalChallengePhaseOverlayResolver === 'function') {
+          const resolve = finalChallengePhaseOverlayResolver;
+          finalChallengePhaseOverlayResolver = null;
+          resolve();
         }
       }
 
@@ -30660,7 +30695,10 @@ para liberar desafio</p>
               button.classList.add('is-correct');
             }
           });
-          await playFinalChallengeAudioForLanguage(card, currentNativeLanguage(), { rate: 0.92, waitForEnd: true });
+          const successPlaybackLanguage = isFinalChallengePracticePhaseTwo()
+            ? currentTargetLanguage()
+            : currentNativeLanguage();
+          await playFinalChallengeAudioForLanguage(card, successPlaybackLanguage, { rate: 0.92, waitForEnd: true });
           await wait(160);
           state.ui.finalChallengeBusy = false;
           await advanceFinalChallengeCard();
@@ -30856,6 +30894,7 @@ para liberar desafio</p>
       function closeFinalChallengeModal() {
         cleanupGameRecognition();
         stopFinalChallengePromptAudio();
+        resolveFinalChallengePhaseOverlayContinue();
         setFinalChallengePhaseOverlay(false);
         state.ui.finalChallengeListening = false;
         state.ui.finalChallengeBusy = false;
@@ -30871,6 +30910,7 @@ para liberar desafio</p>
       function cancelFinalChallengeRunToIntro() {
         cleanupGameRecognition();
         stopFinalChallengePromptAudio();
+        resolveFinalChallengePhaseOverlayContinue();
         setFinalChallengePhaseOverlay(false);
         state.ui.finalChallengeListening = false;
         state.ui.finalChallengeBusy = false;
@@ -30991,11 +31031,12 @@ para liberar desafio</p>
           setFinalChallengeStatus(nativeUiText('phase_2_banner'));
           syncFinalChallengeRunUi();
           setFinalChallengePhaseOverlay(true, nativeUiText('phase_2_copy', { language: currentNativeLanguageLabel() }));
-          await wait(1500);
+          await waitForFinalChallengePhaseOverlayContinue();
           setFinalChallengePhaseOverlay(false);
           setFinalChallengeStatus('');
           const firstPhaseTwoCard = currentFinalChallengeCard();
           if (firstPhaseTwoCard) {
+            syncFinalChallengeRunUi();
             state.ui.finalChallengePromptCardId = safeText(firstPhaseTwoCard?.id);
             void playFinalChallengeAudioForLanguage(firstPhaseTwoCard, currentTargetLanguage(), { rate: 0.9, audioProgressVisual: true });
           }
@@ -32936,6 +32977,9 @@ para liberar desafio</p>
         });
         els.finalChallengePracticeBtn?.addEventListener('click', () => {
           void startFinalChallengePracticeRun();
+        });
+        els.finalChallengePhaseOverlayContinueBtn?.addEventListener('click', () => {
+          resolveFinalChallengePhaseOverlayContinue();
         });
         els.finalChallengeSpeakBtn?.addEventListener('click', () => {
           void handleFinalChallengeAttempt();
