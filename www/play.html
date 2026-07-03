@@ -663,6 +663,21 @@
         0 0 22px rgba(255, 190, 38, 0.42);
     }
 
+    .welcome-gate__energy-mini.is-heard {
+      color: #55d8ff;
+      text-shadow: 0 0 10px rgba(85, 216, 255, 0.72), 0 0 22px rgba(46, 183, 255, 0.42);
+    }
+
+    .welcome-gate__energy-mini.is-built {
+      color: #67f0ad;
+      text-shadow: 0 0 10px rgba(103, 240, 173, 0.72), 0 0 22px rgba(55, 222, 147, 0.42);
+    }
+
+    .welcome-gate__energy-mini-icon.is-heard,
+    .welcome-gate__energy-mini-icon.is-built {
+      filter: drop-shadow(0 0 11px currentColor);
+    }
+
     .welcome-gate__energy-mini-icon svg {
       width: 100%;
       height: 100%;
@@ -11608,8 +11623,8 @@
     }
 
     .final-challenge-modal__heart {
-      width: 28px;
-      height: 28px;
+      width: clamp(36px, 10vw, 52px);
+      height: clamp(36px, 10vw, 52px);
       color: #ff4d5f;
       opacity: 1;
       transition: opacity 160ms ease, transform 160ms ease;
@@ -11620,10 +11635,149 @@
       transform: scale(0.94);
     }
 
-    .final-challenge-modal__heart svg {
+    .final-challenge-modal__heart svg,
+    .final-challenge-modal__heart img {
       width: 100%;
       height: 100%;
+      display: block;
+      object-fit: contain;
+      filter: drop-shadow(0 5px 10px rgba(180, 0, 24, 0.3));
+    }
+
+    #finalChallengeResultScreen {
+      height: 100dvh;
+      min-height: 100dvh;
+      padding: max(12px, env(safe-area-inset-top)) 18px max(16px, env(safe-area-inset-bottom));
+      grid-template-rows: 10% 10% 50% 30%;
+      overflow: hidden;
+    }
+
+    #finalChallengeResultScreen.is-active {
+      display: grid;
+    }
+
+    .final-challenge-modal__result-heading {
+      position: relative;
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+
+    .final-challenge-modal__result-heading .final-challenge-modal__back {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .final-challenge-modal__result-title {
+      margin: 0;
+      font: 900 clamp(25px, 7vw, 42px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .final-challenge-modal__result-hearts {
+      display: flex;
+      align-items: center;
+      justify-content: space-evenly;
+      width: min(100%, 460px);
+      margin: 0 auto;
+    }
+
+    .final-challenge-modal__result-heart {
+      width: clamp(38px, 11vw, 56px);
+      height: clamp(38px, 11vw, 56px);
+      opacity: 1;
+      transform: scale(1);
+      transition: opacity 240ms ease, transform 240ms ease, filter 240ms ease;
+    }
+
+    .final-challenge-modal__result-heart.is-dimmed {
+      opacity: 0.3;
+      transform: scale(0.92);
+      filter: grayscale(0.35);
+    }
+
+    .final-challenge-modal__result-heart img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .final-challenge-modal__result-stats {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+      gap: clamp(8px, 1.5vh, 14px);
+      width: min(100%, 520px);
+      margin: 0 auto;
+      padding: 10px 0;
+    }
+
+    .final-challenge-modal__result-stats[hidden] {
+      display: none;
+    }
+
+    #finalChallengeResultBody:not([hidden]) {
+      display: grid;
+      place-items: center;
+      width: min(100%, 520px);
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .final-challenge-modal__result-stat {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: linear-gradient(100deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035));
+    }
+
+    .final-challenge-modal__result-stat-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      color: #65dcff;
+    }
+
+    .final-challenge-modal__result-stat:nth-child(2) .final-challenge-modal__result-stat-icon { color: #66efad; }
+    .final-challenge-modal__result-stat:nth-child(3) .final-challenge-modal__result-stat-icon { color: #ffd34d; }
+
+    .final-challenge-modal__result-stat-icon svg,
+    .final-challenge-modal__result-stat-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
       fill: currentColor;
+      stroke: currentColor;
+      stroke-width: 1.6;
+    }
+
+    .final-challenge-modal__result-stat-label {
+      font: 800 clamp(14px, 3.8vw, 19px)/1.15 "Exo 2", "Open Sans", Arial, sans-serif;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .final-challenge-modal__result-stat-value {
+      font: 900 clamp(28px, 8vw, 46px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
+      color: #fff;
+    }
+
+    .final-challenge-modal__result-actions {
+      min-height: 0;
+      align-content: center;
+      gap: 10px;
+    }
+
+    .final-challenge-modal__result-actions .final-challenge-modal__cta {
+      min-height: clamp(48px, 7vh, 60px);
     }
 
     .final-challenge-modal__progress {
@@ -12503,18 +12657,34 @@ para liberar desafio</p>
         </div>
       </div>
       <div class="final-challenge-modal__screen" id="finalChallengeResultScreen">
-        <div class="final-challenge-modal__topbar">
+        <div class="final-challenge-modal__result-heading">
           <button class="final-challenge-modal__back" id="finalChallengeResultBackBtn" type="button" aria-label="Fechar resultado do desafio">
             <svg viewBox="0 0 24 24" focusable="false"><path d="M10.7 5.3a1 1 0 0 1 0 1.4L6.41 11H20a1 1 0 1 1 0 2H6.4l4.3 4.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
           </button>
+          <h2 class="final-challenge-modal__result-title" id="finalChallengeResultTitle">Nível desbloqueado</h2>
         </div>
-        <div>
-          <p class="final-challenge-modal__eyebrow">Resultado</p>
-          <h2 class="final-challenge-modal__level" id="finalChallengeResultTitle">Voce passou de fase</h2>
-          <p class="final-challenge-modal__intro-copy" id="finalChallengeResultBody">Voce acertou 20 de 25 cartas.</p>
+        <div class="final-challenge-modal__result-hearts" id="finalChallengeResultHearts" aria-label="Cinco coracoes"></div>
+        <div class="final-challenge-modal__result-stats" id="finalChallengeResultStats">
+          <div class="final-challenge-modal__result-stat">
+            <span class="final-challenge-modal__result-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M11 5a6 6 0 0 0-6 6v2"></path><path d="M11 19c2.5 0 4-1.5 4-4v-3a4 4 0 0 0-8 0"></path><path d="M16 6c2 1.4 3 3.4 3 6"></path></svg></span>
+            <span class="final-challenge-modal__result-stat-label">Ouviu frases</span>
+            <strong class="final-challenge-modal__result-stat-value" id="finalChallengeResultHeardValue">0</strong>
+          </div>
+          <div class="final-challenge-modal__result-stat">
+            <span class="final-challenge-modal__result-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="8" height="6" rx="2"></rect><rect x="13" y="5" width="8" height="6" rx="2"></rect><rect x="7" y="14" width="10" height="6" rx="2"></rect></svg></span>
+            <span class="final-challenge-modal__result-stat-label">Montou frases</span>
+            <strong class="final-challenge-modal__result-stat-value" id="finalChallengeResultBuiltValue">0</strong>
+          </div>
+          <div class="final-challenge-modal__result-stat">
+            <span class="final-challenge-modal__result-stat-icon" aria-hidden="true"><img src="/SVG/codex-icons/post-results/coins.svg" alt=""></span>
+            <span class="final-challenge-modal__result-stat-label">Ganhou FluentCoins</span>
+            <strong class="final-challenge-modal__result-stat-value" id="finalChallengeResultCoinsValue">0</strong>
+          </div>
         </div>
-        <div class="final-challenge-modal__intro-actions">
+        <p class="final-challenge-modal__intro-copy" id="finalChallengeResultBody" hidden></p>
+        <div class="final-challenge-modal__intro-actions final-challenge-modal__result-actions">
           <button class="final-challenge-modal__cta final-challenge-modal__cta--primary" id="finalChallengeRetryBtn" type="button">Tentar de novo</button>
+          <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost" id="finalChallengeVoiceBtn" type="button" hidden><span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0"></path><path d="M12 18v3"></path></svg></span>Fazer desafio de voz</button>
           <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost" id="finalChallengeReviewBtn" type="button">
             <span style="display:inline-flex;align-items:center;gap:10px;justify-content:center;">
               <svg viewBox="0 0 24 24" focusable="false" style="width:18px;height:18px;fill:currentColor;"><path d="M8 5.5v13l10-6.5-10-6.5Z"/></svg>
@@ -13352,6 +13522,7 @@ para liberar desafio</p>
           complete_training_unlock: 'Complete o treino\npara liberar desafio',
           training_complete_unlock: 'Treino completo\nDesafio liberado',
           challenge_unavailable: 'Desafio indisponivel agora',
+          download_to_draw: 'Baixe o nivel para sortear 25 cartas',
           final_challenge_complete: 'Desafio completo',
           note_label: 'Nota',
           time_label: 'Tempo',
@@ -13409,6 +13580,7 @@ para liberar desafio</p>
           complete_training_unlock: 'Complete the training\nto unlock the challenge',
           training_complete_unlock: 'Training complete\nChallenge unlocked',
           challenge_unavailable: 'Challenge unavailable right now',
+          download_to_draw: 'Download the level to draw 25 cards',
           final_challenge_complete: 'Challenge complete',
           note_label: 'Score',
           time_label: 'Time',
@@ -13466,6 +13638,7 @@ para liberar desafio</p>
           complete_training_unlock: 'Completa el entrenamiento\npara liberar el desafio',
           training_complete_unlock: 'Entrenamiento completo\nDesafio liberado',
           challenge_unavailable: 'Desafio no disponible ahora',
+          download_to_draw: 'Descarga el nivel para sortear 25 cartas',
           final_challenge_complete: 'Desafio completo',
           note_label: 'Nota',
           time_label: 'Tiempo',
@@ -13523,6 +13696,7 @@ para liberar desafio</p>
           complete_training_unlock: 'Complete l entrainement\npour debloquer le defi',
           training_complete_unlock: 'Entrainement termine\nDefi debloque',
           challenge_unavailable: 'Defi indisponible maintenant',
+          download_to_draw: 'Telechargez le niveau pour tirer 25 cartes',
           final_challenge_complete: 'Defi termine',
           note_label: 'Note',
           time_label: 'Temps',
@@ -13580,6 +13754,7 @@ para liberar desafio</p>
           complete_training_unlock: 'Schliesse das Training ab,\num die Herausforderung freizuschalten',
           training_complete_unlock: 'Training abgeschlossen\nHerausforderung freigeschaltet',
           challenge_unavailable: 'Herausforderung gerade nicht verfugbar',
+          download_to_draw: 'Lade das Level herunter, um 25 Karten zu ziehen',
           final_challenge_complete: 'Herausforderung abgeschlossen',
           note_label: 'Note',
           time_label: 'Zeit',
@@ -13637,6 +13812,7 @@ para liberar desafio</p>
           complete_training_unlock: 'Wancheng xunlian\njiesuo tiaozhan',
           training_complete_unlock: 'Xunlian wancheng\nTiaozhan yijiesuo',
           challenge_unavailable: 'Dangqian wufa kaishi tiaozhan',
+          download_to_draw: 'Xiazai dengji yi chouqu 25 zhang kapian',
           final_challenge_complete: 'Tiaozhan yi wancheng',
           note_label: 'Fenshu',
           time_label: 'Shijian',
@@ -14150,6 +14326,8 @@ para liberar desafio</p>
           booksEnergyXpDelta: 0,
           coinsTotal: 0,
           coinsDelta: 0,
+          heardWordsTotal: 0,
+          builtSentencesTotal: 0,
           xpDelta: 0
         },
         timeOffsetMs: 0,
@@ -14530,6 +14708,14 @@ para liberar desafio</p>
           finalChallengeReviewIndex: 0,
           finalChallengeReviewToken: 0,
           finalChallengeResultPassed: false,
+          finalChallengeRunId: '',
+          finalChallengeHeardKeys: new Set(),
+          finalChallengeHeardSentences: 0,
+          finalChallengeHeardWords: 0,
+          finalChallengeBuiltSentences: 0,
+          finalChallengeEarnedLetters: 0,
+          finalChallengeResultPersisted: false,
+          finalChallengeResultHeartTimers: [],
           finalChallengeIntroStatsStep: 0,
           finalChallengeIntroStatsTimer: 0,
           finalChallengeSessionStartedAt: 0,
@@ -14609,7 +14795,13 @@ para liberar desafio</p>
         finalChallengeExitConfirmNo: document.getElementById('finalChallengeExitConfirmNo'),
         finalChallengeResultTitle: document.getElementById('finalChallengeResultTitle'),
         finalChallengeResultBody: document.getElementById('finalChallengeResultBody'),
+        finalChallengeResultHearts: document.getElementById('finalChallengeResultHearts'),
+        finalChallengeResultStats: document.getElementById('finalChallengeResultStats'),
+        finalChallengeResultHeardValue: document.getElementById('finalChallengeResultHeardValue'),
+        finalChallengeResultBuiltValue: document.getElementById('finalChallengeResultBuiltValue'),
+        finalChallengeResultCoinsValue: document.getElementById('finalChallengeResultCoinsValue'),
         finalChallengeRetryBtn: document.getElementById('finalChallengeRetryBtn'),
+        finalChallengeVoiceBtn: document.getElementById('finalChallengeVoiceBtn'),
         finalChallengeReviewBtn: document.getElementById('finalChallengeReviewBtn'),
         finalChallengeMenuBtn: document.getElementById('finalChallengeMenuBtn'),
         finalChallengeResultBackBtn: document.getElementById('finalChallengeResultBackBtn'),
@@ -15157,6 +15349,7 @@ para liberar desafio</p>
           }
           const records = payload?.records && typeof payload.records === 'object' ? payload.records : {};
           setStoredFinalChallengeState(normalizedLanguage, payload.unlockedLevel || payload.level, payload.bestPercent, records);
+          syncFinalChallengeSelectionsFromServer(payload?.selections || {}, normalizedLanguage);
           return payload;
         } catch (error) {
           console.warn('Falha ao carregar nivel do desafio final:', error);
@@ -15566,12 +15759,12 @@ para liberar desafio</p>
           note.className = 'final-challenge-modal__downloads-note';
           note.textContent = payload.audioUrls.length
             ? `${nativeUiText(downloaded ? 'download_complete' : 'download_available')} • ${downloaded ? 100 : 0}%`
-            : nativeUiText('download_unavailable');
+            : `${nativeUiText('download_available')} • 0%`;
           meta.append(title, note);
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'final-challenge-modal__downloads-btn';
-          button.disabled = !payload.audioUrls.length || busyLevel > 0;
+          button.disabled = !state.user?.id || busyLevel > 0;
           if (downloaded) button.classList.add('is-downloaded');
           button.setAttribute('aria-label', `${downloaded ? nativeUiText('download_update') : nativeUiText('download_audio')} ${nativeUiText('level')} ${level}`);
           button.innerHTML = downloaded
@@ -15620,17 +15813,22 @@ para liberar desafio</p>
 
       async function downloadFinalChallengeLevelAudio(level) {
         const normalizedLevel = normalizeUserLevel(level);
-        const payload = finalChallengeDownloadPayload(normalizedLevel);
-        if (!payload.audioUrls.length || !finalChallengeAudioCacheSupported()) {
+        if (!finalChallengeAudioCacheSupported()) {
           setFinalChallengeDownloadsStatus(nativeUiText('download_unavailable'), 'error');
           renderFinalChallengeDownloadsModal();
           return;
         }
         state.ui.finalChallengeDownloadsBusyLevel = normalizedLevel;
-        setFinalChallengeDownloadProgress(0, payload.audioUrls.length);
+        setFinalChallengeDownloadProgress(0, 0);
         setFinalChallengeDownloadsStatus(nativeUiText('downloading_level', { level: normalizedLevel }), '');
         renderFinalChallengeDownloadsModal();
         try {
+          await ensureFinalChallengeSelection(normalizedLevel);
+          const payload = finalChallengeDownloadPayload(normalizedLevel);
+          if (!payload.audioUrls.length) {
+            throw new Error('download-selection-empty');
+          }
+          setFinalChallengeDownloadProgress(0, payload.audioUrls.length);
           const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
           for (let index = 0; index < payload.audioUrls.length; index += 1) {
             const src = payload.audioUrls[index];
@@ -15648,8 +15846,8 @@ para liberar desafio</p>
             updatedAt: Date.now()
           });
           setFinalChallengeDownloadsStatus(nativeUiText('download_done', { level: normalizedLevel }), 'success');
-        } catch (_error) {
-          setFinalChallengeDownloadsStatus(nativeUiText('download_unavailable'), 'error');
+        } catch (error) {
+          setFinalChallengeDownloadsStatus(error?.message || nativeUiText('download_unavailable'), 'error');
         } finally {
           state.ui.finalChallengeDownloadsBusyLevel = 0;
           state.ui.finalChallengeDownloadsCompletedCount = 0;
@@ -15693,30 +15891,87 @@ para liberar desafio</p>
         writeFinalChallengeSelectionStore(store);
       }
 
+      function syncFinalChallengeSelectionsFromServer(selections, language = currentFinalChallengeLanguage()) {
+        if (!selections || typeof selections !== 'object') return;
+        Object.entries(selections).forEach(([rawLevel, rawCards]) => {
+          const level = normalizeUserLevel(rawLevel);
+          const cards = Array.isArray(rawCards)
+            ? rawCards.map((card) => ({
+                cardId: safeText(card?.cardId || card?.card_id),
+                source: safeText(card?.source),
+                sourceIndex: Math.max(0, Number.parseInt(card?.sourceIndex ?? card?.source_index, 10) || 0),
+                sourceLevel: normalizeUserLevel(card?.sourceLevel ?? card?.source_level ?? 1)
+              })).filter((card) => card.source && Number.isInteger(card.sourceIndex))
+            : [];
+          if (!cards.length) return;
+          const existing = readFinalChallengeSelectionRecord(language, level) || {};
+          writeFinalChallengeSelectionRecord(language, level, {
+            cards,
+            serverAllocated: true,
+            practiceComplete: Boolean(existing.practiceComplete) && cards.length === FINAL_CHALLENGE_CARD_COUNT
+          });
+        });
+      }
+
+      async function ensureFinalChallengeSelection(level = currentFinalChallengeLevel()) {
+        const challengeLevel = normalizeUserLevel(level);
+        if (!state.user?.id) throw new Error('Entre para baixar este nivel.');
+        const response = await fetch(buildApiUrl('/api/flashcards/final-challenge-selection'), {
+          method: 'POST',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          credentials: 'include',
+          body: JSON.stringify({
+            targetLanguage: currentTargetLanguage(),
+            nativeLanguage: currentNativeLanguage(),
+            challengeLevel
+          })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success) {
+          throw new Error(payload?.message || 'Nao foi possivel sortear as cartas deste nivel.');
+        }
+        syncFinalChallengeSelectionsFromServer(payload.selections || {
+          [challengeLevel]: payload.cards || []
+        }, currentFinalChallengeLanguage());
+        const selection = resolveStoredFinalChallengeSelection(challengeLevel);
+        syncFinalChallengeIntroUi();
+        return selection;
+      }
+
       function resolveStoredFinalChallengeSelection(level = currentFinalChallengeLevel(), { forceRebuild = false } = {}) {
         const challengeLevel = normalizeUserLevel(level);
         const language = currentFinalChallengeLanguage();
         const key = finalChallengeSelectionRecordKey(language, challengeLevel);
-        const sourceCards = buildFinalChallengeSourceCards(challengeLevel)
+        const sourceCards = (Array.isArray(state.allCards) ? state.allCards : [])
           .filter((card) => isCardEligibleForFinalChallenge(card));
         const sourceById = new Map(sourceCards.map((card) => [safeText(card?.id), card]));
-        const stored = forceRebuild ? null : readFinalChallengeSelectionRecord(language, challengeLevel);
+        const sourceByReference = new Map(sourceCards.map((card) => [
+          `${safeText(card?.source)}#${Math.max(0, Number.parseInt(card?.sourceIndex, 10) || 0)}`,
+          card
+        ]));
+        const rawStored = forceRebuild ? null : readFinalChallengeSelectionRecord(language, challengeLevel);
+        const stored = rawStored?.serverAllocated === true ? rawStored : null;
         const storedIds = Array.isArray(stored?.ids)
           ? stored.ids.map((id) => safeText(id)).filter(Boolean)
           : [];
-        let cards = storedIds
-          .map((id) => sourceById.get(id) || null)
-          .filter(Boolean);
+        const storedCards = Array.isArray(stored?.cards) ? stored.cards : [];
+        let cards = storedCards.length
+          ? storedCards.map((card) => sourceByReference.get(`${safeText(card?.source)}#${Math.max(0, Number.parseInt(card?.sourceIndex, 10) || 0)}`) || null).filter(Boolean)
+          : storedIds.map((id) => sourceById.get(id) || null).filter(Boolean);
         const invalidStoredSelection = cards.length !== FINAL_CHALLENGE_CARD_COUNT;
-        if (!cards.length || invalidStoredSelection) {
-          cards = buildOrderedDeckSelection(sourceCards, FINAL_CHALLENGE_CARD_COUNT);
-        }
         const practiceComplete = !invalidStoredSelection
           && Boolean(stored?.practiceComplete)
           && storedIds.length === FINAL_CHALLENGE_CARD_COUNT;
         if (cards.length === FINAL_CHALLENGE_CARD_COUNT) {
           writeFinalChallengeSelectionRecord(language, challengeLevel, {
+            cards: storedCards.length ? storedCards : cards.map((card) => ({
+              cardId: `${safeText(card?.source)}#${Math.max(0, Number.parseInt(card?.sourceIndex, 10) || 0)}`,
+              source: safeText(card?.source),
+              sourceIndex: Math.max(0, Number.parseInt(card?.sourceIndex, 10) || 0),
+              sourceLevel: finalChallengeDeckLevel(card)
+            })),
             ids: cards.map((card) => safeText(card?.id)).filter(Boolean),
+            serverAllocated: true,
             practiceComplete
           });
         }
@@ -15733,7 +15988,9 @@ para liberar desafio</p>
         const language = currentFinalChallengeLanguage();
         const record = readFinalChallengeSelectionRecord(language, level) || {};
         writeFinalChallengeSelectionRecord(language, level, {
+          cards: Array.isArray(record.cards) ? record.cards : [],
           ids: Array.isArray(record.ids) ? record.ids : [],
+          serverAllocated: record.serverAllocated === true,
           practiceComplete: Boolean(completed)
         });
         state.ui.finalChallengePracticeCompleted = Boolean(completed);
@@ -16703,6 +16960,8 @@ para liberar desafio</p>
         const booksEnergyXpDelta = Math.max(0, Math.round(Number(raw?.booksEnergyXpDelta ?? raw?.books_energy_xp_delta) || 0));
         const coinsTotal = Math.max(0, Math.round(Number(raw?.coinsTotal ?? raw?.coins_total) || 0));
         const coinsDelta = Math.max(0, Math.round(Number(raw?.coinsDelta ?? raw?.coins_delta) || 0));
+        const heardWordsTotal = Math.max(0, Math.round(Number(raw?.heardWordsTotal ?? raw?.heard_words_total) || 0));
+        const builtSentencesTotal = Math.max(0, Math.round(Number(raw?.builtSentencesTotal ?? raw?.built_sentences_total) || 0));
         const xpDelta = Math.max(0, Math.round(Number(raw?.xpDelta ?? raw?.xp_delta) || 0));
         return {
           playTimeMs: Math.max(0, Math.round(Number(raw?.playTimeMs) || 0)),
@@ -16719,6 +16978,8 @@ para liberar desafio</p>
           booksEnergyXpDelta,
           coinsTotal,
           coinsDelta,
+          heardWordsTotal,
+          builtSentencesTotal,
           xpDelta
         };
       }
@@ -18938,8 +19199,12 @@ para liberar desafio</p>
         if (!els.welcomeEnergyMiniValue || !els.welcomeEnergyMiniIcon) return;
         const energyLabel = safeText(state.ui.welcomeEnergyMiniEnergyLabel || '--') || '--';
         const coinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
-        const showCoins = Boolean(state.user?.id) && (state.ui.welcomeEnergyMiniModeIndex % 2 === 1);
-        if (showCoins) {
+        const heardWordsTotal = Math.max(0, Math.round(Number(state.stats?.heardWordsTotal) || 0));
+        const builtSentencesTotal = Math.max(0, Math.round(Number(state.stats?.builtSentencesTotal) || 0));
+        const mode = state.user?.id ? (state.ui.welcomeEnergyMiniModeIndex % 4) : 0;
+        els.welcomeEnergyMini?.classList.remove('is-coins', 'is-heard', 'is-built');
+        els.welcomeEnergyMiniIcon.classList.remove('is-coins', 'is-heard', 'is-built');
+        if (mode === 1) {
           els.welcomeEnergyMini?.setAttribute('aria-label', 'Moedas atuais');
           els.welcomeEnergyMini?.classList.add('is-coins');
           els.welcomeEnergyMiniIcon.classList.add('is-coins');
@@ -18947,9 +19212,23 @@ para liberar desafio</p>
           els.welcomeEnergyMiniValue.textContent = String(coinsTotal);
           return;
         }
+        if (mode === 2) {
+          els.welcomeEnergyMini?.setAttribute('aria-label', 'Palavras ouvidas');
+          els.welcomeEnergyMini?.classList.add('is-heard');
+          els.welcomeEnergyMiniIcon.classList.add('is-heard');
+          els.welcomeEnergyMiniIcon.innerHTML = '<svg viewBox="0 0 24 24" focusable="false"><path d="M11 5a6 6 0 0 0-6 6v2"></path><path d="M11 19c2.5 0 4-1.5 4-4v-3a4 4 0 0 0-8 0"></path><path d="M15.5 6.5c2 1.2 3 3 3 5.5"></path><path d="M19 4c2 2 3 4.5 3 7.5"></path></svg>';
+          els.welcomeEnergyMiniValue.textContent = String(heardWordsTotal);
+          return;
+        }
+        if (mode === 3) {
+          els.welcomeEnergyMini?.setAttribute('aria-label', 'Frases montadas');
+          els.welcomeEnergyMini?.classList.add('is-built');
+          els.welcomeEnergyMiniIcon.classList.add('is-built');
+          els.welcomeEnergyMiniIcon.innerHTML = '<svg viewBox="0 0 24 24" focusable="false"><rect x="3" y="5" width="8" height="6" rx="2"></rect><rect x="13" y="5" width="8" height="6" rx="2"></rect><rect x="7" y="14" width="10" height="6" rx="2"></rect><path d="m9.5 17 1.6 1.6 3.4-3.6"></path></svg>';
+          els.welcomeEnergyMiniValue.textContent = String(builtSentencesTotal);
+          return;
+        }
         els.welcomeEnergyMini?.setAttribute('aria-label', 'Energias atuais');
-        els.welcomeEnergyMini?.classList.remove('is-coins');
-        els.welcomeEnergyMiniIcon.classList.remove('is-coins');
         els.welcomeEnergyMiniIcon.innerHTML = '<svg viewBox="0 0 24 24" focusable="false"><path d="M13 2 5 14h5l-1 8 8-12h-5l1-8Z"/></svg>';
         els.welcomeEnergyMiniValue.textContent = energyLabel;
       }
@@ -18960,7 +19239,7 @@ para liberar desafio</p>
         renderWelcomeEnergyMiniTicker();
         if (!state.user?.id) return;
         state.ui.welcomeEnergyMiniSwapTimer = window.setInterval(() => {
-          state.ui.welcomeEnergyMiniModeIndex = (state.ui.welcomeEnergyMiniModeIndex + 1) % 2;
+          state.ui.welcomeEnergyMiniModeIndex = (state.ui.welcomeEnergyMiniModeIndex + 1) % 4;
           renderWelcomeEnergyMiniTicker();
         }, 3000);
       }
@@ -31220,15 +31499,6 @@ para liberar desafio</p>
         return cardDeckLevel(card);
       }
 
-      function buildFinalChallengeSourceCards(level = currentFinalChallengeLevel()) {
-        const targetLevel = normalizeUserLevel(Number(level) > 0 ? level : currentFinalChallengeLevel());
-        return uniqueCardsById((Array.isArray(state.allCards) ? state.allCards : []).filter((card) => {
-          if (!card) return false;
-          if (isCardHiddenForUser(card?.id)) return false;
-          return finalChallengeDeckLevel(card) === targetLevel;
-        }));
-      }
-
       function finalChallengeExpectedAnswersForCard(card) {
         return uniqueAnswerList(
           resolveSourceLanguageAnswers(
@@ -31249,11 +31519,88 @@ para liberar desafio</p>
         );
       }
 
-      function buildFinalChallengeDeck(level = currentFinalChallengeLevel()) {
-        return resolveStoredFinalChallengeSelection(level).cards;
+      function createFinalChallengeRunId() {
+        if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+        return `training-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+      }
+
+      function finalChallengeWordCount(text) {
+        return safeText(text).split(/\s+/).map((word) => word.trim()).filter(Boolean).length;
+      }
+
+      function finalChallengeLetterCount(text) {
+        return (safeText(text).match(/\p{L}/gu) || []).length;
+      }
+
+      function recordFinalChallengeHeardCard(card) {
+        if (state.ui.finalChallengeMode !== 'practice' || !card) return;
+        const key = `${currentFinalChallengePracticePhase()}:${Number(state.ui.finalChallengeIndex) || 0}:${safeText(card?.id)}`;
+        if (state.ui.finalChallengeHeardKeys.has(key)) return;
+        state.ui.finalChallengeHeardKeys.add(key);
+        const targetText = resolveSourceLanguageText(card, currentTargetLanguage());
+        state.ui.finalChallengeHeardSentences += 1;
+        state.ui.finalChallengeHeardWords += finalChallengeWordCount(targetText);
+      }
+
+      function recordFinalChallengeBuiltCard(card) {
+        if (state.ui.finalChallengeMode !== 'practice' || !card) return;
+        const answerLanguage = isFinalChallengePracticePhaseTwo() ? currentNativeLanguage() : currentTargetLanguage();
+        const answerText = resolveSourceLanguageText(card, answerLanguage);
+        state.ui.finalChallengeBuiltSentences += 1;
+        state.ui.finalChallengeEarnedLetters += finalChallengeLetterCount(answerText);
+      }
+
+      function finalChallengeEarnedCoins() {
+        return Math.max(0, Math.floor((Number(state.ui.finalChallengeEarnedLetters) || 0) / 10));
+      }
+
+      function clearFinalChallengeResultHeartTimers() {
+        (Array.isArray(state.ui.finalChallengeResultHeartTimers) ? state.ui.finalChallengeResultHeartTimers : []).forEach((timer) => window.clearTimeout(timer));
+        state.ui.finalChallengeResultHeartTimers = [];
+      }
+
+      function animateFinalChallengeResultHearts() {
+        clearFinalChallengeResultHeartTimers();
+        if (!els.finalChallengeResultHearts) return;
+        els.finalChallengeResultHearts.innerHTML = Array.from({ length: 5 }, () => (
+          '<span class="final-challenge-modal__result-heart"><img src="/SVG/codex-icons/heart-game.svg" alt=""></span>'
+        )).join('');
+        Array.from(els.finalChallengeResultHearts.children).forEach((heart, index) => {
+          const timer = window.setTimeout(() => heart.classList.add('is-dimmed'), index * 200);
+          state.ui.finalChallengeResultHeartTimers.push(timer);
+        });
+      }
+
+      async function persistFinalChallengeTrainingResult() {
+        if (!state.user?.id || state.ui.finalChallengeMode !== 'practice' || state.ui.finalChallengeResultPersisted) return null;
+        state.ui.finalChallengeResultPersisted = true;
+        const response = await fetch(buildApiUrl('/api/flashcards/training-result'), {
+          method: 'POST',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          credentials: 'include',
+          body: JSON.stringify({
+            runId: state.ui.finalChallengeRunId,
+            targetLanguage: currentTargetLanguage(),
+            challengeLevel: currentFinalChallengeLevel(),
+            heardWords: state.ui.finalChallengeHeardWords,
+            builtSentences: state.ui.finalChallengeBuiltSentences,
+            coinsAwarded: finalChallengeEarnedCoins()
+          })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success) {
+          state.ui.finalChallengeResultPersisted = false;
+          throw new Error(payload?.message || 'Falha ao salvar resultado do treino.');
+        }
+        state.stats.heardWordsTotal = Math.max(0, Number(payload.heardWordsTotal) || 0);
+        state.stats.builtSentencesTotal = Math.max(0, Number(payload.builtSentencesTotal) || 0);
+        state.stats.coinsTotal = Math.max(0, Number(payload.coinsTotal) || 0);
+        renderWelcomeEnergyMiniTicker();
+        return payload;
       }
 
       function resetFinalChallengeRunState() {
+        clearFinalChallengeResultHeartTimers();
         state.ui.finalChallengeCards = [];
         state.ui.finalChallengeMode = 'voice';
         state.ui.finalChallengePracticePhase = 1;
@@ -31272,6 +31619,13 @@ para liberar desafio</p>
         state.ui.finalChallengePromptCardId = '';
         state.ui.finalChallengeAvatarColorProgress = 0;
         state.ui.finalChallengeResultPassed = false;
+        state.ui.finalChallengeRunId = '';
+        state.ui.finalChallengeHeardKeys = new Set();
+        state.ui.finalChallengeHeardSentences = 0;
+        state.ui.finalChallengeHeardWords = 0;
+        state.ui.finalChallengeBuiltSentences = 0;
+        state.ui.finalChallengeEarnedLetters = 0;
+        state.ui.finalChallengeResultPersisted = false;
         state.ui.finalChallengeSessionStartedAt = 0;
         clearFinalChallengeSessionState();
       }
@@ -31327,7 +31681,7 @@ para liberar desafio</p>
         const totalHearts = finalChallengeMaxLives();
         const lostHearts = Math.max(0, Math.min(totalHearts, Number(state.ui.finalChallengeLivesLost) || 0));
         els.finalChallengeHearts.innerHTML = Array.from({ length: totalHearts }, (_unused, index) => (
-          `<span class="final-challenge-modal__heart${index < lostHearts ? ' is-lost' : ''}" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 21.35 10.55 20C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09A6 6 0 0 1 16.5 3C19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35Z"></path></svg></span>`
+          `<span class="final-challenge-modal__heart${index < lostHearts ? ' is-lost' : ''}" aria-hidden="true"><img src="/SVG/codex-icons/heart-game.svg" alt=""></span>`
         )).join('');
       }
 
@@ -31581,8 +31935,25 @@ para liberar desafio</p>
         }, { once: true });
         if (options.waitForEnd) {
           await new Promise((resolve) => {
-            audio.addEventListener('ended', resolve, { once: true });
-            audio.addEventListener('error', resolve, { once: true });
+            if (audio.ended) {
+              resolve();
+              return;
+            }
+            let finished = false;
+            const finish = () => {
+              if (finished) return;
+              finished = true;
+              audio.removeEventListener('ended', finish);
+              audio.removeEventListener('error', finish);
+              window.clearTimeout(fallbackTimer);
+              resolve();
+            };
+            const expectedMs = Number.isFinite(audio.duration) && audio.duration > 0
+              ? ((audio.duration - audio.currentTime) / Math.max(0.1, audio.playbackRate || 1)) * 1000 + 280
+              : 2600;
+            const fallbackTimer = window.setTimeout(finish, Math.max(900, Math.min(3500, expectedMs)));
+            audio.addEventListener('ended', finish, { once: true });
+            audio.addEventListener('error', finish, { once: true });
           });
         }
         return true;
@@ -31621,7 +31992,7 @@ para liberar desafio</p>
         if (els.finalChallengeIntroFeedback) {
           els.finalChallengeIntroFeedback.textContent = hasDeck
             ? (challengeUnlocked ? nativeUiText('training_complete_unlock') : nativeUiText('complete_training_unlock'))
-            : `${nativeUiText('challenge_unavailable')}\n${nativeUiText('level')} ${selectedLevel} • ${currentTargetLanguageLabel()}`;
+            : `${nativeUiText('download_to_draw')}\n${nativeUiText('level')} ${selectedLevel} • ${currentTargetLanguageLabel()}`;
         }
         if (record.completed) {
           if (!state.ui.finalChallengeIntroStatsTimer) {
@@ -31697,6 +32068,7 @@ para liberar desafio</p>
           state.ui.finalChallengeBusy = true;
           state.ui.finalChallengeAttempts += 1;
           state.ui.finalChallengeScores.push(100);
+          recordFinalChallengeBuiltCard(card);
           setFinalChallengeStatus('');
           playSuccessAudio();
           buttons.forEach((button) => {
@@ -32062,6 +32434,7 @@ para liberar desafio</p>
           const firstPhaseTwoCard = currentFinalChallengeCard();
           if (firstPhaseTwoCard) {
             syncFinalChallengeRunUi();
+            recordFinalChallengeHeardCard(firstPhaseTwoCard);
             state.ui.finalChallengePromptCardId = safeText(firstPhaseTwoCard?.id);
             void playFinalChallengeAudioForLanguage(firstPhaseTwoCard, currentTargetLanguage(), { rate: 0.9, audioProgressVisual: true });
           }
@@ -32124,29 +32497,47 @@ para liberar desafio</p>
           state.ui.finalChallengeSessionStartedAt = 0;
         }
         syncFinalChallengeLevelCopy();
+        const practiceCompleted = isPracticeMode
+          && !state.ui.finalChallengeForcedGameOver
+          && currentFinalChallengePracticePhase() === 2
+          && state.ui.finalChallengeIndex >= state.ui.finalChallengeCards.length;
         if (els.finalChallengeResultTitle) {
           els.finalChallengeResultTitle.textContent = isPracticeMode
-            ? (state.ui.finalChallengeForcedGameOver ? 'Treino interrompido' : 'Treino concluido')
+            ? (practiceCompleted ? 'Nível desbloqueado' : 'Tente novamente')
             : (passed
             ? 'Voce passou de fase'
             : (state.ui.finalChallengeForcedGameOver ? 'Game over' : 'Voce nao passou de fase'));
         }
         if (els.finalChallengeResultBody) {
-          els.finalChallengeResultBody.textContent = isPracticeMode
-            ? (state.ui.finalChallengeForcedGameOver
-              ? `Voce fez ${correctCount} de ${FINAL_CHALLENGE_CARD_COUNT} pontos na Fase ${currentFinalChallengePracticePhase()}. Complete as duas fases para liberar o desafio.`
-              : `Voce fechou a Fase 2 com ${correctCount} de ${FINAL_CHALLENGE_CARD_COUNT} pontos. O desafio de voz foi liberado para este conjunto local.`)
-            : (passed
+          els.finalChallengeResultBody.hidden = isPracticeMode;
+          els.finalChallengeResultBody.textContent = passed
             ? `Nota final ${formatFinalChallengeNote(notePercent)}. Voce acertou ${correctCount} de ${FINAL_CHALLENGE_CARD_COUNT} cartas e o proximo nivel ja foi liberado.`
-            : `Nota final ${formatFinalChallengeNote(notePercent)}. Voce acertou ${correctCount} de ${FINAL_CHALLENGE_CARD_COUNT} cartas. Meta para subir: ${passTarget} corretas.`);
+            : `Nota final ${formatFinalChallengeNote(notePercent)}. Voce acertou ${correctCount} de ${FINAL_CHALLENGE_CARD_COUNT} cartas. Meta para subir: ${passTarget} corretas.`;
+        }
+        if (els.finalChallengeResultStats) {
+          els.finalChallengeResultStats.hidden = !isPracticeMode;
+        }
+        if (els.finalChallengeResultHeardValue) {
+          els.finalChallengeResultHeardValue.textContent = String(Math.max(0, Number(state.ui.finalChallengeHeardSentences) || 0));
+        }
+        if (els.finalChallengeResultBuiltValue) {
+          els.finalChallengeResultBuiltValue.textContent = String(Math.max(0, Number(state.ui.finalChallengeBuiltSentences) || 0));
+        }
+        if (els.finalChallengeResultCoinsValue) {
+          els.finalChallengeResultCoinsValue.textContent = String(finalChallengeEarnedCoins());
         }
         if (els.finalChallengeReviewBtn) {
           els.finalChallengeReviewBtn.hidden = isPracticeMode || !Array.isArray(state.ui.finalChallengeWrongCards) || !state.ui.finalChallengeWrongCards.length;
         }
+        if (els.finalChallengeVoiceBtn) {
+          els.finalChallengeVoiceBtn.hidden = !practiceCompleted;
+        }
         if (els.finalChallengeRetryBtn) {
           if (isPracticeMode) {
-            els.finalChallengeRetryBtn.textContent = state.ui.finalChallengeForcedGameOver ? 'Praticar de novo' : 'Comecar desafio';
-            state.ui.finalChallengeResultAction = state.ui.finalChallengeForcedGameOver ? 'retry-practice' : 'start-voice';
+            els.finalChallengeRetryBtn.textContent = practiceCompleted
+              ? `Avançar para Nível ${normalizeUserLevel(currentLevel + 1)}`
+              : 'Tentar de novo';
+            state.ui.finalChallengeResultAction = practiceCompleted ? 'next-level-intro' : 'retry-practice';
           } else if (passed) {
             els.finalChallengeRetryBtn.textContent = `Jogar Nivel ${Math.max(currentLevel, currentUnlockedFinalChallengeLevel())}`;
             state.ui.finalChallengeResultAction = 'next-level-intro';
@@ -32156,6 +32547,12 @@ para liberar desafio</p>
           }
         }
         setFinalChallengeScreen('result');
+        animateFinalChallengeResultHearts();
+        if (isPracticeMode) {
+          void persistFinalChallengeTrainingResult().catch((error) => {
+            console.warn('Falha ao creditar resultado do treino:', error);
+          });
+        }
       }
 
       async function advanceFinalChallengeCard() {
@@ -32170,6 +32567,7 @@ para liberar desafio</p>
         syncFinalChallengeRunUi();
         const nextCard = currentFinalChallengeCard();
         if (state.ui.finalChallengeMode === 'practice' && nextCard) {
+          recordFinalChallengeHeardCard(nextCard);
           state.ui.finalChallengePromptCardId = safeText(nextCard?.id);
           void playFinalChallengeAudioForLanguage(nextCard, currentTargetLanguage(), { rate: 0.9, audioProgressVisual: true });
         }
@@ -32277,8 +32675,11 @@ para liberar desafio</p>
             els.finalChallengeResultTitle.textContent = nativeUiText('challenge_unavailable');
           }
           if (els.finalChallengeResultBody) {
+            els.finalChallengeResultBody.hidden = false;
             els.finalChallengeResultBody.textContent = `${nativeUiText('level')} ${challengeLevel} • ${currentTargetLanguageLabel()}`;
           }
+          if (els.finalChallengeResultStats) els.finalChallengeResultStats.hidden = true;
+          if (els.finalChallengeVoiceBtn) els.finalChallengeVoiceBtn.hidden = true;
           if (els.finalChallengeReviewBtn) {
             els.finalChallengeReviewBtn.hidden = true;
           }
@@ -32316,6 +32717,7 @@ para liberar desafio</p>
         closeFinalChallengeReviewModal();
         resetFinalChallengeRunState();
         state.ui.finalChallengeMode = 'practice';
+        state.ui.finalChallengeRunId = createFinalChallengeRunId();
         state.ui.finalChallengePracticePhase = 1;
         state.ui.finalChallengeCards = cards;
         state.ui.finalChallengeIndex = 0;
@@ -32326,6 +32728,7 @@ para liberar desafio</p>
         syncFinalChallengeRunUi();
         const firstCard = currentFinalChallengeCard();
         if (firstCard) {
+          recordFinalChallengeHeardCard(firstCard);
           state.ui.finalChallengePromptCardId = safeText(firstCard?.id);
           void playFinalChallengeAudioForLanguage(firstCard, currentTargetLanguage(), { rate: 0.9, audioProgressVisual: true });
         }
@@ -34068,6 +34471,9 @@ para liberar desafio</p>
             setFinalChallengeScreen('intro');
             return;
           }
+          void startFinalChallengeRun();
+        });
+        els.finalChallengeVoiceBtn?.addEventListener('click', () => {
           void startFinalChallengeRun();
         });
         els.finalChallengeLevelPrevBtn?.addEventListener('click', () => {

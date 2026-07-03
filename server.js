@@ -2576,6 +2576,47 @@ const ensureFlashcardUserStateTables = async () => {
         ON public.user_flashcard_final_challenge_records (user_id, target_language, updated_at DESC)
       `);
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_training_totals (
+          user_id integer PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+          heard_words_total bigint NOT NULL DEFAULT 0,
+          built_sentences_total bigint NOT NULL DEFAULT 0,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_training_results (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          run_id text NOT NULL,
+          target_language text NOT NULL,
+          challenge_level integer NOT NULL DEFAULT 1,
+          heard_words integer NOT NULL DEFAULT 0,
+          built_sentences integer NOT NULL DEFAULT 0,
+          coins_awarded integer NOT NULL DEFAULT 0,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, run_id)
+        )
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_challenge_cards (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          target_language text NOT NULL,
+          challenge_level integer NOT NULL,
+          slot_index integer NOT NULL,
+          card_id text NOT NULL,
+          source text NOT NULL,
+          source_index integer NOT NULL,
+          source_level integer NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, target_language, challenge_level, slot_index),
+          UNIQUE (user_id, target_language, card_id)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_challenge_cards_lookup_idx
+        ON public.user_flashcard_challenge_cards (user_id, target_language, challenge_level, slot_index)
+      `);
+      await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_language_cards (
           user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
           card_id text NOT NULL,
@@ -6426,7 +6467,7 @@ const readFlashcardStateForUser = async (userId, options = {}) => {
     ? normalizeFlashcardTargetLanguage(explicitTargetLanguage)
     : normalizeFlashcardTargetLanguage(flashcardStatsRow.game_option_target_language);
 
-  const [progressResult, accurateResult, hiddenResult, onTableResult, userLevelResult, booksEnergyXpResult, coinsResult, speedSamplesResult, conqueredLanguagesResult] = await Promise.all([
+  const [progressResult, accurateResult, hiddenResult, onTableResult, userLevelResult, booksEnergyXpResult, coinsResult, trainingTotalsResult, speedSamplesResult, conqueredLanguagesResult] = await Promise.all([
     pool.query(
       `SELECT
          card_id,
@@ -6492,6 +6533,13 @@ const readFlashcardStateForUser = async (userId, options = {}) => {
     pool.query(
       `SELECT coins_total
        FROM public.user_coins
+       WHERE user_id = $1
+       LIMIT 1`,
+      [normalizedUserId]
+    ),
+    pool.query(
+      `SELECT heard_words_total, built_sentences_total
+       FROM public.user_flashcard_training_totals
        WHERE user_id = $1
        LIMIT 1`,
       [normalizedUserId]
@@ -6614,7 +6662,9 @@ const readFlashcardStateForUser = async (userId, options = {}) => {
       speedFlashcardsPerHour: resolvedSpeedPerHour,
       winsSequence: normalizeWinsSequence(speedSamplesResult.rows[0]?.wins_sequence),
       booksEnergyXpTotal: Math.max(0, Number(booksEnergyXpResult.rows[0]?.energy_xp_total) || 0),
-      coinsTotal: Math.max(0, Number(coinsResult.rows[0]?.coins_total) || 0)
+      coinsTotal: Math.max(0, Number(coinsResult.rows[0]?.coins_total) || 0),
+      heardWordsTotal: Math.max(0, Number(trainingTotalsResult.rows[0]?.heard_words_total) || 0),
+      builtSentencesTotal: Math.max(0, Number(trainingTotalsResult.rows[0]?.built_sentences_total) || 0)
     },
     meta: {
       userLevel: normalizeUserFlashcardLevel(languageLevelResult.rows[0]?.current_level || fallbackUserLevel),
@@ -7421,13 +7471,15 @@ const readFinalChallengeLevelForUser = async (userId, targetLanguage) => {
       bestTimeMs: Math.max(0, Number(record.best_time_ms) || 0)
     };
   }
+  const selections = await readFinalChallengeCardSelections(normalizedUserId, normalizedTargetLanguage);
   return {
     targetLanguage: normalizedTargetLanguage,
     level: normalizeUserFlashcardLevel(row.current_level || 1),
     unlockedLevel: normalizeUserFlashcardLevel(row.current_level || 1),
     bestPercent: Math.max(0, Math.min(100, Number(row.best_percent) || 0)),
     updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
-    records
+    records,
+    selections
   };
 };
 
@@ -7498,7 +7550,8 @@ const saveFinalChallengeLevelForUser = async (userId, targetLanguage, payload = 
     unlockedLevel: reloaded.unlockedLevel,
     bestPercent: Math.max(0, Math.min(100, Number(row.best_percent) || requestedBestPercent)),
     updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
-    records: reloaded.records || {}
+    records: reloaded.records || {},
+    selections: reloaded.selections || {}
   };
 };
 
@@ -9450,6 +9503,7 @@ function normalizeFlashcardsSequenceCard(sourceKey, item, index) {
     audioZh,
     audioEs,
     audioDe,
+    sourceIndex: index,
     orderIndex: index
   };
 }
@@ -9526,6 +9580,7 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
       if (!source || !id || fallbackItemCatalog.has(catalogKey)) return;
       fallbackItemCatalog.set(catalogKey, {
         id,
+        sourceIndex: Number.isInteger(Number.parseInt(item?.sourceIndex, 10)) ? Number.parseInt(item.sourceIndex, 10) : null,
         english: String(item?.english || '').trim(),
         portuguese: String(item?.portuguese || '').trim(),
         french: String(item?.french || '').trim(),
@@ -9629,6 +9684,7 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
       items: Array.isArray(deck.items)
         ? deck.items.map((item, index) => ({
           id: String(item?.id || `${String(deck.source || '').trim()}#${index + 1}`).trim(),
+          sourceIndex: Number.isInteger(Number.parseInt(item?.sourceIndex, 10)) ? Number.parseInt(item.sourceIndex, 10) : index,
           english: String(item?.english || '').trim(),
           portuguese: String(item?.portuguese || '').trim(),
           french: String(item?.french || '').trim(),
@@ -11756,6 +11812,157 @@ function setFlashcardItemEnglish(item, value) {
 
 function setFlashcardItemPortuguese(item, value) {
   setPreferredFlashcardField(item, ['nomePortugues', 'portuguese', 'translation'], value);
+}
+
+async function resolveFlashcardsSequenceState() {
+  const fallback = await buildDefaultFlashcardsSequenceState();
+  const savedStateRow = await readFlashcardsSequenceState();
+  const savedPayload = savedStateRow?.payload && typeof savedStateRow.payload === 'object'
+    ? savedStateRow.payload
+    : null;
+  return savedPayload
+    ? sanitizeFlashcardsSequencePayload(savedPayload, fallback.decks)
+    : fallback;
+}
+
+function flashcardSequenceTextForLanguage(card, language) {
+  const normalized = normalizeFlashcardTargetLanguage(language);
+  if (normalized === 'portuguese') return String(card?.portuguese || '').trim();
+  if (normalized === 'french') return String(card?.french || '').trim();
+  if (normalized === 'mandarin') return String(card?.mandarinPinyin || card?.mandarin || '').trim();
+  if (normalized === 'spanish') return String(card?.spanish || '').trim();
+  if (normalized === 'german') return String(card?.german || '').trim();
+  return String(card?.english || '').trim();
+}
+
+function flashcardSequenceAudioForLanguage(card, language) {
+  const normalized = normalizeFlashcardTargetLanguage(language);
+  if (normalized === 'portuguese') return String(card?.audioPt || '').trim();
+  if (normalized === 'french') return String(card?.audioFr || '').trim();
+  if (normalized === 'mandarin') return String(card?.audioZh || '').trim();
+  if (normalized === 'spanish') return String(card?.audioEs || '').trim();
+  if (normalized === 'german') return String(card?.audioDe || '').trim();
+  return String(card?.audio || card?.audio2 || '').trim();
+}
+
+function buildFinalChallengeAllocationCandidates(sequenceState, targetLanguage, nativeLanguage) {
+  const candidates = [];
+  for (const deck of (Array.isArray(sequenceState?.decks) ? sequenceState.decks : [])) {
+    const source = String(deck?.source || '').trim();
+    const sourceLevel = Number.parseInt(deck?.deckLevel, 10);
+    if (!source || !Number.isInteger(sourceLevel) || sourceLevel < 1) continue;
+    for (const [fallbackIndex, card] of (Array.isArray(deck?.items) ? deck.items : []).entries()) {
+      const parsedSourceIndex = Number.parseInt(card?.sourceIndex, 10);
+      const sourceIndex = Number.isInteger(parsedSourceIndex)
+        ? parsedSourceIndex
+        : parseSequenceCardIndexFromId(card?.id, source);
+      if (!Number.isInteger(sourceIndex) || sourceIndex < 0) continue;
+      const targetText = flashcardSequenceTextForLanguage(card, targetLanguage);
+      const nativeText = flashcardSequenceTextForLanguage(card, nativeLanguage);
+      if (!targetText || !nativeText || !String(card?.image || '').trim()) continue;
+      if (!flashcardSequenceAudioForLanguage(card, targetLanguage)) continue;
+      if (!flashcardSequenceAudioForLanguage(card, nativeLanguage)) continue;
+      candidates.push({
+        cardId: `${source}#${sourceIndex}`,
+        source,
+        sourceIndex,
+        sourceLevel,
+        targetLength: Array.from(targetText.replace(/\s+/g, '')).length,
+        orderIndex: Number.isInteger(Number(card?.orderIndex)) ? Number(card.orderIndex) : fallbackIndex
+      });
+    }
+  }
+  return candidates.sort((left, right) => (
+    left.sourceLevel - right.sourceLevel
+    || left.targetLength - right.targetLength
+    || left.orderIndex - right.orderIndex
+    || left.cardId.localeCompare(right.cardId)
+  ));
+}
+
+async function readFinalChallengeCardSelections(userId, targetLanguage, db = pool) {
+  const normalizedUserId = Number.parseInt(userId, 10);
+  const normalizedTargetLanguage = normalizeFlashcardTargetLanguage(targetLanguage);
+  const result = await db.query(
+    `SELECT challenge_level, slot_index, card_id, source, source_index, source_level
+     FROM public.user_flashcard_challenge_cards
+     WHERE user_id = $1 AND target_language = $2
+     ORDER BY challenge_level ASC, slot_index ASC`,
+    [normalizedUserId, normalizedTargetLanguage]
+  );
+  const selections = {};
+  for (const row of result.rows || []) {
+    const level = normalizeUserFlashcardLevel(row.challenge_level || 1);
+    if (!Array.isArray(selections[level])) selections[level] = [];
+    selections[level].push({
+      cardId: String(row.card_id || '').trim(),
+      source: String(row.source || '').trim(),
+      sourceIndex: Math.max(0, Number(row.source_index) || 0),
+      sourceLevel: normalizeUserFlashcardLevel(row.source_level || 1)
+    });
+  }
+  return selections;
+}
+
+async function allocateFinalChallengeCardsForUser(userId, targetLanguage, nativeLanguage, challengeLevel, count = 25) {
+  await ensureFlashcardUserStateTables();
+  const normalizedUserId = Number.parseInt(userId, 10);
+  const normalizedTargetLanguage = normalizeFlashcardTargetLanguage(targetLanguage);
+  const normalizedNativeLanguage = normalizeFlashcardTargetLanguage(nativeLanguage || 'portuguese');
+  const normalizedLevel = normalizeUserFlashcardLevel(challengeLevel || 1);
+  const normalizedCount = Math.max(1, Math.min(100, Number.parseInt(count, 10) || 25));
+  const sequenceState = await resolveFlashcardsSequenceState();
+  const candidates = buildFinalChallengeAllocationCandidates(sequenceState, normalizedTargetLanguage, normalizedNativeLanguage);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`final-challenge:${normalizedUserId}:${normalizedTargetLanguage}`]);
+    const selectionsBefore = await readFinalChallengeCardSelections(normalizedUserId, normalizedTargetLanguage, client);
+    const existing = Array.isArray(selectionsBefore[normalizedLevel]) ? selectionsBefore[normalizedLevel] : [];
+    if (existing.length < normalizedCount) {
+      const usedIds = new Set(Object.values(selectionsBefore).flat().map((card) => String(card?.cardId || '').trim()).filter(Boolean));
+      const required = normalizedCount - existing.length;
+      const available = candidates.filter((card) => !usedIds.has(card.cardId)).slice(0, required);
+      if (available.length < required) {
+        const error = new Error(`Existem apenas ${available.length} cartas ineditas disponiveis para completar este nivel.`);
+        error.statusCode = 409;
+        throw error;
+      }
+      for (const [offset, card] of available.entries()) {
+        await client.query(
+          `INSERT INTO public.user_flashcard_challenge_cards (
+             user_id, target_language, challenge_level, slot_index,
+             card_id, source, source_index, source_level, created_at
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
+           ON CONFLICT DO NOTHING`,
+          [
+            normalizedUserId,
+            normalizedTargetLanguage,
+            normalizedLevel,
+            existing.length + offset,
+            card.cardId,
+            card.source,
+            card.sourceIndex,
+            card.sourceLevel
+          ]
+        );
+      }
+    }
+    const selections = await readFinalChallengeCardSelections(normalizedUserId, normalizedTargetLanguage, client);
+    await client.query('COMMIT');
+    return {
+      targetLanguage: normalizedTargetLanguage,
+      challengeLevel: normalizedLevel,
+      cards: (selections[normalizedLevel] || []).slice(0, normalizedCount),
+      selections
+    };
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 function setFlashcardItemFrench(item, value) {
@@ -16642,7 +16849,8 @@ app.get('/api/flashcards/final-challenge-state', async (req, res) => {
       level: state.level,
       bestPercent: state.bestPercent,
       updatedAt: state.updatedAt,
-      records: state.records || {}
+      records: state.records || {},
+      selections: state.selections || {}
     });
   } catch (error) {
     console.error('Erro ao carregar estado do desafio final:', error);
@@ -16674,11 +16882,135 @@ app.put('/api/flashcards/final-challenge-state', express.json({ limit: '256kb' }
       level: saved.level,
       bestPercent: saved.bestPercent,
       updatedAt: saved.updatedAt,
-      records: saved.records || {}
+      records: saved.records || {},
+      selections: saved.selections || {}
     });
   } catch (error) {
     console.error('Erro ao salvar estado do desafio final:', error);
     res.status(500).json({ success: false, message: 'Erro ao salvar desafio final.' });
+  }
+});
+
+app.post('/api/flashcards/final-challenge-selection', express.json({ limit: '64kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    const allocation = await allocateFinalChallengeCardsForUser(
+      authUser.id,
+      req.body?.targetLanguage,
+      req.body?.nativeLanguage,
+      req.body?.challengeLevel,
+      25
+    );
+    res.json({ success: true, ...allocation });
+  } catch (error) {
+    console.error('Erro ao sortear cartas do desafio final:', error);
+    res.status(Number.isInteger(error?.statusCode) ? error.statusCode : 500).json({
+      success: false,
+      message: error?.message || 'Erro ao sortear cartas do desafio final.'
+    });
+  }
+});
+
+app.post('/api/flashcards/training-result', express.json({ limit: '64kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    await ensureFlashcardUserStateTables();
+    await ensureUserCoinsTable();
+    const userId = Number(authUser.id);
+    const runId = String(req.body?.runId || '').trim().slice(0, 100);
+    if (!runId) {
+      res.status(400).json({ success: false, message: 'Rodada invalida.' });
+      return;
+    }
+    const targetLanguage = normalizeFlashcardTargetLanguage(req.body?.targetLanguage);
+    const challengeLevel = normalizeUserFlashcardLevel(req.body?.challengeLevel || 1);
+    const heardWords = Math.max(0, Math.min(10000, Math.round(Number(req.body?.heardWords) || 0)));
+    const builtSentences = Math.max(0, Math.min(100, Math.round(Number(req.body?.builtSentences) || 0)));
+    const coinsAwarded = Math.max(0, Math.min(10000, Math.round(Number(req.body?.coinsAwarded) || 0)));
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const eventResult = await client.query(
+        `INSERT INTO public.user_flashcard_training_results (
+           user_id, run_id, target_language, challenge_level,
+           heard_words, built_sentences, coins_awarded, created_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+         ON CONFLICT (user_id, run_id) DO NOTHING
+         RETURNING run_id`,
+        [userId, runId, targetLanguage, challengeLevel, heardWords, builtSentences, coinsAwarded]
+      );
+      const newlyAwarded = Boolean(eventResult.rows[0]);
+      if (newlyAwarded) {
+        await client.query(
+          `INSERT INTO public.user_flashcard_training_totals (
+             user_id, heard_words_total, built_sentences_total, created_at, updated_at
+           )
+           VALUES ($1, $2, $3, now(), now())
+           ON CONFLICT (user_id)
+           DO UPDATE SET
+             heard_words_total = public.user_flashcard_training_totals.heard_words_total + EXCLUDED.heard_words_total,
+             built_sentences_total = public.user_flashcard_training_totals.built_sentences_total + EXCLUDED.built_sentences_total,
+             updated_at = now()`,
+          [userId, heardWords, builtSentences]
+        );
+        await client.query(
+          `INSERT INTO public.user_coins (user_id, coins_total, created_at, updated_at)
+           VALUES ($1, $2, now(), now())
+           ON CONFLICT (user_id)
+           DO UPDATE SET
+             coins_total = public.user_coins.coins_total + EXCLUDED.coins_total,
+             updated_at = now()`,
+          [userId, coinsAwarded]
+        );
+      }
+      const [totalsResult, coinsResult] = await Promise.all([
+        client.query(
+          `SELECT heard_words_total, built_sentences_total
+           FROM public.user_flashcard_training_totals
+           WHERE user_id = $1`,
+          [userId]
+        ),
+        client.query(
+          `SELECT coins_total FROM public.user_coins WHERE user_id = $1`,
+          [userId]
+        )
+      ]);
+      await client.query('COMMIT');
+      res.json({
+        success: true,
+        awarded: newlyAwarded,
+        heardWordsTotal: Math.max(0, Number(totalsResult.rows[0]?.heard_words_total) || 0),
+        builtSentencesTotal: Math.max(0, Number(totalsResult.rows[0]?.built_sentences_total) || 0),
+        coinsTotal: Math.max(0, Number(coinsResult.rows[0]?.coins_total) || 0)
+      });
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Erro ao salvar resultado do treino final:', error);
+    res.status(500).json({ success: false, message: 'Erro ao salvar resultado do treino.' });
   }
 });
 
@@ -21600,6 +21932,9 @@ app.post('/api/admin/users/:userId/reset-data', async (req, res) => {
       await client.query('DELETE FROM public.user_daily_mission_stats WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.user_books_energy_xp_stats WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.user_coins WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_flashcard_training_results WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_flashcard_training_totals WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM public.user_flashcard_challenge_cards WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.flashcard_rankings WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM public.user_ranking_overrides WHERE user_id = $1', [userId]);
 
