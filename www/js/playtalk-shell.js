@@ -6,7 +6,8 @@
   const LOADER_ROOT_ID = 'playtalkGlobalLoader';
   const LOADER_STYLE_ID = 'playtalkGlobalLoaderStyles';
   const LOADER_BODY_CLASS = 'playtalk-loader-active';
-  const LOADER_MIN_VISIBLE_MS = 9000;
+  const LOADER_MIN_VISIBLE_MS = 0;
+  const LOADER_PROGRESS_TARGET_MS = 1800;
   const USERS_LOADER_MAX_VISIBLE_MS = 4200;
   const LOADER_AUDIO_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
   const LOADER_AUDIO_PATHS = {
@@ -287,6 +288,11 @@
           0 0 16px rgba(51, 214, 255, 0.45);
       }
 
+      .playtalk-loader__kicker,
+      .playtalk-loader__tip {
+        display: none !important;
+      }
+
       .playtalk-loader__screen.is-dissolving {
         opacity: 0;
         transform: scale(0.992);
@@ -487,55 +493,11 @@
   }
 
   function renderLoaderTip() {
-    const tip = LOADER_TIPS[loaderState.tipIndex % LOADER_TIPS.length] || LOADER_TIPS[0];
-    const root = document.getElementById(LOADER_ROOT_ID);
-    if (!root) return;
-    const [ptTop, ptBottom] = splitTipTextBalanced(tip[0] || '');
-    const [enTop, enBottom] = splitTipTextBalanced(tip[1] || '');
-    const pt1 = root.querySelector('[data-tip-line="pt-1"]');
-    const pt2 = root.querySelector('[data-tip-line="pt-2"]');
-    const en1 = root.querySelector('[data-tip-line="en-1"]');
-    const en2 = root.querySelector('[data-tip-line="en-2"]');
-    if (pt1) pt1.textContent = ptTop;
-    if (pt2) pt2.textContent = ptBottom;
-    if (en1) en1.textContent = enTop;
-    if (en2) en2.textContent = enBottom;
+    return;
   }
 
   function renderLoaderTipForLanguage(language) {
-    const tip = LOADER_TIPS[loaderState.tipIndex % LOADER_TIPS.length] || LOADER_TIPS[0];
-    const root = document.getElementById(LOADER_ROOT_ID);
-    if (!root) return;
-    const [ptTop, ptBottom] = splitTipTextBalanced(tip[0] || '');
-    const [enTop, enBottom] = splitTipTextBalanced(tip[1] || '');
-    const pt1 = root.querySelector('[data-tip-line="pt-1"]');
-    const pt2 = root.querySelector('[data-tip-line="pt-2"]');
-    const en1 = root.querySelector('[data-tip-line="en-1"]');
-    const en2 = root.querySelector('[data-tip-line="en-2"]');
-    const kicker = root.querySelector('.playtalk-loader__kicker');
-    const normalizedLanguage = language === 'en' ? 'en' : 'pt';
-    if (kicker) {
-      kicker.classList.toggle('is-english', normalizedLanguage === 'en');
-    }
-    if (normalizedLanguage === 'pt') {
-      if (pt1) pt1.textContent = ptTop;
-      if (pt2) pt2.textContent = ptBottom;
-      if (en1) en1.textContent = '';
-      if (en2) en2.textContent = '';
-      if (pt1) pt1.hidden = false;
-      if (pt2) pt2.hidden = !ptBottom;
-      if (en1) en1.hidden = true;
-      if (en2) en2.hidden = true;
-      return;
-    }
-    if (pt1) pt1.textContent = '';
-    if (pt2) pt2.textContent = '';
-    if (en1) en1.textContent = enTop;
-    if (en2) en2.textContent = enBottom;
-    if (pt1) pt1.hidden = true;
-    if (pt2) pt2.hidden = true;
-    if (en1) en1.hidden = false;
-    if (en2) en2.hidden = !enBottom;
+    return;
   }
 
   function resolvePendingAudioCycleWaiters() {
@@ -617,57 +579,23 @@
   }
 
   function pickNextTipIndexRandom() {
-    if (LOADER_TIPS.length <= 1) return 0;
-    let nextIndex = loaderState.tipIndex;
-    while (nextIndex === loaderState.tipIndex) {
-      nextIndex = Math.floor(Math.random() * LOADER_TIPS.length);
-    }
-    return nextIndex;
+    return 0;
   }
 
   function ensureLoaderBackgroundMusic() {
-    if (loaderState.bgAudio) return loaderState.bgAudio;
-    const bgAudio = new Audio(LOADER_BG_MUSIC_URL);
-    bgAudio.preload = 'auto';
-    bgAudio.loop = true;
-    bgAudio.volume = 0.22;
-    loaderState.bgAudio = bgAudio;
-    return bgAudio;
+    return null;
   }
 
   function preloadLoaderAudioBuffer() {
-    preloadAudioUrl(LOADER_BG_MUSIC_URL);
-    const tipCount = LOADER_TIPS.length;
-    if (!tipCount) return;
-    for (let offset = 0; offset <= 4; offset += 1) {
-      const targetIndex = (loaderState.tipIndex + offset) % tipCount;
-      const ptCandidates = loaderTipAudioCandidates(targetIndex, 'pt');
-      const enCandidates = loaderTipAudioCandidates(targetIndex, 'en');
-      preloadAudioUrl(ptCandidates[0]);
-      preloadAudioUrl(enCandidates[0]);
-    }
+    return;
   }
 
   function playLoaderBackgroundMusic() {
-    const bgAudio = ensureLoaderBackgroundMusic();
-    if (!bgAudio.paused) return;
-    bgAudio.play().catch(() => {});
+    return;
   }
 
   function fadeOutLoaderBackgroundMusic(durationMs = LOADER_FINAL_DISSOLVE_MS) {
-    const bgAudio = loaderState.bgAudio;
-    if (!bgAudio) return;
-    const startVolume = Math.max(0, Number(bgAudio.volume) || 0);
-    const steps = Math.max(1, Math.round(durationMs / 40));
-    let step = 0;
-    const timer = window.setInterval(() => {
-      step += 1;
-      const ratio = Math.max(0, 1 - (step / steps));
-      bgAudio.volume = startVolume * ratio;
-      if (step >= steps) {
-        window.clearInterval(timer);
-      }
-    }, Math.max(30, Math.floor(durationMs / steps)));
+    return;
   }
 
   function dissolveLoaderScreen() {
@@ -680,85 +608,9 @@
   }
 
   function playLoaderTipLanguage(language, token) {
-    if (!loaderState.activeKeys.size) return;
-    loaderState.tipLanguage = language === 'en' ? 'en' : 'pt';
-    renderLoaderTipForLanguage(loaderState.tipLanguage);
-    if (loaderState.tipAudio) {
-      loaderState.tipAudio.pause();
-      loaderState.tipAudio.currentTime = 0;
-      loaderState.tipAudio = null;
-    }
-    playLoaderBackgroundMusic();
-    const candidates = loaderTipAudioCandidates(loaderState.tipIndex, loaderState.tipLanguage);
-    if (loaderState.tipFadeStartTimer) {
-      window.clearTimeout(loaderState.tipFadeStartTimer);
-      loaderState.tipFadeStartTimer = 0;
-    }
-    if (loaderState.tipFadeInterval) {
-      window.clearInterval(loaderState.tipFadeInterval);
-      loaderState.tipFadeInterval = 0;
-    }
-    const onFinish = () => {
-      if (token !== loaderState.tipAudioToken || !loaderState.activeKeys.size) return;
-      if (loaderState.tipLanguage === 'pt') {
-        playLoaderTipLanguage('en', token);
-        return;
-      }
-      dissolveLoaderScreen();
-      fadeOutLoaderBackgroundMusic(LOADER_FINAL_DISSOLVE_MS);
-      loaderState.audioSequenceRunning = false;
-      loaderState.tipIndex = pickNextTipIndexRandom();
-      resolvePendingAudioCycleWaiters();
-    };
-    const scheduleFadeOut = () => {
-      if (token !== loaderState.tipAudioToken) return;
-      const duration = Number(audio.duration);
-      if (!Number.isFinite(duration) || duration <= 0) return;
-      const fadeStartMs = Math.max(0, (duration * 1000) - LOADER_TIP_AUDIO_FADE_MS);
-      loaderState.tipFadeStartTimer = window.setTimeout(() => {
-        if (token !== loaderState.tipAudioToken) return;
-        const startVolume = Math.max(0, Number(audio.volume) || 0);
-        const steps = 15;
-        const intervalMs = Math.max(40, Math.floor(LOADER_TIP_AUDIO_FADE_MS / steps));
-        let step = 0;
-        loaderState.tipFadeInterval = window.setInterval(() => {
-          if (token !== loaderState.tipAudioToken) {
-            window.clearInterval(loaderState.tipFadeInterval);
-            loaderState.tipFadeInterval = 0;
-            return;
-          }
-          step += 1;
-          const ratio = Math.max(0, 1 - (step / steps));
-          audio.volume = Math.max(0, startVolume * ratio);
-          if (step >= steps) {
-            window.clearInterval(loaderState.tipFadeInterval);
-            loaderState.tipFadeInterval = 0;
-          }
-        }, intervalMs);
-      }, fadeStartMs);
-    };
-    const tryPlayCandidate = (candidateIndex) => {
-      if (token !== loaderState.tipAudioToken || !loaderState.activeKeys.size) return;
-      if (candidateIndex >= candidates.length) {
-        onFinish();
-        return;
-      }
-      const audio = new Audio(candidates[candidateIndex]);
-      audio.preload = 'auto';
-      audio.volume = LOADER_TIP_AUDIO_VOLUME;
-      loaderState.tipAudio = audio;
-      audio.addEventListener('loadedmetadata', scheduleFadeOut, { once: true });
-      audio.addEventListener('ended', onFinish, { once: true });
-      audio.addEventListener('error', () => {
-        if (token !== loaderState.tipAudioToken) return;
-        tryPlayCandidate(candidateIndex + 1);
-      }, { once: true });
-      audio.play().catch(() => {
-        if (token !== loaderState.tipAudioToken) return;
-        tryPlayCandidate(candidateIndex + 1);
-      });
-    };
-    tryPlayCandidate(0);
+    loaderState.audioSequenceRunning = false;
+    dissolveLoaderScreen();
+    resolvePendingAudioCycleWaiters();
   }
 
   function startLoaderAudioSequence() {
@@ -850,7 +702,7 @@
       return;
     }
     const elapsed = Math.max(0, Date.now() - earliest);
-    const progress = Math.max(0, Math.min(100, (elapsed / LOADER_MIN_VISIBLE_MS) * 100));
+    const progress = Math.max(0, Math.min(100, (elapsed / LOADER_PROGRESS_TARGET_MS) * 100));
     fill.style.width = `${progress.toFixed(2)}%`;
   }
 

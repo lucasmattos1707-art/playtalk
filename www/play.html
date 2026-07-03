@@ -11650,6 +11650,27 @@
       filter: drop-shadow(0 5px 10px rgba(180, 0, 24, 0.3));
     }
 
+    .final-challenge-modal__heart.is-star-preview {
+      color: #ffd34d;
+      opacity: 0;
+      transform: scale(0.72);
+      filter: drop-shadow(0 0 16px rgba(255, 211, 77, 0.62));
+      animation: finalChallengeHeartStarPreview 2s ease both;
+    }
+
+    .final-challenge-modal__heart.is-star-preview svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+
+    @keyframes finalChallengeHeartStarPreview {
+      0% { opacity: 0; transform: scale(0.62) rotate(-14deg); }
+      18% { opacity: 1; transform: scale(1.12) rotate(0deg); }
+      50% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.82); }
+    }
+
     #finalChallengeResultScreen {
       height: 100dvh;
       min-height: 100dvh;
@@ -11660,6 +11681,14 @@
 
     #finalChallengeResultScreen.is-active {
       display: grid;
+    }
+
+    #finalChallengeResultScreen.is-revealing .final-challenge-modal__result-stats,
+    #finalChallengeResultScreen.is-revealing .final-challenge-modal__result-actions,
+    #finalChallengeResultScreen.is-revealing #finalChallengeResultBody {
+      opacity: 0;
+      transform: translateY(14px);
+      pointer-events: none;
     }
 
     .final-challenge-modal__result-heading {
@@ -11705,6 +11734,29 @@
       filter: grayscale(0.35);
     }
 
+    .final-challenge-modal__result-heart.is-star {
+      color: #ffd34d;
+      opacity: 0;
+      transform: translateY(12px) scale(0.5) rotate(-16deg);
+      filter: drop-shadow(0 0 18px rgba(255, 211, 77, 0.68));
+    }
+
+    .final-challenge-modal__result-heart.is-star.is-visible {
+      opacity: 1;
+      transform: translateY(0) scale(1) rotate(0deg);
+    }
+
+    .final-challenge-modal__result-heart.is-star.is-muted.is-visible {
+      opacity: 0.24;
+      filter: grayscale(0.8);
+    }
+
+    .final-challenge-modal__result-heart.is-star svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+
     .final-challenge-modal__result-heart img {
       width: 100%;
       height: 100%;
@@ -11715,11 +11767,13 @@
       min-height: 0;
       display: grid;
       grid-template-rows: none;
-      grid-auto-rows: minmax(0, 1fr);
+      grid-auto-rows: auto;
+      align-content: center;
       gap: clamp(8px, 1.5vh, 14px);
       width: min(100%, 520px);
       margin: 0 auto;
-      padding: 10px 0;
+      padding: 4px 0;
+      transition: opacity 280ms ease, transform 280ms ease;
     }
 
     .final-challenge-modal__result-stats[hidden] {
@@ -11732,30 +11786,36 @@
       width: min(100%, 520px);
       margin: 0 auto;
       text-align: center;
+      transition: opacity 280ms ease, transform 280ms ease;
     }
 
     .final-challenge-modal__result-stat {
       display: grid;
-      grid-template-columns: 48px minmax(0, 1fr) auto;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
       align-items: center;
-      gap: 14px;
-      padding: 10px 18px;
-      border-radius: 20px;
+      gap: 10px;
+      min-height: 54px;
+      padding: 7px 14px;
+      border-radius: 17px;
       border: 1px solid rgba(255, 255, 255, 0.1);
       background: linear-gradient(100deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035));
     }
 
     .final-challenge-modal__result-stat-icon {
-      width: 42px;
-      height: 42px;
+      width: 30px;
+      height: 30px;
       display: grid;
       place-items: center;
       color: #65dcff;
+      animation: finalChallengeResultIconPop 540ms cubic-bezier(.2, .8, .2, 1) both;
     }
 
     .final-challenge-modal__result-stat:nth-child(2) .final-challenge-modal__result-stat-icon { color: #66efad; }
     .final-challenge-modal__result-stat:nth-child(3) .final-challenge-modal__result-stat-icon { color: #ffd34d; }
     .final-challenge-modal__result-stat:nth-child(4) .final-challenge-modal__result-stat-icon { color: #ff9d2e; }
+    .final-challenge-modal__result-stat:nth-child(2) .final-challenge-modal__result-stat-icon { animation-delay: 120ms; }
+    .final-challenge-modal__result-stat:nth-child(3) .final-challenge-modal__result-stat-icon { animation-delay: 240ms; }
+    .final-challenge-modal__result-stat:nth-child(4) .final-challenge-modal__result-stat-icon { animation-delay: 360ms; }
 
     .final-challenge-modal__result-stat-icon svg,
     .final-challenge-modal__result-stat-icon img {
@@ -11768,13 +11828,13 @@
     }
 
     .final-challenge-modal__result-stat-label {
-      font: 800 clamp(14px, 3.8vw, 19px)/1.15 "Exo 2", "Open Sans", Arial, sans-serif;
+      font: 800 clamp(12px, 3.2vw, 16px)/1.15 "Exo 2", "Open Sans", Arial, sans-serif;
       text-transform: uppercase;
       color: rgba(255, 255, 255, 0.78);
     }
 
     .final-challenge-modal__result-stat-value {
-      font: 900 clamp(28px, 8vw, 46px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
+      font: 900 clamp(22px, 6.4vw, 36px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
       color: #fff;
     }
 
@@ -11782,10 +11842,59 @@
       min-height: 0;
       align-content: center;
       gap: 10px;
+      transition: opacity 280ms ease, transform 280ms ease;
     }
 
     .final-challenge-modal__result-actions .final-challenge-modal__cta {
       min-height: clamp(48px, 7vh, 60px);
+      border: 0;
+      color: #ffffff;
+      box-shadow: 0 16px 30px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .final-challenge-modal__result-actions .final-challenge-modal__cta-icon {
+      animation: finalChallengeResultIconPop 560ms cubic-bezier(.2, .8, .2, 1) both;
+    }
+
+    .final-challenge-modal__result-actions .final-challenge-modal__cta:nth-child(2) .final-challenge-modal__cta-icon { animation-delay: 140ms; }
+    .final-challenge-modal__result-actions .final-challenge-modal__cta:nth-child(3) .final-challenge-modal__cta-icon { animation-delay: 280ms; }
+
+    .final-challenge-modal__cta--result-blue {
+      background: linear-gradient(135deg, #1f83ff, #36d2ff);
+    }
+
+    .final-challenge-modal__cta--result-orange {
+      background: linear-gradient(135deg, #ff8a1f, #ffd166);
+    }
+
+    .final-challenge-modal__cta--result-green {
+      background: linear-gradient(135deg, #12b86f, #79f5ad);
+    }
+
+    .final-challenge-modal__cta--result-neutral {
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.82);
+      box-shadow: none;
+    }
+
+    .final-challenge-modal__cta--voice {
+      background: linear-gradient(120deg, #5e5cff, #2bc6ff, #9c4dff);
+      background-size: 220% 220%;
+      animation: finalChallengeVoiceGradient 4.2s ease-in-out infinite;
+    }
+
+    @keyframes finalChallengeResultIconPop {
+      0% { opacity: 0; transform: translateY(8px) scale(0.72); }
+      70% { opacity: 1; transform: translateY(-2px) scale(1.08); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes finalChallengeVoiceGradient {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
     }
 
     .final-challenge-modal__progress {
@@ -12056,12 +12165,13 @@
     }
 
     .final-challenge-modal__practice-meter {
-      min-width: min(74vw, 280px);
-      display: grid;
-      justify-items: center;
-      gap: 10px;
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
       color: #67f0ad;
-      text-align: center;
+      text-align: left;
       text-shadow: 0 0 12px rgba(103, 240, 173, 0.44);
     }
 
@@ -12075,8 +12185,9 @@
     }
 
     .final-challenge-modal__practice-meter-icon {
-      width: clamp(46px, 12vw, 64px);
-      height: clamp(46px, 12vw, 64px);
+      width: clamp(37px, 9.6vw, 51px);
+      height: clamp(37px, 9.6vw, 51px);
+      flex: 0 0 auto;
       display: grid;
       place-items: center;
       filter: drop-shadow(0 0 14px currentColor);
@@ -12092,14 +12203,15 @@
 
     .final-challenge-modal__practice-meter-value {
       margin: 0;
-      font: 900 clamp(54px, 16vw, 92px)/0.88 "Exo 2", "Open Sans", Arial, sans-serif;
+      font: 900 clamp(43px, 12.8vw, 74px)/0.88 "Exo 2", "Open Sans", Arial, sans-serif;
       letter-spacing: -0.03em;
     }
 
     .final-challenge-modal__practice-meter-label {
       margin: 0;
-      font: 800 13px/1.2 "Exo 2", "Open Sans", Arial, sans-serif;
-      letter-spacing: 0.16em;
+      max-width: min(34vw, 138px);
+      font: 800 11px/1.05 "Exo 2", "Open Sans", Arial, sans-serif;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
       color: rgba(245, 247, 251, 0.54);
     }
@@ -14767,11 +14879,15 @@ para liberar desafio</p>
           finalChallengePercentVisible: false,
           finalChallengeExitConfirmOpen: false,
           finalChallengeLivesLost: 0,
+          finalChallengeHeartAwardTier: 0,
+          finalChallengeHeartAwardUntil: 0,
+          finalChallengeHeartAwardTimer: 0,
           finalChallengeWrongCards: [],
           finalChallengeCorrectionTargetVisible: false,
           finalChallengeForcedGameOver: false,
           finalChallengeResultAction: 'retry-voice',
           finalChallengePromptAudio: null,
+          finalChallengeAudioToken: 0,
           finalChallengePromptCardId: '',
           finalChallengeAvatarColorProgress: 0,
           finalChallengeReviewOpen: false,
@@ -14785,6 +14901,7 @@ para liberar desafio</p>
           finalChallengeBuiltSentences: 0,
           finalChallengeCurrentStreak: 0,
           finalChallengeBestStreak: 0,
+          finalChallengePersistedBestStreak: 0,
           finalChallengeEarnedLetters: 0,
           finalChallengeResultPersisted: false,
           finalChallengeResultHeartTimers: [],
@@ -15657,14 +15774,44 @@ para liberar desafio</p>
         return [audio.currentSrc, audio.src].some((candidate) => safeText(candidate) === absoluteSrc);
       }
 
+      async function resolveCachedRuntimeAudioSource(src, timeoutMs = 120) {
+        const safeSrc = safeText(src);
+        if (!safeSrc || !finalChallengeAudioCacheSupported()) return runtimeAudioSourceFor(safeSrc);
+        const existing = safeText(state.game?.runtimeAudioUrls?.get(safeSrc) || '');
+        if (existing) return existing;
+        const resolveFromCache = (async () => {
+          try {
+            const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
+            const availableResponse = await cache.match(safeSrc);
+            if (!availableResponse) return safeSrc;
+            return await cacheRuntimeAudioBlob(safeSrc, availableResponse);
+          } catch (_error) {
+            return safeSrc;
+          }
+        })();
+        const timeout = new Promise((resolve) => {
+          window.setTimeout(() => resolve(runtimeAudioSourceFor(safeSrc)), Math.max(0, Number(timeoutMs) || 0));
+        });
+        return Promise.race([resolveFromCache, timeout]);
+      }
+
       async function cacheRuntimeAudioBlob(src, response) {
         const safeSrc = safeText(src);
         if (!safeSrc || !response || typeof response.clone !== 'function' || !finalChallengeAudioCacheSupported()) return safeSrc;
         try {
           const existing = safeText(state.game?.runtimeAudioUrls?.get(safeSrc) || '');
+          const existingAudio = state.game.preloadAudios.get(safeSrc);
           const blob = await response.clone().blob();
           if (!blob || !blob.size) return safeSrc;
           const nextUrl = window.URL.createObjectURL(blob);
+          if (existing && existingAudio && audioElementUsesSource(existingAudio, existing) && !existingAudio.paused && !existingAudio.ended) {
+            try {
+              window.URL.revokeObjectURL(nextUrl);
+            } catch (_error) {
+              // ignore
+            }
+            return existing;
+          }
           if (existing && existing.startsWith('blob:') && existing !== nextUrl) {
             try {
               window.URL.revokeObjectURL(existing);
@@ -15674,13 +15821,9 @@ para liberar desafio</p>
           }
           state.game.runtimeAudioUrls.set(safeSrc, nextUrl);
           state.game.preloadAudioPromises.delete(safeSrc);
-          const staleAudio = state.game.preloadAudios.get(safeSrc);
+          const staleAudio = existingAudio;
           if (staleAudio && !audioElementUsesSource(staleAudio, nextUrl)) {
-            try {
-              staleAudio.pause();
-            } catch (_error) {
-              // ignore
-            }
+            if (!staleAudio.paused && !staleAudio.ended) return nextUrl;
             state.game.preloadAudios.delete(safeSrc);
           }
           return nextUrl;
@@ -15700,13 +15843,16 @@ para liberar desafio</p>
           try {
             const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
             let availableResponse = await cache.match(safeSrc);
-            if (!availableResponse) {
+            if (availableResponse) {
+              return await cacheRuntimeAudioBlob(safeSrc, availableResponse);
+            }
+            if (navigator.onLine !== false) {
               const networkResponse = await fetch(safeSrc, { cache: 'force-cache' });
               if (!networkResponse.ok) return safeSrc;
               await cache.put(safeSrc, networkResponse.clone());
-              availableResponse = networkResponse;
+              return await cacheRuntimeAudioBlob(safeSrc, networkResponse);
             }
-            return await cacheRuntimeAudioBlob(safeSrc, availableResponse);
+            return safeSrc;
           } catch (_error) {
             return safeSrc;
           } finally {
@@ -31662,6 +31808,9 @@ para liberar desafio</p>
       }
 
       function resetFinalChallengePracticeStreak() {
+        void persistFinalChallengeBrokenStreakRecord().catch((error) => {
+          console.warn('Falha ao salvar recorde de sequencia do treino:', error);
+        });
         state.ui.finalChallengeCurrentStreak = 0;
       }
 
@@ -31671,6 +31820,10 @@ para liberar desafio</p>
         els.finalChallengePracticeMeter.hidden = !isPracticeMode;
         if (!isPracticeMode) return;
         const builtSentences = Math.max(0, Math.round(Number(state.ui.finalChallengeBuiltSentences) || 0));
+        const builtSentencesTotal = Math.max(
+          builtSentences,
+          Math.max(0, Math.round(Number(state.stats.builtSentencesTotal) || 0)) + builtSentences
+        );
         const currentStreak = Math.max(0, Math.round(Number(state.ui.finalChallengeCurrentStreak) || 0));
         const showStreak = currentStreak > 0 && currentStreak % 10 === 0;
         els.finalChallengePracticeMeter.classList.toggle('is-streak', showStreak);
@@ -31680,7 +31833,7 @@ para liberar desafio</p>
             : BUILT_SENTENCES_ICON_SVG;
         }
         if (els.finalChallengePracticeMeterValue) {
-          els.finalChallengePracticeMeterValue.textContent = String(showStreak ? currentStreak : builtSentences);
+          els.finalChallengePracticeMeterValue.textContent = String(showStreak ? currentStreak : builtSentencesTotal);
         }
         if (els.finalChallengePracticeMeterLabel) {
           els.finalChallengePracticeMeterLabel.textContent = showStreak
@@ -31691,7 +31844,7 @@ para liberar desafio</p>
 
       function finalChallengeEarnedCoins() {
         const legacyCoinValue = Math.floor((Number(state.ui.finalChallengeEarnedLetters) || 0) / 10);
-        return Math.max(0, Math.floor(legacyCoinValue / 1000));
+        return Math.max(0, legacyCoinValue);
       }
 
       function clearFinalChallengeResultHeartTimers() {
@@ -31699,16 +31852,46 @@ para liberar desafio</p>
         state.ui.finalChallengeResultHeartTimers = [];
       }
 
-      function animateFinalChallengeResultHearts() {
+      function finalChallengePracticeStarTier(correctTotal = state.ui.finalChallengeBuiltSentences) {
+        const total = Math.max(0, Math.round(Number(correctTotal) || 0));
+        if (total >= 49) return 5;
+        if (total >= 46) return 4;
+        return 3;
+      }
+
+      function finalChallengeStarSvg() {
+        return '<svg viewBox="0 0 24 24" focusable="false"><path d="m12 2.7 2.86 5.8 6.4.93-4.63 4.51 1.09 6.37L12 17.3l-5.72 3.01 1.09-6.37-4.63-4.51 6.4-.93L12 2.7Z"></path></svg>';
+      }
+
+      function animateFinalChallengeResultAwards({ showStars = false, starCount = 0 } = {}) {
         clearFinalChallengeResultHeartTimers();
         if (!els.finalChallengeResultHearts) return;
-        els.finalChallengeResultHearts.innerHTML = Array.from({ length: 5 }, () => (
-          '<span class="final-challenge-modal__result-heart"><img src="/SVG/codex-icons/heart-game.svg" alt=""></span>'
+        els.finalChallengeResultScreen?.querySelectorAll('.final-challenge-modal__result-stat-icon').forEach((icon) => {
+          icon.style.animation = 'none';
+          void icon.offsetWidth;
+          icon.style.animation = '';
+        });
+        const safeStarCount = Math.max(0, Math.min(5, Math.round(Number(starCount) || 0)));
+        els.finalChallengeResultHearts.innerHTML = Array.from({ length: 5 }, (_unused, index) => (
+          showStars
+            ? `<span class="final-challenge-modal__result-heart is-star${index >= safeStarCount ? ' is-muted' : ''}">${finalChallengeStarSvg()}</span>`
+            : '<span class="final-challenge-modal__result-heart"><img src="/SVG/codex-icons/heart-game.svg" alt=""></span>'
         )).join('');
         Array.from(els.finalChallengeResultHearts.children).forEach((heart, index) => {
-          const timer = window.setTimeout(() => heart.classList.add('is-dimmed'), index * 200);
+          const timer = window.setTimeout(() => {
+            if (showStars) {
+              heart.classList.add('is-visible');
+            } else {
+              heart.classList.add('is-dimmed');
+            }
+          }, index * 200);
           state.ui.finalChallengeResultHeartTimers.push(timer);
         });
+        els.finalChallengeResultScreen?.classList.add('is-revealing');
+        const revealTimer = window.setTimeout(() => {
+          els.finalChallengeResultScreen?.classList.remove('is-revealing');
+        }, 1500);
+        state.ui.finalChallengeResultHeartTimers.push(revealTimer);
       }
 
       async function persistFinalChallengeTrainingResult() {
@@ -31747,6 +31930,37 @@ para liberar desafio</p>
         return payload;
       }
 
+      async function persistFinalChallengeBrokenStreakRecord() {
+        if (!state.user?.id || state.ui.finalChallengeMode !== 'practice') return null;
+        const bestSequence = Math.max(0, Math.round(Number(state.ui.finalChallengeCurrentStreak) || 0));
+        if (bestSequence <= 10) return null;
+        const knownRecord = Math.max(
+          Math.max(0, Number(state.stats.bestSequenceTotal) || 0),
+          Math.max(0, Number(state.ui.finalChallengePersistedBestStreak) || 0)
+        );
+        if (bestSequence <= knownRecord) return null;
+        state.ui.finalChallengePersistedBestStreak = bestSequence;
+        const response = await fetch(buildApiUrl('/api/flashcards/training-streak-record'), {
+          method: 'POST',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          credentials: 'include',
+          body: JSON.stringify({
+            targetLanguage: currentTargetLanguage(),
+            challengeLevel: currentFinalChallengeLevel(),
+            bestSequence
+          })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success) {
+          state.ui.finalChallengePersistedBestStreak = knownRecord;
+          throw new Error(payload?.message || 'Falha ao salvar recorde de sequencia.');
+        }
+        state.stats.bestSequenceTotal = Math.max(knownRecord, Math.max(0, Number(payload.bestSequenceTotal) || 0), bestSequence);
+        renderWelcomeEnergyMiniTicker();
+        updateWelcomeUserDisplay();
+        return payload;
+      }
+
       function resetFinalChallengeRunState() {
         clearFinalChallengeResultHeartTimers();
         state.ui.finalChallengeCards = [];
@@ -31760,6 +31974,12 @@ para liberar desafio</p>
         state.ui.finalChallengePercentVisible = false;
         state.ui.finalChallengeExitConfirmOpen = false;
         state.ui.finalChallengeLivesLost = 0;
+        state.ui.finalChallengeHeartAwardTier = 0;
+        state.ui.finalChallengeHeartAwardUntil = 0;
+        if (state.ui.finalChallengeHeartAwardTimer) {
+          window.clearTimeout(state.ui.finalChallengeHeartAwardTimer);
+        }
+        state.ui.finalChallengeHeartAwardTimer = 0;
         state.ui.finalChallengeWrongCards = [];
         state.ui.finalChallengeCorrectionTargetVisible = false;
         state.ui.finalChallengeForcedGameOver = false;
@@ -31774,6 +31994,7 @@ para liberar desafio</p>
         state.ui.finalChallengeBuiltSentences = 0;
         state.ui.finalChallengeCurrentStreak = 0;
         state.ui.finalChallengeBestStreak = 0;
+        state.ui.finalChallengePersistedBestStreak = Math.max(0, Number(state.stats.bestSequenceTotal) || 0);
         state.ui.finalChallengeEarnedLetters = 0;
         state.ui.finalChallengeResultPersisted = false;
         state.ui.finalChallengeSessionStartedAt = 0;
@@ -31829,10 +32050,52 @@ para liberar desafio</p>
       function syncFinalChallengeHeartsUi() {
         if (!els.finalChallengeHearts) return;
         const totalHearts = finalChallengeMaxLives();
+        const showStarPreview = state.ui.finalChallengeMode === 'practice'
+          && Math.max(0, Number(state.ui.finalChallengeHeartAwardTier) || 0) > 0
+          && Date.now() < Math.max(0, Number(state.ui.finalChallengeHeartAwardUntil) || 0);
+        if (showStarPreview) {
+          const tier = Math.max(0, Math.min(totalHearts, Math.round(Number(state.ui.finalChallengeHeartAwardTier) || 0)));
+          els.finalChallengeHearts.innerHTML = Array.from({ length: totalHearts }, (_unused, index) => (
+            `<span class="final-challenge-modal__heart is-star-preview${index >= tier ? ' is-lost' : ''}" aria-hidden="true">${finalChallengeStarSvg()}</span>`
+          )).join('');
+          return;
+        }
         const lostHearts = Math.max(0, Math.min(totalHearts, Number(state.ui.finalChallengeLivesLost) || 0));
         els.finalChallengeHearts.innerHTML = Array.from({ length: totalHearts }, (_unused, index) => (
           `<span class="final-challenge-modal__heart${index < lostHearts ? ' is-lost' : ''}" aria-hidden="true"><img src="/SVG/codex-icons/heart-game.svg" alt=""></span>`
         )).join('');
+      }
+
+      function maybePreviewFinalChallengeStarTier() {
+        if (state.ui.finalChallengeMode !== 'practice') return;
+        if (Math.max(0, Number(state.ui.finalChallengeBuiltSentences) || 0) < 46) return;
+        const nextTier = finalChallengePracticeStarTier(state.ui.finalChallengeBuiltSentences);
+        const currentTier = Math.max(0, Number(state.ui.finalChallengeHeartAwardTier) || 0);
+        if (nextTier <= currentTier) return;
+        state.ui.finalChallengeHeartAwardTier = nextTier;
+        state.ui.finalChallengeHeartAwardUntil = Date.now() + 2000;
+        if (state.ui.finalChallengeHeartAwardTimer) {
+          window.clearTimeout(state.ui.finalChallengeHeartAwardTimer);
+        }
+        syncFinalChallengeHeartsUi();
+        state.ui.finalChallengeHeartAwardTimer = window.setTimeout(() => {
+          state.ui.finalChallengeHeartAwardUntil = 0;
+          state.ui.finalChallengeHeartAwardTimer = 0;
+          syncFinalChallengeHeartsUi();
+        }, 2000);
+      }
+
+      function setFinalChallengeResultButton(button, toneClass, iconSvg, label) {
+        if (!button) return;
+        button.classList.remove(
+          'final-challenge-modal__cta--result-blue',
+          'final-challenge-modal__cta--result-orange',
+          'final-challenge-modal__cta--result-green',
+          'final-challenge-modal__cta--result-neutral',
+          'final-challenge-modal__cta--voice'
+        );
+        if (toneClass) button.classList.add(toneClass);
+        button.innerHTML = `${iconSvg ? `<span class="final-challenge-modal__cta-icon" aria-hidden="true">${iconSvg}</span>` : ''}${escapeHtml(label)}`;
       }
 
       function currentFinalChallengeCard() {
@@ -31965,6 +32228,7 @@ para liberar desafio</p>
       }
 
       function stopFinalChallengePromptAudio() {
+        state.ui.finalChallengeAudioToken = Math.max(0, Number(state.ui.finalChallengeAudioToken) || 0) + 1;
         if (typeof finalChallengePromptCleanup === 'function') {
           try {
             finalChallengePromptCleanup();
@@ -32014,8 +32278,10 @@ para liberar desafio</p>
         });
         if (!src) return false;
         stopFinalChallengePromptAudio();
-        await prepareRuntimeAudioSource(src);
-        const runtimeSrc = runtimeAudioSourceFor(src);
+        const playbackToken = Math.max(0, Number(state.ui.finalChallengeAudioToken) || 0);
+        const immediateRuntimeSrc = await resolveCachedRuntimeAudioSource(src, 140);
+        if (playbackToken !== Math.max(0, Number(state.ui.finalChallengeAudioToken) || 0)) return false;
+        const runtimeSrc = safeText(immediateRuntimeSrc) || runtimeAudioSourceFor(src);
         const cachedAudio = state.game.preloadAudios.get(src);
         const shouldReplaceCachedAudio = !cachedAudio || !audioElementUsesSource(cachedAudio, runtimeSrc);
         const audio = shouldReplaceCachedAudio
@@ -32024,12 +32290,12 @@ para liberar desafio</p>
         audio.preload = 'auto';
         if (shouldReplaceCachedAudio) {
           try {
-            audio.load();
             state.game.preloadAudios.set(src, audio);
           } catch (_error) {
             // ignore
           }
         }
+        void prepareRuntimeAudioSource(src, options.waitForEnd ? 900 : 650);
         audio.playbackRate = Math.max(0.1, Math.min(2.5, Number(options.rate || 1) * resolveSelectedGameSpeed()));
         audio.defaultPlaybackRate = audio.playbackRate;
         audio.preservesPitch = true;
@@ -32064,7 +32330,6 @@ para liberar desafio</p>
         } catch (_error) {
           // ignore
         }
-        await waitForAudioCanPlay(audio, 1800);
         try {
           await audio.play();
         } catch (_error) {
@@ -32073,6 +32338,15 @@ para liberar desafio</p>
           }
           resetColorProgress();
           finalChallengePromptCleanup = null;
+          return false;
+        }
+        if (playbackToken !== Math.max(0, Number(state.ui.finalChallengeAudioToken) || 0)) {
+          try {
+            audio.pause();
+            audio.currentTime = 0;
+          } catch (_error) {
+            // ignore
+          }
           return false;
         }
         audio.addEventListener('ended', finalizePlayback, { once: true });
@@ -32090,20 +32364,28 @@ para liberar desafio</p>
               return;
             }
             let finished = false;
-            const finish = () => {
+            const finish = (reason = '') => {
               if (finished) return;
               finished = true;
               audio.removeEventListener('ended', finish);
               audio.removeEventListener('error', finish);
               window.clearTimeout(fallbackTimer);
+              if (reason === 'timeout' && !audio.ended) {
+                try {
+                  audio.pause();
+                  audio.currentTime = 0;
+                } catch (_error) {
+                  // ignore
+                }
+              }
               resolve();
             };
             const expectedMs = Number.isFinite(audio.duration) && audio.duration > 0
-              ? ((audio.duration - audio.currentTime) / Math.max(0.1, audio.playbackRate || 1)) * 1000 + 280
+              ? ((audio.duration - audio.currentTime) / Math.max(0.1, audio.playbackRate || 1)) * 1000 + 420
               : 2600;
-            const fallbackTimer = window.setTimeout(finish, Math.max(900, Math.min(3500, expectedMs)));
-            audio.addEventListener('ended', finish, { once: true });
-            audio.addEventListener('error', finish, { once: true });
+            const fallbackTimer = window.setTimeout(() => finish('timeout'), Math.max(1000, Math.min(9000, expectedMs)));
+            audio.addEventListener('ended', () => finish('ended'), { once: true });
+            audio.addEventListener('error', () => finish('error'), { once: true });
           });
         }
         return true;
@@ -32220,6 +32502,7 @@ para liberar desafio</p>
           state.ui.finalChallengeAttempts += 1;
           state.ui.finalChallengeScores.push(100);
           recordFinalChallengeBuiltCard(card);
+          maybePreviewFinalChallengeStarTier();
           syncFinalChallengePracticeMeter();
           setFinalChallengeStatus('');
           playSuccessAudio();
@@ -32656,7 +32939,7 @@ para liberar desafio</p>
           && state.ui.finalChallengeIndex >= state.ui.finalChallengeCards.length;
         if (els.finalChallengeResultTitle) {
           els.finalChallengeResultTitle.textContent = isPracticeMode
-            ? (practiceCompleted ? 'Nível desbloqueado' : 'Tente novamente')
+            ? (practiceCompleted ? 'Sucesso' : 'Tente novamente')
             : (passed
             ? 'Voce passou de fase'
             : (state.ui.finalChallengeForcedGameOver ? 'Game over' : 'Voce nao passou de fase'));
@@ -32688,26 +32971,66 @@ para liberar desafio</p>
         }
         if (els.finalChallengeReviewBtn) {
           els.finalChallengeReviewBtn.hidden = isPracticeMode || !Array.isArray(state.ui.finalChallengeWrongCards) || !state.ui.finalChallengeWrongCards.length;
+          if (!els.finalChallengeReviewBtn.hidden) {
+            setFinalChallengeResultButton(
+              els.finalChallengeReviewBtn,
+              'final-challenge-modal__cta--result-blue',
+              '<svg viewBox="0 0 24 24" focusable="false"><path d="M8 5.5v13l10-6.5-10-6.5Z"/></svg>',
+              'Revisar'
+            );
+          }
         }
         if (els.finalChallengeVoiceBtn) {
           els.finalChallengeVoiceBtn.hidden = !practiceCompleted;
+          if (!els.finalChallengeVoiceBtn.hidden) {
+            setFinalChallengeResultButton(
+              els.finalChallengeVoiceBtn,
+              'final-challenge-modal__cta--voice',
+              '<svg viewBox="0 0 24 24" focusable="false"><rect x="9" y="3" width="6" height="12" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0"></path><path d="M12 18v3"></path></svg>',
+              'Fazer desafio de voz'
+            );
+          }
         }
         if (els.finalChallengeRetryBtn) {
           if (isPracticeMode) {
-            els.finalChallengeRetryBtn.textContent = practiceCompleted
-              ? `Avançar para Nível ${normalizeUserLevel(currentLevel + 1)}`
-              : 'Tentar de novo';
+            setFinalChallengeResultButton(
+              els.finalChallengeRetryBtn,
+              practiceCompleted ? 'final-challenge-modal__cta--result-green' : 'final-challenge-modal__cta--result-orange',
+              practiceCompleted
+                ? '<svg viewBox="0 0 24 24" focusable="false"><path d="M5 12h12"></path><path d="m13 6 6 6-6 6"></path></svg>'
+                : '<svg viewBox="0 0 24 24" focusable="false"><path d="M20 12a8 8 0 1 1-2.34-5.66"></path><path d="M20 4v6h-6"></path></svg>',
+              practiceCompleted ? `Avançar para Nível ${normalizeUserLevel(currentLevel + 1)}` : 'Tentar de novo'
+            );
             state.ui.finalChallengeResultAction = practiceCompleted ? 'next-level-intro' : 'retry-practice';
           } else if (passed) {
-            els.finalChallengeRetryBtn.textContent = `Jogar Nivel ${Math.max(currentLevel, currentUnlockedFinalChallengeLevel())}`;
+            setFinalChallengeResultButton(
+              els.finalChallengeRetryBtn,
+              'final-challenge-modal__cta--result-green',
+              '<svg viewBox="0 0 24 24" focusable="false"><path d="M5 12h12"></path><path d="m13 6 6 6-6 6"></path></svg>',
+              `Jogar Nivel ${Math.max(currentLevel, currentUnlockedFinalChallengeLevel())}`
+            );
             state.ui.finalChallengeResultAction = 'next-level-intro';
           } else {
-            els.finalChallengeRetryBtn.textContent = 'Tentar de novo';
+            setFinalChallengeResultButton(
+              els.finalChallengeRetryBtn,
+              'final-challenge-modal__cta--result-orange',
+              '<svg viewBox="0 0 24 24" focusable="false"><path d="M20 12a8 8 0 1 1-2.34-5.66"></path><path d="M20 4v6h-6"></path></svg>',
+              'Tentar de novo'
+            );
             state.ui.finalChallengeResultAction = 'retry-voice';
           }
         }
+        setFinalChallengeResultButton(
+          els.finalChallengeMenuBtn,
+          'final-challenge-modal__cta--result-neutral',
+          '<svg viewBox="0 0 24 24" focusable="false"><path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-8.5Z"></path></svg>',
+          'Voltar ao menu'
+        );
         setFinalChallengeScreen('result');
-        animateFinalChallengeResultHearts();
+        animateFinalChallengeResultAwards({
+          showStars: practiceCompleted,
+          starCount: practiceCompleted ? finalChallengePracticeStarTier(state.ui.finalChallengeBuiltSentences) : 0
+        });
         if (isPracticeMode) {
           void persistFinalChallengeTrainingResult().catch((error) => {
             console.warn('Falha ao creditar resultado do treino:', error);
@@ -34422,7 +34745,7 @@ para liberar desafio</p>
         els.dailyPlanCloseBtn?.addEventListener('click', closeDailyPlanModal);
         els.dailyPlanSealProgressValue?.addEventListener('click', () => {
           closeDailyPlanModal();
-          window.location.href = '/fluency-plan?returnTo=/play';
+          showWelcomeGate();
         });
         els.welcomeBooksBtn?.addEventListener('click', () => {
           void openAlbumsModal();

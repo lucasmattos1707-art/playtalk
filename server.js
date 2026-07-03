@@ -5557,12 +5557,8 @@ function buildOnboardingRoute(pathname, returnTo = '/play') {
 }
 
 function resolveRequiredOnboardingPath(user, returnTo = '/play') {
-  if (!hasCompletedFluencyPlan(user)) {
-    return buildOnboardingRoute('/fluency-plan', returnTo);
-  }
-  if (needsAvatarOnboarding(user)) {
-    return buildOnboardingRoute('/avataradd', returnTo);
-  }
+  // Welcome gate is now the direct post-login landing point.
+  // Fluency-plan and avatar setup remain optional instead of blocking entry.
   return '';
 }
 
@@ -17036,6 +17032,80 @@ app.post('/api/flashcards/training-result', express.json({ limit: '64kb' }), asy
   } catch (error) {
     console.error('Erro ao salvar resultado do treino final:', error);
     res.status(500).json({ success: false, message: 'Erro ao salvar resultado do treino.' });
+  }
+});
+
+app.post('/api/flashcards/training-streak-record', express.json({ limit: '32kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    await ensureFlashcardUserStateTables();
+    const userId = Number(authUser.id);
+    const targetLanguage = normalizeFlashcardTargetLanguage(req.body?.targetLanguage);
+    const challengeLevel = normalizeUserFlashcardLevel(req.body?.challengeLevel || 1);
+    const bestSequence = Math.max(0, Math.min(100, Math.round(Number(req.body?.bestSequence) || 0)));
+    if (bestSequence <= 10) {
+      res.status(400).json({ success: false, message: 'Sequencia insuficiente para recorde.' });
+      return;
+    }
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const currentResult = await client.query(
+        `SELECT heard_words_total, built_sentences_total, best_sequence_total
+         FROM public.user_flashcard_training_totals
+         WHERE user_id = $1
+         FOR UPDATE`,
+        [userId]
+      );
+      const currentBestSequence = Math.max(0, Number(currentResult.rows[0]?.best_sequence_total) || 0);
+      const awarded = bestSequence > currentBestSequence;
+      if (awarded) {
+        await client.query(
+          `INSERT INTO public.user_flashcard_training_totals (
+             user_id, heard_words_total, built_sentences_total, best_sequence_total, created_at, updated_at
+           )
+           VALUES ($1, 0, 0, $2, now(), now())
+           ON CONFLICT (user_id)
+           DO UPDATE SET
+             best_sequence_total = GREATEST(public.user_flashcard_training_totals.best_sequence_total, EXCLUDED.best_sequence_total),
+             updated_at = now()`,
+          [userId, bestSequence]
+        );
+      }
+      const totalsResult = await client.query(
+        `SELECT heard_words_total, built_sentences_total, best_sequence_total
+         FROM public.user_flashcard_training_totals
+         WHERE user_id = $1`,
+        [userId]
+      );
+      await client.query('COMMIT');
+      res.json({
+        success: true,
+        awarded,
+        targetLanguage,
+        challengeLevel,
+        heardWordsTotal: Math.max(0, Number(totalsResult.rows[0]?.heard_words_total) || 0),
+        builtSentencesTotal: Math.max(0, Number(totalsResult.rows[0]?.built_sentences_total) || 0),
+        bestSequenceTotal: Math.max(0, Number(totalsResult.rows[0]?.best_sequence_total) || 0)
+      });
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Erro ao salvar recorde de sequencia do treino:', error);
+    res.status(500).json({ success: false, message: 'Erro ao salvar recorde de sequencia.' });
   }
 });
 
