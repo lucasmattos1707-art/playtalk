@@ -12050,6 +12050,178 @@
       min-width: 160px;
     }
 
+    .final-challenge-modal__topbar--intro {
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .final-challenge-modal__download-trigger {
+      margin-left: auto;
+    }
+
+    .final-challenge-modal__downloads {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: none;
+      align-items: stretch;
+      justify-content: center;
+      background: linear-gradient(180deg, rgba(6, 8, 12, 0.98), rgba(16, 20, 30, 0.98));
+    }
+
+    .final-challenge-modal__downloads.is-visible {
+      display: flex;
+    }
+
+    .final-challenge-modal__downloads-panel {
+      width: 100%;
+      min-height: 100%;
+      padding: 18px 16px 24px;
+      display: grid;
+      grid-template-rows: auto auto auto minmax(0, 1fr);
+      gap: 18px;
+      box-sizing: border-box;
+    }
+
+    .final-challenge-modal__downloads-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .final-challenge-modal__downloads-copy {
+      display: grid;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .final-challenge-modal__downloads-title {
+      margin: 0;
+      font: 900 clamp(28px, 8vw, 42px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
+      text-transform: uppercase;
+      color: #f7fbff;
+    }
+
+    .final-challenge-modal__downloads-subtitle {
+      margin: 0;
+      font: 700 clamp(14px, 3.8vw, 18px)/1.4 "Open Sans", Arial, sans-serif;
+      color: rgba(245, 247, 251, 0.74);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .final-challenge-modal__downloads-status {
+      min-height: 22px;
+      margin: 0;
+      text-align: center;
+      font: 800 13px/1.4 "Exo 2", "Open Sans", Arial, sans-serif;
+      color: rgba(255, 255, 255, 0.78);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .final-challenge-modal__downloads-status.is-error {
+      color: #ff9999;
+    }
+
+    .final-challenge-modal__downloads-status.is-success {
+      color: #59efae;
+    }
+
+    .final-challenge-modal__downloads-list {
+      min-height: 0;
+      overflow: auto;
+      display: grid;
+      align-content: start;
+      gap: 12px;
+      padding-right: 4px;
+    }
+
+    .final-challenge-modal__downloads-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 16px 18px;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.06);
+      box-shadow: 0 18px 30px rgba(0, 0, 0, 0.18);
+    }
+
+    .final-challenge-modal__downloads-row.is-active {
+      border-color: rgba(255, 177, 87, 0.44);
+      background: rgba(255, 177, 87, 0.1);
+    }
+
+    .final-challenge-modal__downloads-row.is-downloaded {
+      border-color: rgba(91, 239, 174, 0.32);
+    }
+
+    .final-challenge-modal__downloads-meta {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .final-challenge-modal__downloads-level {
+      margin: 0;
+      font: 900 clamp(20px, 5.2vw, 28px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
+      text-transform: uppercase;
+      color: #ffffff;
+    }
+
+    .final-challenge-modal__downloads-note {
+      margin: 0;
+      font: 700 13px/1.4 "Open Sans", Arial, sans-serif;
+      color: rgba(245, 247, 251, 0.7);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .final-challenge-modal__downloads-btn {
+      min-width: 60px;
+      min-height: 60px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.08);
+      color: #f5f7fb;
+      display: inline-grid;
+      place-items: center;
+      cursor: pointer;
+      transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
+    }
+
+    .final-challenge-modal__downloads-btn:hover,
+    .final-challenge-modal__downloads-btn:focus-visible {
+      transform: translateY(-1px);
+      filter: brightness(1.08);
+    }
+
+    .final-challenge-modal__downloads-btn:disabled {
+      opacity: 0.55;
+      cursor: wait;
+      transform: none;
+      filter: none;
+    }
+
+    .final-challenge-modal__downloads-btn.is-downloaded {
+      background: linear-gradient(135deg, rgba(73, 223, 149, 0.26), rgba(42, 200, 255, 0.22));
+      border-color: rgba(91, 239, 174, 0.44);
+      color: #8cffcb;
+    }
+
+    .final-challenge-modal__downloads-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+      stroke: currentColor;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
     .final-challenge-modal__confirm[hidden] {
       display: none;
     }
@@ -12231,9 +12403,12 @@
     </div>
     <div class="final-challenge-modal" id="finalChallengeModal" aria-hidden="true">
       <div class="final-challenge-modal__screen is-active" id="finalChallengeIntroScreen">
-        <div class="final-challenge-modal__topbar">
+        <div class="final-challenge-modal__topbar final-challenge-modal__topbar--intro">
           <button class="final-challenge-modal__back" id="finalChallengeCloseBtn" type="button" aria-label="Fechar desafio final">
             <svg viewBox="0 0 24 24" focusable="false"><path d="M10.7 5.3a1 1 0 0 1 0 1.4L6.41 11H20a1 1 0 1 1 0 2H6.4l4.3 4.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
+          </button>
+          <button class="final-challenge-modal__back final-challenge-modal__download-trigger" id="finalChallengeDownloadsBtn" type="button" aria-label="Baixar audios do nivel">
+            <svg viewBox="0 0 24 24" focusable="false"><path d="M12 4v9"></path><path d="m8.5 10.5 3.5 3.5 3.5-3.5"></path><path d="M5 18h14"></path></svg>
           </button>
         </div>
         <div class="final-challenge-modal__intro-header">
@@ -12338,6 +12513,23 @@ para liberar desafio</p>
           <p class="final-challenge-modal__review-native" id="finalChallengeReviewNative">...</p>
           <p class="final-challenge-modal__review-target" id="finalChallengeReviewTarget">...</p>
           <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost final-challenge-modal__review-close" id="finalChallengeReviewCloseBtn" type="button">Fechar</button>
+        </div>
+      </div>
+      <div class="final-challenge-modal__downloads" id="finalChallengeDownloadsModal" aria-hidden="true">
+        <div class="final-challenge-modal__downloads-panel">
+          <div class="final-challenge-modal__downloads-header">
+            <button class="final-challenge-modal__back" id="finalChallengeDownloadsCloseBtn" type="button" aria-label="Fechar downloads">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M10.7 5.3a1 1 0 0 1 0 1.4L6.41 11H20a1 1 0 1 1 0 2H6.4l4.3 4.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
+            </button>
+            <div style="width:44px;height:44px;" aria-hidden="true"></div>
+          </div>
+          <div class="final-challenge-modal__downloads-copy">
+            <p class="final-challenge-modal__eyebrow" id="finalChallengeDownloadsEyebrow">Downloads</p>
+            <h2 class="final-challenge-modal__downloads-title" id="finalChallengeDownloadsTitle">Audios do nivel</h2>
+            <p class="final-challenge-modal__downloads-subtitle" id="finalChallengeDownloadsSubtitle">Portugues + Ingles</p>
+          </div>
+          <p class="final-challenge-modal__downloads-status" id="finalChallengeDownloadsStatus"></p>
+          <div class="final-challenge-modal__downloads-list" id="finalChallengeDownloadsList"></div>
         </div>
       </div>
     </div>
@@ -13146,6 +13338,15 @@ para liberar desafio</p>
           final_challenge_complete: 'Desafio completo',
           note_label: 'Nota',
           time_label: 'Tempo',
+          downloads: 'Downloads',
+          level_audio_downloads: 'Audios do nivel',
+          downloaded: 'Baixado',
+          download_audio: 'Baixar',
+          download_update: 'Atualizar',
+          download_ready: 'Pronto para uso offline leve',
+          downloading_level: 'Baixando nivel {level}...',
+          download_done: 'Nivel {level} pronto neste aparelho',
+          download_unavailable: 'Sem cartas suficientes para este nivel',
           phase_2: 'Fase 2',
           phase_2_copy: 'Agora toque nos blocos em {language}.',
           phase_2_banner: 'FASE 2',
@@ -13193,6 +13394,15 @@ para liberar desafio</p>
           final_challenge_complete: 'Challenge complete',
           note_label: 'Score',
           time_label: 'Time',
+          downloads: 'Downloads',
+          level_audio_downloads: 'Level audio',
+          downloaded: 'Downloaded',
+          download_audio: 'Download',
+          download_update: 'Refresh',
+          download_ready: 'Ready for smoother offline play',
+          downloading_level: 'Downloading level {level}...',
+          download_done: 'Level {level} ready on this device',
+          download_unavailable: 'Not enough cards for this level',
           phase_2: 'Phase 2',
           phase_2_copy: 'Now tap the blocks in {language}.',
           phase_2_banner: 'PHASE 2',
@@ -13240,6 +13450,15 @@ para liberar desafio</p>
           final_challenge_complete: 'Desafio completo',
           note_label: 'Nota',
           time_label: 'Tiempo',
+          downloads: 'Descargas',
+          level_audio_downloads: 'Audios del nivel',
+          downloaded: 'Descargado',
+          download_audio: 'Descargar',
+          download_update: 'Actualizar',
+          download_ready: 'Listo para jugar con menos carga',
+          downloading_level: 'Descargando nivel {level}...',
+          download_done: 'Nivel {level} listo en este dispositivo',
+          download_unavailable: 'No hay cartas suficientes para este nivel',
           phase_2: 'Fase 2',
           phase_2_copy: 'Ahora toca los bloques en {language}.',
           phase_2_banner: 'FASE 2',
@@ -13287,6 +13506,15 @@ para liberar desafio</p>
           final_challenge_complete: 'Defi termine',
           note_label: 'Note',
           time_label: 'Temps',
+          downloads: 'Telechargements',
+          level_audio_downloads: 'Audios du niveau',
+          downloaded: 'Telecharge',
+          download_audio: 'Telecharger',
+          download_update: 'Actualiser',
+          download_ready: 'Pret pour un jeu plus fluide',
+          downloading_level: 'Telechargement du niveau {level}...',
+          download_done: 'Niveau {level} pret sur cet appareil',
+          download_unavailable: 'Pas assez de cartes pour ce niveau',
           phase_2: 'Phase 2',
           phase_2_copy: 'Maintenant touche les blocs en {language}.',
           phase_2_banner: 'PHASE 2',
@@ -13334,6 +13562,15 @@ para liberar desafio</p>
           final_challenge_complete: 'Herausforderung abgeschlossen',
           note_label: 'Note',
           time_label: 'Zeit',
+          downloads: 'Downloads',
+          level_audio_downloads: 'Level-Audios',
+          downloaded: 'Geladen',
+          download_audio: 'Laden',
+          download_update: 'Aktualisieren',
+          download_ready: 'Bereit fur flussigeres Spiel',
+          downloading_level: 'Level {level} wird geladen...',
+          download_done: 'Level {level} ist auf diesem Gerat bereit',
+          download_unavailable: 'Nicht genug Karten fur dieses Level',
           phase_2: 'Phase 2',
           phase_2_copy: 'Tippe jetzt die Blöcke auf {language}.',
           phase_2_banner: 'PHASE 2',
@@ -13381,6 +13618,15 @@ para liberar desafio</p>
           final_challenge_complete: 'Tiaozhan yi wancheng',
           note_label: 'Fenshu',
           time_label: 'Shijian',
+          downloads: 'Xiazai',
+          level_audio_downloads: 'Dengji yuyin',
+          downloaded: 'Yi xiazai',
+          download_audio: 'Xiazai',
+          download_update: 'Gengxin',
+          download_ready: 'Yi zhunbei hao geng shun chang de bofang',
+          downloading_level: 'Zhengzai xiazai dengji {level}...',
+          download_done: 'Dengji {level} yi zai ci shebei shiyong',
+          download_unavailable: 'Zhege dengji de kapiandeng bu zu',
           phase_2: 'Di er jie duan',
           phase_2_copy: 'Xianzai qing dianji {language} yukuai.',
           phase_2_banner: 'DI ER JIE DUAN',
@@ -13802,6 +14048,8 @@ para liberar desafio</p>
       const FINAL_CHALLENGE_CARD_COUNT = 25;
       const FINAL_CHALLENGE_CARD_PASS_PERCENT = 69;
       const FINAL_CHALLENGE_PASS_PERCENT = 80;
+      const FINAL_CHALLENGE_DOWNLOADS_STORAGE_KEY = 'playtalk-final-challenge-downloads-v1';
+      const FINAL_CHALLENGE_AUDIO_CACHE_NAME = 'playtalk-final-challenge-audio-v1';
       const FLASHCARD_REPORT_ICONS = {
         'blurred-image': '<svg class="game-report-menu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v10H4z"></path><circle cx="9" cy="11" r="1.8"></circle><path d="M12 15l2.5-2.5L18 16"></path></svg>',
         'weak-association': '<svg class="game-report-menu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7l-2 2a3 3 0 0 0 0 4 3 3 0 0 0 4 0l2-2"></path><path d="M14 17l2-2a3 3 0 0 0 0-4 3 3 0 0 0-4 0l-2 2"></path><line x1="9" y1="15" x2="15" y2="9"></line></svg>',
@@ -13995,6 +14243,7 @@ para liberar desafio</p>
           reportAudio: null,
           preloadImages: new Map(),
           preloadAudios: new Map(),
+          runtimeAudioUrls: new Map(),
           pendingEnsureAudioKeys: new Set(),
           contextLimit: DEFAULT_GAME_CONTEXT_LIMIT,
           selectedCount: null,
@@ -14257,7 +14506,11 @@ para liberar desafio</p>
           finalChallengeResultPassed: false,
           finalChallengeIntroStatsStep: 0,
           finalChallengeIntroStatsTimer: 0,
-          finalChallengeSessionStartedAt: 0
+          finalChallengeSessionStartedAt: 0,
+          finalChallengeDownloadsOpen: false,
+          finalChallengeDownloadsBusyLevel: 0,
+          finalChallengeDownloadsStatus: '',
+          finalChallengeDownloadsStatusTone: ''
         },
         options: {
           difficulty: DEFAULT_GAME_OPTIONS.difficulty,
@@ -14297,6 +14550,7 @@ para liberar desafio</p>
         finalChallengeRunScreen: document.getElementById('finalChallengeRunScreen'),
         finalChallengeResultScreen: document.getElementById('finalChallengeResultScreen'),
         finalChallengeCloseBtn: document.getElementById('finalChallengeCloseBtn'),
+        finalChallengeDownloadsBtn: document.getElementById('finalChallengeDownloadsBtn'),
         finalChallengeStartBtn: document.getElementById('finalChallengeStartBtn'),
         finalChallengePracticeBtn: document.getElementById('finalChallengePracticeBtn'),
         finalChallengeContinueWithoutBtn: document.getElementById('finalChallengeContinueWithoutBtn'),
@@ -14337,6 +14591,13 @@ para liberar desafio</p>
         finalChallengeReviewNative: document.getElementById('finalChallengeReviewNative'),
         finalChallengeReviewTarget: document.getElementById('finalChallengeReviewTarget'),
         finalChallengeReviewCloseBtn: document.getElementById('finalChallengeReviewCloseBtn'),
+        finalChallengeDownloadsModal: document.getElementById('finalChallengeDownloadsModal'),
+        finalChallengeDownloadsCloseBtn: document.getElementById('finalChallengeDownloadsCloseBtn'),
+        finalChallengeDownloadsEyebrow: document.getElementById('finalChallengeDownloadsEyebrow'),
+        finalChallengeDownloadsTitle: document.getElementById('finalChallengeDownloadsTitle'),
+        finalChallengeDownloadsSubtitle: document.getElementById('finalChallengeDownloadsSubtitle'),
+        finalChallengeDownloadsStatus: document.getElementById('finalChallengeDownloadsStatus'),
+        finalChallengeDownloadsList: document.getElementById('finalChallengeDownloadsList'),
         dailyPlanModal: document.getElementById('dailyPlanModal'),
         dailyPlanCloseBtn: document.getElementById('dailyPlanCloseBtn'),
         albumsModal: document.getElementById('albumsModal'),
@@ -14938,6 +15199,9 @@ para liberar desafio</p>
         state.ui.finalChallengeIntroStatsStep = 0;
         stopFinalChallengeIntroStatsRotation();
         syncFinalChallengeLevelCopy();
+        if (state.ui.finalChallengeDownloadsOpen) {
+          renderFinalChallengeDownloadsModal();
+        }
         return nextLevel;
       }
 
@@ -15013,6 +15277,236 @@ para liberar desafio</p>
           state.ui.finalChallengeIntroStatsStep = (Number(state.ui.finalChallengeIntroStatsStep) || 0) + 1;
           syncFinalChallengeIntroUi();
         }, 2000);
+      }
+
+      function finalChallengeAudioCacheSupported() {
+        return typeof window !== 'undefined'
+          && typeof window.caches !== 'undefined'
+          && typeof window.fetch === 'function'
+          && typeof window.URL?.createObjectURL === 'function';
+      }
+
+      function finalChallengeDownloadPairKey(nativeLanguage = currentNativeLanguage(), targetLanguage = currentTargetLanguage()) {
+        return [normalizeGameOptionValue('nativeLanguage', nativeLanguage), normalizeGameOptionValue('targetLanguage', targetLanguage)]
+          .filter(Boolean)
+          .sort()
+          .join('|');
+      }
+
+      function finalChallengeDownloadPairLabel(nativeLanguage = currentNativeLanguage(), targetLanguage = currentTargetLanguage()) {
+        return `${uiLanguageLabel(nativeLanguage)} + ${uiLanguageLabel(targetLanguage)}`;
+      }
+
+      function finalChallengeDownloadStoreKey(level, nativeLanguage = currentNativeLanguage(), targetLanguage = currentTargetLanguage()) {
+        return `${finalChallengeDownloadPairKey(nativeLanguage, targetLanguage)}:${normalizeUserLevel(level)}`;
+      }
+
+      function readFinalChallengeDownloadsStore() {
+        try {
+          const raw = window.localStorage.getItem(FINAL_CHALLENGE_DOWNLOADS_STORAGE_KEY);
+          const parsed = raw ? JSON.parse(raw) : {};
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (_error) {
+          return {};
+        }
+      }
+
+      function writeFinalChallengeDownloadsStore(store) {
+        try {
+          window.localStorage.setItem(FINAL_CHALLENGE_DOWNLOADS_STORAGE_KEY, JSON.stringify(store || {}));
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      function readFinalChallengeDownloadRecord(level, nativeLanguage = currentNativeLanguage(), targetLanguage = currentTargetLanguage()) {
+        const store = readFinalChallengeDownloadsStore();
+        const record = store?.[finalChallengeDownloadStoreKey(level, nativeLanguage, targetLanguage)];
+        return record && typeof record === 'object' ? record : null;
+      }
+
+      function writeFinalChallengeDownloadRecord(level, record, nativeLanguage = currentNativeLanguage(), targetLanguage = currentTargetLanguage()) {
+        const store = readFinalChallengeDownloadsStore();
+        store[finalChallengeDownloadStoreKey(level, nativeLanguage, targetLanguage)] = record;
+        writeFinalChallengeDownloadsStore(store);
+      }
+
+      function runtimeAudioSourceFor(src) {
+        const safeSrc = safeText(src);
+        return safeText(state.game?.runtimeAudioUrls?.get(safeSrc) || safeSrc);
+      }
+
+      async function cacheRuntimeAudioBlob(src, response) {
+        const safeSrc = safeText(src);
+        if (!safeSrc || !response || typeof response.clone !== 'function' || !finalChallengeAudioCacheSupported()) return safeSrc;
+        try {
+          const existing = safeText(state.game?.runtimeAudioUrls?.get(safeSrc) || '');
+          const blob = await response.clone().blob();
+          if (!blob || !blob.size) return safeSrc;
+          const nextUrl = window.URL.createObjectURL(blob);
+          if (existing && existing.startsWith('blob:') && existing !== nextUrl) {
+            try {
+              window.URL.revokeObjectURL(existing);
+            } catch (_error) {
+              // ignore
+            }
+          }
+          state.game.runtimeAudioUrls.set(safeSrc, nextUrl);
+          return nextUrl;
+        } catch (_error) {
+          return safeSrc;
+        }
+      }
+
+      async function ensureRuntimeAudioSource(src) {
+        const safeSrc = safeText(src);
+        if (!safeSrc || !finalChallengeAudioCacheSupported()) return safeSrc;
+        const existing = safeText(state.game?.runtimeAudioUrls?.get(safeSrc) || '');
+        if (existing) return existing;
+        try {
+          const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
+          const cachedResponse = await cache.match(safeSrc);
+          if (!cachedResponse) return safeSrc;
+          return await cacheRuntimeAudioBlob(safeSrc, cachedResponse);
+        } catch (_error) {
+          return safeSrc;
+        }
+      }
+
+      function setFinalChallengeDownloadsStatus(message = '', tone = '') {
+        state.ui.finalChallengeDownloadsStatus = safeText(message);
+        state.ui.finalChallengeDownloadsStatusTone = safeText(tone);
+        if (!els.finalChallengeDownloadsStatus) return;
+        els.finalChallengeDownloadsStatus.textContent = state.ui.finalChallengeDownloadsStatus;
+        els.finalChallengeDownloadsStatus.className = 'final-challenge-modal__downloads-status';
+        if (tone === 'success') {
+          els.finalChallengeDownloadsStatus.classList.add('is-success');
+        } else if (tone === 'error') {
+          els.finalChallengeDownloadsStatus.classList.add('is-error');
+        }
+      }
+
+      function finalChallengeDownloadPayload(level) {
+        const selection = resolveStoredFinalChallengeSelection(level);
+        const cards = Array.isArray(selection.cards) ? selection.cards : [];
+        const languages = Array.from(new Set([currentNativeLanguage(), currentTargetLanguage()]));
+        const urls = [];
+        cards.forEach((card) => {
+          languages.forEach((language) => {
+            const audioUrl = resolveCardAudioUrlForLanguage(card, language, {
+              accent: language === 'english' ? currentLanguageBackgroundAccent() : ''
+            });
+            if (audioUrl) {
+              urls.push(audioUrl);
+            }
+          });
+        });
+        return {
+          cards,
+          audioUrls: Array.from(new Set(urls))
+        };
+      }
+
+      function renderFinalChallengeDownloadsModal() {
+        if (!els.finalChallengeDownloadsList) return;
+        const maxLevel = Math.max(1, currentUnlockedFinalChallengeLevel());
+        const selectedLevel = currentFinalChallengeLevel();
+        const busyLevel = Math.max(0, Number(state.ui.finalChallengeDownloadsBusyLevel) || 0);
+        els.finalChallengeDownloadsList.innerHTML = '';
+        if (els.finalChallengeDownloadsEyebrow) {
+          els.finalChallengeDownloadsEyebrow.textContent = nativeUiText('downloads');
+        }
+        if (els.finalChallengeDownloadsTitle) {
+          els.finalChallengeDownloadsTitle.textContent = nativeUiText('level_audio_downloads');
+        }
+        if (els.finalChallengeDownloadsSubtitle) {
+          els.finalChallengeDownloadsSubtitle.textContent = finalChallengeDownloadPairLabel();
+        }
+        setFinalChallengeDownloadsStatus(state.ui.finalChallengeDownloadsStatus, state.ui.finalChallengeDownloadsStatusTone);
+        for (let level = 1; level <= maxLevel; level += 1) {
+          const payload = finalChallengeDownloadPayload(level);
+          const downloadedRecord = readFinalChallengeDownloadRecord(level);
+          const downloaded = Boolean(downloadedRecord?.completed && Number(downloadedRecord?.audioCount) === payload.audioUrls.length && payload.audioUrls.length > 0);
+          const row = document.createElement('div');
+          row.className = 'final-challenge-modal__downloads-row';
+          if (level === selectedLevel) row.classList.add('is-active');
+          if (downloaded) row.classList.add('is-downloaded');
+          const meta = document.createElement('div');
+          meta.className = 'final-challenge-modal__downloads-meta';
+          const title = document.createElement('p');
+          title.className = 'final-challenge-modal__downloads-level';
+          title.textContent = `${nativeUiText('level')} ${level}`;
+          const note = document.createElement('p');
+          note.className = 'final-challenge-modal__downloads-note';
+          note.textContent = payload.audioUrls.length
+            ? (downloaded ? `${nativeUiText('downloaded')} • ${payload.audioUrls.length} audios` : `${payload.audioUrls.length} audios • ${nativeUiText('download_ready')}`)
+            : nativeUiText('download_unavailable');
+          meta.append(title, note);
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'final-challenge-modal__downloads-btn';
+          button.disabled = !payload.audioUrls.length || busyLevel === level;
+          if (downloaded) button.classList.add('is-downloaded');
+          button.setAttribute('aria-label', `${downloaded ? nativeUiText('download_update') : nativeUiText('download_audio')} ${nativeUiText('level')} ${level}`);
+          button.innerHTML = downloaded
+            ? '<svg viewBox="0 0 24 24" focusable="false"><path d="M5 12.5 9.5 17 19 7.5"></path></svg>'
+            : '<svg viewBox="0 0 24 24" focusable="false"><path d="M12 4v9"></path><path d="m8.5 10.5 3.5 3.5 3.5-3.5"></path><path d="M5 18h14"></path></svg>';
+          button.addEventListener('click', () => {
+            void downloadFinalChallengeLevelAudio(level);
+          });
+          row.append(meta, button);
+          els.finalChallengeDownloadsList.appendChild(row);
+        }
+      }
+
+      function openFinalChallengeDownloadsModal() {
+        if (!els.finalChallengeDownloadsModal) return;
+        state.ui.finalChallengeDownloadsOpen = true;
+        els.finalChallengeDownloadsModal.classList.add('is-visible');
+        els.finalChallengeDownloadsModal.setAttribute('aria-hidden', 'false');
+        renderFinalChallengeDownloadsModal();
+      }
+
+      function closeFinalChallengeDownloadsModal() {
+        state.ui.finalChallengeDownloadsOpen = false;
+        if (!els.finalChallengeDownloadsModal) return;
+        els.finalChallengeDownloadsModal.classList.remove('is-visible');
+        els.finalChallengeDownloadsModal.setAttribute('aria-hidden', 'true');
+      }
+
+      async function downloadFinalChallengeLevelAudio(level) {
+        const normalizedLevel = normalizeUserLevel(level);
+        const payload = finalChallengeDownloadPayload(normalizedLevel);
+        if (!payload.audioUrls.length || !finalChallengeAudioCacheSupported()) {
+          setFinalChallengeDownloadsStatus(nativeUiText('download_unavailable'), 'error');
+          renderFinalChallengeDownloadsModal();
+          return;
+        }
+        state.ui.finalChallengeDownloadsBusyLevel = normalizedLevel;
+        setFinalChallengeDownloadsStatus(nativeUiText('downloading_level', { level: normalizedLevel }), '');
+        renderFinalChallengeDownloadsModal();
+        try {
+          const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
+          for (const src of payload.audioUrls) {
+            const response = await fetch(src, { cache: 'force-cache' });
+            if (!response.ok) {
+              throw new Error(`download-failed:${response.status}`);
+            }
+            await cache.put(src, response.clone());
+            await cacheRuntimeAudioBlob(src, response);
+          }
+          writeFinalChallengeDownloadRecord(normalizedLevel, {
+            completed: true,
+            audioCount: payload.audioUrls.length,
+            updatedAt: Date.now()
+          });
+          setFinalChallengeDownloadsStatus(nativeUiText('download_done', { level: normalizedLevel }), 'success');
+        } catch (_error) {
+          setFinalChallengeDownloadsStatus(nativeUiText('download_unavailable'), 'error');
+        } finally {
+          state.ui.finalChallengeDownloadsBusyLevel = 0;
+          renderFinalChallengeDownloadsModal();
+        }
       }
 
       function continueWithoutFinalChallenge() {
@@ -22339,6 +22833,7 @@ para liberar desafio</p>
       async function playAlbumsNarrationAudioUrl(src, rate = 1, runId = 0) {
         const safeSrc = safeText(src);
         if (!safeSrc || runId !== Number(state.ui.albumsNarrationRunId || 0)) return;
+        await ensureRuntimeAudioSource(safeSrc);
         const current = state.ui.albumsNarrationAudio;
         if (current) {
           try {
@@ -22349,7 +22844,7 @@ para liberar desafio</p>
           }
         }
         state.ui.albumsNarrationAudio = null;
-        const audio = new Audio(safeSrc);
+        const audio = new Audio(runtimeAudioSourceFor(safeSrc));
         audio.playbackRate = Math.max(0.1, Math.min(2.5, Number(rate || 1) * resolveSelectedGameSpeed()));
         audio.defaultPlaybackRate = audio.playbackRate;
         audio.preservesPitch = true;
@@ -26870,35 +27365,42 @@ para liberar desafio</p>
         if (reflectFirstStarListen) setFirstStarListenSealPlaying(true);
         const selectedAudioUrl = resolveCardAudioUrl(card);
         if (selectedAudioUrl) {
-          const cachedAudio = state.game.preloadAudios.get(selectedAudioUrl);
-          const audio = cachedAudio || new Audio(selectedAudioUrl);
-          try {
-            audio.pause();
-            audio.currentTime = 0;
-          } catch (_error) {
-            // ignore
-          }
-          audio.preload = 'auto';
-          audio.playbackRate = rate;
-          audio.defaultPlaybackRate = rate;
-          audio.preservesPitch = true;
           const shouldUnlockMic = options.enableMicDuringPlayback !== false;
           const unlockDelayMs = Number(options.unlockDelayMs);
           setLevelTextModeWaveformActive(true);
-          return finishPromptReflection(playAudioWithSoftEnd(audio, {
-            registerAsActive: true,
-            onPlay: () => {
-              if (reflectFirstStarListen) {
-                startFirstStarListenProgressAnimation(audio);
-              }
-              if (shouldUnlockMic) {
-                  scheduleGameMicUnlock(
-                    state.game.currentId ? state.game.entries.get(state.game.currentId) : null,
-                    Number.isFinite(unlockDelayMs) ? unlockDelayMs : GAME_MIC_UNLOCK_DELAY_MS
-                  );
-              }
+          return finishPromptReflection((async () => {
+            await ensureRuntimeAudioSource(selectedAudioUrl);
+            const runtimeSrc = runtimeAudioSourceFor(selectedAudioUrl);
+            let audio = state.game.preloadAudios.get(selectedAudioUrl);
+            if (!audio || safeText(audio.src || '') !== safeText(runtimeSrc)) {
+              audio = new Audio(runtimeSrc);
+              state.game.preloadAudios.set(selectedAudioUrl, audio);
             }
-          }).then((played) => {
+            try {
+              audio.pause();
+              audio.currentTime = 0;
+            } catch (_error) {
+              // ignore
+            }
+            audio.preload = 'auto';
+            audio.playbackRate = rate;
+            audio.defaultPlaybackRate = rate;
+            audio.preservesPitch = true;
+            return playAudioWithSoftEnd(audio, {
+              registerAsActive: true,
+              onPlay: () => {
+                if (reflectFirstStarListen) {
+                  startFirstStarListenProgressAnimation(audio);
+                }
+                if (shouldUnlockMic) {
+                    scheduleGameMicUnlock(
+                      state.game.currentId ? state.game.entries.get(state.game.currentId) : null,
+                      Number.isFinite(unlockDelayMs) ? unlockDelayMs : GAME_MIC_UNLOCK_DELAY_MS
+                    );
+                }
+              }
+            });
+          })().then((played) => {
             setLevelTextModeWaveformActive(false);
             clearFirstStarListenProgressAnimation();
             if (reflectFirstStarListen) {
@@ -27086,8 +27588,9 @@ para liberar desafio</p>
         if (isNoEnergyMediaLocked()) return;
         const src = resolveCardAudioUrl(card);
         if (!src || state.game.preloadAudios.has(src)) return;
+        void ensureRuntimeAudioSource(src);
         try {
-          const audio = new Audio(src);
+          const audio = new Audio(runtimeAudioSourceFor(src));
           audio.preload = 'auto';
           audio.load();
           state.game.preloadAudios.set(src, audio);
@@ -27100,8 +27603,9 @@ para liberar desafio</p>
         if (isNoEnergyMediaLocked()) return;
         const safeSrc = safeText(src);
         if (!safeSrc || state.game.preloadAudios.has(safeSrc)) return;
+        void ensureRuntimeAudioSource(safeSrc);
         try {
-          const audio = new Audio(safeSrc);
+          const audio = new Audio(runtimeAudioSourceFor(safeSrc));
           audio.preload = 'auto';
           audio.load();
           state.game.preloadAudios.set(safeSrc, audio);
@@ -30539,7 +31043,8 @@ para liberar desafio</p>
         if (!state.watch.active || !src) return;
         stopWatchVoice();
         const resolvedRate = Math.max(0.1, Math.min(2.5, Number(rate || 1) * resolveSelectedGameSpeed()));
-        const audio = new Audio(src);
+        await ensureRuntimeAudioSource(src);
+        const audio = new Audio(runtimeAudioSourceFor(src));
         audio.playbackRate = resolvedRate;
         audio.defaultPlaybackRate = resolvedRate;
         audio.preservesPitch = true;
@@ -30736,6 +31241,17 @@ para liberar desafio</p>
         if (els.finalChallengeReviewCloseBtn) {
           els.finalChallengeReviewCloseBtn.textContent = nativeUiText('close');
         }
+        if (els.finalChallengeDownloadsEyebrow) {
+          els.finalChallengeDownloadsEyebrow.textContent = nativeUiText('downloads');
+        }
+        if (els.finalChallengeDownloadsTitle) {
+          els.finalChallengeDownloadsTitle.textContent = nativeUiText('level_audio_downloads');
+        }
+        if (els.finalChallengeDownloadsBtn) {
+          const label = `${nativeUiText('downloads')} • ${nativeUiText('level_audio_downloads')}`;
+          els.finalChallengeDownloadsBtn.setAttribute('aria-label', label);
+          els.finalChallengeDownloadsBtn.title = label;
+        }
         if (els.finalChallengePhaseOverlayContinueBtn) {
           els.finalChallengePhaseOverlayContinueBtn.textContent = nativeUiText('continue');
         }
@@ -30840,10 +31356,15 @@ para liberar desafio</p>
         });
         if (!src) return false;
         stopFinalChallengePromptAudio();
+        await ensureRuntimeAudioSource(src);
+        const runtimeSrc = runtimeAudioSourceFor(src);
         const cachedAudio = state.game.preloadAudios.get(src);
-        const audio = cachedAudio || new Audio(src);
+        const shouldReplaceCachedAudio = !cachedAudio || safeText(cachedAudio.src || '') !== safeText(runtimeSrc);
+        const audio = shouldReplaceCachedAudio
+          ? new Audio(runtimeSrc)
+          : cachedAudio;
         audio.preload = 'auto';
-        if (!cachedAudio) {
+        if (shouldReplaceCachedAudio) {
           try {
             audio.load();
             state.game.preloadAudios.set(src, audio);
@@ -30959,6 +31480,9 @@ para liberar desafio</p>
         } else {
           stopFinalChallengeIntroStatsRotation();
           state.ui.finalChallengeIntroStatsStep = 0;
+        }
+        if (state.ui.finalChallengeDownloadsOpen) {
+          renderFinalChallengeDownloadsModal();
         }
       }
 
@@ -31217,6 +31741,7 @@ para liberar desafio</p>
         resetFinalChallengeRunState();
         state.ui.finalChallengeRunOpen = true;
         state.ui.finalChallengeIntroStatsStep = 0;
+        state.ui.finalChallengeDownloadsBusyLevel = 0;
         syncNativeUiStaticCopy();
         syncFinalChallengeBackground();
         els.finalChallengeModal.classList.add('is-visible');
@@ -31233,12 +31758,15 @@ para liberar desafio</p>
         stopFinalChallengeIntroStatsRotation();
         clearFinalChallengeSessionState();
         state.ui.finalChallengeSessionStartedAt = 0;
+        state.ui.finalChallengeDownloadsBusyLevel = 0;
         resolveFinalChallengePhaseOverlayContinue();
         setFinalChallengePhaseOverlay(false);
         state.ui.finalChallengeListening = false;
         state.ui.finalChallengeBusy = false;
         state.ui.finalChallengeRunOpen = false;
         state.ui.finalChallengeExitConfirmOpen = false;
+        setFinalChallengeDownloadsStatus('', '');
+        closeFinalChallengeDownloadsModal();
         closeFinalChallengeReviewModal();
         if (!els.finalChallengeModal) return;
         els.finalChallengeModal.classList.remove('is-visible');
@@ -31256,6 +31784,7 @@ para liberar desafio</p>
         setFinalChallengePhaseOverlay(false);
         state.ui.finalChallengeListening = false;
         state.ui.finalChallengeBusy = false;
+        closeFinalChallengeDownloadsModal();
         closeFinalChallengeReviewModal();
         resetFinalChallengeRunState();
         setFinalChallengeStatus('');
@@ -31661,7 +32190,8 @@ para liberar desafio</p>
         if (!isWatchSessionTokenActive(sessionToken) || !src) return;
         stopWatchVoice();
         const resolvedRate = Math.max(0.1, Math.min(2.5, Number(rate || 1) * resolveSelectedGameSpeed()));
-        const audio = new Audio(src);
+        await ensureRuntimeAudioSource(src);
+        const audio = new Audio(runtimeAudioSourceFor(src));
         audio.playbackRate = resolvedRate;
         audio.defaultPlaybackRate = resolvedRate;
         audio.preservesPitch = true;
@@ -33157,21 +33687,14 @@ para liberar desafio</p>
         els.welcomeStartBtn?.addEventListener('click', (event) => {
           void (async () => {
             playStatusCueAudio(WELCOME_PLAY_SOUND_PATH);
-            if (canResumePausedFlashGame()) {
-              state.ui.gamePausedAtWelcome = true;
+            event.preventDefault();
+            event.stopPropagation();
+            if (!state.user?.id) {
+              setAuthStatus('Entre para liberar treino e desafio.', 'error');
+              return;
             }
-            if (resumeFlashcardsGameFromWelcome()) return;
-            if (await handleManualWelcomeNoEnergy(event.currentTarget)) return;
-            if (!(await guardWelcomeEnergy({ previewTarget: event.currentTarget }))) return;
-            state.game.levelMode = false;
-            state.game.levelScaleMode = false;
-            state.game.levelAudioMode = false;
-            state.game.levelTextMode = false;
-            state.game.levelTypingMode = false;
-            resetScaleBatchProgress();
-            state.entry.welcomeStartRequested = true;
-            state.entry.welcomeFlashStartAt = Date.now();
-            void openAudioCheck();
+            syncFinalChallengeLevelCopy();
+            openFinalChallengeModal();
           })();
         });
         els.welcomeMissionBtn?.addEventListener('click', () => {
@@ -33326,15 +33849,8 @@ para liberar desafio</p>
             openWelcomeModeModal('scale');
           })();
         });
-        els.welcomeAvatarPreview?.closest('.welcome-gate__avatar')?.addEventListener('click', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          if (!state.user?.id) {
-            setAuthStatus('Entre para liberar o desafio final.', 'error');
-            return;
-          }
-          syncFinalChallengeLevelCopy();
-          openFinalChallengeModal();
+        els.finalChallengeDownloadsBtn?.addEventListener('click', () => {
+          openFinalChallengeDownloadsModal();
         });
         els.finalChallengeModal?.addEventListener('click', (event) => {
           if (event.target === els.finalChallengeModal) {
@@ -33346,7 +33862,13 @@ para liberar desafio</p>
             closeFinalChallengeModal();
           }
         });
+        els.finalChallengeDownloadsModal?.addEventListener('click', (event) => {
+          if (event.target === els.finalChallengeDownloadsModal) {
+            closeFinalChallengeDownloadsModal();
+          }
+        });
         els.finalChallengeCloseBtn?.addEventListener('click', closeFinalChallengeModal);
+        els.finalChallengeDownloadsCloseBtn?.addEventListener('click', closeFinalChallengeDownloadsModal);
         els.finalChallengeExitRunBtn?.addEventListener('click', () => {
           setFinalChallengeExitConfirmOpen(true);
           syncFinalChallengeRunUi();
