@@ -673,8 +673,14 @@
       text-shadow: 0 0 10px rgba(103, 240, 173, 0.72), 0 0 22px rgba(55, 222, 147, 0.42);
     }
 
+    .welcome-gate__energy-mini.is-streak {
+      color: #ff9d2e;
+      text-shadow: 0 0 10px rgba(255, 157, 46, 0.78), 0 0 24px rgba(255, 107, 32, 0.48);
+    }
+
     .welcome-gate__energy-mini-icon.is-heard,
-    .welcome-gate__energy-mini-icon.is-built {
+    .welcome-gate__energy-mini-icon.is-built,
+    .welcome-gate__energy-mini-icon.is-streak {
       filter: drop-shadow(0 0 11px currentColor);
     }
 
@@ -11708,7 +11714,8 @@
     .final-challenge-modal__result-stats {
       min-height: 0;
       display: grid;
-      grid-template-rows: repeat(3, minmax(0, 1fr));
+      grid-template-rows: none;
+      grid-auto-rows: minmax(0, 1fr);
       gap: clamp(8px, 1.5vh, 14px);
       width: min(100%, 520px);
       margin: 0 auto;
@@ -11748,6 +11755,7 @@
 
     .final-challenge-modal__result-stat:nth-child(2) .final-challenge-modal__result-stat-icon { color: #66efad; }
     .final-challenge-modal__result-stat:nth-child(3) .final-challenge-modal__result-stat-icon { color: #ffd34d; }
+    .final-challenge-modal__result-stat:nth-child(4) .final-challenge-modal__result-stat-icon { color: #ff9d2e; }
 
     .final-challenge-modal__result-stat-icon svg,
     .final-challenge-modal__result-stat-icon img {
@@ -12045,6 +12053,55 @@
       display: grid;
       gap: 14px;
       justify-items: center;
+    }
+
+    .final-challenge-modal__practice-meter {
+      min-width: min(74vw, 280px);
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      color: #67f0ad;
+      text-align: center;
+      text-shadow: 0 0 12px rgba(103, 240, 173, 0.44);
+    }
+
+    .final-challenge-modal__practice-meter[hidden] {
+      display: none;
+    }
+
+    .final-challenge-modal__practice-meter.is-streak {
+      color: #ff9d2e;
+      text-shadow: 0 0 14px rgba(255, 157, 46, 0.58), 0 0 30px rgba(255, 107, 32, 0.34);
+    }
+
+    .final-challenge-modal__practice-meter-icon {
+      width: clamp(46px, 12vw, 64px);
+      height: clamp(46px, 12vw, 64px);
+      display: grid;
+      place-items: center;
+      filter: drop-shadow(0 0 14px currentColor);
+    }
+
+    .final-challenge-modal__practice-meter-icon svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+      stroke: currentColor;
+      stroke-width: 1.6;
+    }
+
+    .final-challenge-modal__practice-meter-value {
+      margin: 0;
+      font: 900 clamp(54px, 16vw, 92px)/0.88 "Exo 2", "Open Sans", Arial, sans-serif;
+      letter-spacing: -0.03em;
+    }
+
+    .final-challenge-modal__practice-meter-label {
+      margin: 0;
+      font: 800 13px/1.2 "Exo 2", "Open Sans", Arial, sans-serif;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(245, 247, 251, 0.54);
     }
 
     .final-challenge-modal__score-row {
@@ -12635,6 +12692,11 @@ para liberar desafio</p>
         </section>
         <section class="final-challenge-modal__zone final-challenge-modal__zone--percent">
           <div class="final-challenge-modal__percent-stack">
+            <div class="final-challenge-modal__practice-meter" id="finalChallengePracticeMeter" hidden>
+              <span class="final-challenge-modal__practice-meter-icon" id="finalChallengePracticeMeterIcon" aria-hidden="true"></span>
+              <p class="final-challenge-modal__practice-meter-value" id="finalChallengePracticeMeterValue">0</p>
+              <p class="final-challenge-modal__practice-meter-label" id="finalChallengePracticeMeterLabel">Frases montadas</p>
+            </div>
             <div class="final-challenge-modal__score-row">
               <span class="final-challenge-modal__percent-gem is-blank" id="finalChallengePercentGem" aria-hidden="true">
                 <svg viewBox="0 0 64 64" focusable="false"><path d="M20 10h24l10 14-22 30L10 24l10-14Zm4.8 4-6 8h10.4l2.8-8h-7.2Zm14.4 0 2.8 8h10.4l-6-8h-7.2ZM27.6 26l4.4 18.8L36.4 26h-8.8Z"></path></svg>
@@ -12679,6 +12741,11 @@ para liberar desafio</p>
             <span class="final-challenge-modal__result-stat-icon" aria-hidden="true"><img src="/SVG/codex-icons/post-results/coins.svg" alt=""></span>
             <span class="final-challenge-modal__result-stat-label">Ganhou FluentCoins</span>
             <strong class="final-challenge-modal__result-stat-value" id="finalChallengeResultCoinsValue">0</strong>
+          </div>
+          <div class="final-challenge-modal__result-stat" id="finalChallengeResultStreakStat" hidden>
+            <span class="final-challenge-modal__result-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4.5 13H10l-1 9 10.5-13H14l-1-7Z"></path></svg></span>
+            <span class="final-challenge-modal__result-stat-label">Sequência ativa</span>
+            <strong class="final-challenge-modal__result-stat-value" id="finalChallengeResultStreakValue">0</strong>
           </div>
         </div>
         <p class="final-challenge-modal__intro-copy" id="finalChallengeResultBody" hidden></p>
@@ -13900,6 +13967,8 @@ para liberar desafio</p>
         { level: 500, xp: 25000000 }
       ];
       const COINS_ICON_PATH = '/SVG/codex-icons/post-results/coins.svg';
+      const BUILT_SENTENCES_ICON_SVG = '<svg viewBox="0 0 24 24" focusable="false"><rect x="3" y="5" width="8" height="6" rx="2"></rect><rect x="13" y="5" width="8" height="6" rx="2"></rect><rect x="7" y="14" width="10" height="6" rx="2"></rect><path d="m9.5 17 1.6 1.6 3.4-3.6"></path></svg>';
+      const STREAK_LIGHTNING_ICON_SVG = '<svg viewBox="0 0 24 24" focusable="false"><path d="M13 2 4.5 13H10l-1 9 10.5-13H14l-1-7Z"></path></svg>';
       const WELCOME_LEVEL_ANIMATION_MS = 2500;
       const SECOND_STAGE_BLOCK_MIN_TOTAL = 9;
       const SECOND_STAGE_BLOCK_MAX_TOTAL = 11;
@@ -14328,6 +14397,7 @@ para liberar desafio</p>
           coinsDelta: 0,
           heardWordsTotal: 0,
           builtSentencesTotal: 0,
+          bestSequenceTotal: 0,
           xpDelta: 0
         },
         timeOffsetMs: 0,
@@ -14713,6 +14783,8 @@ para liberar desafio</p>
           finalChallengeHeardSentences: 0,
           finalChallengeHeardWords: 0,
           finalChallengeBuiltSentences: 0,
+          finalChallengeCurrentStreak: 0,
+          finalChallengeBestStreak: 0,
           finalChallengeEarnedLetters: 0,
           finalChallengeResultPersisted: false,
           finalChallengeResultHeartTimers: [],
@@ -14785,6 +14857,10 @@ para liberar desafio</p>
         finalChallengeHint: document.getElementById('finalChallengeHint'),
         finalChallengeTargetLanguageLabel: document.getElementById('finalChallengeTargetLanguageLabel'),
         finalChallengePercentGem: document.getElementById('finalChallengePercentGem'),
+        finalChallengePracticeMeter: document.getElementById('finalChallengePracticeMeter'),
+        finalChallengePracticeMeterIcon: document.getElementById('finalChallengePracticeMeterIcon'),
+        finalChallengePracticeMeterValue: document.getElementById('finalChallengePracticeMeterValue'),
+        finalChallengePracticeMeterLabel: document.getElementById('finalChallengePracticeMeterLabel'),
         finalChallengePercentLabel: document.getElementById('finalChallengePercentLabel'),
         finalChallengePercentValue: document.getElementById('finalChallengePercentValue'),
         finalChallengePercentCopy: document.getElementById('finalChallengePercentCopy'),
@@ -14800,6 +14876,8 @@ para liberar desafio</p>
         finalChallengeResultHeardValue: document.getElementById('finalChallengeResultHeardValue'),
         finalChallengeResultBuiltValue: document.getElementById('finalChallengeResultBuiltValue'),
         finalChallengeResultCoinsValue: document.getElementById('finalChallengeResultCoinsValue'),
+        finalChallengeResultStreakStat: document.getElementById('finalChallengeResultStreakStat'),
+        finalChallengeResultStreakValue: document.getElementById('finalChallengeResultStreakValue'),
         finalChallengeRetryBtn: document.getElementById('finalChallengeRetryBtn'),
         finalChallengeVoiceBtn: document.getElementById('finalChallengeVoiceBtn'),
         finalChallengeReviewBtn: document.getElementById('finalChallengeReviewBtn'),
@@ -15545,6 +15623,17 @@ para liberar desafio</p>
         return record && typeof record === 'object' ? record : null;
       }
 
+      function currentDownloadableFinalChallengeLevel(nativeLanguage = currentNativeLanguage(), targetLanguage = currentTargetLanguage()) {
+        const unlockedLevel = Math.max(1, currentUnlockedFinalChallengeLevel());
+        let maxLevel = unlockedLevel;
+        while (maxLevel < USER_LEVEL_MAX) {
+          const record = readFinalChallengeDownloadRecord(maxLevel, nativeLanguage, targetLanguage);
+          if (!record?.completed) break;
+          maxLevel += 1;
+        }
+        return maxLevel;
+      }
+
       function writeFinalChallengeDownloadRecord(level, record, nativeLanguage = currentNativeLanguage(), targetLanguage = currentTargetLanguage()) {
         const store = readFinalChallengeDownloadsStore();
         store[finalChallengeDownloadStoreKey(level, nativeLanguage, targetLanguage)] = record;
@@ -15727,7 +15816,7 @@ para liberar desafio</p>
 
       function renderFinalChallengeDownloadsModal() {
         if (!els.finalChallengeDownloadsList) return;
-        const maxLevel = Math.max(1, currentUnlockedFinalChallengeLevel());
+        const maxLevel = Math.max(1, currentDownloadableFinalChallengeLevel());
         const selectedLevel = currentFinalChallengeLevel();
         const busyLevel = Math.max(0, Number(state.ui.finalChallengeDownloadsBusyLevel) || 0);
         els.finalChallengeDownloadsList.innerHTML = '';
@@ -15813,6 +15902,12 @@ para liberar desafio</p>
 
       async function downloadFinalChallengeLevelAudio(level) {
         const normalizedLevel = normalizeUserLevel(level);
+        const maxDownloadableLevel = currentDownloadableFinalChallengeLevel();
+        if (normalizedLevel > maxDownloadableLevel) {
+          setFinalChallengeDownloadsStatus(nativeUiText('download_unavailable'), 'error');
+          renderFinalChallengeDownloadsModal();
+          return;
+        }
         if (!finalChallengeAudioCacheSupported()) {
           setFinalChallengeDownloadsStatus(nativeUiText('download_unavailable'), 'error');
           renderFinalChallengeDownloadsModal();
@@ -16962,6 +17057,7 @@ para liberar desafio</p>
         const coinsDelta = Math.max(0, Math.round(Number(raw?.coinsDelta ?? raw?.coins_delta) || 0));
         const heardWordsTotal = Math.max(0, Math.round(Number(raw?.heardWordsTotal ?? raw?.heard_words_total) || 0));
         const builtSentencesTotal = Math.max(0, Math.round(Number(raw?.builtSentencesTotal ?? raw?.built_sentences_total) || 0));
+        const bestSequenceTotal = Math.max(0, Math.round(Number(raw?.bestSequenceTotal ?? raw?.best_sequence_total) || 0));
         const xpDelta = Math.max(0, Math.round(Number(raw?.xpDelta ?? raw?.xp_delta) || 0));
         return {
           playTimeMs: Math.max(0, Math.round(Number(raw?.playTimeMs) || 0)),
@@ -16980,6 +17076,7 @@ para liberar desafio</p>
           coinsDelta,
           heardWordsTotal,
           builtSentencesTotal,
+          bestSequenceTotal,
           xpDelta
         };
       }
@@ -19201,9 +19298,10 @@ para liberar desafio</p>
         const coinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
         const heardWordsTotal = Math.max(0, Math.round(Number(state.stats?.heardWordsTotal) || 0));
         const builtSentencesTotal = Math.max(0, Math.round(Number(state.stats?.builtSentencesTotal) || 0));
-        const mode = state.user?.id ? (state.ui.welcomeEnergyMiniModeIndex % 4) : 0;
-        els.welcomeEnergyMini?.classList.remove('is-coins', 'is-heard', 'is-built');
-        els.welcomeEnergyMiniIcon.classList.remove('is-coins', 'is-heard', 'is-built');
+        const bestSequenceTotal = Math.max(0, Math.round(Number(state.stats?.bestSequenceTotal) || 0));
+        const mode = state.user?.id ? (state.ui.welcomeEnergyMiniModeIndex % 5) : 0;
+        els.welcomeEnergyMini?.classList.remove('is-coins', 'is-heard', 'is-built', 'is-streak');
+        els.welcomeEnergyMiniIcon.classList.remove('is-coins', 'is-heard', 'is-built', 'is-streak');
         if (mode === 1) {
           els.welcomeEnergyMini?.setAttribute('aria-label', 'Moedas atuais');
           els.welcomeEnergyMini?.classList.add('is-coins');
@@ -19224,8 +19322,16 @@ para liberar desafio</p>
           els.welcomeEnergyMini?.setAttribute('aria-label', 'Frases montadas');
           els.welcomeEnergyMini?.classList.add('is-built');
           els.welcomeEnergyMiniIcon.classList.add('is-built');
-          els.welcomeEnergyMiniIcon.innerHTML = '<svg viewBox="0 0 24 24" focusable="false"><rect x="3" y="5" width="8" height="6" rx="2"></rect><rect x="13" y="5" width="8" height="6" rx="2"></rect><rect x="7" y="14" width="10" height="6" rx="2"></rect><path d="m9.5 17 1.6 1.6 3.4-3.6"></path></svg>';
+          els.welcomeEnergyMiniIcon.innerHTML = BUILT_SENTENCES_ICON_SVG;
           els.welcomeEnergyMiniValue.textContent = String(builtSentencesTotal);
+          return;
+        }
+        if (mode === 4) {
+          els.welcomeEnergyMini?.setAttribute('aria-label', 'Maior sequencia de acertos');
+          els.welcomeEnergyMini?.classList.add('is-streak');
+          els.welcomeEnergyMiniIcon.classList.add('is-streak');
+          els.welcomeEnergyMiniIcon.innerHTML = STREAK_LIGHTNING_ICON_SVG;
+          els.welcomeEnergyMiniValue.textContent = String(bestSequenceTotal);
           return;
         }
         els.welcomeEnergyMini?.setAttribute('aria-label', 'Energias atuais');
@@ -19239,7 +19345,7 @@ para liberar desafio</p>
         renderWelcomeEnergyMiniTicker();
         if (!state.user?.id) return;
         state.ui.welcomeEnergyMiniSwapTimer = window.setInterval(() => {
-          state.ui.welcomeEnergyMiniModeIndex = (state.ui.welcomeEnergyMiniModeIndex + 1) % 4;
+          state.ui.welcomeEnergyMiniModeIndex = (state.ui.welcomeEnergyMiniModeIndex + 1) % 5;
           renderWelcomeEnergyMiniTicker();
         }, 3000);
       }
@@ -31547,11 +31653,45 @@ para liberar desafio</p>
         const answerLanguage = isFinalChallengePracticePhaseTwo() ? currentNativeLanguage() : currentTargetLanguage();
         const answerText = resolveSourceLanguageText(card, answerLanguage);
         state.ui.finalChallengeBuiltSentences += 1;
+        state.ui.finalChallengeCurrentStreak = Math.max(0, Number(state.ui.finalChallengeCurrentStreak) || 0) + 1;
+        state.ui.finalChallengeBestStreak = Math.max(
+          Math.max(0, Number(state.ui.finalChallengeBestStreak) || 0),
+          state.ui.finalChallengeCurrentStreak
+        );
         state.ui.finalChallengeEarnedLetters += finalChallengeLetterCount(answerText);
       }
 
+      function resetFinalChallengePracticeStreak() {
+        state.ui.finalChallengeCurrentStreak = 0;
+      }
+
+      function syncFinalChallengePracticeMeter() {
+        if (!els.finalChallengePracticeMeter) return;
+        const isPracticeMode = state.ui.finalChallengeMode === 'practice';
+        els.finalChallengePracticeMeter.hidden = !isPracticeMode;
+        if (!isPracticeMode) return;
+        const builtSentences = Math.max(0, Math.round(Number(state.ui.finalChallengeBuiltSentences) || 0));
+        const currentStreak = Math.max(0, Math.round(Number(state.ui.finalChallengeCurrentStreak) || 0));
+        const showStreak = currentStreak > 0 && currentStreak % 10 === 0;
+        els.finalChallengePracticeMeter.classList.toggle('is-streak', showStreak);
+        if (els.finalChallengePracticeMeterIcon) {
+          els.finalChallengePracticeMeterIcon.innerHTML = showStreak
+            ? STREAK_LIGHTNING_ICON_SVG
+            : BUILT_SENTENCES_ICON_SVG;
+        }
+        if (els.finalChallengePracticeMeterValue) {
+          els.finalChallengePracticeMeterValue.textContent = String(showStreak ? currentStreak : builtSentences);
+        }
+        if (els.finalChallengePracticeMeterLabel) {
+          els.finalChallengePracticeMeterLabel.textContent = showStreak
+            ? 'Sequencia de acertos'
+            : 'Frases montadas';
+        }
+      }
+
       function finalChallengeEarnedCoins() {
-        return Math.max(0, Math.floor((Number(state.ui.finalChallengeEarnedLetters) || 0) / 10));
+        const legacyCoinValue = Math.floor((Number(state.ui.finalChallengeEarnedLetters) || 0) / 10);
+        return Math.max(0, Math.floor(legacyCoinValue / 1000));
       }
 
       function clearFinalChallengeResultHeartTimers() {
@@ -31584,6 +31724,7 @@ para liberar desafio</p>
             challengeLevel: currentFinalChallengeLevel(),
             heardWords: state.ui.finalChallengeHeardWords,
             builtSentences: state.ui.finalChallengeBuiltSentences,
+            bestSequence: state.ui.finalChallengeBestStreak,
             coinsAwarded: finalChallengeEarnedCoins()
           })
         });
@@ -31594,8 +31735,15 @@ para liberar desafio</p>
         }
         state.stats.heardWordsTotal = Math.max(0, Number(payload.heardWordsTotal) || 0);
         state.stats.builtSentencesTotal = Math.max(0, Number(payload.builtSentencesTotal) || 0);
+        state.stats.bestSequenceTotal = Math.max(
+          Math.max(0, Number(payload.bestSequenceTotal) || 0),
+          Math.max(0, Number(state.ui.finalChallengeBestStreak) || 0)
+        );
         state.stats.coinsTotal = Math.max(0, Number(payload.coinsTotal) || 0);
+        state.stats.booksEnergyXpTotal = Math.max(0, Number(payload.booksEnergyXpTotal ?? state.stats.booksEnergyXpTotal) || 0);
+        state.stats.booksEnergyXpDelta = Math.max(0, Number(payload.booksEnergyXpDelta) || 0);
         renderWelcomeEnergyMiniTicker();
+        updateWelcomeUserDisplay();
         return payload;
       }
 
@@ -31624,6 +31772,8 @@ para liberar desafio</p>
         state.ui.finalChallengeHeardSentences = 0;
         state.ui.finalChallengeHeardWords = 0;
         state.ui.finalChallengeBuiltSentences = 0;
+        state.ui.finalChallengeCurrentStreak = 0;
+        state.ui.finalChallengeBestStreak = 0;
         state.ui.finalChallengeEarnedLetters = 0;
         state.ui.finalChallengeResultPersisted = false;
         state.ui.finalChallengeSessionStartedAt = 0;
@@ -32048,6 +32198,7 @@ para liberar desafio</p>
           state.ui.finalChallengeAttempts += 1;
           state.ui.finalChallengeScores.push(0);
           state.ui.finalChallengeLivesLost = Math.max(0, Number(state.ui.finalChallengeLivesLost) || 0) + 1;
+          resetFinalChallengePracticeStreak();
           syncFinalChallengeRunUi();
           activeButton?.classList.add('is-error');
           playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
@@ -32069,6 +32220,7 @@ para liberar desafio</p>
           state.ui.finalChallengeAttempts += 1;
           state.ui.finalChallengeScores.push(100);
           recordFinalChallengeBuiltCard(card);
+          syncFinalChallengePracticeMeter();
           setFinalChallengeStatus('');
           playSuccessAudio();
           buttons.forEach((button) => {
@@ -32222,6 +32374,7 @@ para liberar desafio</p>
           avatarRing.style.setProperty('--progress', `${progressPercent.toFixed(2)}%`);
         }
         renderFinalChallengePracticeBlocks(card);
+        syncFinalChallengePracticeMeter();
         if (els.finalChallengePercentGem) {
           els.finalChallengePercentGem.hidden = true;
         }
@@ -32526,6 +32679,13 @@ para liberar desafio</p>
         if (els.finalChallengeResultCoinsValue) {
           els.finalChallengeResultCoinsValue.textContent = String(finalChallengeEarnedCoins());
         }
+        const activeStreak = Math.max(0, Math.round(Number(state.ui.finalChallengeCurrentStreak) || 0));
+        if (els.finalChallengeResultStreakStat) {
+          els.finalChallengeResultStreakStat.hidden = !isPracticeMode || activeStreak <= 0;
+        }
+        if (els.finalChallengeResultStreakValue) {
+          els.finalChallengeResultStreakValue.textContent = String(activeStreak);
+        }
         if (els.finalChallengeReviewBtn) {
           els.finalChallengeReviewBtn.hidden = isPracticeMode || !Array.isArray(state.ui.finalChallengeWrongCards) || !state.ui.finalChallengeWrongCards.length;
         }
@@ -32679,6 +32839,7 @@ para liberar desafio</p>
             els.finalChallengeResultBody.textContent = `${nativeUiText('level')} ${challengeLevel} • ${currentTargetLanguageLabel()}`;
           }
           if (els.finalChallengeResultStats) els.finalChallengeResultStats.hidden = true;
+          if (els.finalChallengeResultStreakStat) els.finalChallengeResultStreakStat.hidden = true;
           if (els.finalChallengeVoiceBtn) els.finalChallengeVoiceBtn.hidden = true;
           if (els.finalChallengeReviewBtn) {
             els.finalChallengeReviewBtn.hidden = true;

@@ -2580,9 +2580,14 @@ const ensureFlashcardUserStateTables = async () => {
           user_id integer PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
           heard_words_total bigint NOT NULL DEFAULT 0,
           built_sentences_total bigint NOT NULL DEFAULT 0,
+          best_sequence_total bigint NOT NULL DEFAULT 0,
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now()
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_training_totals
+        ADD COLUMN IF NOT EXISTS best_sequence_total bigint NOT NULL DEFAULT 0
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_training_results (
@@ -2592,10 +2597,15 @@ const ensureFlashcardUserStateTables = async () => {
           challenge_level integer NOT NULL DEFAULT 1,
           heard_words integer NOT NULL DEFAULT 0,
           built_sentences integer NOT NULL DEFAULT 0,
+          best_sequence integer NOT NULL DEFAULT 0,
           coins_awarded integer NOT NULL DEFAULT 0,
           created_at timestamptz NOT NULL DEFAULT now(),
           PRIMARY KEY (user_id, run_id)
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_training_results
+        ADD COLUMN IF NOT EXISTS best_sequence integer NOT NULL DEFAULT 0
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_challenge_cards (
@@ -6538,7 +6548,7 @@ const readFlashcardStateForUser = async (userId, options = {}) => {
       [normalizedUserId]
     ),
     pool.query(
-      `SELECT heard_words_total, built_sentences_total
+      `SELECT heard_words_total, built_sentences_total, best_sequence_total
        FROM public.user_flashcard_training_totals
        WHERE user_id = $1
        LIMIT 1`,
@@ -6664,7 +6674,8 @@ const readFlashcardStateForUser = async (userId, options = {}) => {
       booksEnergyXpTotal: Math.max(0, Number(booksEnergyXpResult.rows[0]?.energy_xp_total) || 0),
       coinsTotal: Math.max(0, Number(coinsResult.rows[0]?.coins_total) || 0),
       heardWordsTotal: Math.max(0, Number(trainingTotalsResult.rows[0]?.heard_words_total) || 0),
-      builtSentencesTotal: Math.max(0, Number(trainingTotalsResult.rows[0]?.built_sentences_total) || 0)
+      builtSentencesTotal: Math.max(0, Number(trainingTotalsResult.rows[0]?.built_sentences_total) || 0),
+      bestSequenceTotal: Math.max(0, Number(trainingTotalsResult.rows[0]?.best_sequence_total) || 0)
     },
     meta: {
       userLevel: normalizeUserFlashcardLevel(languageLevelResult.rows[0]?.current_level || fallbackUserLevel),
@@ -16934,6 +16945,7 @@ app.post('/api/flashcards/training-result', express.json({ limit: '64kb' }), asy
     }
     await ensureFlashcardUserStateTables();
     await ensureUserCoinsTable();
+    await ensureUserBooksEnergyXpStatsTable();
     const userId = Number(authUser.id);
     const runId = String(req.body?.runId || '').trim().slice(0, 100);
     if (!runId) {
@@ -16944,6 +16956,7 @@ app.post('/api/flashcards/training-result', express.json({ limit: '64kb' }), asy
     const challengeLevel = normalizeUserFlashcardLevel(req.body?.challengeLevel || 1);
     const heardWords = Math.max(0, Math.min(10000, Math.round(Number(req.body?.heardWords) || 0)));
     const builtSentences = Math.max(0, Math.min(100, Math.round(Number(req.body?.builtSentences) || 0)));
+    const bestSequence = Math.max(0, Math.min(100, Math.round(Number(req.body?.bestSequence) || 0)));
     const coinsAwarded = Math.max(0, Math.min(10000, Math.round(Number(req.body?.coinsAwarded) || 0)));
     const client = await pool.connect();
     try {
@@ -16951,46 +16964,55 @@ app.post('/api/flashcards/training-result', express.json({ limit: '64kb' }), asy
       const eventResult = await client.query(
         `INSERT INTO public.user_flashcard_training_results (
            user_id, run_id, target_language, challenge_level,
-           heard_words, built_sentences, coins_awarded, created_at
+           heard_words, built_sentences, best_sequence, coins_awarded, created_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
          ON CONFLICT (user_id, run_id) DO NOTHING
          RETURNING run_id`,
-        [userId, runId, targetLanguage, challengeLevel, heardWords, builtSentences, coinsAwarded]
+        [userId, runId, targetLanguage, challengeLevel, heardWords, builtSentences, bestSequence, coinsAwarded]
       );
       const newlyAwarded = Boolean(eventResult.rows[0]);
+      let xpAward = {
+        xpDelta: 0,
+        totalXp: 0,
+        levelsAwarded: 0,
+        xpLevel: 1,
+        coinsTotal: 0
+      };
       if (newlyAwarded) {
         await client.query(
           `INSERT INTO public.user_flashcard_training_totals (
-             user_id, heard_words_total, built_sentences_total, created_at, updated_at
+             user_id, heard_words_total, built_sentences_total, best_sequence_total, created_at, updated_at
            )
-           VALUES ($1, $2, $3, now(), now())
+           VALUES ($1, $2, $3, $4, now(), now())
            ON CONFLICT (user_id)
            DO UPDATE SET
              heard_words_total = public.user_flashcard_training_totals.heard_words_total + EXCLUDED.heard_words_total,
              built_sentences_total = public.user_flashcard_training_totals.built_sentences_total + EXCLUDED.built_sentences_total,
+             best_sequence_total = GREATEST(public.user_flashcard_training_totals.best_sequence_total, EXCLUDED.best_sequence_total),
              updated_at = now()`,
-          [userId, heardWords, builtSentences]
+          [userId, heardWords, builtSentences, bestSequence]
         );
-        await client.query(
-          `INSERT INTO public.user_coins (user_id, coins_total, created_at, updated_at)
-           VALUES ($1, $2, now(), now())
-           ON CONFLICT (user_id)
-           DO UPDATE SET
-             coins_total = public.user_coins.coins_total + EXCLUDED.coins_total,
-             updated_at = now()`,
-          [userId, coinsAwarded]
-        );
+        xpAward = await awardUserBooksEnergyXp(client, userId, {
+          coinsDelta: coinsAwarded,
+          xpDelta: coinsAwarded
+        });
       }
-      const [totalsResult, coinsResult] = await Promise.all([
+      const [totalsResult, coinsResult, booksEnergyXpResult] = await Promise.all([
         client.query(
-          `SELECT heard_words_total, built_sentences_total
+          `SELECT heard_words_total, built_sentences_total, best_sequence_total
            FROM public.user_flashcard_training_totals
            WHERE user_id = $1`,
           [userId]
         ),
         client.query(
           `SELECT coins_total FROM public.user_coins WHERE user_id = $1`,
+          [userId]
+        ),
+        client.query(
+          `SELECT energy_xp_total
+           FROM public.user_books_energy_xp_stats
+           WHERE user_id = $1`,
           [userId]
         )
       ]);
@@ -17000,7 +17022,10 @@ app.post('/api/flashcards/training-result', express.json({ limit: '64kb' }), asy
         awarded: newlyAwarded,
         heardWordsTotal: Math.max(0, Number(totalsResult.rows[0]?.heard_words_total) || 0),
         builtSentencesTotal: Math.max(0, Number(totalsResult.rows[0]?.built_sentences_total) || 0),
-        coinsTotal: Math.max(0, Number(coinsResult.rows[0]?.coins_total) || 0)
+        bestSequenceTotal: Math.max(0, Number(totalsResult.rows[0]?.best_sequence_total) || 0),
+        coinsTotal: Math.max(0, Number(coinsResult.rows[0]?.coins_total) || 0),
+        booksEnergyXpTotal: Math.max(0, Number(booksEnergyXpResult.rows[0]?.energy_xp_total) || 0),
+        booksEnergyXpDelta: newlyAwarded ? Math.max(0, Number(xpAward?.xpDelta) || 0) : 0
       });
     } catch (error) {
       await client.query('ROLLBACK').catch(() => {});
