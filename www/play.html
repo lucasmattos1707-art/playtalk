@@ -11442,6 +11442,45 @@
       text-align: center;
     }
 
+    .final-challenge-modal__level-nav {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr) 44px;
+      align-items: center;
+      gap: 12px;
+      width: min(100%, 360px);
+    }
+
+    .final-challenge-modal__level-nav-btn {
+      width: 44px;
+      height: 44px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.82);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .final-challenge-modal__level-nav-btn:hover,
+    .final-challenge-modal__level-nav-btn:focus-visible {
+      transform: scale(1.04);
+      opacity: 1;
+    }
+
+    .final-challenge-modal__level-nav-btn:disabled {
+      opacity: 0.2;
+      cursor: default;
+      transform: none;
+    }
+
+    .final-challenge-modal__level-nav-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
     .final-challenge-modal__intro-copy {
       margin: 14px 0 0;
       font: 600 clamp(15px, 3.5vw, 18px)/1.45 "Open Sans", Arial, sans-serif;
@@ -11510,6 +11549,13 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
 
+    .final-challenge-modal__cta--challenge-complete {
+      background: linear-gradient(135deg, #0b7cff 0%, #44b7ff 55%, #0f5bdb 100%);
+      color: #f8fbff;
+      border: 1px solid rgba(171, 218, 255, 0.42);
+      box-shadow: 0 16px 34px rgba(15, 91, 219, 0.3);
+    }
+
     .final-challenge-modal__cta-icon {
       width: 20px;
       height: 20px;
@@ -11525,6 +11571,23 @@
       stroke-width: 1.8;
       stroke-linecap: round;
       stroke-linejoin: round;
+    }
+
+    .final-challenge-modal__inline-link {
+      margin: 2px auto 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: rgba(245, 247, 251, 0.76);
+      font: 700 14px/1.35 "Open Sans", Arial, sans-serif;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .final-challenge-modal__inline-link:hover,
+    .final-challenge-modal__inline-link:focus-visible {
+      color: #ffffff;
     }
 
     .final-challenge-modal__run {
@@ -12177,11 +12240,20 @@
           <p class="final-challenge-modal__eyebrow">Feedback</p>
           <p class="final-challenge-modal__intro-feedback" id="finalChallengeIntroFeedback">Complete o treino
 para liberar desafio</p>
-          <h2 class="final-challenge-modal__level" id="finalChallengeIntroLevel">Nivel 1</h2>
+          <div class="final-challenge-modal__level-nav">
+            <button class="final-challenge-modal__level-nav-btn" id="finalChallengeLevelPrevBtn" type="button" aria-label="Nivel anterior">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M14.7 5.3a1 1 0 0 1 0 1.4L10.41 11H20a1 1 0 1 1 0 2h-9.59l4.3 4.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
+            </button>
+            <h2 class="final-challenge-modal__level" id="finalChallengeIntroLevel">Nivel 1</h2>
+            <button class="final-challenge-modal__level-nav-btn" id="finalChallengeLevelNextBtn" type="button" aria-label="Proximo nivel">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M9.3 18.7a1 1 0 0 1 0-1.4L13.59 13H4a1 1 0 1 1 0-2h9.59L9.3 6.7a1 1 0 0 1 1.4-1.4l6 6a1 1 0 0 1 0 1.4l-6 6a1 1 0 0 1-1.4 0Z"/></svg>
+            </button>
+          </div>
         </div>
         <div class="final-challenge-modal__intro-actions">
           <button class="final-challenge-modal__cta final-challenge-modal__cta--primary" id="finalChallengePracticeBtn" type="button"><span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>Iniciar treino</button>
           <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost" id="finalChallengeStartBtn" type="button"><span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m12 3 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 16.53l-5.3 2.78 1.01-5.9-4.29-4.18 5.93-.86L12 3Z"></path></svg></span>Desafio final</button>
+          <button class="final-challenge-modal__inline-link" id="finalChallengeContinueWithoutBtn" type="button" hidden>Continuar sem desafio</button>
         </div>
       </div>
       <div class="final-challenge-modal__screen final-challenge-modal__run" id="finalChallengeRunScreen">
@@ -13070,6 +13142,10 @@ para liberar desafio</p>
           complete_training_unlock: 'Complete o treino\npara liberar desafio',
           training_complete_unlock: 'Treino completo\nDesafio liberado',
           challenge_unavailable: 'Desafio indisponivel agora',
+          continue_without_challenge: 'Continuar sem desafio',
+          final_challenge_complete: 'Desafio completo',
+          note_label: 'Nota',
+          time_label: 'Tempo',
           phase_2: 'Fase 2',
           phase_2_copy: 'Agora toque nos blocos em {language}.',
           phase_2_banner: 'FASE 2',
@@ -13113,6 +13189,10 @@ para liberar desafio</p>
           complete_training_unlock: 'Complete the training\nto unlock the challenge',
           training_complete_unlock: 'Training complete\nChallenge unlocked',
           challenge_unavailable: 'Challenge unavailable right now',
+          continue_without_challenge: 'Continue without challenge',
+          final_challenge_complete: 'Challenge complete',
+          note_label: 'Score',
+          time_label: 'Time',
           phase_2: 'Phase 2',
           phase_2_copy: 'Now tap the blocks in {language}.',
           phase_2_banner: 'PHASE 2',
@@ -13156,6 +13236,10 @@ para liberar desafio</p>
           complete_training_unlock: 'Completa el entrenamiento\npara liberar el desafio',
           training_complete_unlock: 'Entrenamiento completo\nDesafio liberado',
           challenge_unavailable: 'Desafio no disponible ahora',
+          continue_without_challenge: 'Continuar sin desafio',
+          final_challenge_complete: 'Desafio completo',
+          note_label: 'Nota',
+          time_label: 'Tiempo',
           phase_2: 'Fase 2',
           phase_2_copy: 'Ahora toca los bloques en {language}.',
           phase_2_banner: 'FASE 2',
@@ -13199,6 +13283,10 @@ para liberar desafio</p>
           complete_training_unlock: 'Complete l entrainement\npour debloquer le defi',
           training_complete_unlock: 'Entrainement termine\nDefi debloque',
           challenge_unavailable: 'Defi indisponible maintenant',
+          continue_without_challenge: 'Continuer sans defi',
+          final_challenge_complete: 'Defi termine',
+          note_label: 'Note',
+          time_label: 'Temps',
           phase_2: 'Phase 2',
           phase_2_copy: 'Maintenant touche les blocs en {language}.',
           phase_2_banner: 'PHASE 2',
@@ -13242,6 +13330,10 @@ para liberar desafio</p>
           complete_training_unlock: 'Schliesse das Training ab,\num die Herausforderung freizuschalten',
           training_complete_unlock: 'Training abgeschlossen\nHerausforderung freigeschaltet',
           challenge_unavailable: 'Herausforderung gerade nicht verfugbar',
+          continue_without_challenge: 'Ohne Herausforderung fortfahren',
+          final_challenge_complete: 'Herausforderung abgeschlossen',
+          note_label: 'Note',
+          time_label: 'Zeit',
           phase_2: 'Phase 2',
           phase_2_copy: 'Tippe jetzt die Blöcke auf {language}.',
           phase_2_banner: 'PHASE 2',
@@ -13285,6 +13377,10 @@ para liberar desafio</p>
           complete_training_unlock: 'Wancheng xunlian\njiesuo tiaozhan',
           training_complete_unlock: 'Xunlian wancheng\nTiaozhan yijiesuo',
           challenge_unavailable: 'Dangqian wufa kaishi tiaozhan',
+          continue_without_challenge: 'Bujinru tiaozhan jixu',
+          final_challenge_complete: 'Tiaozhan yi wancheng',
+          note_label: 'Fenshu',
+          time_label: 'Shijian',
           phase_2: 'Di er jie duan',
           phase_2_copy: 'Xianzai qing dianji {language} yukuai.',
           phase_2_banner: 'DI ER JIE DUAN',
@@ -13336,6 +13432,7 @@ para liberar desafio</p>
       const WELCOME_FLASH_LOADER_TIP_LEAD_MS = 500;
       const WELCOME_LANGUAGE_BACKGROUND_FADE_MS = 1000;
       const FINAL_CHALLENGE_SELECTION_STORAGE_KEY = 'playtalk-final-challenge-selection-v1';
+      const FINAL_CHALLENGE_SESSION_STORAGE_KEY = 'playtalk-final-challenge-session-v1';
       const WATCH_SETTINGS_KEY = 'playtalk-flashcards-watch-v1';
       const FLASHCARDS_PAGE_SIZE = 30;
       const ADMIN_USERNAMES = new Set(['admin', 'adm', 'adminst']);
@@ -14130,6 +14227,8 @@ para liberar desafio</p>
           gameOptionsSnapshotBeforeOpen: null,
           finalChallengeLevels: {},
           finalChallengeBestPercents: {},
+          finalChallengeRecords: {},
+          finalChallengeSelectedLevels: {},
           finalChallengeRunOpen: false,
           finalChallengeScreen: 'intro',
           finalChallengeMode: 'voice',
@@ -14155,7 +14254,10 @@ para liberar desafio</p>
           finalChallengeReviewOpen: false,
           finalChallengeReviewIndex: 0,
           finalChallengeReviewToken: 0,
-          finalChallengeResultPassed: false
+          finalChallengeResultPassed: false,
+          finalChallengeIntroStatsStep: 0,
+          finalChallengeIntroStatsTimer: 0,
+          finalChallengeSessionStartedAt: 0
         },
         options: {
           difficulty: DEFAULT_GAME_OPTIONS.difficulty,
@@ -14197,7 +14299,10 @@ para liberar desafio</p>
         finalChallengeCloseBtn: document.getElementById('finalChallengeCloseBtn'),
         finalChallengeStartBtn: document.getElementById('finalChallengeStartBtn'),
         finalChallengePracticeBtn: document.getElementById('finalChallengePracticeBtn'),
+        finalChallengeContinueWithoutBtn: document.getElementById('finalChallengeContinueWithoutBtn'),
         finalChallengeIntroFeedback: document.getElementById('finalChallengeIntroFeedback'),
+        finalChallengeLevelPrevBtn: document.getElementById('finalChallengeLevelPrevBtn'),
+        finalChallengeLevelNextBtn: document.getElementById('finalChallengeLevelNextBtn'),
         finalChallengeExitRunBtn: document.getElementById('finalChallengeExitRunBtn'),
         finalChallengeIntroLevel: document.getElementById('finalChallengeIntroLevel'),
         finalChallengeProgressCopy: document.getElementById('finalChallengeProgressCopy'),
@@ -14660,9 +14765,16 @@ para liberar desafio</p>
         return normalizeGameOptionValue('targetLanguage', currentTargetLanguage());
       }
 
-      function currentFinalChallengeLevel() {
+      function currentUnlockedFinalChallengeLevel() {
         const language = currentFinalChallengeLanguage();
         return normalizeUserLevel(state.ui.finalChallengeLevels?.[language] || 1);
+      }
+
+      function currentFinalChallengeLevel() {
+        const language = currentFinalChallengeLanguage();
+        const unlockedLevel = currentUnlockedFinalChallengeLevel();
+        const selectedLevel = normalizeUserLevel(state.ui.finalChallengeSelectedLevels?.[language] || unlockedLevel);
+        return Math.max(1, Math.min(unlockedLevel, selectedLevel));
       }
 
       function currentFinalChallengeBestPercent() {
@@ -14670,7 +14782,41 @@ para liberar desafio</p>
         return Math.max(0, Math.min(100, Number(state.ui.finalChallengeBestPercents?.[language]) || 0));
       }
 
-      function setStoredFinalChallengeState(language, level = 1, bestPercent = 0) {
+      function currentFinalChallengeRecordsMap(language = currentFinalChallengeLanguage()) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        const records = state.ui.finalChallengeRecords?.[normalizedLanguage];
+        return records && typeof records === 'object' ? records : {};
+      }
+
+      function currentFinalChallengeRecord(level = currentFinalChallengeLevel(), language = currentFinalChallengeLanguage()) {
+        const records = currentFinalChallengeRecordsMap(language);
+        const normalizedLevel = normalizeUserLevel(level);
+        const entry = records?.[normalizedLevel];
+        return entry && typeof entry === 'object'
+          ? {
+            completed: Boolean(entry.completed),
+            bestPercent: Math.max(0, Math.min(100, Number(entry.bestPercent) || 0)),
+            bestTimeMs: Math.max(0, Number(entry.bestTimeMs) || 0)
+          }
+          : {
+            completed: false,
+            bestPercent: 0,
+            bestTimeMs: 0
+          };
+      }
+
+      function setSelectedFinalChallengeLevel(level, language = currentFinalChallengeLanguage()) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        const unlockedLevel = normalizeUserLevel(state.ui.finalChallengeLevels?.[normalizedLanguage] || 1);
+        const nextLevel = Math.max(1, Math.min(unlockedLevel, normalizeUserLevel(level)));
+        state.ui.finalChallengeSelectedLevels = {
+          ...(state.ui.finalChallengeSelectedLevels || {}),
+          [normalizedLanguage]: nextLevel
+        };
+        return nextLevel;
+      }
+
+      function setStoredFinalChallengeState(language, level = 1, bestPercent = 0, records = null) {
         const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
         state.ui.finalChallengeLevels = {
           ...(state.ui.finalChallengeLevels || {}),
@@ -14680,16 +14826,35 @@ para liberar desafio</p>
           ...(state.ui.finalChallengeBestPercents || {}),
           [normalizedLanguage]: Math.max(0, Math.min(100, Math.round(Number(bestPercent) || 0)))
         };
+        state.ui.finalChallengeSelectedLevels = {
+          ...(state.ui.finalChallengeSelectedLevels || {}),
+          [normalizedLanguage]: Math.min(
+            normalizeUserLevel(state.ui.finalChallengeSelectedLevels?.[normalizedLanguage] || normalizeUserLevel(level)),
+            normalizeUserLevel(level)
+          )
+        };
+        if (records && typeof records === 'object') {
+          state.ui.finalChallengeRecords = {
+            ...(state.ui.finalChallengeRecords || {}),
+            [normalizedLanguage]: records
+          };
+        } else if (!state.ui.finalChallengeRecords?.[normalizedLanguage]) {
+          state.ui.finalChallengeRecords = {
+            ...(state.ui.finalChallengeRecords || {}),
+            [normalizedLanguage]: {}
+          };
+        }
       }
 
       async function loadFinalChallengeStateForLanguage(language = currentFinalChallengeLanguage()) {
         const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
         if (!state.user?.id) {
-          setStoredFinalChallengeState(normalizedLanguage, 1, 0);
+          setStoredFinalChallengeState(normalizedLanguage, 1, 0, {});
           return {
             targetLanguage: normalizedLanguage,
-            level: 1,
-            bestPercent: 0
+            unlockedLevel: 1,
+            bestPercent: 0,
+            records: {}
           };
         }
         try {
@@ -14702,15 +14867,22 @@ para liberar desafio</p>
           if (!response.ok || !payload?.success) {
             throw new Error(payload?.message || 'Falha ao carregar desafio final.');
           }
-          setStoredFinalChallengeState(normalizedLanguage, payload.level, payload.bestPercent);
+          const records = payload?.records && typeof payload.records === 'object' ? payload.records : {};
+          setStoredFinalChallengeState(normalizedLanguage, payload.unlockedLevel || payload.level, payload.bestPercent, records);
           return payload;
         } catch (error) {
           console.warn('Falha ao carregar nivel do desafio final:', error);
-          setStoredFinalChallengeState(normalizedLanguage, state.ui.finalChallengeLevels?.[normalizedLanguage] || 1, state.ui.finalChallengeBestPercents?.[normalizedLanguage] || 0);
+          setStoredFinalChallengeState(
+            normalizedLanguage,
+            state.ui.finalChallengeLevels?.[normalizedLanguage] || 1,
+            state.ui.finalChallengeBestPercents?.[normalizedLanguage] || 0,
+            state.ui.finalChallengeRecords?.[normalizedLanguage] || {}
+          );
           return {
             targetLanguage: normalizedLanguage,
-            level: currentFinalChallengeLevel(),
-            bestPercent: currentFinalChallengeBestPercent()
+            unlockedLevel: currentUnlockedFinalChallengeLevel(),
+            bestPercent: currentFinalChallengeBestPercent(),
+            records: currentFinalChallengeRecordsMap(normalizedLanguage)
           };
         }
       }
@@ -14726,21 +14898,31 @@ para liberar desafio</p>
           credentials: 'include',
           body: JSON.stringify({
             targetLanguage: normalizedLanguage,
-            level: normalizeUserLevel(payload?.level || currentFinalChallengeLevel()),
-            bestPercent: Math.max(0, Math.min(100, Math.round(Number(payload?.bestPercent) || currentFinalChallengeBestPercent())))
+            unlockedLevel: normalizeUserLevel(payload?.unlockedLevel || payload?.level || currentUnlockedFinalChallengeLevel()),
+            challengeLevel: normalizeUserLevel(payload?.challengeLevel || currentFinalChallengeLevel()),
+            completed: Boolean(payload?.completed),
+            bestPercent: Math.max(0, Math.min(100, Math.round(Number(payload?.bestPercent) || currentFinalChallengeBestPercent()))),
+            bestTimeMs: Math.max(0, Math.round(Number(payload?.bestTimeMs) || 0))
           })
         });
         const savedPayload = await response.json().catch(() => ({}));
         if (!response.ok || !savedPayload?.success) {
           throw new Error(savedPayload?.message || 'Falha ao salvar desafio final.');
         }
-        setStoredFinalChallengeState(normalizedLanguage, savedPayload.level, savedPayload.bestPercent);
+        setStoredFinalChallengeState(
+          normalizedLanguage,
+          savedPayload.unlockedLevel || savedPayload.level,
+          savedPayload.bestPercent,
+          savedPayload?.records && typeof savedPayload.records === 'object'
+            ? savedPayload.records
+            : (state.ui.finalChallengeRecords?.[normalizedLanguage] || {})
+        );
         return savedPayload;
       }
 
       function syncFinalChallengeLevelCopy() {
         if (els.welcomeUserLevelLine) {
-          els.welcomeUserLevelLine.textContent = `Desafio Nivel ${currentFinalChallengeLevel()}`;
+          els.welcomeUserLevelLine.textContent = `Desafio Nivel ${currentUnlockedFinalChallengeLevel()}`;
         }
         if (els.finalChallengeIntroLevel) {
           els.finalChallengeIntroLevel.textContent = `Nivel ${currentFinalChallengeLevel()}`;
@@ -14749,6 +14931,104 @@ para liberar desafio</p>
           els.finalChallengeTargetLanguageLabel.textContent = currentTargetLanguageLabel();
         }
         syncFinalChallengeIntroUi();
+      }
+
+      function nudgeFinalChallengeLevel(delta) {
+        const nextLevel = setSelectedFinalChallengeLevel(currentFinalChallengeLevel() + Number(delta || 0));
+        state.ui.finalChallengeIntroStatsStep = 0;
+        stopFinalChallengeIntroStatsRotation();
+        syncFinalChallengeLevelCopy();
+        return nextLevel;
+      }
+
+      function formatFinalChallengeBestTime(bestTimeMs = 0) {
+        const totalSeconds = Math.max(0, Math.round((Number(bestTimeMs) || 0) / 1000));
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      }
+
+      function currentFinalChallengeElapsedMs() {
+        const startedAt = Math.max(
+          0,
+          Number(state.ui.finalChallengeSessionStartedAt)
+          || Number(readFinalChallengeSessionState()?.startedAt)
+          || 0
+        );
+        if (!startedAt) return 0;
+        return Math.max(0, Date.now() - startedAt);
+      }
+
+      function readFinalChallengeSessionState() {
+        try {
+          const raw = window.localStorage.getItem(FINAL_CHALLENGE_SESSION_STORAGE_KEY);
+          const parsed = raw ? JSON.parse(raw) : null;
+          return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (_error) {
+          return null;
+        }
+      }
+
+      function writeFinalChallengeSessionState(payload) {
+        try {
+          if (!payload || typeof payload !== 'object') {
+            window.localStorage.removeItem(FINAL_CHALLENGE_SESSION_STORAGE_KEY);
+            return;
+          }
+          window.localStorage.setItem(FINAL_CHALLENGE_SESSION_STORAGE_KEY, JSON.stringify(payload));
+        } catch (_error) {
+          // ignore
+        }
+      }
+
+      function clearFinalChallengeSessionState() {
+        writeFinalChallengeSessionState(null);
+      }
+
+      function stopFinalChallengeIntroStatsRotation() {
+        if (state.ui.finalChallengeIntroStatsTimer) {
+          window.clearInterval(state.ui.finalChallengeIntroStatsTimer);
+          state.ui.finalChallengeIntroStatsTimer = 0;
+        }
+      }
+
+      function buildFinalChallengeCompleteButtonMarkup(record) {
+        const step = Math.max(0, Number(state.ui.finalChallengeIntroStatsStep) || 0) % 3;
+        if (step === 1) {
+          return `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 19h16v2H4zM6 10h2v7H6zm5-4h2v11h-2zm5 2h2v9h-2z"></path></svg></span>${escapeHtml(`${nativeUiText('note_label')} ${formatFinalChallengeNote(record.bestPercent)}`)}`;
+        }
+        if (step === 2) {
+          return `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m12 3 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 16.53l-5.3 2.78 1.01-5.9-4.29-4.18 5.93-.86L12 3Z"></path></svg></span>${escapeHtml(`${nativeUiText('time_label')} ${formatFinalChallengeBestTime(record.bestTimeMs)}`)}`;
+        }
+        return `<span class="final-challenge-modal__cta-icon" aria-hidden="true" style="color:#ffd54a;"><svg viewBox="0 0 24 24" focusable="false"><path d="m12 3 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 16.53l-5.3 2.78 1.01-5.9-4.29-4.18 5.93-.86L12 3Z"></path></svg></span>${escapeHtml(nativeUiText('final_challenge_complete'))}`;
+      }
+
+      function startFinalChallengeIntroStatsRotation() {
+        stopFinalChallengeIntroStatsRotation();
+        if (!els.finalChallengeStartBtn) return;
+        const record = currentFinalChallengeRecord();
+        if (!record.completed) return;
+        state.ui.finalChallengeIntroStatsStep = 0;
+        state.ui.finalChallengeIntroStatsTimer = window.setInterval(() => {
+          state.ui.finalChallengeIntroStatsStep = (Number(state.ui.finalChallengeIntroStatsStep) || 0) + 1;
+          syncFinalChallengeIntroUi();
+        }, 2000);
+      }
+
+      function continueWithoutFinalChallenge() {
+        const selectedLevel = currentFinalChallengeLevel();
+        setSelectedGameLevel(selectedLevel);
+        closeFinalChallengeModal();
+        state.game.levelMode = true;
+        state.game.levelScaleMode = true;
+        state.game.levelAudioMode = false;
+        state.game.levelTextMode = false;
+        state.game.levelTypingMode = false;
+        state.game.levelTextResponseLanguage = 'english';
+        state.game.levelTextHitStreak = 0;
+        resetScaleBatchProgress();
+        state.entry.welcomeStartRequested = true;
+        void openAudioCheck();
       }
 
       function finalChallengeSelectionRecordKey(language = currentFinalChallengeLanguage(), level = currentFinalChallengeLevel()) {
@@ -15086,7 +15366,7 @@ para liberar desafio</p>
           case 'french':
             return repairDisplayText(card?.sourceFrench || '');
           case 'mandarin':
-            return repairDisplayText(card?.sourceMandarin || '');
+            return repairDisplayText(card?.sourceMandarinPinyin || card?.sourceMandarin || '');
           case 'spanish':
             return repairDisplayText(card?.sourceSpanish || '');
           case 'german':
@@ -15112,6 +15392,16 @@ para liberar desafio</p>
         const list = Array.isArray(direct) ? direct : [];
         const withFallback = list.length ? list : [fallbackText];
         return uniqueAnswerList(withFallback.map(repairDisplayText).map(item => safeText(item)).filter(Boolean));
+      }
+
+      function resolveSourceMandarinPinyin(card) {
+        return repairDisplayText(
+          card?.sourceMandarinPinyin
+          || card?.mandarinPinyin
+          || card?.pinyinComTons
+          || card?.pinyin
+          || ''
+        );
       }
 
       function resolveSourceLanguageAudio(card, language) {
@@ -16867,7 +17157,7 @@ para liberar desafio</p>
         state.userCardLanguages = new Map();
         state.hiddenCardIds = new Set();
         state.game.persistedOnTable = [];
-        setStoredFinalChallengeState(normalizedTargetLanguage, 1, 0);
+        setStoredFinalChallengeState(normalizedTargetLanguage, 1, 0, {});
         syncOwnedIdsFromProgress();
         persistUserLanguageMetaLocally(normalizedTargetLanguage);
         syncFinalChallengeLevelCopy();
@@ -19819,6 +20109,8 @@ para liberar desafio</p>
         state.stats = readUserStatsForUser(0);
         state.ui.finalChallengeLevels = {};
         state.ui.finalChallengeBestPercents = {};
+        state.ui.finalChallengeRecords = {};
+        state.ui.finalChallengeSelectedLevels = {};
         state.libraryPage = 1;
         state.admin.selectedDeckSource = '';
         state.admin.decks = [];
@@ -23261,13 +23553,18 @@ para liberar desafio</p>
           const sourceEnglish = repairDisplayText(item?.nomeIngles || item?.english || item?.word);
           const sourcePortuguese = repairDisplayText(item?.nomePortugues || item?.portuguese || item?.translation);
           const sourceFrench = repairDisplayText(item?.nomeFrances || item?.french || item?.fr);
-          const sourceMandarin = repairDisplayText(
+          const sourceMandarinCharacters = repairDisplayText(
             item?.nomeMandarim
             || item?.mandarin
+            || item?.zh
+          );
+          const sourceMandarinPinyin = repairDisplayText(
+            item?.mandarinPinyin
             || item?.pinyin
             || item?.pinyinComTons
             || item?.['Pinyin com tons']
           );
+          const sourceMandarin = sourceMandarinCharacters || sourceMandarinPinyin;
           const sourceSpanish = repairDisplayText(item?.nomeEspanhol || item?.spanish || item?.es);
           const sourceGerman = repairDisplayText(item?.nomeAlemao || item?.german || item?.de);
           const baseCard = {
@@ -23310,8 +23607,10 @@ para liberar desafio</p>
               item?.correctFrench
             ),
             sourceMandarin,
+            sourceMandarinPinyin,
             sourceMandarinAnswers: collectAcceptedAnswers(
               sourceMandarin,
+              sourceMandarinPinyin,
               item?.acceptedMandarin,
               item?.acceptedAnswersMandarin,
               item?.mandarinAlternatives,
@@ -23371,8 +23670,8 @@ para liberar desafio</p>
               ? repairDisplayText(card.sourceFrench)
               : '';
           case 'mandarin':
-            return typeof card?.sourceMandarin === 'string'
-              ? repairDisplayText(card.sourceMandarin)
+            return typeof card?.sourceMandarinPinyin === 'string' || typeof card?.sourceMandarin === 'string'
+              ? repairDisplayText(card.sourceMandarinPinyin || card.sourceMandarin)
               : '';
           case 'spanish':
             return typeof card?.sourceSpanish === 'string'
@@ -28481,6 +28780,8 @@ para liberar desafio</p>
       function buildSecondStageWordBlockState(typingState, card) {
         const supplementalAnswers = safeText(typingState?.typingMode) === 'portuguese'
           ? []
+          : currentTargetLanguage() === 'mandarin'
+          ? []
           : (Array.isArray(card?.englishAnswers) ? card.englishAnswers : []);
         const answerCandidates = uniqueAnswerList([
           typingState?.acceptedAnswer,
@@ -30326,6 +30627,8 @@ para liberar desafio</p>
         state.ui.finalChallengePromptCardId = '';
         state.ui.finalChallengeAvatarColorProgress = 0;
         state.ui.finalChallengeResultPassed = false;
+        state.ui.finalChallengeSessionStartedAt = 0;
+        clearFinalChallengeSessionState();
       }
 
       function currentFinalChallengeCorrectCount() {
@@ -30613,17 +30916,49 @@ para liberar desafio</p>
       function syncFinalChallengeIntroUi() {
         const selection = resolveStoredFinalChallengeSelection();
         const hasDeck = selection.cards.length >= FINAL_CHALLENGE_CARD_COUNT;
-        const unlocked = hasDeck && selection.practiceComplete;
+        const challengeUnlocked = hasDeck && selection.practiceComplete;
+        const selectedLevel = currentFinalChallengeLevel();
+        const unlockedLevel = currentUnlockedFinalChallengeLevel();
+        const record = currentFinalChallengeRecord(selectedLevel);
         if (els.finalChallengeStartBtn) {
-          els.finalChallengeStartBtn.disabled = !unlocked;
+          els.finalChallengeStartBtn.disabled = !challengeUnlocked;
+          els.finalChallengeStartBtn.classList.toggle('final-challenge-modal__cta--challenge-complete', Boolean(record.completed));
+          if (record.completed) {
+            els.finalChallengeStartBtn.innerHTML = buildFinalChallengeCompleteButtonMarkup(record);
+          } else {
+            els.finalChallengeStartBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m12 3 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 16.53l-5.3 2.78 1.01-5.9-4.29-4.18 5.93-.86L12 3Z"></path></svg></span>${escapeHtml(nativeUiText('final_challenge'))}`;
+          }
         }
         if (els.finalChallengePracticeBtn) {
           els.finalChallengePracticeBtn.disabled = !hasDeck;
         }
+        if (els.finalChallengeContinueWithoutBtn) {
+          els.finalChallengeContinueWithoutBtn.hidden = !challengeUnlocked;
+          els.finalChallengeContinueWithoutBtn.textContent = nativeUiText('continue_without_challenge');
+        }
+        if (els.finalChallengeLevelPrevBtn) {
+          els.finalChallengeLevelPrevBtn.disabled = selectedLevel <= 1;
+          els.finalChallengeLevelPrevBtn.hidden = unlockedLevel <= 1;
+        }
+        if (els.finalChallengeLevelNextBtn) {
+          els.finalChallengeLevelNextBtn.disabled = selectedLevel >= unlockedLevel;
+          els.finalChallengeLevelNextBtn.hidden = unlockedLevel <= 1;
+        }
+        if (els.finalChallengeIntroLevel) {
+          els.finalChallengeIntroLevel.textContent = `Nivel ${selectedLevel}`;
+        }
         if (els.finalChallengeIntroFeedback) {
           els.finalChallengeIntroFeedback.textContent = hasDeck
-            ? (unlocked ? nativeUiText('training_complete_unlock') : nativeUiText('complete_training_unlock'))
-            : `${nativeUiText('challenge_unavailable')}\n${nativeUiText('level')} ${currentFinalChallengeLevel()} • ${currentTargetLanguageLabel()}`;
+            ? (challengeUnlocked ? nativeUiText('training_complete_unlock') : nativeUiText('complete_training_unlock'))
+            : `${nativeUiText('challenge_unavailable')}\n${nativeUiText('level')} ${selectedLevel} • ${currentTargetLanguageLabel()}`;
+        }
+        if (record.completed) {
+          if (!state.ui.finalChallengeIntroStatsTimer) {
+            startFinalChallengeIntroStatsRotation();
+          }
+        } else {
+          stopFinalChallengeIntroStatsRotation();
+          state.ui.finalChallengeIntroStatsStep = 0;
         }
       }
 
@@ -30881,6 +31216,7 @@ para liberar desafio</p>
         if (!els.finalChallengeModal) return;
         resetFinalChallengeRunState();
         state.ui.finalChallengeRunOpen = true;
+        state.ui.finalChallengeIntroStatsStep = 0;
         syncNativeUiStaticCopy();
         syncFinalChallengeBackground();
         els.finalChallengeModal.classList.add('is-visible');
@@ -30894,6 +31230,9 @@ para liberar desafio</p>
       function closeFinalChallengeModal() {
         cleanupGameRecognition();
         stopFinalChallengePromptAudio();
+        stopFinalChallengeIntroStatsRotation();
+        clearFinalChallengeSessionState();
+        state.ui.finalChallengeSessionStartedAt = 0;
         resolveFinalChallengePhaseOverlayContinue();
         setFinalChallengePhaseOverlay(false);
         state.ui.finalChallengeListening = false;
@@ -30910,6 +31249,9 @@ para liberar desafio</p>
       function cancelFinalChallengeRunToIntro() {
         cleanupGameRecognition();
         stopFinalChallengePromptAudio();
+        stopFinalChallengeIntroStatsRotation();
+        clearFinalChallengeSessionState();
+        state.ui.finalChallengeSessionStartedAt = 0;
         resolveFinalChallengePhaseOverlayContinue();
         setFinalChallengePhaseOverlay(false);
         state.ui.finalChallengeListening = false;
@@ -31013,11 +31355,17 @@ para liberar desafio</p>
 
       async function finishFinalChallengeRun() {
         const isPracticeMode = state.ui.finalChallengeMode === 'practice';
+        const currentLevel = currentFinalChallengeLevel();
+        const unlockedLevelBefore = currentUnlockedFinalChallengeLevel();
         const correctCount = currentFinalChallengeCorrectCount();
         const accuracyPercent = Math.round((correctCount / Math.max(1, FINAL_CHALLENGE_CARD_COUNT)) * 100);
         const notePercent = currentFinalChallengeNotePercent();
         const passTarget = Math.round(FINAL_CHALLENGE_PASS_PERCENT * FINAL_CHALLENGE_CARD_COUNT / 100);
         const passed = !isPracticeMode && accuracyPercent >= FINAL_CHALLENGE_PASS_PERCENT;
+        const elapsedMs = !isPracticeMode ? currentFinalChallengeElapsedMs() : 0;
+        const voiceRunFinished = !isPracticeMode
+          && !state.ui.finalChallengeForcedGameOver
+          && state.ui.finalChallengeIndex >= state.ui.finalChallengeCards.length;
         state.ui.finalChallengeResultPassed = passed;
         if (isPracticeMode && !state.ui.finalChallengeForcedGameOver && currentFinalChallengePracticePhase() === 1 && state.ui.finalChallengeIndex >= state.ui.finalChallengeCards.length) {
           state.ui.finalChallengePracticePhase = 2;
@@ -31043,29 +31391,60 @@ para liberar desafio</p>
           return;
         }
         if (isPracticeMode && !state.ui.finalChallengeForcedGameOver && state.ui.finalChallengeIndex >= state.ui.finalChallengeCards.length) {
-          setFinalChallengePracticeCompleted(currentFinalChallengeLevel(), true);
-        }
-        if (!isPracticeMode && passed) {
-          const nextLevel = normalizeUserLevel(currentFinalChallengeLevel() + 1);
-          setStoredFinalChallengeState(currentFinalChallengeLanguage(), nextLevel, Math.max(currentFinalChallengeBestPercent(), accuracyPercent));
+          const nextUnlockedLevel = normalizeUserLevel(currentLevel + 1);
+          setFinalChallengePracticeCompleted(currentLevel, true);
+          setStoredFinalChallengeState(
+            currentFinalChallengeLanguage(),
+            Math.max(unlockedLevelBefore, nextUnlockedLevel),
+            currentFinalChallengeBestPercent(),
+            currentFinalChallengeRecordsMap()
+          );
           try {
             await persistFinalChallengeStateForLanguage(currentFinalChallengeLanguage(), {
-              level: nextLevel,
-              bestPercent: accuracyPercent
+              unlockedLevel: Math.max(unlockedLevelBefore, nextUnlockedLevel),
+              challengeLevel: currentLevel,
+              completed: false,
+              bestPercent: currentFinalChallengeRecord(currentLevel).bestPercent,
+              bestTimeMs: currentFinalChallengeRecord(currentLevel).bestTimeMs
             });
           } catch (error) {
-            console.warn('Falha ao atualizar nivel do desafio final:', error);
+            console.warn('Falha ao liberar proximo nivel do treino final:', error);
           }
-        } else if (!isPracticeMode) {
-          setStoredFinalChallengeState(currentFinalChallengeLanguage(), currentFinalChallengeLevel(), Math.max(currentFinalChallengeBestPercent(), accuracyPercent));
+        }
+        if (!isPracticeMode) {
+          const previousRecord = currentFinalChallengeRecord(currentLevel);
+          const mergedRecord = {
+            completed: Boolean(previousRecord.completed || voiceRunFinished),
+            bestPercent: Math.max(previousRecord.bestPercent, accuracyPercent),
+            bestTimeMs: voiceRunFinished
+              ? (previousRecord.bestTimeMs > 0
+                ? Math.min(previousRecord.bestTimeMs, elapsedMs || previousRecord.bestTimeMs)
+                : elapsedMs)
+              : previousRecord.bestTimeMs
+          };
+          const mergedRecords = {
+            ...currentFinalChallengeRecordsMap(),
+            [currentLevel]: mergedRecord
+          };
+          setStoredFinalChallengeState(
+            currentFinalChallengeLanguage(),
+            Math.max(unlockedLevelBefore, currentLevel),
+            Math.max(currentFinalChallengeBestPercent(), accuracyPercent),
+            mergedRecords
+          );
           try {
             await persistFinalChallengeStateForLanguage(currentFinalChallengeLanguage(), {
-              level: currentFinalChallengeLevel(),
-              bestPercent: accuracyPercent
+              unlockedLevel: Math.max(unlockedLevelBefore, currentLevel),
+              challengeLevel: currentLevel,
+              completed: mergedRecord.completed,
+              bestPercent: mergedRecord.bestPercent,
+              bestTimeMs: mergedRecord.bestTimeMs
             });
           } catch (error) {
             console.warn('Falha ao salvar resultado do desafio final:', error);
           }
+          clearFinalChallengeSessionState();
+          state.ui.finalChallengeSessionStartedAt = 0;
         }
         syncFinalChallengeLevelCopy();
         if (els.finalChallengeResultTitle) {
@@ -31092,7 +31471,7 @@ para liberar desafio</p>
             els.finalChallengeRetryBtn.textContent = state.ui.finalChallengeForcedGameOver ? 'Praticar de novo' : 'Comecar desafio';
             state.ui.finalChallengeResultAction = state.ui.finalChallengeForcedGameOver ? 'retry-practice' : 'start-voice';
           } else if (passed) {
-            els.finalChallengeRetryBtn.textContent = `Jogar Nivel ${currentFinalChallengeLevel()}`;
+            els.finalChallengeRetryBtn.textContent = `Jogar Nivel ${Math.max(currentLevel, currentUnlockedFinalChallengeLevel())}`;
             state.ui.finalChallengeResultAction = 'next-level-intro';
           } else {
             els.finalChallengeRetryBtn.textContent = 'Tentar de novo';
@@ -31210,6 +31589,7 @@ para liberar desafio</p>
         const challengeLevel = currentFinalChallengeLevel();
         const selection = resolveStoredFinalChallengeSelection(challengeLevel);
         const cards = selection.cards;
+        stopFinalChallengeIntroStatsRotation();
         if (!selection.practiceComplete) {
           syncFinalChallengeIntroUi();
           setFinalChallengeScreen('intro');
@@ -31234,6 +31614,12 @@ para liberar desafio</p>
         state.ui.finalChallengeCards = cards;
         state.ui.finalChallengeIndex = 0;
         state.ui.finalChallengePercentVisible = false;
+        state.ui.finalChallengeSessionStartedAt = Date.now();
+        writeFinalChallengeSessionState({
+          startedAt: state.ui.finalChallengeSessionStartedAt,
+          targetLanguage: currentFinalChallengeLanguage(),
+          challengeLevel
+        });
         setFinalChallengePhaseOverlay(false);
         setFinalChallengeExitConfirmOpen(false);
         setFinalChallengeScreen('run');
@@ -31245,6 +31631,7 @@ para liberar desafio</p>
         const challengeLevel = currentFinalChallengeLevel();
         const selection = resolveStoredFinalChallengeSelection(challengeLevel);
         const cards = selection.cards;
+        stopFinalChallengeIntroStatsRotation();
         if (cards.length < FINAL_CHALLENGE_CARD_COUNT) {
           syncFinalChallengeIntroUi();
           return;
@@ -32997,6 +33384,7 @@ para liberar desafio</p>
             return;
           }
           if (state.ui.finalChallengeResultAction === 'next-level-intro') {
+            setSelectedFinalChallengeLevel(currentFinalChallengeLevel() + 1);
             resetFinalChallengeRunState();
             syncFinalChallengeLevelCopy();
             syncFinalChallengeIntroUi();
@@ -33005,6 +33393,15 @@ para liberar desafio</p>
             return;
           }
           void startFinalChallengeRun();
+        });
+        els.finalChallengeLevelPrevBtn?.addEventListener('click', () => {
+          nudgeFinalChallengeLevel(-1);
+        });
+        els.finalChallengeLevelNextBtn?.addEventListener('click', () => {
+          nudgeFinalChallengeLevel(1);
+        });
+        els.finalChallengeContinueWithoutBtn?.addEventListener('click', () => {
+          continueWithoutFinalChallenge();
         });
         els.finalChallengeReviewBtn?.addEventListener('click', () => {
           openFinalChallengeReviewModal();

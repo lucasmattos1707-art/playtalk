@@ -2540,6 +2540,42 @@ const ensureFlashcardUserStateTables = async () => {
         ON public.user_flashcard_final_challenge_levels (user_id, updated_at DESC)
       `);
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.user_flashcard_final_challenge_records (
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          target_language text NOT NULL,
+          challenge_level integer NOT NULL DEFAULT 1,
+          completed boolean NOT NULL DEFAULT false,
+          best_percent integer NOT NULL DEFAULT 0,
+          best_time_ms integer NOT NULL DEFAULT 0,
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, target_language, challenge_level)
+        )
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS challenge_level integer NOT NULL DEFAULT 1
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS completed boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS best_percent integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS best_time_ms integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS user_flashcard_final_challenge_records_user_idx
+        ON public.user_flashcard_final_challenge_records (user_id, target_language, updated_at DESC)
+      `);
+      await pool.query(`
         CREATE TABLE IF NOT EXISTS public.user_flashcard_language_cards (
           user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
           card_id text NOT NULL,
@@ -7368,11 +7404,30 @@ const readFinalChallengeLevelForUser = async (userId, targetLanguage) => {
     [normalizedUserId, normalizedTargetLanguage]
   );
   const row = rowResult.rows[0] || {};
+  const recordsResult = await pool.query(
+    `SELECT challenge_level, completed, best_percent, best_time_ms
+     FROM public.user_flashcard_final_challenge_records
+     WHERE user_id = $1
+       AND target_language = $2
+     ORDER BY challenge_level ASC`,
+    [normalizedUserId, normalizedTargetLanguage]
+  );
+  const records = {};
+  for (const record of recordsResult.rows || []) {
+    const levelKey = normalizeUserFlashcardLevel(record.challenge_level || 1);
+    records[levelKey] = {
+      completed: Boolean(record.completed),
+      bestPercent: Math.max(0, Math.min(100, Number(record.best_percent) || 0)),
+      bestTimeMs: Math.max(0, Number(record.best_time_ms) || 0)
+    };
+  }
   return {
     targetLanguage: normalizedTargetLanguage,
     level: normalizeUserFlashcardLevel(row.current_level || 1),
+    unlockedLevel: normalizeUserFlashcardLevel(row.current_level || 1),
     bestPercent: Math.max(0, Math.min(100, Number(row.best_percent) || 0)),
-    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+    records
   };
 };
 
@@ -7383,8 +7438,11 @@ const saveFinalChallengeLevelForUser = async (userId, targetLanguage, payload = 
   await ensureFlashcardUserStateTables();
   const normalizedUserId = Number.parseInt(userId, 10);
   const normalizedTargetLanguage = normalizeFlashcardTargetLanguage(targetLanguage);
-  const requestedLevel = normalizeUserFlashcardLevel(payload?.level || 1);
+  const requestedLevel = normalizeUserFlashcardLevel(payload?.unlockedLevel || payload?.level || 1);
+  const challengeLevel = normalizeUserFlashcardLevel(payload?.challengeLevel || 1);
   const requestedBestPercent = Math.max(0, Math.min(100, Math.round(Number(payload?.bestPercent) || 0)));
+  const requestedBestTimeMs = Math.max(0, Math.round(Number(payload?.bestTimeMs) || 0));
+  const completed = Boolean(payload?.completed);
   const result = await pool.query(
     `INSERT INTO public.user_flashcard_final_challenge_levels (
        user_id,
@@ -7402,12 +7460,45 @@ const saveFinalChallengeLevelForUser = async (userId, targetLanguage, payload = 
      RETURNING current_level, best_percent, updated_at`,
     [normalizedUserId, normalizedTargetLanguage, requestedLevel, requestedBestPercent]
   );
+  await pool.query(
+    `INSERT INTO public.user_flashcard_final_challenge_records (
+       user_id,
+       target_language,
+       challenge_level,
+       completed,
+       best_percent,
+       best_time_ms,
+       updated_at
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, now())
+     ON CONFLICT (user_id, target_language, challenge_level)
+     DO UPDATE SET
+       completed = public.user_flashcard_final_challenge_records.completed OR EXCLUDED.completed,
+       best_percent = GREATEST(public.user_flashcard_final_challenge_records.best_percent, EXCLUDED.best_percent),
+       best_time_ms = CASE
+         WHEN EXCLUDED.best_time_ms <= 0 THEN public.user_flashcard_final_challenge_records.best_time_ms
+         WHEN public.user_flashcard_final_challenge_records.best_time_ms <= 0 THEN EXCLUDED.best_time_ms
+         ELSE LEAST(public.user_flashcard_final_challenge_records.best_time_ms, EXCLUDED.best_time_ms)
+       END,
+       updated_at = now()`,
+    [
+      normalizedUserId,
+      normalizedTargetLanguage,
+      challengeLevel,
+      completed,
+      requestedBestPercent,
+      requestedBestTimeMs
+    ]
+  );
   const row = result.rows[0] || {};
+  const reloaded = await readFinalChallengeLevelForUser(normalizedUserId, normalizedTargetLanguage);
   return {
     targetLanguage: normalizedTargetLanguage,
     level: normalizeUserFlashcardLevel(row.current_level || requestedLevel),
+    unlockedLevel: reloaded.unlockedLevel,
     bestPercent: Math.max(0, Math.min(100, Number(row.best_percent) || requestedBestPercent)),
-    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+    records: reloaded.records || {}
   };
 };
 
@@ -16547,9 +16638,11 @@ app.get('/api/flashcards/final-challenge-state', async (req, res) => {
     res.json({
       success: true,
       targetLanguage: state.targetLanguage,
+      unlockedLevel: state.unlockedLevel || state.level,
       level: state.level,
       bestPercent: state.bestPercent,
-      updatedAt: state.updatedAt
+      updatedAt: state.updatedAt,
+      records: state.records || {}
     });
   } catch (error) {
     console.error('Erro ao carregar estado do desafio final:', error);
@@ -16577,9 +16670,11 @@ app.put('/api/flashcards/final-challenge-state', express.json({ limit: '256kb' }
     res.json({
       success: true,
       targetLanguage: saved.targetLanguage,
+      unlockedLevel: saved.unlockedLevel || saved.level,
       level: saved.level,
       bestPercent: saved.bestPercent,
-      updatedAt: saved.updatedAt
+      updatedAt: saved.updatedAt,
+      records: saved.records || {}
     });
   } catch (error) {
     console.error('Erro ao salvar estado do desafio final:', error);
