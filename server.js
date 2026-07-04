@@ -8001,24 +8001,6 @@ const FORCE_R2_GAME_SOUND_FILES = new Set([
 ]);
 const ADMIN_SOUND_LIBRARY = [
   {
-    id: 'loader_bg',
-    title: 'Loader Background',
-    description: 'Trilha de fundo do carregamento global do Playtalk.',
-    objectKey: 'gamesounds/load.mp3'
-  },
-  {
-    id: 'loader_tip_pt_sample',
-    title: 'Loader Tip PT (sample)',
-    description: 'Exemplo de narração PT das dicas do loader (bandeiras).',
-    objectKey: 'Niveis/114/001/bandeiras-flashcard-item-001.mp3'
-  },
-  {
-    id: 'loader_tip_en_sample',
-    title: 'Loader Tip EN (sample)',
-    description: 'Exemplo de narração EN das dicas do loader (acts).',
-    objectKey: 'Niveis/154/001/acts-flashcard-item-001.mp3'
-  },
-  {
     id: 'game_success',
     title: 'Game Success',
     description: 'Som de acerto e feedback positivo.',

@@ -14143,9 +14143,8 @@ para liberar desafio</p>
       };
       const ONBOARDING_GATE_TRANSITION_MS = 2000;
       const ONBOARDING_GATE_OPEN_DELAY_MS = 4000;
-      const WELCOME_FLASH_LOADER_MS = 3000;
-      const WELCOME_FLASH_LOADER_FADE_MS = 240;
-      const WELCOME_FLASH_LOADER_TIP_LEAD_MS = 500;
+      const WELCOME_FLASH_LOADER_MS = 0;
+      const WELCOME_FLASH_LOADER_FADE_MS = 0;
       const WELCOME_LANGUAGE_BACKGROUND_FADE_MS = 1000;
       const FINAL_CHALLENGE_SELECTION_STORAGE_KEY = 'playtalk-final-challenge-selection-v1';
       const FINAL_CHALLENGE_GENERAL_LEVELS_URL = '/api/flashcards/general-levels';
@@ -19141,11 +19140,7 @@ para liberar desafio</p>
         try {
           const loader = window.PlaytalkLoader;
           if (loader) {
-            loader.show('welcome-flash-start', {
-              message: 'PREPARANDO SUA PARTIDA',
-              rotateTips: false,
-              clearMeta: true
-            });
+            loader.show('welcome-flash-start');
           }
           const selectedCount = currentBaseGameCount(selectedGameLevel() || currentUserLevel());
           hideWelcomeGate();
