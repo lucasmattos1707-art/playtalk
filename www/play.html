@@ -15037,6 +15037,9 @@ para liberar desafio</p>
       let finalChallengePhaseOverlayResolver = null;
       let finalChallengeFlowFeedbackTimer = 0;
       let finalChallengeGeneralLevelsPromise = null;
+      let finalChallengeDownloadsStoreCache = null;
+      let finalChallengeSelectionStoreCache = null;
+      let finalChallengeEligibleCardsCache = null;
 
       loadGameOptionsFromStorage();
 
@@ -15822,18 +15825,21 @@ para liberar desafio</p>
       }
 
       function readFinalChallengeDownloadsStore() {
+        if (finalChallengeDownloadsStoreCache) return finalChallengeDownloadsStoreCache;
         try {
           const raw = window.localStorage.getItem(FINAL_CHALLENGE_DOWNLOADS_STORAGE_KEY);
           const parsed = raw ? JSON.parse(raw) : {};
-          return parsed && typeof parsed === 'object' ? parsed : {};
+          finalChallengeDownloadsStoreCache = parsed && typeof parsed === 'object' ? parsed : {};
         } catch (_error) {
-          return {};
+          finalChallengeDownloadsStoreCache = {};
         }
+        return finalChallengeDownloadsStoreCache;
       }
 
       function writeFinalChallengeDownloadsStore(store) {
+        finalChallengeDownloadsStoreCache = store && typeof store === 'object' ? store : {};
         try {
-          window.localStorage.setItem(FINAL_CHALLENGE_DOWNLOADS_STORAGE_KEY, JSON.stringify(store || {}));
+          window.localStorage.setItem(FINAL_CHALLENGE_DOWNLOADS_STORAGE_KEY, JSON.stringify(finalChallengeDownloadsStoreCache));
         } catch (_error) {
           // ignore
         }
@@ -16199,23 +16205,8 @@ para liberar desafio</p>
           && arraysHaveSameOrderedValues(recordCardIds, payload.cardIds);
       }
 
-      async function finalChallengeCachedAssetCount(assetUrls = []) {
-        if (!finalChallengeAudioCacheSupported()) return { cachedCount: 0 };
-        const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
-        let cachedCount = 0;
-        for (const src of assetUrls) {
-          const response = await cache.match(src);
-          if (!response) continue;
-          cachedCount += 1;
-        }
-        return { cachedCount };
-      }
-
       async function finalChallengeDownloadRecordIsReady(level, payload = finalChallengeDownloadPayload(level)) {
-        if (!finalChallengeDownloadRecordMatches(level, payload)) return false;
-        const downloadUrls = [...payload.audioUrls, ...payload.imageUrls];
-        const cacheInfo = await finalChallengeCachedAssetCount(downloadUrls).catch(() => ({ cachedCount: 0 }));
-        return cacheInfo.cachedCount === downloadUrls.length;
+        return finalChallengeDownloadRecordMatches(level, payload);
       }
 
       function renderFinalChallengeDownloadsModal() {
@@ -16310,11 +16301,6 @@ para liberar desafio</p>
         if (cachedResponse) {
           const blob = await cachedResponse.clone().blob().catch(() => null);
           if (blob?.size) {
-            if (kind === 'image') {
-              await cacheRuntimeImageBlob(src, cachedResponse);
-            } else {
-              await cacheRuntimeAudioBlob(src, cachedResponse);
-            }
             onProgress?.(blob.size, blob.size);
             return blob.size;
           }
@@ -16328,11 +16314,6 @@ para liberar desafio</p>
         if (!response.body?.getReader) {
           const blob = await response.clone().blob();
           await cache.put(src, response.clone());
-          if (kind === 'image') {
-            await cacheRuntimeImageBlob(src, response);
-          } else {
-            await cacheRuntimeAudioBlob(src, response);
-          }
           onProgress?.(blob.size || expectedBytes, expectedBytes || blob.size || 0);
           return blob.size || expectedBytes || 0;
         }
@@ -16355,11 +16336,6 @@ para liberar desafio</p>
           }
         });
         await cache.put(src, cached.clone());
-        if (kind === 'image') {
-          await cacheRuntimeImageBlob(src, cached);
-        } else {
-          await cacheRuntimeAudioBlob(src, cached);
-        }
         onProgress?.(blob.size, expectedBytes || blob.size);
         return blob.size;
       }
@@ -16478,18 +16454,21 @@ para liberar desafio</p>
       }
 
       function readFinalChallengeSelectionStore() {
+        if (finalChallengeSelectionStoreCache) return finalChallengeSelectionStoreCache;
         try {
           const raw = window.localStorage.getItem(FINAL_CHALLENGE_SELECTION_STORAGE_KEY);
           const parsed = raw ? JSON.parse(raw) : {};
-          return parsed && typeof parsed === 'object' ? parsed : {};
+          finalChallengeSelectionStoreCache = parsed && typeof parsed === 'object' ? parsed : {};
         } catch (_error) {
-          return {};
+          finalChallengeSelectionStoreCache = {};
         }
+        return finalChallengeSelectionStoreCache;
       }
 
       function writeFinalChallengeSelectionStore(store) {
+        finalChallengeSelectionStoreCache = store && typeof store === 'object' ? store : {};
         try {
-          window.localStorage.setItem(FINAL_CHALLENGE_SELECTION_STORAGE_KEY, JSON.stringify(store || {}));
+          window.localStorage.setItem(FINAL_CHALLENGE_SELECTION_STORAGE_KEY, JSON.stringify(finalChallengeSelectionStoreCache));
         } catch (_error) {
           // ignore
         }
@@ -16598,8 +16577,7 @@ para liberar desafio</p>
         const challengeLevel = normalizeUserLevel(level);
         if (!state.user?.id) throw new Error('Entre para baixar este nivel.');
         const existingSelection = resolveStoredFinalChallengeSelection(challengeLevel);
-        const existingDownload = readFinalChallengeDownloadRecord(challengeLevel);
-        if (existingDownload?.completed && existingSelection.cards.length >= FINAL_CHALLENGE_CARD_COUNT) {
+        if (existingSelection.cards.length >= FINAL_CHALLENGE_CARD_COUNT) {
           return existingSelection;
         }
         try {
@@ -16635,13 +16613,27 @@ para liberar desafio</p>
         const challengeLevel = normalizeUserLevel(level);
         const language = currentFinalChallengeLanguage();
         const key = finalChallengeSelectionRecordKey(language, challengeLevel);
-        const sourceCards = (Array.isArray(state.allCards) ? state.allCards : [])
-          .filter((card) => isCardEligibleForFinalChallenge(card));
-        const sourceById = new Map(sourceCards.map((card) => [safeText(card?.id), card]));
-        const sourceByReference = new Map(sourceCards.map((card) => [
-          `${safeText(card?.source)}#${Math.max(0, Number.parseInt(card?.sourceIndex, 10) || 0)}`,
-          card
-        ]));
+        const allCards = Array.isArray(state.allCards) ? state.allCards : [];
+        const cacheMatches = finalChallengeEligibleCardsCache
+          && finalChallengeEligibleCardsCache.allCards === allCards
+          && finalChallengeEligibleCardsCache.length === allCards.length
+          && finalChallengeEligibleCardsCache.nativeLanguage === currentNativeLanguage()
+          && finalChallengeEligibleCardsCache.targetLanguage === currentTargetLanguage();
+        if (!cacheMatches) {
+          const sourceCards = allCards.filter((card) => isCardEligibleForFinalChallenge(card));
+          finalChallengeEligibleCardsCache = {
+            allCards,
+            length: allCards.length,
+            nativeLanguage: currentNativeLanguage(),
+            targetLanguage: currentTargetLanguage(),
+            sourceById: new Map(sourceCards.map((card) => [safeText(card?.id), card])),
+            sourceByReference: new Map(sourceCards.map((card) => [
+              `${safeText(card?.source)}#${Math.max(0, Number.parseInt(card?.sourceIndex, 10) || 0)}`,
+              card
+            ]))
+          };
+        }
+        const { sourceById, sourceByReference } = finalChallengeEligibleCardsCache;
         const rawStored = forceRebuild ? null : readFinalChallengeSelectionRecord(language, challengeLevel);
         const stored = rawStored?.serverAllocated === true ? rawStored : null;
         const storedIds = Array.isArray(stored?.ids)
@@ -16652,18 +16644,20 @@ para liberar desafio</p>
           ? storedCards.map((card) => sourceByReference.get(`${safeText(card?.source)}#${Math.max(0, Number.parseInt(card?.sourceIndex, 10) || 0)}`) || null).filter(Boolean)
           : storedIds.map((id) => sourceById.get(id) || null).filter(Boolean);
         const invalidStoredSelection = cards.length !== FINAL_CHALLENGE_CARD_COUNT;
-        const practiceComplete = !invalidStoredSelection
-          && Boolean(stored?.practiceComplete)
-          && storedIds.length === FINAL_CHALLENGE_CARD_COUNT;
+        const practiceComplete = !invalidStoredSelection && Boolean(stored?.practiceComplete);
         if (cards.length === FINAL_CHALLENGE_CARD_COUNT) {
-          writeFinalChallengeSelectionRecord(language, challengeLevel, {
+          const normalizedIds = cards.map((card) => safeText(card?.id)).filter(Boolean);
+          const needsNormalization = storedIds.length !== FINAL_CHALLENGE_CARD_COUNT
+            || !arraysHaveSameOrderedValues(storedIds, normalizedIds)
+            || !storedCards.length;
+          if (needsNormalization) writeFinalChallengeSelectionRecord(language, challengeLevel, {
             cards: storedCards.length ? storedCards : cards.map((card) => ({
               cardId: `${safeText(card?.source)}#${Math.max(0, Number.parseInt(card?.sourceIndex, 10) || 0)}`,
               source: safeText(card?.source),
               sourceIndex: Math.max(0, Number.parseInt(card?.sourceIndex, 10) || 0),
               sourceLevel: finalChallengeDeckLevel(card)
             })),
-            ids: cards.map((card) => safeText(card?.id)).filter(Boolean),
+            ids: normalizedIds,
             serverAllocated: true,
             practiceComplete
           });
@@ -32786,7 +32780,7 @@ para liberar desafio</p>
           }
         }
         setFinalChallengeFlowFeedback('Disparando audio da carta...', 1200);
-        void prepareRuntimeAudioSource(src, options.waitForEnd ? 900 : 650);
+        void prepareRuntimeAudioSource(src, 650);
         audio.playbackRate = Math.max(0.1, Math.min(2.5, Number(options.rate || 1) * resolveSelectedGameSpeed()));
         audio.defaultPlaybackRate = audio.playbackRate;
         audio.preservesPitch = true;
@@ -32850,39 +32844,6 @@ para liberar desafio</p>
           finalChallengePromptCleanup = null;
           resetColorProgress();
         }, { once: true });
-        if (options.waitForEnd) {
-          setFinalChallengeFlowFeedback('Aguardando MP3 terminar antes da proxima carta...', 0);
-          await new Promise((resolve) => {
-            if (audio.ended) {
-              resolve();
-              return;
-            }
-            let finished = false;
-            const finish = (reason = '') => {
-              if (finished) return;
-              finished = true;
-              audio.removeEventListener('ended', finish);
-              audio.removeEventListener('error', finish);
-              window.clearTimeout(fallbackTimer);
-              if (reason === 'timeout' && !audio.ended) {
-                try {
-                  audio.pause();
-                  audio.currentTime = 0;
-                } catch (_error) {
-                  // ignore
-                }
-              }
-              resolve();
-            };
-            const expectedMs = Number.isFinite(audio.duration) && audio.duration > 0
-              ? ((audio.duration - audio.currentTime) / Math.max(0.1, audio.playbackRate || 1)) * 1000 + 420
-              : 2600;
-            const fallbackTimer = window.setTimeout(() => finish('timeout'), Math.max(1000, Math.min(9000, expectedMs)));
-            audio.addEventListener('ended', () => finish('ended'), { once: true });
-            audio.addEventListener('error', () => finish('error'), { once: true });
-          });
-          setFinalChallengeFlowFeedback('', 0);
-        }
         return true;
       }
 
@@ -32962,7 +32923,6 @@ para liberar desafio</p>
 
       async function ensureFinalChallengeDownloadedForPlay(level = currentFinalChallengeLevel(), launchMode = 'practice') {
         const challengeLevel = normalizeUserLevel(level);
-        setFinalChallengeFlowFeedback('Verificando pacote baixado das 25 cartas...', 1800);
         let selection = resolveStoredFinalChallengeSelection(challengeLevel);
         if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
           setFinalChallengeFlowFeedback('Montando as 25 cartas pelo deck global...', 2200);
@@ -32970,7 +32930,6 @@ para liberar desafio</p>
           selection = resolveStoredFinalChallengeSelection(challengeLevel);
         }
         const payload = finalChallengeDownloadPayload(challengeLevel);
-        setFinalChallengeFlowFeedback('Conferindo pacote local de audios e imagens...', 1400);
         const ready = await finalChallengeDownloadRecordIsReady(challengeLevel, payload);
         if (!ready) {
           setFinalChallengeFlowFeedback('Baixando imagens e audios para evitar travas...', 0);
@@ -32981,9 +32940,8 @@ para liberar desafio</p>
           });
           selection = resolveStoredFinalChallengeSelection(challengeLevel);
         }
-        const verifiedPayload = finalChallengeDownloadPayload(challengeLevel);
-        const verified = await finalChallengeDownloadRecordIsReady(challengeLevel, verifiedPayload);
-        if (!verified || selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
+        if (!finalChallengeDownloadRecordMatches(challengeLevel, finalChallengeDownloadPayload(challengeLevel))
+          || selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
           throw new Error(nativeUiText('download_unavailable'));
         }
         setFinalChallengeFlowFeedback('', 0);
@@ -33026,11 +32984,7 @@ para liberar desafio</p>
           activeButton?.classList.add('is-error');
           playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
           setFinalChallengeStatus('');
-          setFinalChallengeFlowFeedback('Erro detectado. Tocando frase correta nativa...', 0);
-          await playFinalChallengeAudioForLanguage(card, currentNativeLanguage(), { rate: 0.92, waitForEnd: true });
-          if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
-          await wait(220);
-          if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
+          setFinalChallengeFlowFeedback('', 0);
           if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
             state.ui.finalChallengeForcedGameOver = true;
             state.ui.finalChallengeBusy = false;
@@ -33056,14 +33010,7 @@ para liberar desafio</p>
               button.classList.add('is-correct');
             }
           });
-          const successPlaybackLanguage = isFinalChallengePracticePhaseTwo()
-            ? currentTargetLanguage()
-            : currentNativeLanguage();
-          setFinalChallengeFlowFeedback('Acerto registrado. Tocando feedback da frase...', 0);
-          await playFinalChallengeAudioForLanguage(card, successPlaybackLanguage, { rate: 0.92, waitForEnd: true });
-          if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
-          await wait(160);
-          if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
+          setFinalChallengeFlowFeedback('', 0);
           state.ui.finalChallengeBusy = false;
           await advanceFinalChallengeCard();
         };
@@ -33442,17 +33389,15 @@ para liberar desafio</p>
             currentFinalChallengeBestPercent(),
             currentFinalChallengeRecordsMap()
           );
-          try {
-            await persistFinalChallengeStateForLanguage(currentFinalChallengeLanguage(), {
+          void persistFinalChallengeStateForLanguage(currentFinalChallengeLanguage(), {
               unlockedLevel: Math.max(unlockedLevelBefore, nextUnlockedLevel),
               challengeLevel: currentLevel,
               completed: false,
               bestPercent: currentFinalChallengeRecord(currentLevel).bestPercent,
               bestTimeMs: currentFinalChallengeRecord(currentLevel).bestTimeMs
-            });
-          } catch (error) {
+            }).catch((error) => {
             console.warn('Falha ao liberar proximo nivel do treino final:', error);
-          }
+            });
         }
         if (!isPracticeMode) {
           const previousRecord = currentFinalChallengeRecord(currentLevel);
@@ -33475,17 +33420,15 @@ para liberar desafio</p>
             Math.max(currentFinalChallengeBestPercent(), accuracyPercent),
             mergedRecords
           );
-          try {
-            await persistFinalChallengeStateForLanguage(currentFinalChallengeLanguage(), {
+          void persistFinalChallengeStateForLanguage(currentFinalChallengeLanguage(), {
               unlockedLevel: Math.max(unlockedLevelBefore, currentLevel),
               challengeLevel: currentLevel,
               completed: mergedRecord.completed,
               bestPercent: mergedRecord.bestPercent,
               bestTimeMs: mergedRecord.bestTimeMs
-            });
-          } catch (error) {
+            }).catch((error) => {
             console.warn('Falha ao salvar resultado do desafio final:', error);
-          }
+            });
           clearFinalChallengeSessionState();
           state.ui.finalChallengeSessionStartedAt = 0;
         }
@@ -33660,7 +33603,7 @@ para liberar desafio</p>
             state.ui.finalChallengeLivesLost = Math.max(0, Number(state.ui.finalChallengeLivesLost) || 0) + 1;
             state.ui.finalChallengeCorrectionTargetVisible = true;
             syncFinalChallengeRunUi();
-            await playFinalChallengeAudioForLanguage(card, currentTargetLanguage(), { rate: 0.9, waitForEnd: true }).catch(() => false);
+            await playFinalChallengeAudioForLanguage(card, currentTargetLanguage(), { rate: 0.9 }).catch(() => false);
             if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
             if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
               state.ui.finalChallengeForcedGameOver = true;
