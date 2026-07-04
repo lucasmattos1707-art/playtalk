@@ -11605,6 +11605,24 @@
       z-index: 1;
     }
 
+    .final-challenge-modal__download-copy {
+      display: grid;
+      justify-items: start;
+      gap: 3px;
+      line-height: 1;
+    }
+
+    .final-challenge-modal__download-copy strong,
+    .final-challenge-modal__download-copy small {
+      display: block;
+    }
+
+    .final-challenge-modal__download-copy small {
+      font-size: 0.68em;
+      letter-spacing: 0.08em;
+      opacity: 0.82;
+    }
+
     @keyframes finalChallengeDownloadSweep {
       to { transform: translateX(100%); }
     }
@@ -11990,8 +12008,26 @@
     .final-challenge-modal__avatar-close {
       position: absolute;
       top: 10px;
+      left: 10px;
+      z-index: 2;
+    }
+
+    .final-challenge-modal__avatar-skip {
+      position: absolute;
+      top: 10px;
       right: 10px;
       z-index: 2;
+      color: #fff;
+      border-color: rgba(218, 121, 255, 0.52);
+      background:
+        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.34), transparent 34%),
+        linear-gradient(135deg, #8e34ff, #d052ff);
+      box-shadow: 0 0 22px rgba(171, 74, 255, 0.46), inset 0 0 14px rgba(255, 255, 255, 0.16);
+    }
+
+    .final-challenge-modal__avatar-skip:disabled {
+      opacity: 0.46;
+      cursor: not-allowed;
     }
 
     .final-challenge-modal__avatar-ring {
@@ -12833,6 +12869,9 @@ para liberar desafio</p>
             <button class="final-challenge-modal__back final-challenge-modal__back--orange final-challenge-modal__avatar-close" id="finalChallengeExitRunBtn" type="button" aria-label="Voltar para a tela inicial do desafio">
               <svg viewBox="0 0 24 24" focusable="false"><path d="M10.7 5.3a1 1 0 0 1 0 1.4L6.41 11H20a1 1 0 1 1 0 2H6.4l4.3 4.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
             </button>
+            <button class="final-challenge-modal__back final-challenge-modal__avatar-skip" id="finalChallengeSkipBtn" type="button" aria-label="Pular carta atual">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M5 5.8v12.4L13.7 12 5 5.8Z"></path><path d="M14 5.8v12.4l8.7-6.2L14 5.8Z"></path></svg>
+            </button>
             <button class="final-challenge-modal__avatar-btn" id="finalChallengeSpeakBtn" type="button" aria-label="Tocar na imagem e falar a traducao">
               <span class="final-challenge-modal__avatar-ring" aria-hidden="true"></span>
               <img id="finalChallengeCardImage" src="/Avatar/profile-neon-blue.svg" alt="Imagem da carta do desafio">
@@ -12870,7 +12909,6 @@ para liberar desafio</p>
             </div>
             <p class="final-challenge-modal__percent-label" id="finalChallengePercentLabel" hidden></p>
             <p class="final-challenge-modal__percent-copy" id="finalChallengePercentCopy" hidden></p>
-            <button class="final-challenge-modal__skip-btn" id="finalChallengeSkipBtn" type="button" hidden>PULAR</button>
             <p class="final-challenge-modal__status" id="finalChallengeStatus"></p>
           </div>
         </section>
@@ -14972,6 +15010,10 @@ para liberar desafio</p>
           finalChallengeDownloadsStatus: '',
           finalChallengeDownloadsStatusTone: '',
           finalChallengeDownloadLaunchMode: '',
+          finalChallengeDownloadPhaseTitle: '',
+          finalChallengeDownloadPhaseStep: '',
+          finalChallengeActionToken: 0,
+          finalChallengeSkipInFlight: false,
           finalChallengeFlowFeedback: ''
         },
         options: {
@@ -16023,6 +16065,12 @@ para liberar desafio</p>
         return total ? Math.max(0, Math.min(100, (completed / total) * 100)) : 0;
       }
 
+      function setFinalChallengeDownloadPhase(title = '', step = '') {
+        state.ui.finalChallengeDownloadPhaseTitle = safeText(title);
+        state.ui.finalChallengeDownloadPhaseStep = safeText(step);
+        syncFinalChallengeInlineDownloadButton();
+      }
+
       function syncFinalChallengeInlineDownloadButton() {
         const mode = safeText(state.ui.finalChallengeDownloadLaunchMode);
         const percent = finalChallengeDownloadPercent();
@@ -16036,7 +16084,10 @@ para liberar desafio</p>
         button.disabled = true;
         button.classList.add('is-downloading');
         button.style.setProperty('--download-progress', `${percent.toFixed(2)}%`);
-        button.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 4v9"></path><path d="m8.5 10.5 3.5 3.5 3.5-3.5"></path><path d="M5 18h14"></path></svg></span><span>Baixando ${Math.round(percent)}%</span>`;
+        const title = safeText(state.ui.finalChallengeDownloadPhaseTitle) || 'Baixando';
+        const step = safeText(state.ui.finalChallengeDownloadPhaseStep);
+        const stepCopy = step ? `<small>${escapeHtml(step)} • ${Math.round(percent)}%</small>` : `<small>${Math.round(percent)}%</small>`;
+        button.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 4v9"></path><path d="m8.5 10.5 3.5 3.5 3.5-3.5"></path><path d="M5 18h14"></path></svg></span><span class="final-challenge-modal__download-copy"><strong>${escapeHtml(title)}</strong>${stepCopy}</span>`;
       }
 
       function setFinalChallengeDownloadProgress(completedBytes = 0, totalBytes = 0) {
@@ -16327,12 +16378,21 @@ para liberar desafio</p>
         }
         state.ui.finalChallengeDownloadsBusyLevel = normalizedLevel;
         state.ui.finalChallengeDownloadLaunchMode = safeText(options.launchMode);
-        setFinalChallengeDownloadProgress(0, 0);
+        setFinalChallengeDownloadPhase('Criando deck', 'Abrindo lista');
+        setFinalChallengeDownloadProgress(1, 100);
         setFinalChallengeFlowFeedback('Preparando pacote local...', 1000);
         setFinalChallengeDownloadsStatus(nativeUiText('downloading_level', { level: normalizedLevel }), '');
         renderFinalChallengeDownloadsModal();
         try {
+          await wait(60);
+          setFinalChallengeDownloadPhase('Criando deck', 'Checando niveis');
+          setFinalChallengeDownloadProgress(8, 100);
+          await wait(40);
+          setFinalChallengeDownloadPhase('Criando deck', 'Montando niveis');
+          setFinalChallengeDownloadProgress(14, 100);
           await ensureFinalChallengeSelection(normalizedLevel);
+          setFinalChallengeDownloadPhase('Criando deck', 'Finalizando deck');
+          setFinalChallengeDownloadProgress(22, 100);
           const payload = finalChallengeDownloadPayload(normalizedLevel);
           const downloadAssets = [
             ...payload.audioUrls.map((src) => ({ src, kind: 'audio' })),
@@ -16344,11 +16404,15 @@ para liberar desafio</p>
           let downloadedBytesTotal = 0;
           let completedAssets = 0;
           const totalAssets = downloadAssets.length;
-          setFinalChallengeDownloadProgress(0, totalAssets);
+          const downloadStartPercent = 25;
+          const downloadSpanPercent = 75;
+          setFinalChallengeDownloadPhase('Baixando pacote', `Arquivo 1 de ${totalAssets}`);
+          setFinalChallengeDownloadProgress(downloadStartPercent, 100);
           const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
           for (let index = 0; index < downloadAssets.length; index += 1) {
             const { src, kind } = downloadAssets[index];
             const label = kind === 'image' ? 'imagem' : 'MP3';
+            setFinalChallengeDownloadPhase('Baixando pacote', `${label} ${index + 1} de ${downloadAssets.length}`);
             setFinalChallengeFlowFeedback(`Baixando ${label} ${index + 1} de ${downloadAssets.length}...`, 0);
             let currentFileProgress = 0;
             const downloadedBytes = await fetchFinalChallengeAssetIntoCache(cache, src, kind, (currentFileBytes, expectedFileBytes) => {
@@ -16359,11 +16423,13 @@ para liberar desafio</p>
                 : current > 0
                 ? Math.max(currentFileProgress, 0.35)
                 : currentFileProgress;
-              setFinalChallengeDownloadProgress(completedAssets + currentFileProgress, totalAssets);
+              const visibleProgress = downloadStartPercent + ((completedAssets + currentFileProgress) / totalAssets) * downloadSpanPercent;
+              setFinalChallengeDownloadProgress(visibleProgress, 100);
             });
             downloadedBytesTotal += Math.max(0, Number(downloadedBytes) || 0);
             completedAssets += 1;
-            setFinalChallengeDownloadProgress(completedAssets, totalAssets);
+            const visibleProgress = downloadStartPercent + (completedAssets / totalAssets) * downloadSpanPercent;
+            setFinalChallengeDownloadProgress(visibleProgress, 100);
           }
           writeFinalChallengeDownloadRecord(normalizedLevel, {
             completed: true,
@@ -16376,7 +16442,8 @@ para liberar desafio</p>
             totalBytes: Math.max(0, Math.round(downloadedBytesTotal)),
             updatedAt: Date.now()
           });
-          setFinalChallengeDownloadProgress(totalAssets, totalAssets);
+          setFinalChallengeDownloadPhase('Finalizando', 'Deck pronto');
+          setFinalChallengeDownloadProgress(100, 100);
           setFinalChallengeFlowFeedback('Download concluido. Rodada liberada.', 1200);
           setFinalChallengeDownloadsStatus(nativeUiText('download_done', { level: normalizedLevel }), 'success');
           return true;
@@ -16392,6 +16459,8 @@ para liberar desafio</p>
           state.ui.finalChallengeDownloadsCompletedBytes = 0;
           state.ui.finalChallengeDownloadsTotalBytes = 0;
           state.ui.finalChallengeDownloadLaunchMode = '';
+          state.ui.finalChallengeDownloadPhaseTitle = '';
+          state.ui.finalChallengeDownloadPhaseStep = '';
           renderFinalChallengeDownloadsModal();
           syncFinalChallengeIntroUi();
         }
@@ -32165,6 +32234,17 @@ para liberar desafio</p>
         }
       }
 
+      function nextFinalChallengeActionToken() {
+        state.ui.finalChallengeActionToken = Math.max(0, Number(state.ui.finalChallengeActionToken) || 0) + 1;
+        return state.ui.finalChallengeActionToken;
+      }
+
+      function isFinalChallengeActionTokenCurrent(token) {
+        return Number(token) === Math.max(0, Number(state.ui.finalChallengeActionToken) || 0)
+          && state.ui.finalChallengeRunOpen
+          && state.ui.finalChallengeScreen === 'run';
+      }
+
       function finalChallengeEarnedCoins() {
         const legacyCoinValue = Math.floor((Number(state.ui.finalChallengeEarnedLetters) || 0) / 10);
         return Math.max(0, legacyCoinValue);
@@ -32294,6 +32374,8 @@ para liberar desafio</p>
         state.ui.finalChallengeAttempts = 0;
         state.ui.finalChallengeListening = false;
         state.ui.finalChallengeBusy = false;
+        state.ui.finalChallengeSkipInFlight = false;
+        state.ui.finalChallengeActionToken = Math.max(0, Number(state.ui.finalChallengeActionToken) || 0) + 1;
         state.ui.finalChallengePercentVisible = false;
         state.ui.finalChallengeExitConfirmOpen = false;
         state.ui.finalChallengeLivesLost = 0;
@@ -32854,6 +32936,7 @@ para liberar desafio</p>
           });
         };
         const markIncorrect = async (activeButton) => {
+          const actionToken = nextFinalChallengeActionToken();
           resolved = true;
           state.ui.finalChallengeBusy = true;
           state.ui.finalChallengeAttempts += 1;
@@ -32866,7 +32949,9 @@ para liberar desafio</p>
           setFinalChallengeStatus('');
           setFinalChallengeFlowFeedback('Erro detectado. Tocando frase correta nativa...', 0);
           await playFinalChallengeAudioForLanguage(card, currentNativeLanguage(), { rate: 0.92, waitForEnd: true });
+          if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
           await wait(220);
+          if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
           if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
             state.ui.finalChallengeForcedGameOver = true;
             state.ui.finalChallengeBusy = false;
@@ -32877,6 +32962,7 @@ para liberar desafio</p>
           await advanceFinalChallengeCard();
         };
         const markCorrect = async () => {
+          const actionToken = nextFinalChallengeActionToken();
           resolved = true;
           state.ui.finalChallengeBusy = true;
           state.ui.finalChallengeAttempts += 1;
@@ -32896,7 +32982,9 @@ para liberar desafio</p>
             : currentNativeLanguage();
           setFinalChallengeFlowFeedback('Acerto registrado. Tocando feedback da frase...', 0);
           await playFinalChallengeAudioForLanguage(card, successPlaybackLanguage, { rate: 0.92, waitForEnd: true });
+          if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
           await wait(160);
+          if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
           state.ui.finalChallengeBusy = false;
           await advanceFinalChallengeCard();
         };
@@ -33063,8 +33151,8 @@ para liberar desafio</p>
           els.finalChallengePercentCopy.textContent = '';
         }
         if (els.finalChallengeSkipBtn) {
-          els.finalChallengeSkipBtn.hidden = isPracticeMode;
-          els.finalChallengeSkipBtn.disabled = Boolean(state.ui.finalChallengeBusy || state.ui.finalChallengeExitConfirmOpen || !card);
+          els.finalChallengeSkipBtn.hidden = !card;
+          els.finalChallengeSkipBtn.disabled = Boolean(state.ui.finalChallengeExitConfirmOpen || state.ui.finalChallengeSkipInFlight || !card);
         }
         syncFinalChallengeHeartsUi();
         if (isPracticeMode) {
@@ -33107,6 +33195,8 @@ para liberar desafio</p>
         setFinalChallengePhaseOverlay(false);
         state.ui.finalChallengeListening = false;
         state.ui.finalChallengeBusy = false;
+        state.ui.finalChallengeSkipInFlight = false;
+        state.ui.finalChallengeActionToken = Math.max(0, Number(state.ui.finalChallengeActionToken) || 0) + 1;
         state.ui.finalChallengeRunOpen = false;
         state.ui.finalChallengeExitConfirmOpen = false;
         setFinalChallengeDownloadsStatus('', '');
@@ -33456,6 +33546,7 @@ para liberar desafio</p>
         if (!state.ui.finalChallengeRunOpen || state.ui.finalChallengeBusy) return;
         const card = currentFinalChallengeCard();
         if (!card) return;
+        const actionToken = nextFinalChallengeActionToken();
         state.ui.finalChallengeBusy = true;
         state.ui.finalChallengeCorrectionTargetVisible = false;
         state.ui.finalChallengeListening = true;
@@ -33463,6 +33554,7 @@ para liberar desafio</p>
         setFinalChallengeStatus('Ouvindo...');
         try {
           const transcript = await captureChallengeSpeechTranscript(currentTargetSpeechCode());
+          if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
           if (!state.ui.finalChallengeRunOpen || state.ui.finalChallengeScreen !== 'run') return;
           state.ui.finalChallengeListening = false;
           syncFinalChallengeRunUi();
@@ -33490,46 +33582,64 @@ para liberar desafio</p>
             state.ui.finalChallengeCorrectionTargetVisible = true;
             syncFinalChallengeRunUi();
             await playFinalChallengeAudioForLanguage(card, currentTargetLanguage(), { rate: 0.9, waitForEnd: true }).catch(() => false);
+            if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
             if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
               state.ui.finalChallengeForcedGameOver = true;
               await wait(480);
+              if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
               await finishFinalChallengeRun();
               return;
             }
           }
           await wait(passedCard ? 380 : 620);
+          if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
           await advanceFinalChallengeCard();
         } catch (error) {
+          if (!isFinalChallengeActionTokenCurrent(actionToken)) return;
           state.ui.finalChallengeListening = false;
           setFinalChallengeStatus(error?.message || 'Nao consegui abrir o microfone. Toque na imagem para tentar de novo.', 'error');
         } finally {
-          state.ui.finalChallengeBusy = false;
-          syncFinalChallengeRunUi();
+          if (isFinalChallengeActionTokenCurrent(actionToken)) {
+            state.ui.finalChallengeBusy = false;
+            syncFinalChallengeRunUi();
+          }
         }
       }
 
       async function skipFinalChallengeCard() {
-        if (state.ui.finalChallengeMode === 'practice' || !state.ui.finalChallengeRunOpen || state.ui.finalChallengeBusy) return;
+        if (!state.ui.finalChallengeRunOpen || state.ui.finalChallengeScreen !== 'run' || state.ui.finalChallengeSkipInFlight) return;
         const card = currentFinalChallengeCard();
         if (!card) return;
-        state.ui.finalChallengeBusy = true;
+        state.ui.finalChallengeSkipInFlight = true;
+        nextFinalChallengeActionToken();
+        stopFinalChallengePromptAudio();
+        setFinalChallengePhaseOverlay(false);
+        state.ui.finalChallengeBusy = false;
+        state.ui.finalChallengeListening = false;
         state.ui.finalChallengeAttempts += 1;
         state.ui.finalChallengeScores.push(0);
+        if (!Array.isArray(state.ui.finalChallengeWrongCards)) {
+          state.ui.finalChallengeWrongCards = [];
+        }
         state.ui.finalChallengeWrongCards.push(card);
         state.ui.finalChallengeLivesLost = Math.max(0, Number(state.ui.finalChallengeLivesLost) || 0) + 1;
-        state.ui.finalChallengeCorrectionTargetVisible = true;
+        state.ui.finalChallengeCorrectionTargetVisible = false;
+        if (state.ui.finalChallengeMode === 'practice') {
+          resetFinalChallengePracticeStreak();
+        }
         syncFinalChallengeRunUi();
         setFinalChallengeStatus('Pulada', 'error');
-        await playFinalChallengeAudioForLanguage(card, currentTargetLanguage(), { rate: 0.9, waitForEnd: true }).catch(() => false);
-        if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
-          state.ui.finalChallengeForcedGameOver = true;
-          state.ui.finalChallengeBusy = false;
-          await finishFinalChallengeRun();
-          return;
+        try {
+          if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
+            state.ui.finalChallengeForcedGameOver = true;
+            await finishFinalChallengeRun();
+            return;
+          }
+          await advanceFinalChallengeCard();
+        } finally {
+          state.ui.finalChallengeSkipInFlight = false;
+          syncFinalChallengeRunUi();
         }
-        state.ui.finalChallengeBusy = false;
-        await wait(420);
-        await advanceFinalChallengeCard();
       }
 
       async function startFinalChallengeRun() {
