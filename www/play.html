@@ -11741,6 +11741,11 @@
       pointer-events: none;
     }
 
+    #finalChallengeResultScreen.is-revealing .final-challenge-modal__back {
+      opacity: 0;
+      pointer-events: none;
+    }
+
     .final-challenge-modal__result-heading {
       position: relative;
       display: grid;
@@ -14681,6 +14686,7 @@ para liberar desafio</p>
           welcomeFlashStartAt: 0,
           flashStartInFlight: false,
           pendingFlashSessionOut: false,
+          pendingFlashSessionLevelSync: false,
           authRequired: false,
           authDelayTimer: 0,
           authRevealTimer: 0,
@@ -15024,6 +15030,7 @@ para liberar desafio</p>
           finalChallengeEarnedLetters: 0,
           finalChallengeResultPersisted: false,
           finalChallengeResultHeartTimers: [],
+          finalChallengeResultIntroTitle: '',
           finalChallengeIntroStatsStep: 0,
           finalChallengeIntroStatsTimer: 0,
           finalChallengeSessionStartedAt: 0,
@@ -20707,12 +20714,23 @@ para liberar desafio</p>
             const currentLevelValue = currentUserLevel();
             const levelChanged = nextLevel !== currentLevelValue;
             const updatedAtChanged = Boolean(nextUpdatedAt && nextUpdatedAt !== safeText(state.userLevelUpdatedAt));
+            const deferVisualLevelSync = normalizedAction === 'tick'
+              && (state.game.active || state.ui.finalChallengeRunOpen);
+            if (deferVisualLevelSync && (levelChanged || updatedAtChanged)) {
+              state.entry.pendingFlashSessionLevelSync = true;
+            }
             applyUserLevelState(nextLevel, {
               updatedAt: payload?.userLevelUpdatedAt || state.userLevelUpdatedAt,
-              allowTransition: levelChanged,
-              scheduleRefresh: levelChanged || updatedAtChanged,
-              delayMs: normalizedAction === 'tick' ? 120 : 0
+              allowTransition: deferVisualLevelSync ? false : levelChanged,
+              suppressVisualTransition: deferVisualLevelSync,
+              scheduleRefresh: deferVisualLevelSync
+                ? false
+                : (levelChanged || updatedAtChanged || state.entry.pendingFlashSessionLevelSync),
+              delayMs: deferVisualLevelSync ? 0 : (normalizedAction === 'tick' ? 120 : 0)
             });
+            if (!deferVisualLevelSync && state.entry.pendingFlashSessionLevelSync) {
+              state.entry.pendingFlashSessionLevelSync = false;
+            }
           }
           return payload;
         } catch (_error) {
@@ -25493,9 +25511,14 @@ para liberar desafio</p>
           state.ui.levelSyncRefreshTimer = 0;
           refreshLibrary();
           syncGameLevelNavigator();
+          if (state.game.active || state.ui.finalChallengeRunOpen) {
+            state.entry.pendingFlashSessionLevelSync = true;
+            return;
+          }
           const now = Date.now();
           if ((now - Number(state.ui.levelSyncLastReloadAt || 0)) < 8000) return;
           state.ui.levelSyncLastReloadAt = now;
+          state.entry.pendingFlashSessionLevelSync = false;
           reloadCardsFromNetwork().catch(() => {});
         }, delayMs);
       }
@@ -32588,10 +32611,23 @@ para liberar desafio</p>
           }, index * 200);
           state.ui.finalChallengeResultHeartTimers.push(timer);
         });
+      }
+
+      function revealFinalChallengeResultSummary(finalTitle, introTitle, introDurationMs = 1200) {
+        const safeFinalTitle = safeText(finalTitle);
+        const safeIntroTitle = safeText(introTitle) || safeFinalTitle;
+        state.ui.finalChallengeResultIntroTitle = safeIntroTitle;
+        if (els.finalChallengeResultTitle) {
+          els.finalChallengeResultTitle.textContent = safeIntroTitle;
+        }
         els.finalChallengeResultScreen?.classList.add('is-revealing');
         const revealTimer = window.setTimeout(() => {
+          state.ui.finalChallengeResultIntroTitle = '';
+          if (els.finalChallengeResultTitle) {
+            els.finalChallengeResultTitle.textContent = safeFinalTitle;
+          }
           els.finalChallengeResultScreen?.classList.remove('is-revealing');
-        }, 1500);
+        }, Math.max(600, Number(introDurationMs) || 1200));
         state.ui.finalChallengeResultHeartTimers.push(revealTimer);
       }
 
@@ -32702,6 +32738,7 @@ para liberar desafio</p>
         state.ui.finalChallengePersistedBestStreak = Math.max(0, Number(state.stats.bestSequenceTotal) || 0);
         state.ui.finalChallengeEarnedLetters = 0;
         state.ui.finalChallengeResultPersisted = false;
+        state.ui.finalChallengeResultIntroTitle = '';
         state.ui.finalChallengeSessionStartedAt = 0;
         state.ui.finalChallengeFlowFeedback = '';
         if (finalChallengeFlowFeedbackTimer) {
@@ -32713,7 +32750,11 @@ para liberar desafio</p>
 
       function currentFinalChallengeCorrectCount() {
         const scores = Array.isArray(state.ui.finalChallengeScores) ? state.ui.finalChallengeScores : [];
-        return scores.reduce((total, score) => total + (Number(score) >= FINAL_CHALLENGE_CARD_PASS_PERCENT ? 1 : 0), 0);
+        const cards = Array.isArray(state.ui.finalChallengeCards) ? state.ui.finalChallengeCards : [];
+        return scores.reduce((total, score, index) => {
+          const card = cards[index] || null;
+          return total + (Number(score) >= finalChallengeVoicePassPercentForCard(card) ? 1 : 0);
+        }, 0);
       }
 
       function currentFinalChallengeNotePercent() {
@@ -32725,6 +32766,18 @@ para liberar desafio</p>
       function formatFinalChallengeNote(percent) {
         const normalized = Math.max(0, Math.min(100, Number(percent) || 0));
         return (normalized / 10).toFixed(1).replace('.', ',');
+      }
+
+      function finalChallengeVoiceCharacterCount(card) {
+        const text = safeText(resolveSourceLanguageText(card, currentTargetLanguage()) || card?.english || '').trim();
+        return text.replace(/\s+/g, '').length;
+      }
+
+      function finalChallengeVoicePassPercentForCard(card) {
+        const charCount = finalChallengeVoiceCharacterCount(card);
+        if (charCount >= 1 && charCount <= 8) return 50;
+        if (charCount >= 9 && charCount <= 15) return 55;
+        return FINAL_CHALLENGE_CARD_PASS_PERCENT;
       }
 
       function finalChallengeGemTier(percent) {
@@ -33706,12 +33759,14 @@ para liberar desafio</p>
           && !state.ui.finalChallengeForcedGameOver
           && currentFinalChallengePracticePhase() === 2
           && state.ui.finalChallengeIndex >= state.ui.finalChallengeCards.length;
-        if (els.finalChallengeResultTitle) {
-          els.finalChallengeResultTitle.textContent = isPracticeMode
-            ? (practiceCompleted ? 'Sucesso' : 'Tente novamente')
-            : (passed
+        const finalResultTitle = isPracticeMode
+          ? (practiceCompleted ? 'Nível desbloqueado' : 'Tente novamente')
+          : (passed
             ? 'Voce passou de fase'
             : (state.ui.finalChallengeForcedGameOver ? 'Game over' : 'Voce nao passou de fase'));
+        const introResultTitle = (practiceCompleted || (!isPracticeMode && passed)) ? 'Sucesso' : 'Tente novamente';
+        if (els.finalChallengeResultTitle) {
+          els.finalChallengeResultTitle.textContent = finalResultTitle;
         }
         if (els.finalChallengeResultBody) {
           els.finalChallengeResultBody.hidden = isPracticeMode;
@@ -33739,7 +33794,7 @@ para liberar desafio</p>
           els.finalChallengeResultStreakValue.textContent = String(activeStreak);
         }
         if (els.finalChallengeReviewBtn) {
-          els.finalChallengeReviewBtn.hidden = isPracticeMode || !Array.isArray(state.ui.finalChallengeWrongCards) || !state.ui.finalChallengeWrongCards.length;
+          els.finalChallengeReviewBtn.hidden = state.ui.finalChallengeMode !== 'voice' || !Array.isArray(state.ui.finalChallengeWrongCards) || !state.ui.finalChallengeWrongCards.length;
           if (!els.finalChallengeReviewBtn.hidden) {
             setFinalChallengeResultButton(
               els.finalChallengeReviewBtn,
@@ -33797,9 +33852,12 @@ para liberar desafio</p>
         );
         setFinalChallengeScreen('result');
         animateFinalChallengeResultAwards({
-          showStars: practiceCompleted,
-          starCount: practiceCompleted ? finalChallengePracticeStarTier(state.ui.finalChallengeBuiltSentences) : 0
+          showStars: practiceCompleted || (!isPracticeMode && passed),
+          starCount: practiceCompleted
+            ? finalChallengePracticeStarTier(state.ui.finalChallengeBuiltSentences)
+            : (!isPracticeMode && passed ? 5 : 0)
         });
+        revealFinalChallengeResultSummary(finalResultTitle, introResultTitle, 1200);
         if (isPracticeMode) {
           void persistFinalChallengeTrainingResult().catch((error) => {
             console.warn('Falha ao creditar resultado do treino:', error);
@@ -33856,7 +33914,7 @@ para liberar desafio</p>
           setFinalChallengeStatus('Analisando...');
           const evaluation = evaluateAcceptedAnswers(finalChallengeExpectedAnswersForCard(card), transcript);
           const score = Math.max(0, Math.min(100, Math.round(Number(evaluation?.score) || 0)));
-          const passedCard = score >= FINAL_CHALLENGE_CARD_PASS_PERCENT;
+          const passedCard = score >= finalChallengeVoicePassPercentForCard(card);
           state.ui.finalChallengeAttempts += 1;
           state.ui.finalChallengeScores.push(score);
           state.ui.finalChallengePercentVisible = true;
