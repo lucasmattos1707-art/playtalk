@@ -240,6 +240,7 @@
           navigate(String(user.next_onboarding_route || ''), { replace: true });
           return false;
         }
+        window.__PLAYTALK_BOOTSTRAP_SESSION_USER = user;
         return true;
       }
     } catch (_error) {

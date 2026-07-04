@@ -12175,8 +12175,31 @@
       align-content: center;
     }
 
+    .final-challenge-modal__blocks.is-correction {
+      gap: 10px;
+      justify-items: center;
+      align-content: center;
+      text-align: center;
+    }
+
     .final-challenge-modal__blocks[hidden] {
       display: none;
+    }
+
+    .final-challenge-modal__correction-line {
+      width: min(90vw, 560px);
+      margin: 0;
+      color: #c8ff3d;
+      font: 800 clamp(22px, 5.8vw, 31px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
+      text-transform: uppercase;
+      text-wrap: balance;
+      letter-spacing: 0.02em;
+      text-shadow: 0 0 14px rgba(200, 255, 61, 0.34);
+    }
+
+    .final-challenge-modal__correction-line.is-success {
+      color: #f5f7fb;
+      text-shadow: 0 0 14px rgba(245, 247, 251, 0.2);
     }
 
     .final-challenge-modal__block-row {
@@ -14884,6 +14907,7 @@ para liberar desafio</p>
           welcomeHeadingModeIndex: 0,
           welcomeProfileReady: false,
           welcomeEnergyReady: false,
+          gameOptionsLaunchSource: '',
           welcomeLevelProgressPercent: 0,
           welcomeLevelDisplayPercent: null,
           welcomeLevelAnimationFrame: 0,
@@ -14992,6 +15016,8 @@ para liberar desafio</p>
           finalChallengeHeardSentences: 0,
           finalChallengeHeardWords: 0,
           finalChallengeBuiltSentences: 0,
+          finalChallengePracticeCorrectionText: '',
+          finalChallengePracticeCorrectionTone: '',
           finalChallengeCurrentStreak: 0,
           finalChallengeBestStreak: 0,
           finalChallengePersistedBestStreak: 0,
@@ -15040,6 +15066,8 @@ para liberar desafio</p>
       let finalChallengeDownloadsStoreCache = null;
       let finalChallengeSelectionStoreCache = null;
       let finalChallengeEligibleCardsCache = null;
+      let cardsCatalogLoadPromise = null;
+      const finalChallengeProgressiveDownloadState = new Map();
 
       loadGameOptionsFromStorage();
 
@@ -16186,6 +16214,31 @@ para liberar desafio</p>
         };
       }
 
+      function buildFinalChallengeDownloadAssets(payload) {
+        const nativeLanguage = currentNativeLanguage();
+        const targetLanguage = currentTargetLanguage();
+        const seen = new Set();
+        const assets = [];
+        const cards = Array.isArray(payload?.cards) ? payload.cards : [];
+        cards.forEach((card) => {
+          const imageUrl = normalizeFinalChallengeDownloadUrl(safeText(card?.imageDisplayUrl || card?.imageUrl));
+          if (imageUrl && !seen.has(`image:${imageUrl}`)) {
+            seen.add(`image:${imageUrl}`);
+            assets.push({ src: imageUrl, kind: 'image' });
+          }
+          [targetLanguage, nativeLanguage].forEach((language) => {
+            const audioUrl = normalizeFinalChallengeDownloadUrl(resolveCardAudioUrlForLanguage(card, language, {
+              accent: language === 'english' ? currentLanguageBackgroundAccent() : ''
+            }));
+            if (audioUrl && !seen.has(`audio:${audioUrl}`)) {
+              seen.add(`audio:${audioUrl}`);
+              assets.push({ src: audioUrl, kind: 'audio' });
+            }
+          });
+        });
+        return assets;
+      }
+
       function finalChallengeDownloadRecordMatches(level, payload = finalChallengeDownloadPayload(level)) {
         const record = readFinalChallengeDownloadRecord(level);
         if (!record?.completed || !payload?.audioUrls?.length || !payload?.imageUrls?.length) return false;
@@ -16207,6 +16260,123 @@ para liberar desafio</p>
 
       async function finalChallengeDownloadRecordIsReady(level, payload = finalChallengeDownloadPayload(level)) {
         return finalChallengeDownloadRecordMatches(level, payload);
+      }
+
+      async function startProgressiveFinalChallengeDownload(level, options = {}) {
+        const normalizedLevel = normalizeUserLevel(level);
+        const downloadKey = `${currentFinalChallengeLanguage()}:${normalizedLevel}`;
+        const existing = finalChallengeProgressiveDownloadState.get(downloadKey);
+        if (existing) {
+          return existing.readyPromise;
+        }
+        const releasePercent = Math.max(1, Math.min(100, Number(options.releasePercent) || 10));
+        let releaseResolved = false;
+        let resolveReady;
+        let rejectReady;
+        const readyPromise = new Promise((resolve, reject) => {
+          resolveReady = resolve;
+          rejectReady = reject;
+        });
+        const runPromise = (async () => {
+          state.ui.finalChallengeDownloadsBusyLevel = normalizedLevel;
+          state.ui.finalChallengeDownloadLaunchMode = safeText(options.launchMode);
+          setFinalChallengeDownloadPhase('Criando deck', 'Abrindo lista');
+          setFinalChallengeDownloadProgress(1, 100);
+          setFinalChallengeFlowFeedback('Preparando nivel para iniciar...', 0);
+          setFinalChallengeDownloadsStatus(nativeUiText('downloading_level', { level: normalizedLevel }), '');
+          renderFinalChallengeDownloadsModal();
+          try {
+            await ensureFinalChallengeSelection(normalizedLevel);
+            setFinalChallengeDownloadPhase('Criando deck', 'Montando cartas jogaveis');
+            setFinalChallengeDownloadProgress(8, 100);
+            const payload = finalChallengeDownloadPayload(normalizedLevel);
+            const downloadAssets = buildFinalChallengeDownloadAssets(payload);
+            if (!payload.audioUrls.length || !payload.imageUrls.length || !downloadAssets.length) {
+              throw new Error('download-selection-empty');
+            }
+            const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
+            let downloadedBytesTotal = 0;
+            let completedAssets = 0;
+            const totalAssets = downloadAssets.length;
+            const downloadStartPercent = 10;
+            const downloadSpanPercent = 90;
+            for (let index = 0; index < downloadAssets.length; index += 1) {
+              const { src, kind } = downloadAssets[index];
+              const label = kind === 'image' ? 'imagem' : 'MP3';
+              setFinalChallengeDownloadPhase('Baixando em segundo plano', `${label} ${index + 1} de ${totalAssets}`);
+              let currentFileProgress = 0;
+              const downloadedBytes = await fetchFinalChallengeAssetIntoCache(cache, src, kind, (currentFileBytes, expectedFileBytes) => {
+                const current = Math.max(0, Number(currentFileBytes) || 0);
+                const expected = Math.max(0, Number(expectedFileBytes) || 0);
+                currentFileProgress = expected > 0
+                  ? Math.max(currentFileProgress, Math.min(0.98, current / expected))
+                  : current > 0
+                    ? Math.max(currentFileProgress, 0.35)
+                    : currentFileProgress;
+                const visibleProgress = downloadStartPercent + ((completedAssets + currentFileProgress) / totalAssets) * downloadSpanPercent;
+                setFinalChallengeDownloadProgress(visibleProgress, 100);
+                if (!releaseResolved && visibleProgress >= releasePercent) {
+                  releaseResolved = true;
+                  setFinalChallengeFlowFeedback('Nivel liberado. O restante continua baixando...', 1200);
+                  resolveReady(true);
+                }
+              });
+              downloadedBytesTotal += Math.max(0, Number(downloadedBytes) || 0);
+              completedAssets += 1;
+              const visibleProgress = downloadStartPercent + (completedAssets / totalAssets) * downloadSpanPercent;
+              setFinalChallengeDownloadProgress(visibleProgress, 100);
+              if (!releaseResolved && visibleProgress >= releasePercent) {
+                releaseResolved = true;
+                setFinalChallengeFlowFeedback('Nivel liberado. O restante continua baixando...', 1200);
+                resolveReady(true);
+              }
+            }
+            writeFinalChallengeDownloadRecord(normalizedLevel, {
+              completed: true,
+              audioCount: payload.audioUrls.length,
+              imageCount: payload.imageUrls.length,
+              completedAssetCount: totalAssets,
+              cardIds: payload.cardIds,
+              audioUrls: payload.audioUrls,
+              imageUrls: payload.imageUrls,
+              totalBytes: Math.max(0, Math.round(downloadedBytesTotal)),
+              updatedAt: Date.now()
+            });
+            setFinalChallengeDownloadPhase('Finalizando', 'Deck pronto');
+            setFinalChallengeDownloadProgress(100, 100);
+            setFinalChallengeDownloadsStatus(nativeUiText('download_done', { level: normalizedLevel }), 'success');
+            if (!releaseResolved) {
+              releaseResolved = true;
+              resolveReady(true);
+            }
+            return true;
+          } catch (error) {
+            setFinalChallengeFlowFeedback('Falha ao iniciar o nivel com download progressivo.', 2200);
+            setFinalChallengeDownloadsStatus(error?.message || nativeUiText('download_unavailable'), 'error');
+            if (!releaseResolved) {
+              releaseResolved = true;
+              rejectReady(error);
+            }
+            throw error;
+          } finally {
+            state.ui.finalChallengeDownloadsBusyLevel = 0;
+            state.ui.finalChallengeDownloadsCompletedCount = 0;
+            state.ui.finalChallengeDownloadsTotalCount = 0;
+            state.ui.finalChallengeDownloadsCompletedBytes = 0;
+            state.ui.finalChallengeDownloadsTotalBytes = 0;
+            state.ui.finalChallengeDownloadLaunchMode = '';
+            state.ui.finalChallengeDownloadPhaseTitle = '';
+            state.ui.finalChallengeDownloadPhaseStep = '';
+            finalChallengeProgressiveDownloadState.delete(downloadKey);
+            renderFinalChallengeDownloadsModal();
+            syncFinalChallengeIntroUi();
+          }
+        })();
+        finalChallengeProgressiveDownloadState.set(downloadKey, { readyPromise, runPromise });
+        runPromise.catch((error) => {
+          console.warn('Falha no download progressivo do nivel:', error);
+        });
+        return readyPromise;
       }
 
       function renderFinalChallengeDownloadsModal() {
@@ -16373,10 +16543,7 @@ para liberar desafio</p>
           setFinalChallengeDownloadPhase('Criando deck', 'Finalizando deck');
           setFinalChallengeDownloadProgress(22, 100);
           const payload = finalChallengeDownloadPayload(normalizedLevel);
-          const downloadAssets = [
-            ...payload.audioUrls.map((src) => ({ src, kind: 'audio' })),
-            ...payload.imageUrls.map((src) => ({ src, kind: 'image' }))
-          ];
+          const downloadAssets = buildFinalChallengeDownloadAssets(payload);
           if (!payload.audioUrls.length || !payload.imageUrls.length || !downloadAssets.length) {
             throw new Error('download-selection-empty');
           }
@@ -16576,6 +16743,7 @@ para liberar desafio</p>
       async function ensureFinalChallengeSelection(level = currentFinalChallengeLevel()) {
         const challengeLevel = normalizeUserLevel(level);
         if (!state.user?.id) throw new Error('Entre para baixar este nivel.');
+        await ensureCardsCatalogLoaded();
         const existingSelection = resolveStoredFinalChallengeSelection(challengeLevel);
         if (existingSelection.cards.length >= FINAL_CHALLENGE_CARD_COUNT) {
           return existingSelection;
@@ -20323,10 +20491,16 @@ para liberar desafio</p>
       function scheduleGuestAuthRequirement() { return false; }
 
       async function fetchSessionUser() {
+        if (window.__PLAYTALK_BOOTSTRAP_SESSION_USER) {
+          const bootstrapUser = normalizeUser(window.__PLAYTALK_BOOTSTRAP_SESSION_USER);
+          window.__PLAYTALK_BOOTSTRAP_SESSION_USER = null;
+          if (bootstrapUser) return bootstrapUser;
+        }
         if (window.PlaytalkApi && typeof window.PlaytalkApi.fetchSessionUser === 'function') {
           const user = await window.PlaytalkApi.fetchSessionUser({
-            attempts: 3,
-            retryDelayMs: 450
+            attempts: 2,
+            retryDelayMs: 300,
+            timeoutMs: 1800
           });
           return normalizeUser(user);
         }
@@ -21569,7 +21743,6 @@ para liberar desafio</p>
           persistAudioCheckCompletedFlag(true);
         }
         clearGuestAuthDelay();
-        scheduleCardsRefresh();
         state.libraryPage = 1;
 
         let cloudState = null;
@@ -23516,9 +23689,10 @@ para liberar desafio</p>
         }
       }
 
-      function openGameOptionsModal() {
+      function openGameOptionsModal(source = 'game') {
         if (!els.gameOptionsModal) return;
         pauseFlashcardsGameForDailyPlan();
+        state.ui.gameOptionsLaunchSource = safeText(source) || 'game';
         state.ui.gameOptionsSnapshotBeforeOpen = {
           difficulty: normalizeGameOptionValue('difficulty', state.options?.difficulty),
           speed: normalizeGameOptionValue('speed', state.options?.speed),
@@ -23629,6 +23803,7 @@ para liberar desafio</p>
         if (!state.entry.gameOptionsOpen || !els.gameOptionsModal) return;
         const previousOptions = state.ui.gameOptionsSnapshotBeforeOpen;
         state.ui.gameOptionsSnapshotBeforeOpen = null;
+        state.ui.gameOptionsLaunchSource = '';
         state.entry.gameOptionsOpen = false;
         els.gameOptionsModal.classList.remove('is-visible');
         els.gameOptionsModal.setAttribute('aria-hidden', 'true');
@@ -25604,6 +25779,32 @@ para liberar desafio</p>
         await refreshAdminWelcomeSummary();
         saveCachedCards(state.allCards);
         syncWelcomeAdminStats();
+      }
+
+      async function ensureCardsCatalogLoaded(options = {}) {
+        const forceNetwork = Boolean(options?.forceNetwork);
+        if (!forceNetwork && Array.isArray(state.allCards) && state.allCards.length) {
+          return state.allCards;
+        }
+        if (!forceNetwork) {
+          const cachedCards = (readCachedCards() || []).map((card) => projectFlashcardLanguageFields(applyTutorialPlanetCardDefaults(card)));
+          if (cachedCards.length) {
+            state.allCards = cachedCards;
+            scheduleCardsRefresh();
+            return state.allCards;
+          }
+        }
+        if (cardsCatalogLoadPromise) {
+          return cardsCatalogLoadPromise;
+        }
+        cardsCatalogLoadPromise = (async () => {
+          await loadCards();
+          scheduleCardsRefresh();
+          return state.allCards;
+        })().finally(() => {
+          cardsCatalogLoadPromise = null;
+        });
+        return cardsCatalogLoadPromise;
       }
 
       function renderMetrics() {
@@ -29730,6 +29931,17 @@ para liberar desafio</p>
         return chooseTypingDisplaySplit(words, desiredLineCount);
       }
 
+      function splitFinalChallengeCorrectionText(text) {
+        const source = safeText(text).trim();
+        if (!source) return [];
+        const words = getTypingDisplayWords(source);
+        if (words.length <= 1) return [source];
+        const twoLineSplit = chooseTypingDisplaySplit(words, Math.min(2, words.length));
+        return Array.isArray(twoLineSplit) && twoLineSplit.length
+          ? twoLineSplit.slice(0, 2)
+          : [source];
+      }
+
       function typingDisplayScaleClass(text) {
         const length = countTypingDisplayLetters(text);
         if (length >= 3 && length <= 5) return 'flashcards-typing__display--size-xl';
@@ -32445,6 +32657,8 @@ para liberar desafio</p>
         state.ui.finalChallengeIndex = 0;
         state.ui.finalChallengeScores = [];
         state.ui.finalChallengeAttempts = 0;
+        state.ui.finalChallengePracticeCorrectionText = '';
+        state.ui.finalChallengePracticeCorrectionTone = '';
         state.ui.finalChallengeListening = false;
         state.ui.finalChallengeBusy = false;
         state.ui.finalChallengeSkipInFlight = false;
@@ -32616,7 +32830,7 @@ para liberar desafio</p>
           resultEyebrow.textContent = nativeUiText('result');
         }
         if (els.finalChallengePracticeBtn) {
-          els.finalChallengePracticeBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>${escapeHtml(nativeUiText('start_training'))}`;
+          els.finalChallengePracticeBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>${escapeHtml(`INICIAR NIVEL (${currentFinalChallengeLevel()})`)}`;
         }
         if (els.finalChallengeStartBtn) {
           els.finalChallengeStartBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m12 3 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 16.53l-5.3 2.78 1.01-5.9-4.29-4.18 5.93-.86L12 3Z"></path></svg></span>${escapeHtml(nativeUiText('final_challenge'))}`;
@@ -32849,11 +33063,17 @@ para liberar desafio</p>
 
       function syncFinalChallengeIntroUi() {
         const selection = resolveStoredFinalChallengeSelection();
+        const storedSelectionRecord = readFinalChallengeSelectionRecord();
+        const storedSelectionCount = Math.max(
+          Array.isArray(storedSelectionRecord?.ids) ? storedSelectionRecord.ids.length : 0,
+          Array.isArray(storedSelectionRecord?.cards) ? storedSelectionRecord.cards.length : 0
+        );
         const hasDeck = selection.cards.length >= FINAL_CHALLENGE_CARD_COUNT;
+        const hasStoredDeck = storedSelectionCount >= FINAL_CHALLENGE_CARD_COUNT;
         const selectedLevel = currentFinalChallengeLevel();
         const payload = finalChallengeDownloadPayload(selectedLevel);
         const hasDownloadRecord = finalChallengeDownloadRecordMatches(selectedLevel, payload);
-        const challengeUnlocked = hasDeck && selection.practiceComplete;
+        const challengeUnlocked = (hasDeck || hasStoredDeck) && (selection.practiceComplete || Boolean(storedSelectionRecord?.practiceComplete));
         const unlockedLevel = currentUnlockedFinalChallengeLevel();
         const record = currentFinalChallengeRecord(selectedLevel);
         const busyLevel = Math.max(0, Number(state.ui.finalChallengeDownloadsBusyLevel) || 0);
@@ -32876,7 +33096,7 @@ para liberar desafio</p>
           if (busyLevel && state.ui.finalChallengeDownloadLaunchMode === 'practice') {
             syncFinalChallengeInlineDownloadButton();
           } else {
-            els.finalChallengePracticeBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>${escapeHtml(nativeUiText(hasDownloadRecord ? 'start_training' : 'download_audio'))}`;
+            els.finalChallengePracticeBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>${escapeHtml(`INICIAR NIVEL (${selectedLevel})`)}`;
           }
         }
         if (els.finalChallengeLevelPrevBtn) {
@@ -32891,11 +33111,11 @@ para liberar desafio</p>
           els.finalChallengeIntroLevel.textContent = `Nivel ${selectedLevel}`;
         }
         if (els.finalChallengeIntroFeedback) {
-          els.finalChallengeIntroFeedback.textContent = !hasDownloadRecord
-            ? `${nativeUiText('download_to_draw')}\n${nativeUiText('level')} ${selectedLevel} • ${currentTargetLanguageLabel()}`
-            : hasDeck
+          els.finalChallengeIntroFeedback.textContent = (hasDeck || hasStoredDeck)
             ? (challengeUnlocked ? nativeUiText('training_complete_unlock') : nativeUiText('complete_training_unlock'))
-            : `${nativeUiText('download_to_draw')}\n${nativeUiText('level')} ${selectedLevel} • ${currentTargetLanguageLabel()}`;
+            : hasDownloadRecord
+              ? `${nativeUiText('level')} ${selectedLevel} • ${currentTargetLanguageLabel()}`
+              : `DOWNLOADS OPCIONAIS\n${nativeUiText('level')} ${selectedLevel} • ${currentTargetLanguageLabel()}`;
         }
         if (record.completed) {
           if (!state.ui.finalChallengeIntroStatsTimer) {
@@ -32932,16 +33152,15 @@ para liberar desafio</p>
         const payload = finalChallengeDownloadPayload(challengeLevel);
         const ready = await finalChallengeDownloadRecordIsReady(challengeLevel, payload);
         if (!ready) {
-          setFinalChallengeFlowFeedback('Baixando imagens e audios para evitar travas...', 0);
+          setFinalChallengeFlowFeedback('Liberando o nivel e seguindo com o download em segundo plano...', 0);
           setFinalChallengeDownloadsStatus(nativeUiText('downloading_level', { level: challengeLevel }), '');
-          await downloadFinalChallengeLevelAudio(challengeLevel, {
+          await startProgressiveFinalChallengeDownload(challengeLevel, {
             launchMode,
-            throwOnError: true
+            releasePercent: 10
           });
           selection = resolveStoredFinalChallengeSelection(challengeLevel);
         }
-        if (!finalChallengeDownloadRecordMatches(challengeLevel, finalChallengeDownloadPayload(challengeLevel))
-          || selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
+        if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
           throw new Error(nativeUiText('download_unavailable'));
         }
         setFinalChallengeFlowFeedback('', 0);
@@ -32952,9 +33171,27 @@ para liberar desafio</p>
         if (!els.finalChallengeBlocks) return;
         if (state.ui.finalChallengeMode !== 'practice' || !card) {
           els.finalChallengeBlocks.hidden = true;
+          els.finalChallengeBlocks.classList.remove('is-correction');
           els.finalChallengeBlocks.innerHTML = '';
           return;
         }
+        const correctionText = safeText(state.ui.finalChallengePracticeCorrectionText || '').trim();
+        if (correctionText) {
+          els.finalChallengeBlocks.hidden = false;
+          els.finalChallengeBlocks.classList.add('is-correction');
+          els.finalChallengeBlocks.innerHTML = '';
+          splitFinalChallengeCorrectionText(correctionText).forEach((line) => {
+            const lineNode = document.createElement('p');
+            lineNode.className = 'final-challenge-modal__correction-line';
+            if (safeText(state.ui.finalChallengePracticeCorrectionTone) === 'success') {
+              lineNode.classList.add('is-success');
+            }
+            lineNode.textContent = safeText(line);
+            els.finalChallengeBlocks.appendChild(lineNode);
+          });
+          return;
+        }
+        els.finalChallengeBlocks.classList.remove('is-correction');
         const blockState = buildSecondStageWordBlockState(finalChallengePracticeTypingState(card), card);
         if (!blockState?.rows?.length) {
           els.finalChallengeBlocks.hidden = true;
@@ -32979,24 +33216,33 @@ para liberar desafio</p>
           state.ui.finalChallengeAttempts += 1;
           state.ui.finalChallengeScores.push(0);
           state.ui.finalChallengeLivesLost = Math.max(0, Number(state.ui.finalChallengeLivesLost) || 0) + 1;
+          state.ui.finalChallengePracticeCorrectionText = safeText(resolveSourceLanguageText(card, currentTargetLanguage())) || safeText(card?.english || '');
+          state.ui.finalChallengePracticeCorrectionTone = 'error';
           resetFinalChallengePracticeStreak();
           syncFinalChallengeRunUi();
           activeButton?.classList.add('is-error');
           playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
+          void playFinalChallengeAudioForLanguage(card, currentTargetLanguage(), { rate: 0.9, audioProgressVisual: true }).catch(() => false);
           setFinalChallengeStatus('');
           setFinalChallengeFlowFeedback('', 0);
           if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
             state.ui.finalChallengeForcedGameOver = true;
             state.ui.finalChallengeBusy = false;
+            await wait(1100);
             await finishFinalChallengeRun();
             return;
           }
           state.ui.finalChallengeBusy = false;
+          await wait(1100);
+          state.ui.finalChallengePracticeCorrectionText = '';
+          state.ui.finalChallengePracticeCorrectionTone = '';
           await advanceFinalChallengeCard();
         };
         const markCorrect = async () => {
           const actionToken = nextFinalChallengeActionToken();
           resolved = true;
+          state.ui.finalChallengePracticeCorrectionText = '';
+          state.ui.finalChallengePracticeCorrectionTone = '';
           state.ui.finalChallengeBusy = true;
           state.ui.finalChallengeAttempts += 1;
           state.ui.finalChallengeScores.push(100);
@@ -33011,6 +33257,15 @@ para liberar desafio</p>
             }
           });
           setFinalChallengeFlowFeedback('', 0);
+          if (!isFinalChallengePracticePhaseTwo()) {
+            state.ui.finalChallengePracticeCorrectionText = safeText(resolveSourceLanguageText(card, currentTargetLanguage())) || safeText(card?.english || '');
+            state.ui.finalChallengePracticeCorrectionTone = 'success';
+            syncFinalChallengeRunUi();
+            await playFinalChallengeAudioForLanguage(card, currentNativeLanguage(), { rate: 0.9, audioProgressVisual: false }).catch(() => false);
+            await wait(900);
+            state.ui.finalChallengePracticeCorrectionText = '';
+            state.ui.finalChallengePracticeCorrectionTone = '';
+          }
           state.ui.finalChallengeBusy = false;
           await advanceFinalChallengeCard();
         };
@@ -35276,7 +35531,7 @@ para liberar desafio</p>
         });
         els.welcomeMissionBtn?.addEventListener('click', () => {
           playStatusCueAudio(WELCOME_MISSION_SOUND_PATH);
-          openGameOptionsModal();
+          openGameOptionsModal('welcome-settings');
         });
         els.dailyPlanCloseBtn?.addEventListener('click', closeDailyPlanModal);
         els.dailyPlanSealProgressValue?.addEventListener('click', () => {
@@ -35625,7 +35880,9 @@ para liberar desafio</p>
           } catch (error) {
             console.warn('Falha ao aplicar opcoes do jogo:', error);
           } finally {
+            const launchSource = safeText(state.ui.gameOptionsLaunchSource) || 'game';
             state.ui.gameOptionsSnapshotBeforeOpen = null;
+            state.ui.gameOptionsLaunchSource = '';
             state.entry.gameOptionsOpen = false;
             els.gameOptionsModal?.classList.remove('is-visible');
             els.gameOptionsModal?.setAttribute('aria-hidden', 'true');
@@ -35643,6 +35900,10 @@ para liberar desafio</p>
             resetScaleBatchProgress();
             if (els.gameOptionsContinueBtn) {
               els.gameOptionsContinueBtn.disabled = false;
+            }
+            if (launchSource === 'welcome-settings') {
+              syncWelcomeGate();
+              return;
             }
           }
           if (canResumePausedFlashGame()) {
@@ -36161,46 +36422,68 @@ para liberar desafio</p>
         try {
           const sessionUser = await fetchSessionUser().catch(() => null);
           const welcomeModeSettings = await fetchWelcomeModeSettings().catch(() => ({ usersEnabled: false }));
-          const flashcardsPhaseSettings = await fetchFlashcardsPhaseSettings().catch(() => ({ fourthStarUsesSecondStarBlocks: false }));
-          const flashcardLevelRulesSettings = await fetchFlashcardLevelRulesSettings().catch(() => ({ levels: buildDefaultLevelRules() }));
-          const flashcardLevelDynamicsSettings = await fetchFlashcardLevelDynamicsSettings().catch(() => normalizeLevelDynamicsSettings(buildDefaultLevelDynamicsSettings()));
-          const flashcardLevelWindowSettings = await fetchFlashcardLevelWindowSettings().catch(() => normalizeLevelWindowSettings(buildDefaultLevelWindowSettings()));
-          const flashcardCardValueSettings = await fetchFlashcardCardValueSettings().catch(() => normalizeCardValueSettings(buildDefaultCardValueSettings()));
-          const flashcardXpValueSettings = await fetchFlashcardXpValueSettings().catch(() => normalizeCardValueSettings(buildDefaultCardValueSettings()));
-          const flashcardDeckCardLimitSettings = await fetchFlashcardDeckCardLimitSettings().catch(() => normalizeDeckCardLimitSettings(buildDefaultDeckCardLimitSettings()));
           if (sessionUser) {
             state.user = normalizeUser(sessionUser);
           }
           state.entry.welcomeModesUsersEnabled = Boolean(welcomeModeSettings?.usersEnabled);
-          state.entry.fourthStarUsesSecondStarBlocks = Boolean(flashcardsPhaseSettings?.fourthStarUsesSecondStarBlocks);
-          state.levelRules = Array.isArray(flashcardLevelRulesSettings?.levels) ? flashcardLevelRulesSettings.levels : buildDefaultLevelRules();
-          state.entry.levelDynamics = normalizeLevelDynamicsSettings(flashcardLevelDynamicsSettings);
-          state.entry.levelWindowSettings = normalizeLevelWindowSettings(flashcardLevelWindowSettings);
-          state.entry.cardValueSettings = normalizeCardValueSettings(flashcardCardValueSettings);
-          state.entry.xpValueSettings = normalizeCardValueSettings(flashcardXpValueSettings);
-          state.entry.deckCardLimitSettings = normalizeDeckCardLimitSettings(flashcardDeckCardLimitSettings);
           state.entry.welcomeModesResolved = true;
           state.entry.sessionResolved = true;
+          state.entry.cardsReady = true;
           ensureFlashcardsEnergyDepletionWatch();
-          try {
-            await loadCards();
-          } catch (cardsError) {
-            console.warn('Falha ao carregar os decks na inicializacao:', cardsError);
-            state.allCards = (readCachedCards() || []).map((card) => projectFlashcardLanguageFields(card));
-            state.deckCatalog = [];
-          } finally {
-            state.entry.cardsReady = true;
-            refreshLibrary();
-            tryStartPendingWelcomePlay();
-            tryStartPendingTutorial();
-            syncWelcomeGate();
-          }
+          refreshLibrary();
+          tryStartPendingWelcomePlay();
+          tryStartPendingTutorial();
+          syncWelcomeGate();
           if (sessionUser) {
             await hydrateAuthenticatedApp(sessionUser, { skipLoadCards: true });
             primeGameTouchButton();
           } else {
             await handleLoggedOutState('');
           }
+          Promise.allSettled([
+            fetchFlashcardsPhaseSettings(),
+            fetchFlashcardLevelRulesSettings(),
+            fetchFlashcardLevelDynamicsSettings(),
+            fetchFlashcardLevelWindowSettings(),
+            fetchFlashcardCardValueSettings(),
+            fetchFlashcardXpValueSettings(),
+            fetchFlashcardDeckCardLimitSettings()
+          ]).then((results) => {
+            const [
+              flashcardsPhaseSettings,
+              flashcardLevelRulesSettings,
+              flashcardLevelDynamicsSettings,
+              flashcardLevelWindowSettings,
+              flashcardCardValueSettings,
+              flashcardXpValueSettings,
+              flashcardDeckCardLimitSettings
+            ] = results;
+            if (flashcardsPhaseSettings?.status === 'fulfilled') {
+              state.entry.fourthStarUsesSecondStarBlocks = Boolean(flashcardsPhaseSettings.value?.fourthStarUsesSecondStarBlocks);
+            }
+            if (flashcardLevelRulesSettings?.status === 'fulfilled') {
+              state.levelRules = Array.isArray(flashcardLevelRulesSettings.value?.levels)
+                ? flashcardLevelRulesSettings.value.levels
+                : buildDefaultLevelRules();
+            }
+            if (flashcardLevelDynamicsSettings?.status === 'fulfilled') {
+              state.entry.levelDynamics = normalizeLevelDynamicsSettings(flashcardLevelDynamicsSettings.value);
+            }
+            if (flashcardLevelWindowSettings?.status === 'fulfilled') {
+              state.entry.levelWindowSettings = normalizeLevelWindowSettings(flashcardLevelWindowSettings.value);
+            }
+            if (flashcardCardValueSettings?.status === 'fulfilled') {
+              state.entry.cardValueSettings = normalizeCardValueSettings(flashcardCardValueSettings.value);
+            }
+            if (flashcardXpValueSettings?.status === 'fulfilled') {
+              state.entry.xpValueSettings = normalizeCardValueSettings(flashcardXpValueSettings.value);
+            }
+            if (flashcardDeckCardLimitSettings?.status === 'fulfilled') {
+              state.entry.deckCardLimitSettings = normalizeDeckCardLimitSettings(flashcardDeckCardLimitSettings.value);
+            }
+          }).catch((settingsError) => {
+            console.warn('Falha ao aquecer settings do jogo em segundo plano:', settingsError);
+          });
           if (!isAdminUser() && resolveAudioCheckCompletedState() && !readMicCheckCompletedFlag()) {
             openMicCheck();
           }
