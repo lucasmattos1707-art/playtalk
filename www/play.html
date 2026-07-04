@@ -16270,6 +16270,7 @@ para liberar desafio</p>
           return existing.readyPromise;
         }
         const releasePercent = Math.max(1, Math.min(100, Number(options.releasePercent) || 10));
+        const backgroundMode = Boolean(options.background);
         let releaseResolved = false;
         let resolveReady;
         let rejectReady;
@@ -16282,11 +16283,17 @@ para liberar desafio</p>
           state.ui.finalChallengeDownloadLaunchMode = safeText(options.launchMode);
           setFinalChallengeDownloadPhase('Criando deck', 'Abrindo lista');
           setFinalChallengeDownloadProgress(1, 100);
-          setFinalChallengeFlowFeedback('Preparando nivel para iniciar...', 0);
-          setFinalChallengeDownloadsStatus(nativeUiText('downloading_level', { level: normalizedLevel }), '');
-          renderFinalChallengeDownloadsModal();
+          if (!backgroundMode) {
+            setFinalChallengeFlowFeedback('Preparando nivel para iniciar...', 0);
+            setFinalChallengeDownloadsStatus(nativeUiText('downloading_level', { level: normalizedLevel }), '');
+            renderFinalChallengeDownloadsModal();
+          }
           try {
             await ensureFinalChallengeSelection(normalizedLevel);
+            if (backgroundMode && !releaseResolved) {
+              releaseResolved = true;
+              resolveReady(true);
+            }
             setFinalChallengeDownloadPhase('Criando deck', 'Montando cartas jogaveis');
             setFinalChallengeDownloadProgress(8, 100);
             const payload = finalChallengeDownloadPayload(normalizedLevel);
@@ -16315,7 +16322,7 @@ para liberar desafio</p>
                     : currentFileProgress;
                 const visibleProgress = downloadStartPercent + ((completedAssets + currentFileProgress) / totalAssets) * downloadSpanPercent;
                 setFinalChallengeDownloadProgress(visibleProgress, 100);
-                if (!releaseResolved && visibleProgress >= releasePercent) {
+                if (!backgroundMode && !releaseResolved && visibleProgress >= releasePercent) {
                   releaseResolved = true;
                   setFinalChallengeFlowFeedback('Nivel liberado. O restante continua baixando...', 1200);
                   resolveReady(true);
@@ -16325,7 +16332,7 @@ para liberar desafio</p>
               completedAssets += 1;
               const visibleProgress = downloadStartPercent + (completedAssets / totalAssets) * downloadSpanPercent;
               setFinalChallengeDownloadProgress(visibleProgress, 100);
-              if (!releaseResolved && visibleProgress >= releasePercent) {
+              if (!backgroundMode && !releaseResolved && visibleProgress >= releasePercent) {
                 releaseResolved = true;
                 setFinalChallengeFlowFeedback('Nivel liberado. O restante continua baixando...', 1200);
                 resolveReady(true);
@@ -16344,15 +16351,19 @@ para liberar desafio</p>
             });
             setFinalChallengeDownloadPhase('Finalizando', 'Deck pronto');
             setFinalChallengeDownloadProgress(100, 100);
-            setFinalChallengeDownloadsStatus(nativeUiText('download_done', { level: normalizedLevel }), 'success');
+            if (!backgroundMode) {
+              setFinalChallengeDownloadsStatus(nativeUiText('download_done', { level: normalizedLevel }), 'success');
+            }
             if (!releaseResolved) {
               releaseResolved = true;
               resolveReady(true);
             }
             return true;
           } catch (error) {
-            setFinalChallengeFlowFeedback('Falha ao iniciar o nivel com download progressivo.', 2200);
-            setFinalChallengeDownloadsStatus(error?.message || nativeUiText('download_unavailable'), 'error');
+            if (!backgroundMode) {
+              setFinalChallengeFlowFeedback('Falha ao iniciar o nivel com download progressivo.', 2200);
+              setFinalChallengeDownloadsStatus(error?.message || nativeUiText('download_unavailable'), 'error');
+            }
             if (!releaseResolved) {
               releaseResolved = true;
               rejectReady(error);
@@ -16368,7 +16379,9 @@ para liberar desafio</p>
             state.ui.finalChallengeDownloadPhaseTitle = '';
             state.ui.finalChallengeDownloadPhaseStep = '';
             finalChallengeProgressiveDownloadState.delete(downloadKey);
-            renderFinalChallengeDownloadsModal();
+            if (!backgroundMode || state.ui.finalChallengeDownloadsOpen) {
+              renderFinalChallengeDownloadsModal();
+            }
             syncFinalChallengeIntroUi();
           }
         })();
@@ -33152,11 +33165,12 @@ para liberar desafio</p>
         const payload = finalChallengeDownloadPayload(challengeLevel);
         const ready = await finalChallengeDownloadRecordIsReady(challengeLevel, payload);
         if (!ready) {
-          setFinalChallengeFlowFeedback('Liberando o nivel e seguindo com o download em segundo plano...', 0);
-          setFinalChallengeDownloadsStatus(nativeUiText('downloading_level', { level: challengeLevel }), '');
-          await startProgressiveFinalChallengeDownload(challengeLevel, {
+          void startProgressiveFinalChallengeDownload(challengeLevel, {
             launchMode,
-            releasePercent: 10
+            releasePercent: 10,
+            background: true
+          }).catch((error) => {
+            console.warn('Falha ao baixar nivel em segundo plano durante a rodada:', error);
           });
           selection = resolveStoredFinalChallengeSelection(challengeLevel);
         }
