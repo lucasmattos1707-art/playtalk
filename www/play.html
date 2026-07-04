@@ -16078,24 +16078,22 @@ para liberar desafio</p>
       }
 
       async function refreshFinalChallengeDownloadCacheProgress() {
-        if (!finalChallengeAudioCacheSupported() || !els.finalChallengeDownloadsList) return;
+        if (!els.finalChallengeDownloadsList) return;
         const list = els.finalChallengeDownloadsList;
         try {
           Array.from(list.querySelectorAll('[data-download-level]')).forEach((row) => {
-            void (async () => {
-              if (!row.isConnected || row.parentElement !== list) return;
-              const level = normalizeUserLevel(row.dataset.downloadLevel);
-              const payload = finalChallengeDownloadPayload(level);
-              const downloadUrls = [...payload.audioUrls, ...payload.imageUrls];
-              if (!downloadUrls.length) return;
-              const record = readFinalChallengeDownloadRecord(level);
-              const cacheInfo = await finalChallengeCachedAudioBytes(downloadUrls).catch(() => ({ cachedBytes: 0, cachedCount: 0 }));
-              const totalBytes = Math.max(0, Number(record?.totalBytes) || 0);
-              const percent = totalBytes > 0
-                ? (cacheInfo.cachedBytes / totalBytes) * 100
-                : (cacheInfo.cachedCount / downloadUrls.length) * 100;
-              setFinalChallengeDownloadRowState(row, percent);
-            })();
+            if (!row.isConnected || row.parentElement !== list) return;
+            const level = normalizeUserLevel(row.dataset.downloadLevel);
+            const payload = finalChallengeDownloadPayload(level);
+            const record = readFinalChallengeDownloadRecord(level);
+            const assetCount = payload.audioUrls.length + payload.imageUrls.length;
+            const completedAssets = Math.max(0, Number(record?.completedAssetCount) || 0);
+            const percent = finalChallengeDownloadRecordMatches(level, payload)
+              ? 100
+              : assetCount
+              ? (completedAssets / assetCount) * 100
+              : 0;
+            setFinalChallengeDownloadRowState(row, percent);
           });
         } catch (_error) {
           // Keep the download modal usable when Cache Storage is unavailable.
@@ -16147,26 +16145,22 @@ para liberar desafio</p>
           && arraysHaveSameOrderedValues(recordCardIds, payload.cardIds);
       }
 
-      async function finalChallengeCachedAudioBytes(audioUrls = []) {
-        if (!finalChallengeAudioCacheSupported()) return { cachedBytes: 0, cachedCount: 0 };
+      async function finalChallengeCachedAssetCount(assetUrls = []) {
+        if (!finalChallengeAudioCacheSupported()) return { cachedCount: 0 };
         const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
-        let cachedBytes = 0;
         let cachedCount = 0;
-        for (const src of audioUrls) {
+        for (const src of assetUrls) {
           const response = await cache.match(src);
           if (!response) continue;
-          const blob = await response.clone().blob().catch(() => null);
-          if (!blob || !blob.size) continue;
-          cachedBytes += blob.size;
           cachedCount += 1;
         }
-        return { cachedBytes, cachedCount };
+        return { cachedCount };
       }
 
       async function finalChallengeDownloadRecordIsReady(level, payload = finalChallengeDownloadPayload(level)) {
         if (!finalChallengeDownloadRecordMatches(level, payload)) return false;
         const downloadUrls = [...payload.audioUrls, ...payload.imageUrls];
-        const cacheInfo = await finalChallengeCachedAudioBytes(downloadUrls).catch(() => ({ cachedCount: 0 }));
+        const cacheInfo = await finalChallengeCachedAssetCount(downloadUrls).catch(() => ({ cachedCount: 0 }));
         return cacheInfo.cachedCount === downloadUrls.length;
       }
 
@@ -16257,35 +16251,6 @@ para liberar desafio</p>
         els.finalChallengeDownloadsModal.setAttribute('aria-hidden', 'true');
       }
 
-      async function estimateFinalChallengeDownloadBytes(audioUrls = []) {
-        let totalBytes = 0;
-        const sizes = new Map();
-        if (!finalChallengeAudioCacheSupported()) return { totalBytes, sizes };
-        const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
-        for (const src of audioUrls) {
-          const cachedResponse = await cache.match(src).catch(() => null);
-          if (cachedResponse) {
-            const blob = await cachedResponse.clone().blob().catch(() => null);
-            if (blob?.size) {
-              sizes.set(src, blob.size);
-              totalBytes += blob.size;
-              continue;
-            }
-          }
-          try {
-            const headResponse = await fetch(src, { method: 'HEAD', cache: 'force-cache' });
-            const contentLength = Math.max(0, Number.parseInt(headResponse.headers.get('content-length') || '0', 10) || 0);
-            if (contentLength > 0) {
-              sizes.set(src, contentLength);
-              totalBytes += contentLength;
-            }
-          } catch (_error) {
-            // Some static hosts do not allow HEAD; the GET stream will still update bytes.
-          }
-        }
-        return { totalBytes, sizes };
-      }
-
       async function fetchFinalChallengeAssetIntoCache(cache, src, kind = 'audio', onProgress) {
         const cachedResponse = await cache.match(src).catch(() => null);
         if (cachedResponse) {
@@ -16363,7 +16328,7 @@ para liberar desafio</p>
         state.ui.finalChallengeDownloadsBusyLevel = normalizedLevel;
         state.ui.finalChallengeDownloadLaunchMode = safeText(options.launchMode);
         setFinalChallengeDownloadProgress(0, 0);
-        setFinalChallengeFlowFeedback('Calculando tamanho real dos arquivos...', 1800);
+        setFinalChallengeFlowFeedback('Preparando pacote local...', 1000);
         setFinalChallengeDownloadsStatus(nativeUiText('downloading_level', { level: normalizedLevel }), '');
         renderFinalChallengeDownloadsModal();
         try {
@@ -16376,46 +16341,42 @@ para liberar desafio</p>
           if (!payload.audioUrls.length || !payload.imageUrls.length || !downloadAssets.length) {
             throw new Error('download-selection-empty');
           }
-          const downloadUrls = downloadAssets.map((asset) => asset.src);
-          const estimate = await estimateFinalChallengeDownloadBytes(downloadUrls);
-          let completedBytes = 0;
-          let totalBytes = Math.max(0, Number(estimate.totalBytes) || 0);
-          setFinalChallengeDownloadProgress(0, totalBytes);
+          let downloadedBytesTotal = 0;
+          let completedAssets = 0;
+          const totalAssets = downloadAssets.length;
+          setFinalChallengeDownloadProgress(0, totalAssets);
           const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
           for (let index = 0; index < downloadAssets.length; index += 1) {
             const { src, kind } = downloadAssets[index];
             const label = kind === 'image' ? 'imagem' : 'MP3';
             setFinalChallengeFlowFeedback(`Baixando ${label} ${index + 1} de ${downloadAssets.length}...`, 0);
-            const plannedBytes = Math.max(0, Number(estimate.sizes.get(src)) || 0);
-            let adjustedExpectedBytes = plannedBytes;
-            let lastBytesForFile = 0;
+            let currentFileProgress = 0;
             const downloadedBytes = await fetchFinalChallengeAssetIntoCache(cache, src, kind, (currentFileBytes, expectedFileBytes) => {
-              const expected = Math.max(adjustedExpectedBytes, Math.max(0, Number(expectedFileBytes) || 0));
-              if (expected > adjustedExpectedBytes) {
-                totalBytes += expected - adjustedExpectedBytes;
-                adjustedExpectedBytes = expected;
-              }
-              lastBytesForFile = Math.max(lastBytesForFile, Math.max(0, Number(currentFileBytes) || 0));
-              const visibleTotal = Math.max(totalBytes, completedBytes + lastBytesForFile);
-              setFinalChallengeDownloadProgress(completedBytes + lastBytesForFile, visibleTotal);
+              const current = Math.max(0, Number(currentFileBytes) || 0);
+              const expected = Math.max(0, Number(expectedFileBytes) || 0);
+              currentFileProgress = expected > 0
+                ? Math.max(currentFileProgress, Math.min(0.98, current / expected))
+                : current > 0
+                ? Math.max(currentFileProgress, 0.35)
+                : currentFileProgress;
+              setFinalChallengeDownloadProgress(completedAssets + currentFileProgress, totalAssets);
             });
-            if (!plannedBytes && downloadedBytes > 0) {
-              totalBytes += downloadedBytes;
-            }
-            completedBytes += Math.max(downloadedBytes, plannedBytes);
-            setFinalChallengeDownloadProgress(completedBytes, Math.max(totalBytes, completedBytes));
+            downloadedBytesTotal += Math.max(0, Number(downloadedBytes) || 0);
+            completedAssets += 1;
+            setFinalChallengeDownloadProgress(completedAssets, totalAssets);
           }
           writeFinalChallengeDownloadRecord(normalizedLevel, {
             completed: true,
             audioCount: payload.audioUrls.length,
             imageCount: payload.imageUrls.length,
+            completedAssetCount: totalAssets,
             cardIds: payload.cardIds,
             audioUrls: payload.audioUrls,
             imageUrls: payload.imageUrls,
-            totalBytes: Math.max(0, Math.round(Math.max(totalBytes, completedBytes))),
+            totalBytes: Math.max(0, Math.round(downloadedBytesTotal)),
             updatedAt: Date.now()
           });
-          setFinalChallengeDownloadProgress(Math.max(totalBytes, completedBytes), Math.max(totalBytes, completedBytes));
+          setFinalChallengeDownloadProgress(totalAssets, totalAssets);
           setFinalChallengeFlowFeedback('Download concluido. Rodada liberada.', 1200);
           setFinalChallengeDownloadsStatus(nativeUiText('download_done', { level: normalizedLevel }), 'success');
           return true;
@@ -28580,7 +28541,7 @@ para liberar desafio</p>
 
       function preloadCardImage(card) {
         if (isNoEnergyMediaLocked()) return;
-        const src = safeText(card?.imageUrl);
+        const src = safeText(card?.imageDisplayUrl || card?.imageUrl);
         if (!src || state.game.preloadImages.has(src)) return;
         const image = new Image();
         image.src = runtimeImageSourceFor(src);
@@ -32848,7 +32809,7 @@ para liberar desafio</p>
           selection = resolveStoredFinalChallengeSelection(challengeLevel);
         }
         const payload = finalChallengeDownloadPayload(challengeLevel);
-        setFinalChallengeFlowFeedback('Conferindo se os MP3s existem no cache local...', 2200);
+        setFinalChallengeFlowFeedback('Conferindo pacote local de audios e imagens...', 1400);
         const ready = await finalChallengeDownloadRecordIsReady(challengeLevel, payload);
         if (!ready) {
           setFinalChallengeFlowFeedback('Baixando imagens e audios para evitar travas...', 0);
@@ -33131,7 +33092,6 @@ para liberar desafio</p>
         els.finalChallengeModal.classList.add('is-visible');
         els.finalChallengeModal.setAttribute('aria-hidden', 'false');
         syncFinalChallengeLevelCopy();
-        syncFinalChallengeIntroUi();
         setFinalChallengeStatus('');
         setFinalChallengeScreen('intro');
       }
