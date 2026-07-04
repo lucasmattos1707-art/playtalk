@@ -7841,6 +7841,10 @@ const staticDir = (() => {
   return __dirname;
 })();
 
+const FINAL_CHALLENGE_GENERAL_LEVELS_FILE_NAME = 'final-challenge-general-levels.json';
+const FINAL_CHALLENGE_GENERAL_LEVELS_PATH = path.join(staticDir, 'data', FINAL_CHALLENGE_GENERAL_LEVELS_FILE_NAME);
+const FINAL_CHALLENGE_GENERAL_LEVEL_CARD_COUNT = 25;
+
 const IMAGES_ROOT = (() => {
   const candidateDirs = [
     path.join('www', 'imagens'),
@@ -11885,6 +11889,93 @@ function buildFinalChallengeAllocationCandidates(sequenceState, targetLanguage, 
     || left.orderIndex - right.orderIndex
     || left.cardId.localeCompare(right.cardId)
   ));
+}
+
+function finalChallengeGeneralLevelsPairKey(targetLanguage, nativeLanguage) {
+  return `${normalizeFlashcardTargetLanguage(targetLanguage)}|${normalizeFlashcardNativeLanguage(nativeLanguage)}`;
+}
+
+function sanitizeFinalChallengeGeneralCardReference(card) {
+  const source = String(card?.source || '').trim();
+  const sourceIndex = Number.parseInt(card?.sourceIndex ?? card?.source_index, 10);
+  if (!source || !Number.isInteger(sourceIndex) || sourceIndex < 0) return null;
+  return {
+    cardId: String(card?.cardId || `${source}#${sourceIndex}`).trim(),
+    source,
+    sourceIndex,
+    sourceLevel: normalizeUserFlashcardLevel(card?.sourceLevel ?? card?.source_level ?? 1)
+  };
+}
+
+function buildFinalChallengeGeneralLevelsPayload(sequenceState, options = {}) {
+  const countPerLevel = Math.max(1, Math.min(100, Number.parseInt(options?.countPerLevel, 10) || FINAL_CHALLENGE_GENERAL_LEVEL_CARD_COUNT));
+  const generatedAt = new Date().toISOString();
+  const pairs = {};
+  const summary = [];
+  for (const targetLanguage of FLASHCARD_LANGUAGE_CODES) {
+    for (const nativeLanguage of FLASHCARD_LANGUAGE_CODES) {
+      if (targetLanguage === nativeLanguage) continue;
+      const candidates = buildFinalChallengeAllocationCandidates(sequenceState, targetLanguage, nativeLanguage)
+        .map(sanitizeFinalChallengeGeneralCardReference)
+        .filter(Boolean);
+      const levels = {};
+      const levelCount = Math.floor(candidates.length / countPerLevel);
+      for (let index = 0; index < levelCount; index += 1) {
+        levels[String(index + 1)] = candidates.slice(index * countPerLevel, (index + 1) * countPerLevel);
+      }
+      const key = finalChallengeGeneralLevelsPairKey(targetLanguage, nativeLanguage);
+      pairs[key] = {
+        targetLanguage,
+        nativeLanguage,
+        countPerLevel,
+        levelCount,
+        candidateCount: candidates.length,
+        levels
+      };
+      summary.push({
+        key,
+        targetLanguage,
+        nativeLanguage,
+        levelCount,
+        candidateCount: candidates.length
+      });
+    }
+  }
+  return {
+    success: true,
+    generatedAt,
+    countPerLevel,
+    languages: FLASHCARD_LANGUAGE_CODES.slice(),
+    pairCount: summary.length,
+    pairs,
+    summary
+  };
+}
+
+async function readFinalChallengeGeneralLevelsPayload() {
+  try {
+    const raw = await fs.promises.readFile(FINAL_CHALLENGE_GENERAL_LEVELS_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function writeFinalChallengeGeneralLevelsPayload(payload) {
+  await fs.promises.mkdir(path.dirname(FINAL_CHALLENGE_GENERAL_LEVELS_PATH), { recursive: true });
+  await fs.promises.writeFile(
+    FINAL_CHALLENGE_GENERAL_LEVELS_PATH,
+    `${JSON.stringify(payload, null, 2)}\n`,
+    'utf8'
+  );
+  return payload;
+}
+
+async function generateFinalChallengeGeneralLevelsPayload(options = {}) {
+  const sequenceState = await resolveFlashcardsSequenceState();
+  const payload = buildFinalChallengeGeneralLevelsPayload(sequenceState, options);
+  return writeFinalChallengeGeneralLevelsPayload(payload);
 }
 
 async function readFinalChallengeCardSelections(userId, targetLanguage, db = pool) {
@@ -16923,6 +17014,45 @@ app.post('/api/flashcards/final-challenge-selection', express.json({ limit: '64k
     res.status(Number.isInteger(error?.statusCode) ? error.statusCode : 500).json({
       success: false,
       message: error?.message || 'Erro ao sortear cartas do desafio final.'
+    });
+  }
+});
+
+app.get('/api/flashcards/general-levels', async (_req, res) => {
+  try {
+    const payload = await readFinalChallengeGeneralLevelsPayload();
+    if (!payload) {
+      res.status(404).json({
+        success: false,
+        message: 'Lista global de niveis ainda nao foi gerada.',
+        pairs: {},
+        summary: []
+      });
+      return;
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(payload);
+  } catch (error) {
+    console.error('Erro ao ler niveis globais do desafio final:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao ler niveis globais do desafio final.'
+    });
+  }
+});
+
+app.post('/api/flashcards/general-levels/generate', express.json({ limit: '64kb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const payload = await generateFinalChallengeGeneralLevelsPayload({
+      countPerLevel: req.body?.countPerLevel || FINAL_CHALLENGE_GENERAL_LEVEL_CARD_COUNT
+    });
+    res.json(payload);
+  } catch (error) {
+    console.error('Erro ao gerar niveis globais do desafio final:', error);
+    res.status(Number.isInteger(error?.statusCode) ? error.statusCode : 500).json({
+      success: false,
+      message: error?.message || 'Erro ao gerar niveis globais do desafio final.'
     });
   }
 });
@@ -23227,6 +23357,20 @@ app.get(['/levels', '/levels/', '/levels.html'], (req, res) => {
 app.get(['/sequence', '/sequence/', '/sequence.html'], (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'www', 'sequence.html'));
+});
+
+app.get(['/generallevels', '/generallevels/', '/generallevels.html'], (req, res) => {
+  const payload = getAuthenticatedUserFromRequest(req);
+  if (!payload) {
+    res.redirect(302, '/entrar?return=%2Fgenerallevels');
+    return;
+  }
+  if (!isAdminUserRecord(payload)) {
+    res.redirect(302, '/');
+    return;
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'www', 'generallevels.html'));
 });
 
 app.use(express.static(staticDir));

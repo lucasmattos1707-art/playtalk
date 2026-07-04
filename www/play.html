@@ -14148,6 +14148,7 @@ para liberar desafio</p>
       const WELCOME_FLASH_LOADER_TIP_LEAD_MS = 500;
       const WELCOME_LANGUAGE_BACKGROUND_FADE_MS = 1000;
       const FINAL_CHALLENGE_SELECTION_STORAGE_KEY = 'playtalk-final-challenge-selection-v1';
+      const FINAL_CHALLENGE_GENERAL_LEVELS_URL = '/api/flashcards/general-levels';
       const FINAL_CHALLENGE_SESSION_STORAGE_KEY = 'playtalk-final-challenge-session-v1';
       const WATCH_SETTINGS_KEY = 'playtalk-flashcards-watch-v1';
       const FLASHCARDS_PAGE_SIZE = 30;
@@ -15012,6 +15013,8 @@ para liberar desafio</p>
           finalChallengeDownloadLaunchMode: '',
           finalChallengeDownloadPhaseTitle: '',
           finalChallengeDownloadPhaseStep: '',
+          finalChallengeGeneralLevels: null,
+          finalChallengeGeneralLevelsLoadedAt: 0,
           finalChallengeActionToken: 0,
           finalChallengeSkipInFlight: false,
           finalChallengeFlowFeedback: ''
@@ -15034,6 +15037,7 @@ para liberar desafio</p>
       let finalChallengePromptCleanup = null;
       let finalChallengePhaseOverlayResolver = null;
       let finalChallengeFlowFeedbackTimer = 0;
+      let finalChallengeGeneralLevelsPromise = null;
 
       loadGameOptionsFromStorage();
 
@@ -16466,8 +16470,12 @@ para liberar desafio</p>
         }
       }
 
-      function finalChallengeSelectionRecordKey(language = currentFinalChallengeLanguage(), level = currentFinalChallengeLevel()) {
+      function legacyFinalChallengeSelectionRecordKey(language = currentFinalChallengeLanguage(), level = currentFinalChallengeLevel()) {
         return `${normalizeGameOptionValue('targetLanguage', language)}:${normalizeUserLevel(level)}`;
+      }
+
+      function finalChallengeSelectionRecordKey(language = currentFinalChallengeLanguage(), level = currentFinalChallengeLevel(), nativeLanguage = currentNativeLanguage()) {
+        return `${finalChallengeDownloadPairKey(nativeLanguage, language)}:${normalizeUserLevel(level)}`;
       }
 
       function readFinalChallengeSelectionStore() {
@@ -16491,7 +16499,7 @@ para liberar desafio</p>
       function readFinalChallengeSelectionRecord(language = currentFinalChallengeLanguage(), level = currentFinalChallengeLevel()) {
         const store = readFinalChallengeSelectionStore();
         const key = finalChallengeSelectionRecordKey(language, level);
-        const record = store?.[key];
+        const record = store?.[key] || store?.[legacyFinalChallengeSelectionRecordKey(language, level)];
         return record && typeof record === 'object' ? record : null;
       }
 
@@ -16499,6 +16507,12 @@ para liberar desafio</p>
         const store = readFinalChallengeSelectionStore();
         store[finalChallengeSelectionRecordKey(language, level)] = record;
         writeFinalChallengeSelectionStore(store);
+      }
+
+      function finalChallengeSelectionRefs(rawCards = []) {
+        return (Array.isArray(rawCards) ? rawCards : [])
+          .map((card) => `${safeText(card?.source)}#${Math.max(0, Number.parseInt(card?.sourceIndex ?? card?.source_index, 10) || 0)}`)
+          .filter((value) => value !== '#');
       }
 
       function syncFinalChallengeSelectionsFromServer(selections, language = currentFinalChallengeLanguage()) {
@@ -16515,17 +16529,87 @@ para liberar desafio</p>
             : [];
           if (!cards.length) return;
           const existing = readFinalChallengeSelectionRecord(language, level) || {};
+          const sameCards = arraysHaveSameOrderedValues(
+            finalChallengeSelectionRefs(existing.cards || []),
+            finalChallengeSelectionRefs(cards)
+          );
           writeFinalChallengeSelectionRecord(language, level, {
             cards,
             serverAllocated: true,
-            practiceComplete: Boolean(existing.practiceComplete) && cards.length === FINAL_CHALLENGE_CARD_COUNT
+            practiceComplete: Boolean(existing.practiceComplete) && sameCards && cards.length === FINAL_CHALLENGE_CARD_COUNT
           });
         });
+      }
+
+      function finalChallengeGeneralLevelsPairKey(targetLanguage = currentTargetLanguage(), nativeLanguage = currentNativeLanguage()) {
+        return `${normalizeGameOptionValue('targetLanguage', targetLanguage)}|${normalizeGameOptionValue('nativeLanguage', nativeLanguage)}`;
+      }
+
+      async function loadFinalChallengeGeneralLevels({ force = false } = {}) {
+        if (!force && state.ui.finalChallengeGeneralLevels) {
+          return state.ui.finalChallengeGeneralLevels;
+        }
+        if (!force && finalChallengeGeneralLevelsPromise) {
+          return finalChallengeGeneralLevelsPromise;
+        }
+        finalChallengeGeneralLevelsPromise = fetch(buildApiUrl(FINAL_CHALLENGE_GENERAL_LEVELS_URL), {
+          headers: buildAuthHeaders(),
+          credentials: 'include',
+          cache: 'no-store'
+        })
+          .then(async (response) => {
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload?.success) {
+              throw new Error(payload?.message || 'Lista global de niveis ainda nao foi gerada.');
+            }
+            state.ui.finalChallengeGeneralLevels = payload;
+            state.ui.finalChallengeGeneralLevelsLoadedAt = Date.now();
+            return payload;
+          })
+          .finally(() => {
+            finalChallengeGeneralLevelsPromise = null;
+          });
+        return finalChallengeGeneralLevelsPromise;
+      }
+
+      function readFinalChallengeGeneralLevelCards(payload, level = currentFinalChallengeLevel()) {
+        const challengeLevel = normalizeUserLevel(level);
+        const pairKey = finalChallengeGeneralLevelsPairKey();
+        const pair = payload?.pairs?.[pairKey];
+        const rawCards = pair?.levels?.[String(challengeLevel)];
+        return Array.isArray(rawCards) ? rawCards : [];
+      }
+
+      async function ensureFinalChallengeSelectionFromGeneralLevels(level = currentFinalChallengeLevel()) {
+        const challengeLevel = normalizeUserLevel(level);
+        const payload = await loadFinalChallengeGeneralLevels();
+        const cards = readFinalChallengeGeneralLevelCards(payload, challengeLevel);
+        if (cards.length < FINAL_CHALLENGE_CARD_COUNT) {
+          throw new Error('Lista global sem cartas suficientes para este nivel.');
+        }
+        syncFinalChallengeSelectionsFromServer({ [challengeLevel]: cards }, currentFinalChallengeLanguage());
+        const selection = resolveStoredFinalChallengeSelection(challengeLevel);
+        if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
+          throw new Error('As cartas globais deste nivel nao existem mais no deck atual.');
+        }
+        return selection;
       }
 
       async function ensureFinalChallengeSelection(level = currentFinalChallengeLevel()) {
         const challengeLevel = normalizeUserLevel(level);
         if (!state.user?.id) throw new Error('Entre para baixar este nivel.');
+        const existingSelection = resolveStoredFinalChallengeSelection(challengeLevel);
+        const existingDownload = readFinalChallengeDownloadRecord(challengeLevel);
+        if (existingDownload?.completed && existingSelection.cards.length >= FINAL_CHALLENGE_CARD_COUNT) {
+          return existingSelection;
+        }
+        try {
+          const globalSelection = await ensureFinalChallengeSelectionFromGeneralLevels(challengeLevel);
+          syncFinalChallengeIntroUi();
+          return globalSelection;
+        } catch (globalError) {
+          console.warn('Falha ao usar niveis globais do desafio final; usando fallback por usuario:', globalError);
+        }
         const response = await fetch(buildApiUrl('/api/flashcards/final-challenge-selection'), {
           method: 'POST',
           headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
@@ -32886,7 +32970,7 @@ para liberar desafio</p>
         setFinalChallengeFlowFeedback('Verificando pacote baixado das 25 cartas...', 1800);
         let selection = resolveStoredFinalChallengeSelection(challengeLevel);
         if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
-          setFinalChallengeFlowFeedback('Sorteando as 25 cartas deste nivel no servidor...', 2200);
+          setFinalChallengeFlowFeedback('Montando as 25 cartas pelo deck global...', 2200);
           await ensureFinalChallengeSelection(challengeLevel);
           selection = resolveStoredFinalChallengeSelection(challengeLevel);
         }
