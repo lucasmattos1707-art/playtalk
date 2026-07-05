@@ -12927,7 +12927,7 @@ para liberar desafio</p>
                 <span class="final-challenge-modal__practice-meter-icon" id="finalChallengePracticeMeterIcon" aria-hidden="true"></span>
                 <p class="final-challenge-modal__practice-meter-value" id="finalChallengePracticeMeterValue">0</p>
               </div>
-              <p class="final-challenge-modal__practice-meter-label" id="finalChallengePracticeMeterLabel">Frases montadas</p>
+              <p class="final-challenge-modal__practice-meter-label" id="finalChallengePracticeMeterLabel" hidden></p>
             </div>
             <div class="final-challenge-modal__score-row">
               <span class="final-challenge-modal__percent-gem is-blank" id="finalChallengePercentGem" aria-hidden="true">
@@ -12937,7 +12937,7 @@ para liberar desafio</p>
             </div>
             <p class="final-challenge-modal__percent-label" id="finalChallengePercentLabel" hidden></p>
             <p class="final-challenge-modal__percent-copy" id="finalChallengePercentCopy" hidden></p>
-            <p class="final-challenge-modal__status" id="finalChallengeStatus"></p>
+            <p class="final-challenge-modal__status" id="finalChallengeStatus" hidden></p>
           </div>
         </section>
         <section class="final-challenge-modal__zone final-challenge-modal__zone--spacer"></section>
@@ -14687,6 +14687,8 @@ para liberar desafio</p>
           flashStartInFlight: false,
           pendingFlashSessionOut: false,
           pendingFlashSessionLevelSync: false,
+          pendingCloudSyncAfterGameplay: false,
+          pendingCardsReloadAfterGameplay: false,
           authRequired: false,
           authDelayTimer: 0,
           authRevealTimer: 0,
@@ -15031,6 +15033,7 @@ para liberar desafio</p>
           finalChallengeResultPersisted: false,
           finalChallengeResultHeartTimers: [],
           finalChallengeResultIntroTitle: '',
+          finalChallengePendingStateSync: null,
           finalChallengeIntroStatsStep: 0,
           finalChallengeIntroStatsTimer: 0,
           finalChallengeSessionStartedAt: 0,
@@ -15709,6 +15712,13 @@ para liberar desafio</p>
       async function persistFinalChallengeStateForLanguage(language = currentFinalChallengeLanguage(), payload = {}) {
         const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
         if (!state.user?.id) return null;
+        if (shouldDeferGameplayNetworkSync() && !payload?.forceNetwork) {
+          state.ui.finalChallengePendingStateSync = {
+            language: normalizedLanguage,
+            payload: { ...payload }
+          };
+          return null;
+        }
         const response = await fetch(buildApiUrl('/api/flashcards/final-challenge-state'), {
           method: 'PUT',
           headers: buildAuthHeaders({
@@ -15737,6 +15747,21 @@ para liberar desafio</p>
             : (state.ui.finalChallengeRecords?.[normalizedLanguage] || {})
         );
         return savedPayload;
+      }
+
+      async function flushPendingFinalChallengeStateSync() {
+        const pending = state.ui.finalChallengePendingStateSync;
+        if (!pending || !state.user?.id) return null;
+        state.ui.finalChallengePendingStateSync = null;
+        try {
+          return await persistFinalChallengeStateForLanguage(pending.language, {
+            ...pending.payload,
+            forceNetwork: true
+          });
+        } catch (error) {
+          state.ui.finalChallengePendingStateSync = pending;
+          throw error;
+        }
       }
 
       function syncFinalChallengeLevelCopy() {
@@ -17893,9 +17918,70 @@ para liberar desafio</p>
         }
       }
 
+      function shouldDeferGameplayNetworkSync() {
+        return Boolean(
+          (state.ui.finalChallengeRunOpen && state.ui.finalChallengeScreen === 'run')
+          || (state.game.active && !state.game.paused && !state.ui.gamePausedAtWelcome)
+        );
+      }
+
+      function queueGameplayNetworkSync(kind = 'cloud') {
+        if (kind === 'reload') {
+          state.entry.pendingCardsReloadAfterGameplay = true;
+          return;
+        }
+        state.entry.pendingCloudSyncAfterGameplay = true;
+      }
+
+      async function flushDeferredGameplayNetworkSync(options = {}) {
+        if (!state.user?.id) {
+          state.entry.pendingCloudSyncAfterGameplay = false;
+          state.entry.pendingCardsReloadAfterGameplay = false;
+          state.ui.finalChallengePendingStateSync = null;
+          return false;
+        }
+        const shouldSyncCloud = Boolean(state.entry.pendingCloudSyncAfterGameplay);
+        const shouldReloadCards = Boolean(state.entry.pendingCardsReloadAfterGameplay);
+        state.entry.pendingCloudSyncAfterGameplay = false;
+        state.entry.pendingCardsReloadAfterGameplay = false;
+        let flushed = false;
+        if (shouldSyncCloud) {
+          try {
+            await syncFlashcardCloudNow(currentProgressLanguage(), {
+              ...options,
+              forceNetwork: true
+            });
+            flushed = true;
+          } catch (_error) {
+            state.entry.pendingCloudSyncAfterGameplay = true;
+          }
+        }
+        if (shouldReloadCards) {
+          try {
+            await reloadCardsFromNetwork({
+              forceNetwork: true
+            });
+            flushed = true;
+          } catch (_error) {
+            state.entry.pendingCardsReloadAfterGameplay = true;
+          }
+        }
+        try {
+          const finalChallengeStateSynced = await flushPendingFinalChallengeStateSync();
+          flushed = flushed || Boolean(finalChallengeStateSynced);
+        } catch (_error) {
+          // keep pending state queued for the next flush
+        }
+        return flushed;
+      }
+
       function saveUserStats(options = {}) {
         persistUserStatsLocally();
         if (!options.skipCloudSync) {
+          if (shouldDeferGameplayNetworkSync()) {
+            queueGameplayNetworkSync('cloud');
+            return;
+          }
           scheduleFlashcardCloudSync();
         }
       }
@@ -18853,6 +18939,10 @@ para liberar desafio</p>
 
       async function syncFlashcardCloudNow(targetLanguage = currentProgressLanguage(), options = {}) {
         if (!state.user?.id) return false;
+        if (shouldDeferGameplayNetworkSync() && !options.forceNetwork) {
+          queueGameplayNetworkSync('cloud');
+          return false;
+        }
         const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
         const response = await fetch(buildApiUrl('/api/flashcards/state'), {
           method: 'PUT',
@@ -20617,6 +20707,7 @@ para liberar desafio</p>
       async function refreshStagePlaySpeedSnapshot(expectedStagePrimeKey = '') {
         if (!state.user?.id) return;
         if (state.entry.forceProgressResetPending) return;
+        if (shouldDeferGameplayNetworkSync()) return;
         try {
           const payload = await fetchFlashcardCloudState(currentProgressLanguage());
           if (expectedStagePrimeKey && state.game.sessionClockStagePrimeKey !== expectedStagePrimeKey) return;
@@ -20644,13 +20735,23 @@ para liberar desafio</p>
         }, FLASHCARD_SESSION_TICK_LOOP_INTERVAL_MS);
       }
 
-      async function signalFlashcardSessionClock(action) {
+      async function signalFlashcardSessionClock(action, options = {}) {
         if (!state.user?.id) return null;
         const normalizedAction = action === 'out'
           ? 'out'
           : action === 'tick'
             ? 'tick'
             : 'in';
+        if (shouldDeferGameplayNetworkSync() && !options.forceNetwork) {
+          if (normalizedAction === 'out') {
+            state.entry.pendingFlashSessionOut = true;
+          }
+          if (normalizedAction === 'in') {
+            state.game.sessionClockActive = false;
+            stopFlashcardSessionTick();
+          }
+          return null;
+        }
         const suppressTimedInterruptions = normalizedAction === 'tick' && shouldSuppressTimedProgressInterruptions();
         try {
           const response = await fetch(buildApiUrl('/api/flashcards/session-clock'), {
@@ -25030,6 +25131,10 @@ para liberar desafio</p>
         if (levelLoss <= 0) return 0;
         const optimisticLevel = normalizeUserLevel(baseLevel - levelLoss);
         applyUserLevelState(optimisticLevel, { allowTransition: true, scheduleRefresh: false });
+        if (shouldDeferGameplayNetworkSync()) {
+          queueGameplayNetworkSync('cloud');
+          return levelLoss;
+        }
         state.entry.firstStagePenaltyBusy = true;
         try {
           const response = await fetch(buildApiUrl('/api/flashcards/first-stage-level-penalty'), {
@@ -25069,6 +25174,10 @@ para liberar desafio</p>
         if (levelLoss <= 0) return 0;
         const optimisticLevel = normalizeUserLevel(baseLevel - levelLoss);
         applyUserLevelState(optimisticLevel, { allowTransition: true, scheduleRefresh: false });
+        if (shouldDeferGameplayNetworkSync()) {
+          queueGameplayNetworkSync('cloud');
+          return levelLoss;
+        }
         state.entry.firstStarJumpPenaltyBusy = true;
         try {
           const response = await fetch(buildApiUrl('/api/flashcards/jump-level-penalty'), {
@@ -26426,7 +26535,11 @@ para liberar desafio</p>
         setAdminToolsStatus(state.admin.status, state.admin.error);
       }
 
-      async function reloadCardsFromNetwork() {
+      async function reloadCardsFromNetwork(options = {}) {
+        if (shouldDeferGameplayNetworkSync() && !options.forceNetwork) {
+          queueGameplayNetworkSync('reload');
+          return false;
+        }
         if (state.entry.cardsReloadInFlight) return false;
         state.entry.cardsReloadInFlight = true;
         try {
@@ -32572,11 +32685,9 @@ para liberar desafio</p>
           els.finalChallengePracticeMeterValue.textContent = String(showStreak ? currentStreak : builtSentencesTotal);
         }
         if (els.finalChallengePracticeMeterLabel) {
-          const feedback = safeText(state.ui.finalChallengeFlowFeedback);
-          els.finalChallengePracticeMeterLabel.classList.toggle('is-feedback', Boolean(feedback));
-          els.finalChallengePracticeMeterLabel.textContent = feedback || (showStreak
-            ? 'Sequencia de acertos'
-            : 'Frases montadas');
+          els.finalChallengePracticeMeterLabel.hidden = !showStreak;
+          els.finalChallengePracticeMeterLabel.classList.remove('is-feedback');
+          els.finalChallengePracticeMeterLabel.textContent = showStreak ? 'Sequencia de acertos' : '';
         }
       }
 
@@ -32694,6 +32805,7 @@ para liberar desafio</p>
 
       async function persistFinalChallengeBrokenStreakRecord() {
         if (!state.user?.id || state.ui.finalChallengeMode !== 'practice') return null;
+        if (shouldDeferGameplayNetworkSync()) return null;
         const bestSequence = Math.max(0, Math.round(Number(state.ui.finalChallengeCurrentStreak) || 0));
         if (bestSequence <= 10) return null;
         const knownRecord = Math.max(
@@ -32902,6 +33014,7 @@ para liberar desafio</p>
 
       function setFinalChallengeStatus(message = '', tone = '') {
         if (!els.finalChallengeStatus) return;
+        els.finalChallengeStatus.hidden = true;
         els.finalChallengeStatus.textContent = safeText(message);
         els.finalChallengeStatus.className = 'final-challenge-modal__status';
         if (tone === 'success') {
@@ -33575,6 +33688,7 @@ para liberar desafio</p>
         setFinalChallengeDownloadsStatus('', '');
         closeFinalChallengeDownloadsModal();
         closeFinalChallengeReviewModal();
+        void flushDeferredGameplayNetworkSync({ keepalive: true });
         if (!els.finalChallengeModal) return;
         els.finalChallengeModal.classList.remove('is-visible');
         els.finalChallengeModal.setAttribute('aria-hidden', 'true');
@@ -33593,6 +33707,7 @@ para liberar desafio</p>
         state.ui.finalChallengeBusy = false;
         closeFinalChallengeDownloadsModal();
         closeFinalChallengeReviewModal();
+        void flushDeferredGameplayNetworkSync({ keepalive: true });
         resetFinalChallengeRunState();
         setFinalChallengeStatus('');
         setFinalChallengeScreen('intro');
@@ -33876,6 +33991,7 @@ para liberar desafio</p>
           'Voltar ao menu'
         );
         setFinalChallengeScreen('result');
+        void flushDeferredGameplayNetworkSync();
         animateFinalChallengeResultAwards({
           showStars: practiceCompleted || (!isPracticeMode && passed),
           starCount: practiceCompleted
@@ -34664,9 +34780,10 @@ para liberar desafio</p>
         clearGameIdleAutoPauseTimer();
         state.game.sessionClockActive = false;
         stopFlashcardSessionTick();
-        void signalFlashcardSessionClock('out');
+        void signalFlashcardSessionClock('out', { forceNetwork: true });
         if (state.user?.id) {
-          void syncFlashcardCloudNow(currentProgressLanguage());
+          void syncFlashcardCloudNow(currentProgressLanguage(), { forceNetwork: true });
+          void flushDeferredGameplayNetworkSync();
         }
         commitCurrentCardTrainingTime();
         if (!state.game.tutorial.active && state.game.entries.size) {
@@ -34747,7 +34864,8 @@ para liberar desafio</p>
         clearGameIdleAutoPauseTimer();
         state.game.sessionClockActive = false;
         stopFlashcardSessionTick();
-        await signalFlashcardSessionClock('out');
+        await signalFlashcardSessionClock('out', { forceNetwork: true });
+        await flushDeferredGameplayNetworkSync();
         clearGameStatusRankTimer();
         commitCurrentCardTrainingTime();
         if (state.game.active && !state.game.tutorial.active && state.game.entries.size) {
@@ -36311,21 +36429,23 @@ para liberar desafio</p>
         });
         window.addEventListener('beforeunload', () => {
           if (state.user?.id) {
-            void syncFlashcardCloudNow(currentProgressLanguage(), { keepalive: true });
+            void syncFlashcardCloudNow(currentProgressLanguage(), { keepalive: true, forceNetwork: true });
+            void flushDeferredGameplayNetworkSync({ keepalive: true });
           }
           if (!state.game.active || state.game.paused) return;
           state.game.sessionClockActive = false;
           stopFlashcardSessionTick();
-          void signalFlashcardSessionClock('out');
+          void signalFlashcardSessionClock('out', { forceNetwork: true });
         });
         window.addEventListener('pagehide', () => {
           if (state.user?.id) {
-            void syncFlashcardCloudNow(currentProgressLanguage(), { keepalive: true });
+            void syncFlashcardCloudNow(currentProgressLanguage(), { keepalive: true, forceNetwork: true });
+            void flushDeferredGameplayNetworkSync({ keepalive: true });
           }
         });
         window.addEventListener('online', () => {
           if (state.entry.pendingFlashSessionOut) {
-            void signalFlashcardSessionClock('out');
+            void signalFlashcardSessionClock('out', { forceNetwork: true });
           }
         });
         els.gameTouchBtn.addEventListener('click', (event) => {
