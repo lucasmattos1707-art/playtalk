@@ -89,6 +89,7 @@
         <p class="eyebrow">Admin PlayTalk</p>
         <h1>Niveis Globais</h1>
         <p class="lead" id="sourceLead">Carregando quantas cartas o sistema enxerga na pasta 1...</p>
+        <p class="lead" id="trackedLead">Carregando em que nivel a Pax Romana trouxe paz ficou...</p>
         <p class="status" id="status">Carregando lista atual...</p>
       </div>
       <div class="actions">
@@ -125,6 +126,7 @@
     const els = {
       status: document.getElementById('status'),
       sourceLead: document.getElementById('sourceLead'),
+      trackedLead: document.getElementById('trackedLead'),
       generateBtn: document.getElementById('generateBtn'),
       refreshBtn: document.getElementById('refreshBtn'),
       generatedAt: document.getElementById('generatedAt'),
@@ -159,10 +161,24 @@
       els.sourceLead.textContent = `O sistema do /generallevels esta vendo ${count} cartas na ${title}.`;
     }
 
+    function renderTrackedLead(payload) {
+      const tracked = payload?.trackedCards?.paxRomana && typeof payload.trackedCards.paxRomana === 'object'
+        ? payload.trackedCards.paxRomana
+        : null;
+      const level = Number(tracked?.level) || 0;
+      if (!tracked?.found || !level) {
+        els.trackedLead.textContent = 'A carta Pax Romana trouxe paz nao apareceu na construcao atual do generallevels.';
+        return;
+      }
+      const sourceLevel = Number(tracked?.sourceLevel) || 0;
+      els.trackedLead.textContent = `Pax Romana trouxe paz foi parar no Nivel ${level} da lista global atual${sourceLevel ? `, vindo do slot ${sourceLevel}` : ''}.`;
+    }
+
     function renderPayload(payload) {
       const summary = Array.isArray(payload?.summary) ? payload.summary : [];
       const totalLevels = summary.reduce((sum, item) => sum + (Number(item?.levelCount) || 0), 0);
       renderSourceLead(payload);
+      renderTrackedLead(payload);
       els.generatedAt.textContent = formatDate(payload?.generatedAt);
       els.pairCount.textContent = String(Number(payload?.pairCount) || summary.length || 0);
       els.countPerLevel.textContent = String(Number(payload?.countPerLevel) || 25);
@@ -197,6 +213,7 @@
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload?.success) {
           renderSourceLead(payload);
+          renderTrackedLead(payload);
           throw new Error(payload?.message || 'Lista ainda nao gerada.');
         }
         renderPayload(payload);
@@ -221,6 +238,7 @@
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload?.success) {
           renderSourceLead(payload);
+          renderTrackedLead(payload);
           throw new Error(payload?.message || 'Falha ao gerar niveis.');
         }
         renderPayload(payload);

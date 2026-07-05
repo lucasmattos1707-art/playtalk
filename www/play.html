@@ -16705,8 +16705,22 @@ para liberar desafio</p>
           .filter((value) => value !== '#');
       }
 
-      function syncFinalChallengeSelectionsFromServer(selections, language = currentFinalChallengeLanguage()) {
+      function finalChallengeGeneralLevelsVersion(payload = state.ui.finalChallengeGeneralLevels) {
+        const generatedAt = safeText(payload?.generatedAt);
+        const pairKey = finalChallengeGeneralLevelsPairKey();
+        const pair = payload?.pairs?.[pairKey];
+        const candidateCount = Math.max(0, Number(pair?.candidateCount) || 0);
+        const countPerLevel = Math.max(0, Number(payload?.countPerLevel) || 0);
+        return generatedAt ? `${generatedAt}|${pairKey}|${candidateCount}|${countPerLevel}` : '';
+      }
+
+      function readFinalChallengeSelectionVersion(record) {
+        return safeText(record?.generalLevelsVersion || record?.generatedAt || '');
+      }
+
+      function syncFinalChallengeSelectionsFromServer(selections, language = currentFinalChallengeLanguage(), options = {}) {
         if (!selections || typeof selections !== 'object') return;
+        const generalLevelsVersion = safeText(options?.generalLevelsVersion || finalChallengeGeneralLevelsVersion());
         Object.entries(selections).forEach(([rawLevel, rawCards]) => {
           const level = normalizeUserLevel(rawLevel);
           const cards = Array.isArray(rawCards)
@@ -16726,6 +16740,7 @@ para liberar desafio</p>
           writeFinalChallengeSelectionRecord(language, level, {
             cards,
             serverAllocated: true,
+            generalLevelsVersion,
             practiceComplete: Boolean(existing.practiceComplete) && sameCards && cards.length === FINAL_CHALLENGE_CARD_COUNT
           });
         });
@@ -16777,7 +16792,11 @@ para liberar desafio</p>
         if (cards.length < FINAL_CHALLENGE_CARD_COUNT) {
           throw new Error('Lista global sem cartas suficientes para este nivel.');
         }
-        syncFinalChallengeSelectionsFromServer({ [challengeLevel]: cards }, currentFinalChallengeLanguage());
+        syncFinalChallengeSelectionsFromServer(
+          { [challengeLevel]: cards },
+          currentFinalChallengeLanguage(),
+          { generalLevelsVersion: finalChallengeGeneralLevelsVersion(payload) }
+        );
         const selection = resolveStoredFinalChallengeSelection(challengeLevel);
         if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
           throw new Error('As cartas globais deste nivel nao existem mais no deck atual.');
@@ -16789,16 +16808,16 @@ para liberar desafio</p>
         const challengeLevel = normalizeUserLevel(level);
         if (!state.user?.id) throw new Error('Entre para baixar este nivel.');
         await ensureCardsCatalogLoaded();
-        const existingSelection = resolveStoredFinalChallengeSelection(challengeLevel);
-        if (existingSelection.cards.length >= FINAL_CHALLENGE_CARD_COUNT) {
-          return existingSelection;
-        }
         try {
           const globalSelection = await ensureFinalChallengeSelectionFromGeneralLevels(challengeLevel);
           syncFinalChallengeIntroUi();
           return globalSelection;
         } catch (globalError) {
           console.warn('Falha ao usar niveis globais do desafio final; usando fallback por usuario:', globalError);
+        }
+        const existingSelection = resolveStoredFinalChallengeSelection(challengeLevel);
+        if (existingSelection.cards.length >= FINAL_CHALLENGE_CARD_COUNT) {
+          return existingSelection;
         }
         const response = await fetch(buildApiUrl('/api/flashcards/final-challenge-selection'), {
           method: 'POST',
@@ -16849,11 +16868,18 @@ para liberar desafio</p>
         const { sourceById, sourceByReference } = finalChallengeEligibleCardsCache;
         const rawStored = forceRebuild ? null : readFinalChallengeSelectionRecord(language, challengeLevel);
         const stored = rawStored?.serverAllocated === true ? rawStored : null;
+        const currentGeneralLevelsVersion = finalChallengeGeneralLevelsVersion();
+        const storedGeneralLevelsVersion = readFinalChallengeSelectionVersion(stored);
+        const hasGeneralLevelsVersionMismatch = Boolean(
+          currentGeneralLevelsVersion
+          && storedGeneralLevelsVersion
+          && currentGeneralLevelsVersion !== storedGeneralLevelsVersion
+        );
         const storedIds = Array.isArray(stored?.ids)
           ? stored.ids.map((id) => safeText(id)).filter(Boolean)
           : [];
         const storedCards = Array.isArray(stored?.cards) ? stored.cards : [];
-        let cards = storedCards.length
+        let cards = hasGeneralLevelsVersionMismatch ? [] : storedCards.length
           ? storedCards.map((card) => sourceByReference.get(`${safeText(card?.source)}#${Math.max(0, Number.parseInt(card?.sourceIndex, 10) || 0)}`) || null).filter(Boolean)
           : storedIds.map((id) => sourceById.get(id) || null).filter(Boolean);
         const invalidStoredSelection = cards.length !== FINAL_CHALLENGE_CARD_COUNT;
@@ -16872,6 +16898,7 @@ para liberar desafio</p>
             })),
             ids: normalizedIds,
             serverAllocated: true,
+            generalLevelsVersion: currentGeneralLevelsVersion || storedGeneralLevelsVersion,
             practiceComplete
           });
         }
@@ -33373,6 +33400,11 @@ para liberar desafio</p>
       async function ensureFinalChallengeDownloadedForPlay(level = currentFinalChallengeLevel(), launchMode = 'practice') {
         const challengeLevel = normalizeUserLevel(level);
         updateFinalChallengeLaunchLoader('Preparando nivel', `Separando o Nivel ${challengeLevel} para ${launchMode === 'voice' ? 'desafio' : 'treino'}.`);
+        try {
+          await loadFinalChallengeGeneralLevels({ force: true });
+        } catch (_error) {
+          // fallback handled below
+        }
         let selection = resolveStoredFinalChallengeSelection(challengeLevel);
         if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
           updateFinalChallengeLaunchLoader('Montando deck', 'Buscando 25 cartas do deck global e organizando a rodada.');

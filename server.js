@@ -11940,6 +11940,7 @@ function buildFinalChallengeGeneralLevelsPayload(sequenceState, options = {}) {
     generatedAt,
     countPerLevel,
     sourceSummary: buildGeneralLevelsSourceSummary(sequenceState),
+    trackedCards: buildGeneralLevelsTrackedCardsSummary(sequenceState, countPerLevel),
     languages: FLASHCARD_LANGUAGE_CODES.slice(),
     pairCount: summary.length,
     pairs,
@@ -11956,6 +11957,27 @@ function buildGeneralLevelsSourceSummary(sequenceState) {
     title: String(slotOneDeck?.title || '').trim() || 'Pasta 1',
     source: String(slotOneDeck?.source || '').trim(),
     cardCount: items.length
+  };
+}
+
+function buildGeneralLevelsTrackedCardsSummary(sequenceState, countPerLevel = FINAL_CHALLENGE_GENERAL_LEVEL_CARD_COUNT) {
+  const normalizedCountPerLevel = Math.max(1, Math.min(100, Number.parseInt(countPerLevel, 10) || FINAL_CHALLENGE_GENERAL_LEVEL_CARD_COUNT));
+  const englishPortugueseCandidates = buildFinalChallengeAllocationCandidates(sequenceState, 'english', 'portuguese');
+  const paxIndex = englishPortugueseCandidates.findIndex((card) => {
+    const candidateId = String(card?.cardId || '').trim().toLowerCase();
+    return candidateId === 'allcards/2sts.json#107';
+  });
+  const paxCard = paxIndex >= 0 ? englishPortugueseCandidates[paxIndex] : null;
+  return {
+    paxRomana: {
+      label: 'Pax Romana trouxe paz',
+      found: paxIndex >= 0,
+      pairKey: finalChallengeGeneralLevelsPairKey('english', 'portuguese'),
+      level: paxIndex >= 0 ? Math.floor(paxIndex / normalizedCountPerLevel) + 1 : null,
+      position: paxIndex >= 0 ? paxIndex + 1 : null,
+      sourceLevel: Number.isInteger(Number(paxCard?.sourceLevel)) ? Number(paxCard.sourceLevel) : null,
+      cardId: String(paxCard?.cardId || '').trim()
+    }
   };
 }
 
