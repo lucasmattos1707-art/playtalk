@@ -12212,7 +12212,9 @@
     }
 
     .final-challenge-modal__avatar-ring::before {
-      background: conic-gradient(from -90deg, #22ef8f 0%, #59f6ff calc(var(--progress) * 0.48), #d6ff36 var(--progress), rgba(255, 255, 255, 0.12) var(--progress), rgba(255, 255, 255, 0.12) 100%);
+      background:
+        conic-gradient(from -90deg, rgba(34, 239, 143, 0.28) 0%, rgba(89, 246, 255, 0.28) 48%, rgba(214, 255, 54, 0.28) 100%),
+        conic-gradient(from -90deg, #22ef8f 0%, #59f6ff calc(var(--progress) * 0.48), #d6ff36 var(--progress), transparent var(--progress), transparent 100%);
       -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 9px));
       mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 9px));
       box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
@@ -15251,6 +15253,7 @@ para liberar desafio</p>
       let finalChallengeEligibleCardsCache = null;
       let cardsCatalogLoadPromise = null;
       const finalChallengeProgressiveDownloadState = new Map();
+      const finalChallengeSelectionWarmups = new Set();
 
       loadGameOptionsFromStorage();
 
@@ -32991,9 +32994,9 @@ para liberar desafio</p>
           els.finalChallengePracticeMeterValue.textContent = String(showStreak ? currentStreak : builtSentencesTotal);
         }
         if (els.finalChallengePracticeMeterLabel) {
-          els.finalChallengePracticeMeterLabel.hidden = !showStreak;
+          els.finalChallengePracticeMeterLabel.hidden = true;
           els.finalChallengePracticeMeterLabel.classList.remove('is-feedback');
-          els.finalChallengePracticeMeterLabel.textContent = showStreak ? 'Sequencia de acertos' : '';
+          els.finalChallengePracticeMeterLabel.textContent = '';
         }
       }
 
@@ -33703,11 +33706,6 @@ para liberar desafio</p>
       async function ensureFinalChallengeDownloadedForPlay(level = currentFinalChallengeLevel(), launchMode = 'practice') {
         const challengeLevel = normalizeUserLevel(level);
         updateFinalChallengeLaunchLoader('Preparando nivel', `Separando o Nivel ${challengeLevel} para ${launchMode === 'voice' ? 'desafio' : 'treino'}.`);
-        try {
-          await loadFinalChallengeGeneralLevels({ force: true });
-        } catch (_error) {
-          // fallback handled below
-        }
         let selection = resolveStoredFinalChallengeSelection(challengeLevel);
         if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
           updateFinalChallengeLaunchLoader('Montando deck', 'Buscando 25 cartas do deck global e organizando a rodada.');
@@ -33949,7 +33947,7 @@ para liberar desafio</p>
       function isFinalChallengeMusicPlaying() {
         const radioApi = window.playtalkGlobalRadio;
         return safeText(radioApi?.getStation?.()) === safeText(state.ui.finalChallengeMusicStation || 'station1')
-          && Boolean(radioApi?.isPlaying?.());
+          && Boolean(radioApi?.isEnabled?.());
       }
 
       function syncFinalChallengeMusicButton() {

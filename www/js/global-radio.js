@@ -4,7 +4,7 @@
   const PLAYBACK_STORAGE_KEY = 'playtalk-global-radio-playback';
   const DEFAULT_STATION = 'off';
   const MUSIC_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas';
-  const RADIO_STATION_ONE_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/radios/esta%C3%A7%C3%B5es/Esta%C3%A7%C3%A3o%201';
+  const RADIO_STATION_ONE_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/radios/stations/station-1';
   const PLAYBACK_SAVE_INTERVAL_MS = 2000;
   const PLAYBACK_STATE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
   const STATIONS = {
@@ -346,6 +346,9 @@
     },
     getStation() {
       return currentStation;
+    },
+    isEnabled() {
+      return currentStation !== 'off' && !muted;
     },
     isPlaying() {
       return currentStation !== 'off' && !audio.paused && !audio.ended && !muted;

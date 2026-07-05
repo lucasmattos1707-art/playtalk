@@ -56,7 +56,7 @@ function buildClient() {
 function parseArgs(argv) {
   const options = {
     source: path.join(__dirname, '..', 'www', 'radios', 'estacao-1'),
-    prefix: 'radios/estações/Estação 1'
+    prefix: 'radios/stations/station-1'
   };
 
   for (const arg of argv) {
