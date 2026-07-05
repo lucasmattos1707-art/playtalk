@@ -12049,11 +12049,11 @@
       right: 10px;
       z-index: 2;
       color: #fff;
-      border-color: rgba(218, 121, 255, 0.52);
+      border-color: rgba(87, 182, 255, 0.72);
       background:
         radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.34), transparent 34%),
-        linear-gradient(135deg, #8e34ff, #d052ff);
-      box-shadow: 0 0 22px rgba(171, 74, 255, 0.46), inset 0 0 14px rgba(255, 255, 255, 0.16);
+        linear-gradient(135deg, #1f7bff, #49d5ff);
+      box-shadow: 0 0 22px rgba(47, 134, 255, 0.42), inset 0 0 14px rgba(255, 255, 255, 0.16);
     }
 
     .final-challenge-modal__avatar-skip:disabled {
@@ -12062,8 +12062,8 @@
     }
 
     .final-challenge-modal__avatar-skip.is-playing {
-      border-color: rgba(166, 138, 255, 0.76);
-      box-shadow: 0 0 26px rgba(164, 104, 255, 0.56), inset 0 0 18px rgba(255, 255, 255, 0.22);
+      border-color: rgba(129, 226, 255, 0.92);
+      box-shadow: 0 0 28px rgba(73, 213, 255, 0.62), inset 0 0 18px rgba(255, 255, 255, 0.24);
     }
 
     .final-challenge-modal__avatar-skip svg {
@@ -12199,6 +12199,7 @@
       inset: -10px;
       border-radius: 999px;
       opacity: 1;
+      z-index: 4;
       transition: --progress 300ms ease-out;
     }
 
@@ -12213,16 +12214,16 @@
 
     .final-challenge-modal__avatar-ring::before {
       background:
-        conic-gradient(from -90deg, rgba(34, 239, 143, 0.62) 0%, rgba(89, 246, 255, 0.58) 48%, rgba(214, 255, 54, 0.62) 100%),
-        conic-gradient(from -90deg, #22ef8f 0%, #59f6ff calc(var(--progress) * 0.48), #d6ff36 var(--progress), rgba(11, 28, 34, 0.38) var(--progress), rgba(11, 28, 34, 0.38) 100%);
-      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 9px));
-      mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 9px));
+        conic-gradient(from -90deg, rgba(0, 255, 136, 1) 0%, rgba(46, 255, 171, 1) 38%, rgba(153, 255, 0, 1) 70%, rgba(43, 255, 128, 1) 100%),
+        conic-gradient(from -90deg, #00ff88 0%, #2effab calc(var(--progress) * 0.45), #99ff00 var(--progress), rgba(0, 46, 20, 1) var(--progress), rgba(0, 46, 20, 1) 100%);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
+      mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
       box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.12),
-        0 0 12px rgba(34, 239, 143, 0.34),
-        0 0 18px rgba(89, 246, 255, 0.26),
-        0 0 24px rgba(214, 255, 54, 0.18);
-      filter: saturate(1.18) brightness(1.08);
+        0 0 0 2px rgba(194, 255, 225, 0.52),
+        0 0 18px rgba(0, 255, 136, 0.7),
+        0 0 32px rgba(46, 255, 171, 0.58),
+        0 0 42px rgba(153, 255, 0, 0.42);
+      filter: saturate(1.5) brightness(1.18);
       animation: finalChallengeRingSpin 15s linear infinite;
     }
 
