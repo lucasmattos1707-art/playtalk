@@ -12365,6 +12365,7 @@
 
     .final-challenge-modal__correction-line.is-success {
       color: #f5f7fb;
+      font-size: clamp(31px, 8.1vw, 43px);
       text-shadow: 0 0 14px rgba(245, 247, 251, 0.2);
     }
 
@@ -15085,6 +15086,8 @@ para liberar desafio</p>
           welcomeHeadingModeIndex: 0,
           welcomeProfileReady: false,
           welcomeEnergyReady: false,
+          welcomeCloudStatsInFlight: false,
+          welcomeCloudStatsLoadedAt: 0,
           welcomeLanguageSetupOpen: false,
           welcomeLanguageSetupStep: 1,
           welcomeLanguageSetupCompleted: false,
@@ -15200,6 +15203,9 @@ para liberar desafio</p>
           finalChallengeBuiltSentences: 0,
           finalChallengePracticeCorrectionText: '',
           finalChallengePracticeCorrectionTone: '',
+          finalChallengePracticeRevealWords: [],
+          finalChallengePracticeRevealCount: 0,
+          finalChallengePracticeRevealTimer: 0,
           finalChallengeCurrentStreak: 0,
           finalChallengeBestStreak: 0,
           finalChallengePersistedBestStreak: 0,
@@ -19232,6 +19238,41 @@ para liberar desafio</p>
         return payload;
       }
 
+      async function refreshWelcomeCloudStats(options = {}) {
+        if (!state.user?.id) return null;
+        if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) return null;
+        if (state.ui.welcomeCloudStatsInFlight) return null;
+        const now = Date.now();
+        if (!options.force && (now - Math.max(0, Number(state.ui.welcomeCloudStatsLoadedAt) || 0)) < 3000) {
+          return null;
+        }
+        state.ui.welcomeCloudStatsInFlight = true;
+        try {
+          const payload = await fetchFlashcardCloudState(currentProgressLanguage());
+          if (payload?.stats) {
+            state.stats = normalizeStatsSnapshot(payload.stats);
+            state.ui.gameStatusLastCoinsTotal = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
+            state.ui.fifthStarDisplayedCoinsTotal = state.ui.gameStatusLastCoinsTotal;
+            saveUserStats({ skipCloudSync: true });
+          }
+          if (Number.isFinite(Number(payload?.userLevel ?? payload?.meta?.userLevel))) {
+            state.userLevel = normalizeUserLevel(payload?.userLevel ?? payload?.meta?.userLevel);
+            if (state.user) {
+              state.user.level = state.userLevel;
+            }
+          }
+          state.userLevelUpdatedAt = safeText(payload?.userLevelUpdatedAt || payload?.meta?.userLevelUpdatedAt);
+          state.ui.welcomeCloudStatsLoadedAt = Date.now();
+          syncWelcomeEnergyMini();
+          syncWelcomeLevelProgress({ allowMedalTransition: false });
+          return payload;
+        } catch (_error) {
+          return null;
+        } finally {
+          state.ui.welcomeCloudStatsInFlight = false;
+        }
+      }
+
       function buildLocalAuthenticatedLanguageSnapshot(userId, targetLanguage) {
         const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
         const progress = Array.from(readUserProgressForUser(userId, normalizedTargetLanguage).values());
@@ -20780,6 +20821,7 @@ para liberar desafio</p>
         syncWelcomeLanguageBackground({ immediate: !safeText(els.welcomeBgBase?.dataset.path) });
         syncFinalChallengeBackground();
         const visible = shouldShowWelcomeGate();
+        const wasVisible = Boolean(state.entry.welcomeVisible);
         state.entry.welcomeVisible = visible;
         document.body.classList.toggle('welcome-active', visible);
         els.welcomeGate?.classList.toggle('is-visible', visible);
@@ -20795,6 +20837,9 @@ para liberar desafio</p>
         syncWelcomeBackgroundAdmin();
         syncWelcomeModeModal();
         syncWelcomeLanguageSetupModal();
+        if (visible && state.user?.id && (!wasVisible || !state.ui.welcomeCloudStatsLoadedAt)) {
+          void refreshWelcomeCloudStats({ force: true });
+        }
         if (visible && !state.ui.soundTestOpen && !state.ui.micCheckOpen) {
           closeAudioCheck();
         }
@@ -30425,6 +30470,45 @@ para liberar desafio</p>
           : [source];
       }
 
+      function clearFinalChallengePracticeRevealTimer() {
+        if (state.ui.finalChallengePracticeRevealTimer) {
+          window.clearTimeout(state.ui.finalChallengePracticeRevealTimer);
+        }
+        state.ui.finalChallengePracticeRevealTimer = 0;
+      }
+
+      function resetFinalChallengePracticeRevealState() {
+        clearFinalChallengePracticeRevealTimer();
+        state.ui.finalChallengePracticeRevealWords = [];
+        state.ui.finalChallengePracticeRevealCount = 0;
+      }
+
+      function startFinalChallengePracticeReveal(words, actionToken) {
+        const sequence = Array.isArray(words)
+          ? words.map((word) => safeText(word).trim()).filter(Boolean)
+          : [];
+        resetFinalChallengePracticeRevealState();
+        if (!sequence.length) return;
+        state.ui.finalChallengePracticeRevealWords = sequence;
+        state.ui.finalChallengePracticeRevealCount = 0;
+        syncFinalChallengeRunUi();
+        const revealNext = () => {
+          if (actionToken !== state.ui.finalChallengeActionToken) {
+            clearFinalChallengePracticeRevealTimer();
+            return;
+          }
+          const nextCount = Math.min(sequence.length, (Number(state.ui.finalChallengePracticeRevealCount) || 0) + 1);
+          state.ui.finalChallengePracticeRevealCount = nextCount;
+          syncFinalChallengeRunUi();
+          if (nextCount >= sequence.length) {
+            clearFinalChallengePracticeRevealTimer();
+            return;
+          }
+          state.ui.finalChallengePracticeRevealTimer = window.setTimeout(revealNext, 500);
+        };
+        state.ui.finalChallengePracticeRevealTimer = window.setTimeout(revealNext, 500);
+      }
+
       function typingDisplayScaleClass(text) {
         const length = countTypingDisplayLetters(text);
         if (length >= 3 && length <= 5) return 'flashcards-typing__display--size-xl';
@@ -33146,6 +33230,7 @@ para liberar desafio</p>
 
       function resetFinalChallengeRunState() {
         clearFinalChallengeResultHeartTimers();
+        resetFinalChallengePracticeRevealState();
         state.ui.finalChallengeCards = [];
         state.ui.finalChallengeMode = 'voice';
         state.ui.finalChallengePracticePhase = 1;
@@ -33744,6 +33829,7 @@ para liberar desafio</p>
           els.finalChallengeBlocks.innerHTML = '';
           return;
         }
+        const blockState = buildSecondStageWordBlockState(finalChallengePracticeTypingState(card), card);
         const correctionText = safeText(state.ui.finalChallengePracticeCorrectionText || '').trim();
         if (correctionText) {
           els.finalChallengeBlocks.hidden = false;
@@ -33761,7 +33847,6 @@ para liberar desafio</p>
           return;
         }
         els.finalChallengeBlocks.classList.remove('is-correction');
-        const blockState = buildSecondStageWordBlockState(finalChallengePracticeTypingState(card), card);
         if (!blockState?.rows?.length) {
           els.finalChallengeBlocks.hidden = true;
           els.finalChallengeBlocks.innerHTML = '';
@@ -33769,6 +33854,15 @@ para liberar desafio</p>
         }
         els.finalChallengeBlocks.hidden = false;
         els.finalChallengeBlocks.innerHTML = '';
+        const revealWords = Array.isArray(state.ui.finalChallengePracticeRevealWords)
+          ? state.ui.finalChallengePracticeRevealWords.map((word) => safeText(word).trim()).filter(Boolean)
+          : [];
+        const revealCount = Math.max(0, Number(state.ui.finalChallengePracticeRevealCount) || 0);
+        const revealedCounts = new Map();
+        revealWords.slice(0, revealCount).forEach((word) => {
+          revealedCounts.set(word, (revealedCounts.get(word) || 0) + 1);
+        });
+        const renderedCounts = new Map();
         const selectedWords = [];
         const buttons = [];
         let resolved = false;
@@ -33785,8 +33879,14 @@ para liberar desafio</p>
           state.ui.finalChallengeAttempts += 1;
           state.ui.finalChallengeScores.push(0);
           state.ui.finalChallengeLivesLost = Math.max(0, Number(state.ui.finalChallengeLivesLost) || 0) + 1;
-          state.ui.finalChallengePracticeCorrectionText = safeText(resolveSourceLanguageText(card, currentTargetLanguage())) || safeText(card?.english || '');
-          state.ui.finalChallengePracticeCorrectionTone = 'error';
+          state.ui.finalChallengePracticeCorrectionText = '';
+          state.ui.finalChallengePracticeCorrectionTone = '';
+          startFinalChallengePracticeReveal(
+            Array.isArray(blockState?.primarySequence)
+              ? blockState.primarySequence.map((token) => token?.normalized)
+              : [],
+            actionToken
+          );
           resetFinalChallengePracticeStreak();
           syncFinalChallengeRunUi();
           activeButton?.classList.add('is-error');
@@ -33803,13 +33903,13 @@ para liberar desafio</p>
           }
           state.ui.finalChallengeBusy = false;
           await wait(1100);
-          state.ui.finalChallengePracticeCorrectionText = '';
-          state.ui.finalChallengePracticeCorrectionTone = '';
+          resetFinalChallengePracticeRevealState();
           await advanceFinalChallengeCard();
         };
         const markCorrect = async () => {
-          const actionToken = nextFinalChallengeActionToken();
+          nextFinalChallengeActionToken();
           resolved = true;
+          resetFinalChallengePracticeRevealState();
           state.ui.finalChallengePracticeCorrectionText = '';
           state.ui.finalChallengePracticeCorrectionTone = '';
           state.ui.finalChallengeBusy = true;
@@ -33847,6 +33947,15 @@ para liberar desafio</p>
           button.type = 'button';
           button.className = 'final-challenge-modal__block';
           button.textContent = safeText(block?.word) || '';
+          const normalized = safeText(block?.normalized).trim();
+          const renderedCount = renderedCounts.get(normalized) || 0;
+          renderedCounts.set(normalized, renderedCount + 1);
+          if (renderedCount < (revealedCounts.get(normalized) || 0)) {
+            button.classList.add('is-correct');
+          }
+          if (revealWords.length) {
+            button.disabled = true;
+          }
           button.addEventListener('click', async () => {
             if (resolved || state.ui.finalChallengeBusy || state.ui.finalChallengeExitConfirmOpen) return;
             const nextWords = [...selectedWords, block.normalized];
@@ -33961,11 +34070,14 @@ para liberar desafio</p>
       function toggleFinalChallengeMusic() {
         const radioApi = window.playtalkGlobalRadio;
         if (!radioApi || typeof radioApi.setStation !== 'function') return;
-        if (isFinalChallengeMusicPlaying()) {
+        const stationId = safeText(state.ui.finalChallengeMusicStation || 'station1');
+        const stationSelected = safeText(radioApi.getStation?.()) === stationId;
+        const activelyPlaying = Boolean(radioApi.isPlaying?.());
+        if (stationSelected && activelyPlaying) {
           radioApi.setStation('off');
         } else {
           radioApi.setMuted(false);
-          radioApi.setStation(state.ui.finalChallengeMusicStation || 'station1');
+          radioApi.setStation(stationId);
           if (typeof radioApi.play === 'function') {
             void Promise.resolve(radioApi.play()).catch(() => {});
           }

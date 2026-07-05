@@ -59,6 +59,7 @@
   audio.preload = 'auto';
   audio.loop = false;
   audio.__playtalkGlobalRadio = true;
+  audio.crossOrigin = 'anonymous';
 
   let muted = false;
   let currentStation = DEFAULT_STATION;
