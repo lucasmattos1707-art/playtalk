@@ -12040,14 +12040,14 @@
       position: absolute;
       top: 10px;
       left: 10px;
-      z-index: 2;
+      z-index: 5;
     }
 
     .final-challenge-modal__avatar-skip {
       position: absolute;
       top: 10px;
       right: 10px;
-      z-index: 2;
+      z-index: 5;
       color: #fff;
       border-color: rgba(87, 182, 255, 0.72);
       background:
@@ -12194,58 +12194,48 @@
     }
 
     .final-challenge-modal__avatar-ring {
-      --progress: 0%;
       position: absolute;
-      inset: -10px;
-      border-radius: 999px;
+      inset: -12px;
+      width: calc(100% + 24px);
+      height: calc(100% + 24px);
       opacity: 1;
-      z-index: 1;
-      transition: --progress 500ms ease-out;
-    }
-
-    .final-challenge-modal__avatar-ring::before,
-    .final-challenge-modal__avatar-ring::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: 999px;
-      pointer-events: none;
-    }
-
-    .final-challenge-modal__avatar-ring::before {
-      background:
-        conic-gradient(
-          from -90deg,
-          #00ff88 0%,
-          #2effab calc(var(--progress) * 0.45),
-          #99ff00 var(--progress),
-          transparent var(--progress),
-          transparent 100%
-        );
-      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
-      mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
-      box-shadow:
-        0 0 16px rgba(0, 255, 136, 0.52),
-        0 0 28px rgba(46, 255, 171, 0.34),
-        0 0 36px rgba(153, 255, 0, 0.2);
-      filter: saturate(1.5) brightness(1.18);
+      z-index: 3;
+      overflow: visible;
+      transform: rotate(-90deg);
       animation: finalChallengeRingSpin 15s linear infinite;
-      transform-origin: center;
     }
 
-    .final-challenge-modal__avatar-ring::after {
-      background: radial-gradient(circle at center, rgba(89, 246, 255, 0.2), rgba(89, 246, 255, 0) 68%);
+    .final-challenge-modal__avatar-ring circle {
+      fill: none;
+      transform-origin: 50% 50%;
+    }
+
+    .final-challenge-modal__avatar-ring-track {
+      stroke: transparent;
+      stroke-width: 5;
+    }
+
+    .final-challenge-modal__avatar-ring-progress {
+      stroke: url(#finalChallengeAvatarRingGradient);
+      stroke-width: 5;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.78)) drop-shadow(0 0 14px rgba(46, 255, 171, 0.42));
+      transition: stroke-dashoffset 500ms ease-out;
+    }
+
+    .final-challenge-modal__avatar-ring-glow {
+      transform: rotate(90deg);
+      transform-origin: 50% 50%;
       opacity: 0;
       transition: opacity 180ms ease;
     }
 
-    .final-challenge-modal__avatar-btn.is-listening .final-challenge-modal__avatar-ring::after {
+    .final-challenge-modal__avatar-btn.is-listening .final-challenge-modal__avatar-ring-glow {
       opacity: 1;
     }
 
-    .final-challenge-modal__avatar-btn.is-success-flash .final-challenge-modal__avatar-ring::after {
+    .final-challenge-modal__avatar-btn.is-success-flash .final-challenge-modal__avatar-ring-glow {
       opacity: 1;
-      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.78), rgba(214, 255, 54, 0.34) 42%, rgba(89, 246, 255, 0) 72%);
       animation: finalChallengeAvatarFlash 520ms ease-out;
     }
 
@@ -13083,7 +13073,18 @@
               <svg viewBox="0 0 24 24" focusable="false"><path d="M14 4v8.2a3.8 3.8 0 1 1-1.8-3.24V6.2l7.6-1.9v5.05a3.8 3.8 0 1 1-1.8-3.24V2L14 4Z"></path><path d="m4.7 5.7 13.6 13.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path></svg>
             </button>
             <button class="final-challenge-modal__avatar-btn" id="finalChallengeSpeakBtn" type="button" aria-label="Tocar na imagem e falar a traducao">
-              <span class="final-challenge-modal__avatar-ring" aria-hidden="true"></span>
+              <svg class="final-challenge-modal__avatar-ring" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+                <defs>
+                  <linearGradient id="finalChallengeAvatarRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#00ff88"></stop>
+                    <stop offset="52%" stop-color="#2effab"></stop>
+                    <stop offset="100%" stop-color="#99ff00"></stop>
+                  </linearGradient>
+                </defs>
+                <circle class="final-challenge-modal__avatar-ring-track" cx="50" cy="50" r="46"></circle>
+                <circle class="final-challenge-modal__avatar-ring-progress" id="finalChallengeAvatarRingProgress" cx="50" cy="50" r="46"></circle>
+                <circle class="final-challenge-modal__avatar-ring-glow" cx="50" cy="50" r="44" fill="url(#finalChallengeAvatarRingGradient)" opacity="0.15"></circle>
+              </svg>
               <img id="finalChallengeCardImage" src="/Avatar/profile-neon-blue.svg" alt="Imagem da carta do desafio">
             </button>
           </div>
@@ -15273,6 +15274,7 @@
         'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/radios/stations/station-1/after-hours-desk-1.mp3',
         'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/radios/stations/station-1/after-hours-compile-1.mp3'
       ];
+      const FINAL_CHALLENGE_AVATAR_RING_CIRCUMFERENCE = 2 * Math.PI * 46;
       const finalChallengeProgressiveDownloadState = new Map();
       let finalChallengeMusicAudio = null;
       let finalChallengeMusicTrackIndex = 0;
@@ -15309,6 +15311,7 @@
         finalChallengeProgressCopy: document.getElementById('finalChallengeProgressCopy'),
         finalChallengeHearts: document.getElementById('finalChallengeHearts'),
         finalChallengeSpeakBtn: document.getElementById('finalChallengeSpeakBtn'),
+        finalChallengeAvatarRingProgress: document.getElementById('finalChallengeAvatarRingProgress'),
         finalChallengeCardImage: document.getElementById('finalChallengeCardImage'),
         finalChallengePhaseOverlay: document.getElementById('finalChallengePhaseOverlay'),
         finalChallengePhaseOverlayKicker: document.getElementById('finalChallengePhaseOverlayKicker'),
@@ -34133,7 +34136,6 @@
         const audio = new Audio();
         audio.preload = 'auto';
         audio.loop = false;
-        audio.crossOrigin = 'anonymous';
         audio.playsInline = true;
         audio.addEventListener('ended', () => {
           finalChallengeMusicTrackIndex = (finalChallengeMusicTrackIndex + 1) % FINAL_CHALLENGE_MUSIC_TRACKS.length;
@@ -34161,6 +34163,15 @@
         });
         finalChallengeMusicAudio = audio;
         return finalChallengeMusicAudio;
+      }
+
+      function setFinalChallengeAvatarRingProgress(percent = 0) {
+        const ring = els.finalChallengeAvatarRingProgress;
+        if (!ring) return;
+        const clamped = Math.max(0, Math.min(100, Number(percent) || 0));
+        ring.style.strokeDasharray = `${FINAL_CHALLENGE_AVATAR_RING_CIRCUMFERENCE}`;
+        ring.style.strokeDashoffset = `${FINAL_CHALLENGE_AVATAR_RING_CIRCUMFERENCE * (1 - (clamped / 100))}`;
+        ring.style.opacity = clamped > 0 ? '1' : '0';
       }
 
       function stopFinalChallengeMusic() {
@@ -34215,7 +34226,7 @@
         const index = Math.max(0, Number(state.ui.finalChallengeIndex) || 0);
         const isPracticeMode = state.ui.finalChallengeMode === 'practice';
         const progressPercent = totalCards
-          ? Math.max(0, Math.min(100, (index / totalCards) * 100))
+          ? Math.max(0, Math.min(100, ((Math.min(index + 1, totalCards)) / totalCards) * 100))
           : 0;
         if (els.finalChallengeProgressCopy) {
           els.finalChallengeProgressCopy.textContent = '';
@@ -34254,10 +34265,7 @@
         if (!isPracticeMode) {
           setFinalChallengeAvatarColorProgress(0);
         }
-        const avatarRing = els.finalChallengeSpeakBtn?.querySelector('.final-challenge-modal__avatar-ring');
-        if (avatarRing) {
-          avatarRing.style.setProperty('--progress', `${progressPercent.toFixed(2)}%`);
-        }
+        setFinalChallengeAvatarRingProgress(progressPercent);
         renderFinalChallengePracticeBlocks(card);
         syncFinalChallengePracticeMeter();
         if (els.finalChallengePercentGem) {
