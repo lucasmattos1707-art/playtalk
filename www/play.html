@@ -58,10 +58,10 @@
 
     :root {
       --bg: #07111f;
-      --playtalk-global-bg-desktop: url('/arquivos-codex/backgrounds/languages/american.png');
-      --playtalk-global-bg-mobile: url('/arquivos-codex/backgrounds/languages/american.png');
+      --playtalk-global-bg-desktop: radial-gradient(circle at 18% 14%, rgba(113, 233, 255, 0.96) 0%, rgba(42, 148, 255, 0.9) 22%, rgba(21, 84, 171, 0.92) 44%, rgba(7, 20, 44, 0.98) 72%), linear-gradient(135deg, rgba(35, 214, 180, 0.9) 0%, rgba(20, 129, 224, 0.82) 46%, rgba(7, 24, 58, 1) 100%);
+      --playtalk-global-bg-mobile: radial-gradient(circle at 18% 14%, rgba(113, 233, 255, 0.96) 0%, rgba(42, 148, 255, 0.9) 22%, rgba(21, 84, 171, 0.92) 44%, rgba(7, 20, 44, 0.98) 72%), linear-gradient(135deg, rgba(35, 214, 180, 0.9) 0%, rgba(20, 129, 224, 0.82) 46%, rgba(7, 24, 58, 1) 100%);
       --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
-      --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 0.78) 0%, rgba(4, 18, 38, 0.34) 42%, rgba(4, 18, 38, 0.04) 100%);
+      --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 0.36) 0%, rgba(4, 18, 38, 0.16) 42%, rgba(4, 18, 38, 0.04) 100%);
       --panel: rgba(8, 28, 54, 0.9);
       --line: rgba(95, 201, 255, 0.22);
       --text: #f7fbff;
@@ -105,7 +105,11 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat;
+      background: #041226;
+      background-image: var(--playtalk-global-bg-image);
+      background-position: center;
+      background-size: cover;
+      background-repeat: no-repeat;
       overflow: hidden;
       pointer-events: none;
       z-index: 0;
@@ -798,9 +802,21 @@
       position: absolute;
       right: clamp(-2px, 0.4vw, 6px);
       bottom: clamp(-2px, 0.4vw, 6px);
-      width: clamp(88px, 16vw, 114px);
-      height: clamp(88px, 16vw, 114px);
-      object-fit: contain;
+      width: clamp(52px, 11vw, 72px);
+      height: clamp(52px, 11vw, 72px);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: #f8fcff;
+      font-family: "Orbitron", "Exo 2", Arial, sans-serif;
+      font-size: clamp(14px, 3.4vw, 18px);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.24) 36%, transparent 38%),
+        linear-gradient(135deg, rgba(53, 234, 186, 0.96), rgba(38, 149, 255, 0.96));
+      border: 2px solid rgba(255, 255, 255, 0.72);
       z-index: 3;
       filter:
         drop-shadow(0 0 10px rgba(135, 214, 103, 0.38))
@@ -1058,7 +1074,7 @@
         12px
         clamp(16px, 4vw, 28px)
         calc(env(safe-area-inset-bottom, 0px) + 12px);
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       background:
@@ -12035,6 +12051,119 @@
       cursor: not-allowed;
     }
 
+    .final-challenge-modal__avatar-skip.is-playing {
+      border-color: rgba(166, 138, 255, 0.76);
+      box-shadow: 0 0 26px rgba(164, 104, 255, 0.56), inset 0 0 18px rgba(255, 255, 255, 0.22);
+    }
+
+    .welcome-language-setup {
+      position: absolute;
+      inset: 0;
+      z-index: 12;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 22px;
+      background:
+        linear-gradient(180deg, rgba(3, 11, 25, 0.44), rgba(3, 11, 25, 0.74)),
+        radial-gradient(circle at 18% 14%, rgba(113, 233, 255, 0.36), transparent 28%),
+        radial-gradient(circle at 84% 10%, rgba(56, 217, 179, 0.28), transparent 26%),
+        rgba(5, 13, 27, 0.76);
+      backdrop-filter: blur(18px);
+    }
+
+    .welcome-language-setup.is-visible {
+      display: flex;
+    }
+
+    .welcome-language-setup__panel {
+      width: min(100%, 560px);
+      display: grid;
+      gap: 22px;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .welcome-language-setup__step {
+      margin: 0;
+      color: rgba(223, 247, 255, 0.72);
+      font-family: "Exo 2", Arial, sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .welcome-language-setup__title {
+      margin: 0;
+      color: #ffffff;
+      font-family: "TheBoldFont", "Soopafre", Arial, sans-serif;
+      font-size: clamp(42px, 9.6vw, 70px);
+      line-height: 0.9;
+      text-transform: uppercase;
+      text-wrap: balance;
+      text-shadow: 0 16px 42px rgba(0, 0, 0, 0.36);
+    }
+
+    .welcome-language-setup__options {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .welcome-language-setup__option {
+      min-height: 112px;
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background:
+        radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.28), transparent 30%),
+        rgba(6, 20, 43, 0.72);
+      box-shadow: 0 22px 48px rgba(0, 0, 0, 0.22);
+      display: grid;
+      place-items: center;
+      gap: 8px;
+      padding: 14px 10px;
+      cursor: pointer;
+      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+
+    .welcome-language-setup__option:hover,
+    .welcome-language-setup__option:focus-visible {
+      transform: translateY(-2px);
+      border-color: rgba(120, 235, 255, 0.62);
+      background:
+        radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.36), transparent 30%),
+        rgba(9, 30, 61, 0.86);
+    }
+
+    .welcome-language-setup__option:disabled {
+      opacity: 0.34;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .welcome-language-setup__option img {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+    }
+
+    .welcome-language-setup__option span {
+      color: #f7fbff;
+      font-family: "Exo 2", Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 640px) {
+      .welcome-language-setup__options {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
     .final-challenge-modal__avatar-ring {
       --progress: 0%;
       position: absolute;
@@ -12751,7 +12880,7 @@
             <div class="welcome-gate__avatar-row">
               <div class="welcome-gate__avatar">
                 <img id="welcomeAvatarPreview" src="/Avatar/profile-neon-blue.svg" alt="Avatar do usuario">
-                <img class="welcome-gate__avatar-seal" id="welcomeAvatarSeal" src="/medals/user-level/medal-1.png" alt="Selo atual">
+                <span class="welcome-gate__avatar-seal" id="welcomeAvatarSeal" aria-hidden="true">LV</span>
               </div>
               <p class="welcome-gate__xp-line" id="welcomeXpLine">XP | 0 DE 50</p>
             </div>
@@ -12818,6 +12947,13 @@
       </div>
       <div class="welcome-gate__language-dock" id="welcomeLanguageDock" aria-label="Trocar idioma destino">
         <div class="welcome-gate__language-strip" id="welcomeLanguageStrip"></div>
+      </div>
+      <div class="welcome-language-setup" id="welcomeLanguageSetup" aria-hidden="true">
+        <div class="welcome-language-setup__panel">
+          <p class="welcome-language-setup__step" id="welcomeLanguageSetupStep">Passo 1 de 2</p>
+          <h2 class="welcome-language-setup__title" id="welcomeLanguageSetupTitle">Qual e seu<br>idioma nativo?</h2>
+          <div class="welcome-language-setup__options" id="welcomeLanguageSetupOptions"></div>
+        </div>
       </div>
       <p class="welcome-gate__admin-stats" id="welcomeAdminStats" hidden></p>
       <div class="welcome-gate__bg-admin" id="welcomeBgAdmin" hidden>
@@ -12897,8 +13033,8 @@ para liberar desafio</p>
             <button class="final-challenge-modal__back final-challenge-modal__back--orange final-challenge-modal__avatar-close" id="finalChallengeExitRunBtn" type="button" aria-label="Voltar para a tela inicial do desafio">
               <svg viewBox="0 0 24 24" focusable="false"><path d="M10.7 5.3a1 1 0 0 1 0 1.4L6.41 11H20a1 1 0 1 1 0 2H6.4l4.3 4.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
             </button>
-            <button class="final-challenge-modal__back final-challenge-modal__avatar-skip" id="finalChallengeSkipBtn" type="button" aria-label="Pular carta atual">
-              <svg viewBox="0 0 24 24" focusable="false"><path d="M5 5.8v12.4L13.7 12 5 5.8Z"></path><path d="M14 5.8v12.4l8.7-6.2L14 5.8Z"></path></svg>
+            <button class="final-challenge-modal__back final-challenge-modal__avatar-skip" id="finalChallengeSkipBtn" type="button" aria-label="Ativar trilha da estacao 1">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M14 4v8.2a3.8 3.8 0 1 1-1.8-3.24V6.2l7.6-1.9v5.05a3.8 3.8 0 1 1-1.8-3.24V2L14 4Z"></path><path d="m4.7 5.7 13.6 13.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path></svg>
             </button>
             <button class="final-challenge-modal__avatar-btn" id="finalChallengeSpeakBtn" type="button" aria-label="Tocar na imagem e falar a traducao">
               <span class="final-challenge-modal__avatar-ring" aria-hidden="true"></span>
@@ -14131,19 +14267,20 @@ para liberar desafio</p>
           day: 'Di'
         }
       };
+      const PLAYTALK_APP_GRADIENT_BACKGROUND = 'radial-gradient(circle at 18% 14%, rgba(113, 233, 255, 0.96) 0%, rgba(42, 148, 255, 0.9) 22%, rgba(21, 84, 171, 0.92) 44%, rgba(7, 20, 44, 0.98) 72%), linear-gradient(135deg, rgba(35, 214, 180, 0.9) 0%, rgba(20, 129, 224, 0.82) 46%, rgba(7, 24, 58, 1) 100%)';
       const FLASHCARD_LANGUAGE_BADGE_ORDER = ['english', 'spanish', 'french', 'german', 'portuguese', 'mandarin'];
       const TARGET_LANGUAGE_DISPLAY_ORDER = ['english', 'spanish', 'french', 'german', 'portuguese', 'mandarin'];
       const WATCH_PRESENTATION_LANGUAGE_ORDER = TARGET_LANGUAGE_DISPLAY_ORDER.slice();
       const WATCH_PRESENTATION_BACKGROUND_MAP = {
         english: {
-          american: '/arquivos-codex/backgrounds/languages/american.png',
-          british: '/arquivos-codex/backgrounds/languages/brittish.png'
+          american: PLAYTALK_APP_GRADIENT_BACKGROUND,
+          british: PLAYTALK_APP_GRADIENT_BACKGROUND
         },
-        spanish: '/arquivos-codex/backgrounds/languages/spanish.png',
-        french: '/arquivos-codex/backgrounds/languages/french.png',
-        german: '/arquivos-codex/backgrounds/languages/german.png',
-        portuguese: '/arquivos-codex/backgrounds/languages/portuguese.png',
-        mandarin: '/arquivos-codex/backgrounds/languages/chinese.png'
+        spanish: PLAYTALK_APP_GRADIENT_BACKGROUND,
+        french: PLAYTALK_APP_GRADIENT_BACKGROUND,
+        german: PLAYTALK_APP_GRADIENT_BACKGROUND,
+        portuguese: PLAYTALK_APP_GRADIENT_BACKGROUND,
+        mandarin: PLAYTALK_APP_GRADIENT_BACKGROUND
       };
       const WATCH_PRESENTATION_ICON_MAP = {
         english: {
@@ -14174,6 +14311,7 @@ para liberar desafio</p>
       const WELCOME_FLASH_LOADER_MS = 0;
       const WELCOME_FLASH_LOADER_FADE_MS = 0;
       const WELCOME_LANGUAGE_BACKGROUND_FADE_MS = 1000;
+      const WELCOME_LANGUAGE_SETUP_STORAGE_KEY = 'playtalk-welcome-language-setup-v1';
       const FINAL_CHALLENGE_SELECTION_STORAGE_KEY = 'playtalk-final-challenge-selection-v1';
       const FINAL_CHALLENGE_GENERAL_LEVELS_URL = '/api/flashcards/general-levels';
       const FINAL_CHALLENGE_SESSION_STORAGE_KEY = 'playtalk-final-challenge-session-v1';
@@ -14915,6 +15053,10 @@ para liberar desafio</p>
           welcomeHeadingModeIndex: 0,
           welcomeProfileReady: false,
           welcomeEnergyReady: false,
+          welcomeLanguageSetupOpen: false,
+          welcomeLanguageSetupStep: 1,
+          welcomeLanguageSetupCompleted: false,
+          welcomeLanguageSetupNativeDraft: DEFAULT_GAME_OPTIONS.nativeLanguage,
           gameOptionsLaunchSource: '',
           welcomeLevelProgressPercent: 0,
           welcomeLevelDisplayPercent: null,
@@ -15052,6 +15194,7 @@ para liberar desafio</p>
           finalChallengeGeneralLevelsLoadedAt: 0,
           finalChallengeActionToken: 0,
           finalChallengeSkipInFlight: false,
+          finalChallengeMusicStation: 'station1',
           finalChallengeFlowFeedback: ''
         },
         options: {
@@ -15204,6 +15347,10 @@ para liberar desafio</p>
         welcomeBooksBtn: document.getElementById('welcomeBooksBtn'),
         welcomeLanguageDock: document.getElementById('welcomeLanguageDock'),
         welcomeLanguageStrip: document.getElementById('welcomeLanguageStrip'),
+        welcomeLanguageSetup: document.getElementById('welcomeLanguageSetup'),
+        welcomeLanguageSetupStep: document.getElementById('welcomeLanguageSetupStep'),
+        welcomeLanguageSetupTitle: document.getElementById('welcomeLanguageSetupTitle'),
+        welcomeLanguageSetupOptions: document.getElementById('welcomeLanguageSetupOptions'),
         welcomeUserName: document.getElementById('welcomeUserName'),
         welcomeGreetingText: document.getElementById('welcomeGreetingText'),
         welcomeUserLevelLine: document.getElementById('welcomeUserLevelLine'),
@@ -16925,24 +17072,132 @@ para liberar desafio</p>
 
       function renderWelcomeLanguageDock() {
         if (!els.welcomeLanguageStrip) return;
-        const selectedLanguage = currentTargetLanguage();
-        els.welcomeLanguageStrip.innerHTML = TARGET_LANGUAGE_DISPLAY_ORDER.map((language) => {
+        els.welcomeLanguageStrip.innerHTML = '';
+      }
+
+      function welcomeLanguageSetupIdentityKey() {
+        return safeText(state.user?.id) || 'guest';
+      }
+
+      function readWelcomeLanguageSetupStore() {
+        try {
+          const raw = localStorage.getItem(WELCOME_LANGUAGE_SETUP_STORAGE_KEY);
+          const parsed = raw ? JSON.parse(raw) : {};
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (_error) {
+          return {};
+        }
+      }
+
+      function hasCompletedWelcomeLanguageSetup() {
+        const store = readWelcomeLanguageSetupStore();
+        return store[welcomeLanguageSetupIdentityKey()] === true;
+      }
+
+      function persistWelcomeLanguageSetupCompleted(completed = true) {
+        const store = readWelcomeLanguageSetupStore();
+        store[welcomeLanguageSetupIdentityKey()] = Boolean(completed);
+        try {
+          localStorage.setItem(WELCOME_LANGUAGE_SETUP_STORAGE_KEY, JSON.stringify(store));
+        } catch (_error) {
+          // ignore
+        }
+        state.ui.welcomeLanguageSetupCompleted = Boolean(completed);
+      }
+
+      function closeWelcomeLanguageSetupModal() {
+        state.ui.welcomeLanguageSetupOpen = false;
+        if (!els.welcomeLanguageSetup) return;
+        els.welcomeLanguageSetup.classList.remove('is-visible');
+        els.welcomeLanguageSetup.setAttribute('aria-hidden', 'true');
+      }
+
+      function currentWelcomeLanguageSetupCopy() {
+        if (Number(state.ui.welcomeLanguageSetupStep) === 2) {
+          return {
+            step: 'Passo 2 de 2',
+            title: 'Qual idioma<br>quer aprender?'
+          };
+        }
+        return {
+          step: 'Passo 1 de 2',
+          title: 'Qual e seu<br>idioma nativo?'
+        };
+      }
+
+      function renderWelcomeLanguageSetupModal() {
+        if (!els.welcomeLanguageSetup || !els.welcomeLanguageSetupOptions) return;
+        const copy = currentWelcomeLanguageSetupCopy();
+        if (els.welcomeLanguageSetupStep) {
+          els.welcomeLanguageSetupStep.textContent = copy.step;
+        }
+        if (els.welcomeLanguageSetupTitle) {
+          els.welcomeLanguageSetupTitle.innerHTML = copy.title;
+        }
+        const nativeDraft = normalizeGameOptionValue('nativeLanguage', state.ui.welcomeLanguageSetupNativeDraft || currentNativeLanguage());
+        const isTargetStep = Number(state.ui.welcomeLanguageSetupStep) === 2;
+        els.welcomeLanguageSetupOptions.innerHTML = TARGET_LANGUAGE_DISPLAY_ORDER.map((language) => {
           const meta = FLASHCARD_LANGUAGE_OPTIONS[language] || {};
           const iconPath = safeText(meta.iconPath || '');
           if (!iconPath) return '';
-          const active = language === selectedLanguage;
+          const disabled = isTargetStep && language === nativeDraft;
           return `
             <button
-              class="welcome-gate__language-btn${active ? ' is-active' : ''}"
+              class="welcome-language-setup__option"
               type="button"
-              data-welcome-language="${escapeHtml(language)}"
-              aria-pressed="${active ? 'true' : 'false'}"
-              aria-label="Trocar idioma para ${escapeHtml(meta.label || language)}"
+              data-setup-language="${escapeHtml(language)}"
+              ${disabled ? 'disabled' : ''}
+              aria-label="${escapeHtml(meta.label || language)}"
             >
               <img src="${escapeHtml(iconPath)}" alt="">
+              <span>${escapeHtml(uiLanguageLabel(language, 'portuguese'))}</span>
             </button>
           `;
         }).join('');
+        els.welcomeLanguageSetup.classList.toggle('is-visible', state.ui.welcomeLanguageSetupOpen);
+        els.welcomeLanguageSetup.setAttribute('aria-hidden', state.ui.welcomeLanguageSetupOpen ? 'false' : 'true');
+      }
+
+      function shouldOpenWelcomeLanguageSetupModal() {
+        if (!shouldShowWelcomeGate()) return false;
+        if (state.ui.welcomeLanguageSetupOpen) return false;
+        if (state.ui.welcomeLanguageSetupCompleted) return false;
+        return Math.max(0, Number(state.stats?.heardWordsTotal) || 0) === 0;
+      }
+
+      function openWelcomeLanguageSetupModal() {
+        state.ui.welcomeLanguageSetupCompleted = hasCompletedWelcomeLanguageSetup();
+        if (state.ui.welcomeLanguageSetupCompleted) return;
+        state.ui.welcomeLanguageSetupOpen = true;
+        state.ui.welcomeLanguageSetupStep = 1;
+        state.ui.welcomeLanguageSetupNativeDraft = currentNativeLanguage();
+        renderWelcomeLanguageSetupModal();
+      }
+
+      function syncWelcomeLanguageSetupModal() {
+        state.ui.welcomeLanguageSetupCompleted = hasCompletedWelcomeLanguageSetup();
+        if (shouldOpenWelcomeLanguageSetupModal()) {
+          openWelcomeLanguageSetupModal();
+          return;
+        }
+        if (!shouldShowWelcomeGate()) {
+          closeWelcomeLanguageSetupModal();
+        } else {
+          renderWelcomeLanguageSetupModal();
+        }
+      }
+
+      function setWelcomeNativeLanguage(language) {
+        const normalizedLanguage = normalizeGameOptionValue('nativeLanguage', language);
+        if (!normalizedLanguage) return;
+        state.options.nativeLanguage = normalizedLanguage;
+        persistGameOptions();
+        applySelectedLanguageProjectionToAllCards();
+        refreshLibrary();
+        renderMetrics();
+        updateGameChips();
+        syncFinalChallengeLevelCopy();
+        syncWelcomeGate();
       }
 
       async function setWelcomeTargetLanguage(language) {
@@ -16991,17 +17246,13 @@ para liberar desafio</p>
       }
 
       function languageBackgroundPath(language = currentTargetLanguage(), accent = currentLanguageBackgroundAccent()) {
-        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
-        if (normalizedLanguage === 'english') {
-          return WATCH_PRESENTATION_BACKGROUND_MAP.english[safeText(accent).toLowerCase()] || WATCH_PRESENTATION_BACKGROUND_MAP.english.american;
-        }
-        return safeText(WATCH_PRESENTATION_BACKGROUND_MAP[normalizedLanguage] || WATCH_PRESENTATION_BACKGROUND_MAP.english.american);
+        return PLAYTALK_APP_GRADIENT_BACKGROUND;
       }
 
       function syncFinalChallengeBackground() {
         if (!els.finalChallengeModal) return;
         const nextPath = languageBackgroundPath();
-        els.finalChallengeModal.style.backgroundImage = nextPath ? `url("${nextPath}")` : '';
+        els.finalChallengeModal.style.backgroundImage = nextPath || '';
       }
 
       function syncWelcomeLanguageBackground({ immediate = false } = {}) {
@@ -17014,7 +17265,7 @@ para liberar desafio</p>
           welcomeLanguageBackdropFadeTimer = 0;
         }
         if (immediate || !currentPath) {
-          els.welcomeBgBase.style.backgroundImage = `url("${nextPath}")`;
+          els.welcomeBgBase.style.backgroundImage = nextPath;
           els.welcomeBgBase.dataset.path = nextPath;
           els.welcomeBgFade.style.opacity = '0';
           els.welcomeBgFade.style.backgroundImage = '';
@@ -17023,14 +17274,14 @@ para liberar desafio</p>
         }
         if (currentPath === nextPath) return;
         els.welcomeBgFade.style.transition = 'none';
-        els.welcomeBgFade.style.backgroundImage = `url("${nextPath}")`;
+        els.welcomeBgFade.style.backgroundImage = nextPath;
         els.welcomeBgFade.dataset.path = nextPath;
         els.welcomeBgFade.style.opacity = '0';
         void els.welcomeBgFade.offsetWidth;
         els.welcomeBgFade.style.transition = `opacity ${WELCOME_LANGUAGE_BACKGROUND_FADE_MS}ms ease`;
         els.welcomeBgFade.style.opacity = '1';
         welcomeLanguageBackdropFadeTimer = window.setTimeout(() => {
-          els.welcomeBgBase.style.backgroundImage = `url("${nextPath}")`;
+          els.welcomeBgBase.style.backgroundImage = nextPath;
           els.welcomeBgBase.dataset.path = nextPath;
           els.welcomeBgFade.style.opacity = '0';
           els.welcomeBgFade.style.backgroundImage = '';
@@ -20500,7 +20751,7 @@ para liberar desafio</p>
         document.body.classList.toggle('welcome-active', visible);
         els.welcomeGate?.classList.toggle('is-visible', visible);
         if (els.welcomeLanguageDock) {
-          els.welcomeLanguageDock.hidden = !visible;
+          els.welcomeLanguageDock.hidden = true;
         }
         renderWelcomeLanguageDock();
         syncWelcomeModeButtons();
@@ -20510,6 +20761,7 @@ para liberar desafio</p>
         syncWelcomeLevelProgress();
         syncWelcomeBackgroundAdmin();
         syncWelcomeModeModal();
+        syncWelcomeLanguageSetupModal();
         if (visible && !state.ui.soundTestOpen && !state.ui.micCheckOpen) {
           closeAudioCheck();
         }
@@ -20546,6 +20798,7 @@ para liberar desafio</p>
         state.entry.welcomeVisible = false;
         document.body.classList.remove('welcome-active');
         els.welcomeGate?.classList.remove('is-visible');
+        closeWelcomeLanguageSetupModal();
         closeWelcomeModeModal();
         closeAudioCheck();
         clearWelcomeRotation();
@@ -23243,12 +23496,9 @@ para liberar desafio</p>
         const progressPercent = computeUserMedalProgressPercent(level);
         const previousIndex = Math.max(1, Number(state.ui.userMedalIndex) || 1);
         if (els.welcomeAvatarSeal) {
-          const sealSrc = safeText(medal?.image) || '/medals/user-level/medal-1.png';
-          els.welcomeAvatarSeal.src = sealSrc;
-          els.welcomeAvatarSeal.alt = safeText(medal?.label)
-            ? `Selo atual: ${medal.label}`
-            : 'Selo atual';
-          els.welcomeAvatarSeal.style.display = 'block';
+          els.welcomeAvatarSeal.textContent = `L${Math.max(1, Number(medal?.index) || 1)}`;
+          els.welcomeAvatarSeal.setAttribute('title', safeText(medal?.label) || `Nivel ${level}`);
+          els.welcomeAvatarSeal.style.display = 'grid';
         }
         if (els.welcomeLevelProgressBar) {
           els.welcomeLevelProgressBar.style.setProperty('--welcome-level-progress-pct', `${progressPercent.toFixed(2)}%`);
@@ -33243,6 +33493,15 @@ para liberar desafio</p>
             setFinalChallengeAvatarColorProgress(1);
           }
         };
+        let finalizeAwaitedPlayback = () => {};
+        const awaitedPlayback = new Promise((resolve) => {
+          let done = false;
+          finalizeAwaitedPlayback = () => {
+            if (done) return;
+            done = true;
+            resolve(true);
+          };
+        });
         if (options.audioProgressVisual) {
           setFinalChallengeAvatarColorProgress(0);
           audio.addEventListener('timeupdate', () => {
@@ -33280,7 +33539,10 @@ para liberar desafio</p>
           }
           return false;
         }
-        audio.addEventListener('ended', finalizePlayback, { once: true });
+        audio.addEventListener('ended', () => {
+          finalizePlayback();
+          finalizeAwaitedPlayback();
+        }, { once: true });
         audio.addEventListener('error', () => {
           setFinalChallengeFlowFeedback('Erro do elemento de audio ao tocar MP3.', 2200);
           if (state.ui.finalChallengePromptAudio === audio) {
@@ -33288,7 +33550,11 @@ para liberar desafio</p>
           }
           finalChallengePromptCleanup = null;
           resetColorProgress();
+          finalizeAwaitedPlayback();
         }, { once: true });
+        if (options.awaitEnd) {
+          await awaitedPlayback;
+        }
         return true;
       }
 
@@ -33529,8 +33795,12 @@ para liberar desafio</p>
             state.ui.finalChallengePracticeCorrectionText = safeText(resolveSourceLanguageText(card, currentTargetLanguage())) || safeText(card?.english || '');
             state.ui.finalChallengePracticeCorrectionTone = 'success';
             syncFinalChallengeRunUi();
-            await playFinalChallengeAudioForLanguage(card, currentNativeLanguage(), { rate: 0.9, audioProgressVisual: false }).catch(() => false);
-            await wait(900);
+            await playFinalChallengeAudioForLanguage(card, currentNativeLanguage(), {
+              rate: 0.9,
+              audioProgressVisual: false,
+              awaitEnd: true
+            }).catch(() => false);
+            await wait(160);
             state.ui.finalChallengePracticeCorrectionText = '';
             state.ui.finalChallengePracticeCorrectionTone = '';
           }
@@ -33633,6 +33903,39 @@ para liberar desafio</p>
         els.finalChallengeReviewModal.setAttribute('aria-hidden', 'true');
       }
 
+      function buildFinalChallengeMusicButtonMarkup(isPlaying = false) {
+        return isPlaying
+          ? '<svg viewBox="0 0 24 24" focusable="false"><path d="M14 4v8.2a3.8 3.8 0 1 1-1.8-3.24V6.2l7.6-1.9v5.05a3.8 3.8 0 1 1-1.8-3.24V2L14 4Z"></path></svg>'
+          : '<svg viewBox="0 0 24 24" focusable="false"><path d="M14 4v8.2a3.8 3.8 0 1 1-1.8-3.24V6.2l7.6-1.9v5.05a3.8 3.8 0 1 1-1.8-3.24V2L14 4Z"></path><path d="m4.7 5.7 13.6 13.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path></svg>';
+      }
+
+      function isFinalChallengeMusicPlaying() {
+        return safeText(window.playtalkGlobalRadio?.getStation?.()) === safeText(state.ui.finalChallengeMusicStation || 'station1');
+      }
+
+      function syncFinalChallengeMusicButton() {
+        if (!els.finalChallengeSkipBtn) return;
+        const isPlaying = isFinalChallengeMusicPlaying();
+        els.finalChallengeSkipBtn.innerHTML = buildFinalChallengeMusicButtonMarkup(isPlaying);
+        els.finalChallengeSkipBtn.classList.toggle('is-playing', isPlaying);
+        els.finalChallengeSkipBtn.setAttribute('aria-label', isPlaying ? 'Desativar trilha da estacao 1' : 'Ativar trilha da estacao 1');
+      }
+
+      function toggleFinalChallengeMusic() {
+        const radioApi = window.playtalkGlobalRadio;
+        if (!radioApi || typeof radioApi.setStation !== 'function') return;
+        if (isFinalChallengeMusicPlaying()) {
+          radioApi.setStation('off');
+        } else {
+          radioApi.setMuted(false);
+          radioApi.setStation(state.ui.finalChallengeMusicStation || 'station1');
+          if (typeof radioApi.play === 'function') {
+            radioApi.play();
+          }
+        }
+        syncFinalChallengeMusicButton();
+      }
+
       function syncFinalChallengeRunUi() {
         const card = currentFinalChallengeCard();
         const totalCards = Array.isArray(state.ui.finalChallengeCards) ? state.ui.finalChallengeCards.length : 0;
@@ -33701,8 +34004,9 @@ para liberar desafio</p>
         }
         if (els.finalChallengeSkipBtn) {
           els.finalChallengeSkipBtn.hidden = !card;
-          els.finalChallengeSkipBtn.disabled = Boolean(state.ui.finalChallengeExitConfirmOpen || state.ui.finalChallengeSkipInFlight || !card);
+          els.finalChallengeSkipBtn.disabled = Boolean(state.ui.finalChallengeExitConfirmOpen || !card);
         }
+        syncFinalChallengeMusicButton();
         syncFinalChallengeHeartsUi();
         if (isPracticeMode) {
           bufferFinalChallengePracticeAudios(card);
@@ -35837,6 +36141,21 @@ para liberar desafio</p>
           event.stopPropagation();
           void setWelcomeTargetLanguage(button.getAttribute('data-welcome-language') || '');
         });
+        els.welcomeLanguageSetupOptions?.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-setup-language]');
+          if (!button || button.disabled) return;
+          const language = button.getAttribute('data-setup-language') || '';
+          if (Number(state.ui.welcomeLanguageSetupStep) === 2) {
+            persistWelcomeLanguageSetupCompleted(true);
+            closeWelcomeLanguageSetupModal();
+            void setWelcomeTargetLanguage(language);
+            return;
+          }
+          state.ui.welcomeLanguageSetupNativeDraft = normalizeGameOptionValue('nativeLanguage', language);
+          setWelcomeNativeLanguage(language);
+          state.ui.welcomeLanguageSetupStep = 2;
+          renderWelcomeLanguageSetupModal();
+        });
         els.albumsPrevSectionBtn?.addEventListener('click', () => {
           nudgeAlbumsSection(-1);
         });
@@ -36015,7 +36334,7 @@ para liberar desafio</p>
           void handleFinalChallengeAttempt();
         });
         els.finalChallengeSkipBtn?.addEventListener('click', () => {
-          void skipFinalChallengeCard();
+          toggleFinalChallengeMusic();
         });
         els.finalChallengeRetryBtn?.addEventListener('click', () => {
           if (state.ui.finalChallengeResultAction === 'retry-practice') {
@@ -36099,6 +36418,9 @@ para liberar desafio</p>
           if (event.target === els.albumsPlayerPopover) {
             closeAlbumsPlayerPopover();
           }
+        });
+        document.addEventListener('playtalk:global-radio-change', () => {
+          syncFinalChallengeMusicButton();
         });
         els.albumsNativeOrderToggleBtn?.addEventListener('click', (event) => {
           event.preventDefault();

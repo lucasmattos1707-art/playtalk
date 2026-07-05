@@ -36,6 +36,16 @@
       name: 'Soft',
       image: 'images/soft.png',
       tracks: ['soft1.mp3', 'soft2.mp3', 'soft3.mp3', 'soft4.mp3']
+    },
+    station1: {
+      id: 'station1',
+      name: 'Estacao 1',
+      image: 'images/soft.png',
+      tracks: [
+        '/radios/estacao-1/after-hours-desk-2.mp3',
+        '/radios/estacao-1/after-hours-desk-1.mp3',
+        '/radios/estacao-1/after-hours-compile-1.mp3'
+      ]
     }
   };
 
@@ -70,6 +80,9 @@
   function resolveTrackUrl(trackName = '') {
     const normalized = String(trackName || '').trim();
     if (!normalized) return '';
+    if (/^(?:https?:)?\/\//i.test(normalized) || normalized.startsWith('/')) {
+      return normalized;
+    }
     const encoded = normalized
       .split('/')
       .map((segment) => encodeURIComponent(segment))

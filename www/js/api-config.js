@@ -13,26 +13,14 @@
     targetLanguage: 'english',
     accent: 'mix_100_0'
   });
+  const APP_BACKGROUND_GRADIENT = 'radial-gradient(circle at 18% 14%, rgba(113, 233, 255, 0.96) 0%, rgba(42, 148, 255, 0.9) 22%, rgba(21, 84, 171, 0.92) 44%, rgba(7, 20, 44, 0.98) 72%), linear-gradient(135deg, rgba(35, 214, 180, 0.9) 0%, rgba(20, 129, 224, 0.82) 46%, rgba(7, 24, 58, 1) 100%)';
   const LANGUAGE_BACKGROUND_ASSET_PATHS = Object.freeze({
-    english: Object.freeze({
-      american: '/arquivos-codex/backgrounds/languages/american.png',
-      british: '/arquivos-codex/backgrounds/languages/brittish.png'
-    }),
-    spanish: Object.freeze({
-      primary: '/arquivos-codex/backgrounds/languages/spanish.png'
-    }),
-    french: Object.freeze({
-      primary: '/arquivos-codex/backgrounds/languages/french.png'
-    }),
-    german: Object.freeze({
-      primary: '/arquivos-codex/backgrounds/languages/german.png'
-    }),
-    portuguese: Object.freeze({
-      primary: '/arquivos-codex/backgrounds/languages/portuguese.png'
-    }),
-    mandarin: Object.freeze({
-      primary: '/arquivos-codex/backgrounds/languages/chinese.png'
-    })
+    english: Object.freeze({ primary: APP_BACKGROUND_GRADIENT, american: APP_BACKGROUND_GRADIENT, british: APP_BACKGROUND_GRADIENT }),
+    spanish: Object.freeze({ primary: APP_BACKGROUND_GRADIENT }),
+    french: Object.freeze({ primary: APP_BACKGROUND_GRADIENT }),
+    german: Object.freeze({ primary: APP_BACKGROUND_GRADIENT }),
+    portuguese: Object.freeze({ primary: APP_BACKGROUND_GRADIENT }),
+    mandarin: Object.freeze({ primary: APP_BACKGROUND_GRADIENT })
   });
 
   function isNativeRuntime() {
@@ -151,7 +139,11 @@
 
   function safeAssetPath(value) {
     const normalized = String(value || '').trim();
-    return normalized.startsWith('/') ? normalized : '';
+    if (!normalized) return '';
+    if (normalized.startsWith('/') || normalized.includes('gradient(')) {
+      return normalized;
+    }
+    return '';
   }
 
   function joinPublicAssetUrl(baseUrl, relativePath = '') {
@@ -258,8 +250,8 @@
     const selection = resolveLanguageBackgroundUrls(preference);
     const desktopUrl = selection.desktopUrl;
     const mobileUrl = selection.mobileUrl;
-    root.documentElement.style.setProperty('--playtalk-global-bg-desktop', `url('${desktopUrl}')`);
-    root.documentElement.style.setProperty('--playtalk-global-bg-mobile', `url('${mobileUrl}')`);
+    root.documentElement.style.setProperty('--playtalk-global-bg-desktop', desktopUrl);
+    root.documentElement.style.setProperty('--playtalk-global-bg-mobile', mobileUrl);
   }
 
   function applyGlobalBackgroundCssVars(root = document) {

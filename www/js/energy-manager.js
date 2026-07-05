@@ -195,8 +195,8 @@
       .playtalk-energy-gate,
       body > .playtalk-energy-gate,
       body > #playtalkEnergyGate {
-        --playtalk-global-bg-desktop: url('/arquivos-codex/backgrounds/languages/american.png');
-        --playtalk-global-bg-mobile: url('/arquivos-codex/backgrounds/languages/american.png');
+        --playtalk-global-bg-desktop: radial-gradient(circle at 18% 14%, rgba(113, 233, 255, 0.96) 0%, rgba(42, 148, 255, 0.9) 22%, rgba(21, 84, 171, 0.92) 44%, rgba(7, 20, 44, 0.98) 72%), linear-gradient(135deg, rgba(35, 214, 180, 0.9) 0%, rgba(20, 129, 224, 0.82) 46%, rgba(7, 24, 58, 1) 100%);
+        --playtalk-global-bg-mobile: radial-gradient(circle at 18% 14%, rgba(113, 233, 255, 0.96) 0%, rgba(42, 148, 255, 0.9) 22%, rgba(21, 84, 171, 0.92) 44%, rgba(7, 20, 44, 0.98) 72%), linear-gradient(135deg, rgba(35, 214, 180, 0.9) 0%, rgba(20, 129, 224, 0.82) 46%, rgba(7, 24, 58, 1) 100%);
         --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
         --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 0.82) 0%, rgba(4, 18, 38, 0.4) 44%, rgba(4, 18, 38, 0.12) 100%);
         position: fixed;
@@ -205,7 +205,12 @@
         display: none;
         width: 100vw;
         height: 100dvh;
-        background: #041226 var(--playtalk-global-bg-image) center/cover no-repeat fixed;
+        background: #041226;
+        background-image: var(--playtalk-global-bg-image);
+        background-position: center;
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
         color: #ffffff;
         font-family: "Soopafre", "PlaytalkDisplay", Arial, sans-serif;
         overflow: hidden;
