@@ -88,11 +88,7 @@
       <div>
         <p class="eyebrow">Admin PlayTalk</p>
         <h1>Niveis Globais</h1>
-        <p class="lead">
-          Esta pagina gera uma lista unica de decks de 25 cartas para treino e desafio.
-          Ela usa as cartas atuais, pega os menores niveis primeiro e prioriza frases mais curtas.
-          Quem ja baixou um nivel no aparelho continua com o proprio deck local.
-        </p>
+        <p class="lead" id="sourceLead">Carregando quantas cartas o sistema enxerga na pasta 1...</p>
         <p class="status" id="status">Carregando lista atual...</p>
       </div>
       <div class="actions">
@@ -128,6 +124,7 @@
   <script>
     const els = {
       status: document.getElementById('status'),
+      sourceLead: document.getElementById('sourceLead'),
       generateBtn: document.getElementById('generateBtn'),
       refreshBtn: document.getElementById('refreshBtn'),
       generatedAt: document.getElementById('generatedAt'),
@@ -155,9 +152,17 @@
       });
     }
 
+    function renderSourceLead(payload) {
+      const summary = payload?.sourceSummary && typeof payload.sourceSummary === 'object' ? payload.sourceSummary : null;
+      const count = Number(summary?.cardCount) || 0;
+      const title = String(summary?.title || 'Pasta 1').trim() || 'Pasta 1';
+      els.sourceLead.textContent = `O sistema do /generallevels esta vendo ${count} cartas na ${title}.`;
+    }
+
     function renderPayload(payload) {
       const summary = Array.isArray(payload?.summary) ? payload.summary : [];
       const totalLevels = summary.reduce((sum, item) => sum + (Number(item?.levelCount) || 0), 0);
+      renderSourceLead(payload);
       els.generatedAt.textContent = formatDate(payload?.generatedAt);
       els.pairCount.textContent = String(Number(payload?.pairCount) || summary.length || 0);
       els.countPerLevel.textContent = String(Number(payload?.countPerLevel) || 25);
@@ -191,6 +196,7 @@
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload?.success) {
+          renderSourceLead(payload);
           throw new Error(payload?.message || 'Lista ainda nao gerada.');
         }
         renderPayload(payload);
@@ -214,6 +220,7 @@
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload?.success) {
+          renderSourceLead(payload);
           throw new Error(payload?.message || 'Falha ao gerar niveis.');
         }
         renderPayload(payload);

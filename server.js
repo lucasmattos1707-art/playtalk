@@ -11939,10 +11939,23 @@ function buildFinalChallengeGeneralLevelsPayload(sequenceState, options = {}) {
     success: true,
     generatedAt,
     countPerLevel,
+    sourceSummary: buildGeneralLevelsSourceSummary(sequenceState),
     languages: FLASHCARD_LANGUAGE_CODES.slice(),
     pairCount: summary.length,
     pairs,
     summary
+  };
+}
+
+function buildGeneralLevelsSourceSummary(sequenceState) {
+  const decks = Array.isArray(sequenceState?.decks) ? sequenceState.decks : [];
+  const slotOneDeck = decks.find((deck) => Number.parseInt(deck?.deckLevel, 10) === 1) || null;
+  const items = Array.isArray(slotOneDeck?.items) ? slotOneDeck.items : [];
+  return {
+    slot: 1,
+    title: String(slotOneDeck?.title || '').trim() || 'Pasta 1',
+    source: String(slotOneDeck?.source || '').trim(),
+    cardCount: items.length
   };
 }
 
@@ -17015,17 +17028,22 @@ app.post('/api/flashcards/final-challenge-selection', express.json({ limit: '64k
 app.get('/api/flashcards/general-levels', async (_req, res) => {
   try {
     const payload = await readFinalChallengeGeneralLevelsPayload();
+    const sequenceState = await resolveFlashcardsSequenceState();
     if (!payload) {
       res.status(404).json({
         success: false,
         message: 'Lista global de niveis ainda nao foi gerada.',
+        sourceSummary: buildGeneralLevelsSourceSummary(sequenceState),
         pairs: {},
         summary: []
       });
       return;
     }
     res.setHeader('Cache-Control', 'no-store');
-    res.json(payload);
+    res.json({
+      ...payload,
+      sourceSummary: buildGeneralLevelsSourceSummary(sequenceState)
+    });
   } catch (error) {
     console.error('Erro ao ler niveis globais do desafio final:', error);
     res.status(500).json({
