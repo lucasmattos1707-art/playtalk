@@ -12201,8 +12201,8 @@
       opacity: 1;
       z-index: 3;
       overflow: visible;
-      transform: rotate(-90deg);
       animation: finalChallengeRingSpin 15s linear infinite;
+      will-change: transform;
     }
 
     .final-challenge-modal__avatar-ring circle {
@@ -12219,24 +12219,22 @@
       stroke: url(#finalChallengeAvatarRingGradient);
       stroke-width: 5;
       stroke-linecap: round;
-      filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.78)) drop-shadow(0 0 14px rgba(46, 255, 171, 0.42));
-      transition: stroke-dashoffset 500ms ease-out;
+      filter: none;
+      transition: stroke-dashoffset 300ms linear, opacity 120ms linear;
+      will-change: stroke-dashoffset, opacity;
     }
 
     .final-challenge-modal__avatar-ring-glow {
-      transform: rotate(90deg);
-      transform-origin: 50% 50%;
-      opacity: 0;
-      transition: opacity 180ms ease;
+      display: none;
     }
 
     .final-challenge-modal__avatar-btn.is-listening .final-challenge-modal__avatar-ring-glow {
-      opacity: 1;
+      opacity: 0;
     }
 
     .final-challenge-modal__avatar-btn.is-success-flash .final-challenge-modal__avatar-ring-glow {
-      opacity: 1;
-      animation: finalChallengeAvatarFlash 520ms ease-out;
+      opacity: 0;
+      animation: none;
     }
 
     .final-challenge-modal__avatar-btn img {
@@ -12307,10 +12305,10 @@
 
     @keyframes finalChallengeRingSpin {
       from {
-        transform: rotate(0deg);
+        transform: rotate(-90deg);
       }
       to {
-        transform: rotate(360deg);
+        transform: rotate(270deg);
       }
     }
 
@@ -14994,6 +14992,9 @@
           typingKeyAudioBuffer: null,
           typingKeyAudioBufferPath: '',
           typingKeyAudioBufferPromise: null,
+          wordBlockClickAudioPool: [],
+          wordBlockClickAudioIndex: 0,
+          wordBlockClickAudioSourcesKey: '',
           typingSkipActive: false,
           typingSkipRunId: 0,
           typingSkipEntryId: '',
@@ -29346,16 +29347,22 @@
         playAudioWithSoftEnd(state.game.successAudio).catch?.(() => {});
       }
 
-      function playMilestoneAudio(src) {
-        if (isNoEnergyMediaLocked()) return;
+      function ensureMilestoneAudio(src) {
         const resolved = resolveInlineMediaUrl(src);
-        if (!resolved) return;
+        if (!resolved) return null;
         if (!state.game.milestoneAudios.has(resolved)) {
           const audio = new Audio(resolved);
           audio.preload = 'auto';
+          audio.load();
           state.game.milestoneAudios.set(resolved, audio);
         }
-        const audio = state.game.milestoneAudios.get(resolved);
+        return state.game.milestoneAudios.get(resolved) || null;
+      }
+
+      function playMilestoneAudio(src) {
+        if (isNoEnergyMediaLocked()) return;
+        const audio = ensureMilestoneAudio(src);
+        if (!audio) return;
         try {
           audio.currentTime = 0;
         } catch (_error) {
@@ -29364,10 +29371,56 @@
         playAudioWithSoftEnd(audio).catch?.(() => {});
       }
 
+      function primeCustomGameplayAudio() {
+        ensureWordBlockClickAudioPool();
+        ensureMilestoneAudio(CUSTOM_SEQUENCE_TEN_SOUND_PATH);
+        ensureMilestoneAudio(CUSTOM_CORRECTION_SOUND_PATH);
+        ensureMilestoneAudio(CUSTOM_LEVEL_PASSED_SOUND_PATH);
+      }
+
+      function ensureWordBlockClickAudioPool() {
+        if (!Array.isArray(CUSTOM_CLICK_SOUND_PATHS) || !CUSTOM_CLICK_SOUND_PATHS.length) return [];
+        const resolvedPaths = CUSTOM_CLICK_SOUND_PATHS
+          .map((src) => resolveInlineMediaUrl(src))
+          .filter((src) => typeof src === 'string' && src);
+        if (!resolvedPaths.length) return [];
+        const sourcesKey = resolvedPaths.join('|');
+        if (state.game.wordBlockClickAudioPool.length && state.game.wordBlockClickAudioSourcesKey === sourcesKey) {
+          return state.game.wordBlockClickAudioPool;
+        }
+        const pool = [];
+        resolvedPaths.forEach((src) => {
+          for (let index = 0; index < 2; index += 1) {
+            const audio = new Audio(src);
+            audio.preload = 'auto';
+            audio.load();
+            pool.push(audio);
+          }
+        });
+        state.game.wordBlockClickAudioPool = pool;
+        state.game.wordBlockClickAudioIndex = 0;
+        state.game.wordBlockClickAudioSourcesKey = sourcesKey;
+        return pool;
+      }
+
       function playRandomWordBlockClickAudio() {
-        if (!Array.isArray(CUSTOM_CLICK_SOUND_PATHS) || !CUSTOM_CLICK_SOUND_PATHS.length) return;
-        const index = Math.floor(Math.random() * CUSTOM_CLICK_SOUND_PATHS.length);
-        playMilestoneAudio(CUSTOM_CLICK_SOUND_PATHS[index] || CUSTOM_CLICK_SOUND_PATHS[0]);
+        if (isNoEnergyMediaLocked()) return;
+        const pool = ensureWordBlockClickAudioPool();
+        if (!pool.length) return;
+        const audio = pool[state.game.wordBlockClickAudioIndex % pool.length];
+        state.game.wordBlockClickAudioIndex = (state.game.wordBlockClickAudioIndex + 1) % pool.length;
+        try {
+          audio.pause();
+          if (audio.readyState > 0) {
+            audio.currentTime = 0;
+          }
+        } catch (_error) {
+          // ignore
+        }
+        const playPromise = audio.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(() => {});
+        }
       }
 
       function playSequenceTenAudio() {
@@ -31563,7 +31616,10 @@
             selectedButtons.push(key);
             key.disabled = true;
             key.classList.add('is-selected');
-            playRandomWordBlockClickAudio();
+            const completed = wordBlockSequenceIsComplete(blockState.targetSequences, selectedWords);
+            if (!completed) {
+              playRandomWordBlockClickAudio();
+            }
             triggerTypingKeyFlash(key);
             playSuccessAudio();
             renderSelected();
@@ -31575,6 +31631,7 @@
           const rows = Array.isArray(blockState.rows) && blockState.rows.length
             ? blockState.rows
             : [blockState.options];
+          primeCustomGameplayAudio();
           rows.forEach((row) => {
             const rowNode = document.createElement('div');
             rowNode.className = 'flashcards-typing__word-row';
@@ -34081,7 +34138,10 @@
             selectedWords.push(block.normalized);
             button.disabled = true;
             button.classList.add('is-selected');
-            playRandomWordBlockClickAudio();
+            const completed = wordBlockSequenceIsComplete(blockState.targetSequences, selectedWords);
+            if (!completed) {
+              playRandomWordBlockClickAudio();
+            }
             if (!rollingBufferPrimed && nextWords.length === 1 && !wordBlockSequenceIsComplete(blockState.targetSequences, selectedWords)) {
               rollingBufferPrimed = true;
               const nextCard = Array.isArray(state.ui.finalChallengeCards)
@@ -34092,7 +34152,7 @@
                 preloadFinalChallengeCardAudioForLanguage(nextCard, currentTargetLanguage());
               }
             }
-            if (wordBlockSequenceIsComplete(blockState.targetSequences, selectedWords)) {
+            if (completed) {
               disableAll(true);
               await markCorrect();
             }
@@ -34100,6 +34160,7 @@
           buttons.push(button);
           rowNode.appendChild(button);
         };
+        primeCustomGameplayAudio();
         layoutRows.forEach((row) => {
           const rowNode = document.createElement('div');
           rowNode.className = 'final-challenge-modal__block-row';
