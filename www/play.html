@@ -33345,17 +33345,46 @@ para liberar desafio</p>
         };
       }
 
+      const FINAL_CHALLENGE_LAUNCH_LOADER_KEY = 'final-challenge-level-start';
+
+      function showFinalChallengeLaunchLoader(message = '', meta = '') {
+        const loader = window.PlaytalkLoader;
+        if (!loader) return;
+        loader.show(FINAL_CHALLENGE_LAUNCH_LOADER_KEY);
+        loader.setMessage?.(FINAL_CHALLENGE_LAUNCH_LOADER_KEY, message);
+        loader.setMeta?.(FINAL_CHALLENGE_LAUNCH_LOADER_KEY, meta);
+      }
+
+      function updateFinalChallengeLaunchLoader(message = '', meta = '') {
+        const loader = window.PlaytalkLoader;
+        if (!loader) return;
+        loader.setMessage?.(FINAL_CHALLENGE_LAUNCH_LOADER_KEY, message);
+        loader.setMeta?.(FINAL_CHALLENGE_LAUNCH_LOADER_KEY, meta);
+      }
+
+      function hideFinalChallengeLaunchLoader(force = true) {
+        const loader = window.PlaytalkLoader;
+        if (!loader) return;
+        loader.setMessage?.(FINAL_CHALLENGE_LAUNCH_LOADER_KEY, '');
+        loader.setMeta?.(FINAL_CHALLENGE_LAUNCH_LOADER_KEY, '');
+        loader.hide(FINAL_CHALLENGE_LAUNCH_LOADER_KEY, { force });
+      }
+
       async function ensureFinalChallengeDownloadedForPlay(level = currentFinalChallengeLevel(), launchMode = 'practice') {
         const challengeLevel = normalizeUserLevel(level);
+        updateFinalChallengeLaunchLoader('Preparando nivel', `Separando o Nivel ${challengeLevel} para ${launchMode === 'voice' ? 'desafio' : 'treino'}.`);
         let selection = resolveStoredFinalChallengeSelection(challengeLevel);
         if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
+          updateFinalChallengeLaunchLoader('Montando deck', 'Buscando 25 cartas do deck global e organizando a rodada.');
           setFinalChallengeFlowFeedback('Montando as 25 cartas pelo deck global...', 2200);
           await ensureFinalChallengeSelection(challengeLevel);
           selection = resolveStoredFinalChallengeSelection(challengeLevel);
         }
         const payload = finalChallengeDownloadPayload(challengeLevel);
+        updateFinalChallengeLaunchLoader('Checando arquivos', 'Verificando se os audios e imagens desse nivel ja estao prontos.');
         const ready = await finalChallengeDownloadRecordIsReady(challengeLevel, payload);
         if (!ready) {
+          updateFinalChallengeLaunchLoader('Baixando em segundo plano', 'Liberando a rodada enquanto o restante do pacote continua baixando.');
           void startProgressiveFinalChallengeDownload(challengeLevel, {
             launchMode,
             releasePercent: 10,
@@ -33366,8 +33395,10 @@ para liberar desafio</p>
           selection = resolveStoredFinalChallengeSelection(challengeLevel);
         }
         if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
+          updateFinalChallengeLaunchLoader('Nivel indisponivel', 'Ainda nao encontrei cartas suficientes para abrir a rodada.');
           throw new Error(nativeUiText('download_unavailable'));
         }
+        updateFinalChallengeLaunchLoader('Deck pronto', 'Abrindo a primeira carta e preparando o audio inicial.');
         setFinalChallengeFlowFeedback('', 0);
         return selection;
       }
@@ -34135,8 +34166,10 @@ para liberar desafio</p>
       async function startFinalChallengeRun() {
         const challengeLevel = currentFinalChallengeLevel();
         stopFinalChallengeIntroStatsRotation();
+        showFinalChallengeLaunchLoader('Preparando desafio', `Abrindo o Nivel ${challengeLevel} com voz e avaliacao final.`);
         let selection = resolveStoredFinalChallengeSelection(challengeLevel);
         if (!selection.practiceComplete) {
+          hideFinalChallengeLaunchLoader();
           syncFinalChallengeIntroUi();
           setFinalChallengeScreen('intro');
           return;
@@ -34144,6 +34177,7 @@ para liberar desafio</p>
         try {
           selection = await ensureFinalChallengeDownloadedForPlay(challengeLevel, 'voice');
         } catch (error) {
+          hideFinalChallengeLaunchLoader();
           setFinalChallengeDownloadsStatus(error?.message || nativeUiText('download_unavailable'), 'error');
           syncFinalChallengeIntroUi();
           setFinalChallengeScreen('intro');
@@ -34151,6 +34185,7 @@ para liberar desafio</p>
         }
         const cards = selection.cards;
         if (cards.length < FINAL_CHALLENGE_CARD_COUNT) {
+          hideFinalChallengeLaunchLoader();
           if (els.finalChallengeResultTitle) {
             els.finalChallengeResultTitle.textContent = nativeUiText('challenge_unavailable');
           }
@@ -34181,24 +34216,29 @@ para liberar desafio</p>
         });
         setFinalChallengePhaseOverlay(false);
         setFinalChallengeExitConfirmOpen(false);
+        updateFinalChallengeLaunchLoader('Abrindo desafio', 'Mostrando a primeira carta do desafio.');
         setFinalChallengeScreen('run');
         setFinalChallengeStatus('');
         syncFinalChallengeRunUi();
+        hideFinalChallengeLaunchLoader();
       }
 
       async function startFinalChallengePracticeRun() {
         const challengeLevel = currentFinalChallengeLevel();
         let selection = resolveStoredFinalChallengeSelection(challengeLevel);
         stopFinalChallengeIntroStatsRotation();
+        showFinalChallengeLaunchLoader('Preparando treino', `Abrindo o Nivel ${challengeLevel} com blocos e audio guiado.`);
         try {
           selection = await ensureFinalChallengeDownloadedForPlay(challengeLevel, 'practice');
         } catch (error) {
+          hideFinalChallengeLaunchLoader();
           setFinalChallengeDownloadsStatus(error?.message || nativeUiText('download_unavailable'), 'error');
           syncFinalChallengeIntroUi();
           return;
         }
         const verifiedCards = selection.cards;
         if (verifiedCards.length < FINAL_CHALLENGE_CARD_COUNT) {
+          hideFinalChallengeLaunchLoader();
           syncFinalChallengeIntroUi();
           return;
         }
@@ -34211,6 +34251,7 @@ para liberar desafio</p>
         state.ui.finalChallengeIndex = 0;
         setFinalChallengePhaseOverlay(false);
         setFinalChallengeExitConfirmOpen(false);
+        updateFinalChallengeLaunchLoader('Abrindo treino', 'Carregando a primeira carta, imagem e audio inicial.');
         setFinalChallengeScreen('run');
         setFinalChallengeStatus('');
         syncFinalChallengeRunUi();
@@ -34220,6 +34261,7 @@ para liberar desafio</p>
           state.ui.finalChallengePromptCardId = safeText(firstCard?.id);
           void playFinalChallengeAudioForLanguage(firstCard, currentTargetLanguage(), { rate: 0.9, audioProgressVisual: true });
         }
+        hideFinalChallengeLaunchLoader();
       }
 
       async function playWatchAudioForLanguage(card, language, rate, sessionToken = state.watch.sessionToken) {

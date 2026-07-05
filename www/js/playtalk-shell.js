@@ -12,7 +12,9 @@
   const loaderState = {
     activeKeys: new Set(),
     shownAtByKey: new Map(),
-    hideTimerByKey: new Map()
+    hideTimerByKey: new Map(),
+    messageByKey: new Map(),
+    metaByKey: new Map()
   };
 
   function injectStars() {
@@ -104,6 +106,15 @@
         min-height: 100%;
         display: grid;
         place-items: center;
+        padding: 28px;
+      }
+
+      .playtalk-loader__stack {
+        width: min(88vw, 420px);
+        display: grid;
+        justify-items: center;
+        gap: 14px;
+        text-align: center;
       }
 
       .playtalk-loader__spinner {
@@ -117,6 +128,23 @@
         animation: playtalk-loader-spin 0.82s linear infinite;
       }
 
+      .playtalk-loader__message {
+        margin: 0;
+        color: #ffffff;
+        font: 800 clamp(19px, 2.5vw, 25px)/1.15 "Exo 2", Arial, sans-serif;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        text-shadow: 0 0 18px rgba(255, 255, 255, 0.18);
+      }
+
+      .playtalk-loader__meta {
+        margin: 0;
+        max-width: min(84vw, 360px);
+        color: rgba(255, 255, 255, 0.82);
+        font: 700 clamp(13px, 1.9vw, 15px)/1.35 "Exo 2", Arial, sans-serif;
+        letter-spacing: 0.025em;
+      }
+
       @keyframes playtalk-loader-spin {
         to { transform: rotate(360deg); }
       }
@@ -127,7 +155,11 @@
   function loaderMarkup() {
     return `
       <div class="playtalk-loader__screen" aria-live="polite">
-        <span class="playtalk-loader__spinner" aria-label="Carregando"></span>
+        <div class="playtalk-loader__stack">
+          <span class="playtalk-loader__spinner" aria-label="Carregando"></span>
+          <p class="playtalk-loader__message" data-loader-message hidden></p>
+          <p class="playtalk-loader__meta" data-loader-meta hidden></p>
+        </div>
       </div>
     `;
   }
@@ -154,6 +186,19 @@
   function renderLoader() {
     const root = ensureLoader();
     const visible = loaderState.activeKeys.size > 0;
+    const messageNode = root.querySelector('[data-loader-message]');
+    const metaNode = root.querySelector('[data-loader-meta]');
+    const topKey = Array.from(loaderState.activeKeys.values()).pop() || '';
+    const message = String(loaderState.messageByKey?.get(topKey) || '').trim();
+    const meta = String(loaderState.metaByKey?.get(topKey) || '').trim();
+    if (messageNode) {
+      messageNode.hidden = !message;
+      messageNode.textContent = message;
+    }
+    if (metaNode) {
+      metaNode.hidden = !meta;
+      metaNode.textContent = meta;
+    }
     root.hidden = !visible;
     root.classList.toggle('is-visible', visible);
     root.setAttribute('aria-hidden', visible ? 'false' : 'true');
@@ -205,10 +250,30 @@
   }
 
   function setLoaderMessage() {
+    const [key, message] = arguments;
+    const normalizedKey = normalizeLoaderKey(key);
+    if (!loaderState.messageByKey) {
+      loaderState.messageByKey = new Map();
+    }
+    if (message == null || String(message).trim() === '') {
+      loaderState.messageByKey.delete(normalizedKey);
+    } else {
+      loaderState.messageByKey.set(normalizedKey, String(message));
+    }
     renderLoader();
   }
 
   function setLoaderMeta() {
+    const [key, meta] = arguments;
+    const normalizedKey = normalizeLoaderKey(key);
+    if (!loaderState.metaByKey) {
+      loaderState.metaByKey = new Map();
+    }
+    if (meta == null || String(meta).trim() === '') {
+      loaderState.metaByKey.delete(normalizedKey);
+    } else {
+      loaderState.metaByKey.set(normalizedKey, String(meta));
+    }
     renderLoader();
   }
 
@@ -219,6 +284,8 @@
     loaderState.hideTimerByKey.clear();
     loaderState.activeKeys.clear();
     loaderState.shownAtByKey.clear();
+    if (loaderState.messageByKey) loaderState.messageByKey.clear();
+    if (loaderState.metaByKey) loaderState.metaByKey.clear();
     renderLoader();
   }
 
