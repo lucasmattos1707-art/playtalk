@@ -4,6 +4,7 @@
   const PLAYBACK_STORAGE_KEY = 'playtalk-global-radio-playback';
   const DEFAULT_STATION = 'off';
   const MUSIC_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/musicas';
+  const RADIO_STATION_ONE_BASE_URL = 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/radios/esta%C3%A7%C3%B5es/Esta%C3%A7%C3%A3o%201';
   const PLAYBACK_SAVE_INTERVAL_MS = 2000;
   const PLAYBACK_STATE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
   const STATIONS = {
@@ -42,9 +43,9 @@
       name: 'Estacao 1',
       image: 'images/soft.png',
       tracks: [
-        '/radios/estacao-1/after-hours-desk-2.mp3',
-        '/radios/estacao-1/after-hours-desk-1.mp3',
-        '/radios/estacao-1/after-hours-compile-1.mp3'
+        `${RADIO_STATION_ONE_BASE_URL}/after-hours-desk-2.mp3`,
+        `${RADIO_STATION_ONE_BASE_URL}/after-hours-desk-1.mp3`,
+        `${RADIO_STATION_ONE_BASE_URL}/after-hours-compile-1.mp3`
       ]
     }
   };
@@ -236,21 +237,30 @@
     const canPlay = ensureTrackLoaded();
     if (!canPlay || currentStation === 'off') {
       playAttemptPending = false;
-      return;
+      emitChange();
+      return Promise.resolve(false);
     }
 
     applyMutedState();
     const playPromise = audio.play();
     if (playPromise && typeof playPromise.then === 'function') {
-      playPromise
+      return playPromise
         .then(() => {
           playAttemptPending = false;
           savePlaybackState();
+          emitChange();
+          return true;
         })
         .catch(() => {
           playAttemptPending = true;
+          emitChange();
+          return false;
         });
     }
+    playAttemptPending = false;
+    savePlaybackState();
+    emitChange();
+    return Promise.resolve(true);
   }
 
   function setStation(stationId) {
@@ -336,6 +346,9 @@
     },
     getStation() {
       return currentStation;
+    },
+    isPlaying() {
+      return currentStation !== 'off' && !audio.paused && !audio.ended && !muted;
     },
     setStation,
     setMuted,

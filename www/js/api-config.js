@@ -13,7 +13,7 @@
     targetLanguage: 'english',
     accent: 'mix_100_0'
   });
-  const APP_BACKGROUND_GRADIENT = 'radial-gradient(circle at 18% 14%, rgba(113, 233, 255, 0.96) 0%, rgba(42, 148, 255, 0.9) 22%, rgba(21, 84, 171, 0.92) 44%, rgba(7, 20, 44, 0.98) 72%), linear-gradient(135deg, rgba(35, 214, 180, 0.9) 0%, rgba(20, 129, 224, 0.82) 46%, rgba(7, 24, 58, 1) 100%)';
+  const APP_BACKGROUND_GRADIENT = 'radial-gradient(circle at 18% 14%, rgba(120, 235, 255, 0.98) 0%, rgba(58, 184, 255, 0.94) 24%, rgba(32, 116, 234, 0.92) 52%, rgba(18, 77, 184, 0.94) 74%), linear-gradient(180deg, rgba(42, 144, 247, 0.78) 0%, rgba(18, 108, 223, 0.88) 58%, rgba(83, 221, 206, 0.86) 100%)';
   const LANGUAGE_BACKGROUND_ASSET_PATHS = Object.freeze({
     english: Object.freeze({ primary: APP_BACKGROUND_GRADIENT, american: APP_BACKGROUND_GRADIENT, british: APP_BACKGROUND_GRADIENT }),
     spanish: Object.freeze({ primary: APP_BACKGROUND_GRADIENT }),

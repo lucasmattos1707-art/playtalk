@@ -56,6 +56,11 @@ const rootStaticDirectories = [
     destination: 'newfonts'
   }
 ];
+const skippedOutputPrefixes = [
+  'arquivos-codex/backgrounds/languages/',
+  'medals/user-level/',
+  'radios/'
+];
 
 async function removeDir(target) {
   await fs.rm(target, { recursive: true, force: true });
@@ -69,6 +74,9 @@ async function copyRecursive(source, destination) {
   const stats = await fs.stat(source);
   const relativeSource = path.relative(sourceDir, source);
   const relativeFromRoot = path.relative(rootDir, source).split(path.sep).join('/');
+  const normalizedRelativeSource = relativeSource && !relativeSource.startsWith('..')
+    ? relativeSource.split(path.sep).join('/')
+    : '';
 
   if (stats.isDirectory()) {
     await ensureDir(destination);
@@ -77,14 +85,18 @@ async function copyRecursive(source, destination) {
       await copyRecursive(path.join(source, entry), path.join(destination, entry));
     }
   } else {
+    const pathForSkipCheck = normalizedRelativeSource || relativeFromRoot;
+    if (pathForSkipCheck && skippedOutputPrefixes.some((prefix) => pathForSkipCheck.startsWith(prefix))) {
+      return;
+    }
+
     if (relativeFromRoot.startsWith('accesskey/teclas/Teclas/') && relativeFromRoot.toLowerCase().endsWith('.mp4')) {
       return;
     }
 
     if (relativeSource && !relativeSource.startsWith('..')) {
-      const normalizedRelative = relativeSource.split(path.sep).join('/');
-      const isTopLevelHtml = !normalizedRelative.includes('/') && normalizedRelative.toLowerCase().endsWith('.html');
-      if (isTopLevelHtml && !appHtmlFiles.has(normalizedRelative)) {
+      const isTopLevelHtml = !normalizedRelativeSource.includes('/') && normalizedRelativeSource.toLowerCase().endsWith('.html');
+      if (isTopLevelHtml && !appHtmlFiles.has(normalizedRelativeSource)) {
         return;
       }
     }

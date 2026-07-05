@@ -195,10 +195,10 @@
       .playtalk-energy-gate,
       body > .playtalk-energy-gate,
       body > #playtalkEnergyGate {
-        --playtalk-global-bg-desktop: radial-gradient(circle at 18% 14%, rgba(113, 233, 255, 0.96) 0%, rgba(42, 148, 255, 0.9) 22%, rgba(21, 84, 171, 0.92) 44%, rgba(7, 20, 44, 0.98) 72%), linear-gradient(135deg, rgba(35, 214, 180, 0.9) 0%, rgba(20, 129, 224, 0.82) 46%, rgba(7, 24, 58, 1) 100%);
-        --playtalk-global-bg-mobile: radial-gradient(circle at 18% 14%, rgba(113, 233, 255, 0.96) 0%, rgba(42, 148, 255, 0.9) 22%, rgba(21, 84, 171, 0.92) 44%, rgba(7, 20, 44, 0.98) 72%), linear-gradient(135deg, rgba(35, 214, 180, 0.9) 0%, rgba(20, 129, 224, 0.82) 46%, rgba(7, 24, 58, 1) 100%);
+        --playtalk-global-bg-desktop: radial-gradient(circle at 18% 14%, rgba(120, 235, 255, 0.98) 0%, rgba(58, 184, 255, 0.94) 24%, rgba(32, 116, 234, 0.92) 52%, rgba(18, 77, 184, 0.94) 74%), linear-gradient(180deg, rgba(42, 144, 247, 0.78) 0%, rgba(18, 108, 223, 0.88) 58%, rgba(83, 221, 206, 0.86) 100%);
+        --playtalk-global-bg-mobile: radial-gradient(circle at 18% 14%, rgba(120, 235, 255, 0.98) 0%, rgba(58, 184, 255, 0.94) 24%, rgba(32, 116, 234, 0.92) 52%, rgba(18, 77, 184, 0.94) 74%), linear-gradient(180deg, rgba(42, 144, 247, 0.78) 0%, rgba(18, 108, 223, 0.88) 58%, rgba(83, 221, 206, 0.86) 100%);
         --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
-        --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 0.82) 0%, rgba(4, 18, 38, 0.4) 44%, rgba(4, 18, 38, 0.12) 100%);
+        --playtalk-global-bg-overlay: linear-gradient(to top, rgba(7, 50, 114, 0.36) 0%, rgba(7, 50, 114, 0.18) 44%, rgba(7, 50, 114, 0.06) 100%);
         position: fixed;
         inset: 0;
         z-index: 2147483647;

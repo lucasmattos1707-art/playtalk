@@ -57,11 +57,11 @@
     }
 
     :root {
-      --bg: #07111f;
-      --playtalk-global-bg-desktop: radial-gradient(circle at 18% 14%, rgba(113, 233, 255, 0.96) 0%, rgba(42, 148, 255, 0.9) 22%, rgba(21, 84, 171, 0.92) 44%, rgba(7, 20, 44, 0.98) 72%), linear-gradient(135deg, rgba(35, 214, 180, 0.9) 0%, rgba(20, 129, 224, 0.82) 46%, rgba(7, 24, 58, 1) 100%);
-      --playtalk-global-bg-mobile: radial-gradient(circle at 18% 14%, rgba(113, 233, 255, 0.96) 0%, rgba(42, 148, 255, 0.9) 22%, rgba(21, 84, 171, 0.92) 44%, rgba(7, 20, 44, 0.98) 72%), linear-gradient(135deg, rgba(35, 214, 180, 0.9) 0%, rgba(20, 129, 224, 0.82) 46%, rgba(7, 24, 58, 1) 100%);
+      --bg: #0b4b98;
+      --playtalk-global-bg-desktop: radial-gradient(circle at 18% 14%, rgba(120, 235, 255, 0.98) 0%, rgba(58, 184, 255, 0.94) 24%, rgba(32, 116, 234, 0.92) 52%, rgba(18, 77, 184, 0.94) 74%), linear-gradient(180deg, rgba(42, 144, 247, 0.78) 0%, rgba(18, 108, 223, 0.88) 58%, rgba(83, 221, 206, 0.86) 100%);
+      --playtalk-global-bg-mobile: radial-gradient(circle at 18% 14%, rgba(120, 235, 255, 0.98) 0%, rgba(58, 184, 255, 0.94) 24%, rgba(32, 116, 234, 0.92) 52%, rgba(18, 77, 184, 0.94) 74%), linear-gradient(180deg, rgba(42, 144, 247, 0.78) 0%, rgba(18, 108, 223, 0.88) 58%, rgba(83, 221, 206, 0.86) 100%);
       --playtalk-global-bg-image: var(--playtalk-global-bg-desktop);
-      --playtalk-global-bg-overlay: linear-gradient(to top, rgba(4, 18, 38, 0.36) 0%, rgba(4, 18, 38, 0.16) 42%, rgba(4, 18, 38, 0.04) 100%);
+      --playtalk-global-bg-overlay: linear-gradient(to top, rgba(7, 50, 114, 0.28) 0%, rgba(7, 50, 114, 0.12) 42%, rgba(7, 50, 114, 0.03) 100%);
       --panel: rgba(8, 28, 54, 0.9);
       --line: rgba(95, 201, 255, 0.22);
       --text: #f7fbff;
@@ -4492,21 +4492,31 @@
       padding: 4px 0 10px;
     }
 
-    .medal-transition-modal__slide img {
+    .medal-transition-modal__slide-badge {
       width: min(180px, 46vw);
       height: min(180px, 46vw);
-      object-fit: contain;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.22) 34%, transparent 36%),
+        linear-gradient(135deg, rgba(53, 234, 186, 0.96), rgba(38, 149, 255, 0.96));
+      border: 3px solid rgba(255, 255, 255, 0.76);
+      color: #f7fbff;
+      font: 900 clamp(26px, 7vw, 44px)/1 "Orbitron", "Exo 2", Arial, sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
       transition: opacity 120ms linear;
       filter:
         drop-shadow(0 0 20px rgba(164, 255, 171, 0.42))
         drop-shadow(0 0 42px rgba(109, 203, 255, 0.2));
     }
 
-    .medal-transition-modal__slide--to img {
+    .medal-transition-modal__slide--to .medal-transition-modal__slide-badge {
       opacity: 0.8;
     }
 
-    .medal-transition-modal.is-sound-hit .medal-transition-modal__slide--to img {
+    .medal-transition-modal.is-sound-hit .medal-transition-modal__slide--to .medal-transition-modal__slide-badge {
       opacity: 1;
     }
 
@@ -12056,6 +12066,19 @@
       box-shadow: 0 0 26px rgba(164, 104, 255, 0.56), inset 0 0 18px rgba(255, 255, 255, 0.22);
     }
 
+    .final-challenge-modal__avatar-skip svg {
+      width: 22px;
+      height: 22px;
+      display: block;
+      stroke: currentColor;
+      stroke-width: 1.85;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      vector-effect: non-scaling-stroke;
+      shape-rendering: geometricPrecision;
+    }
+
     .welcome-language-setup {
       position: absolute;
       inset: 0;
@@ -12164,12 +12187,19 @@
       }
     }
 
+    @property --progress {
+      syntax: "<percentage>";
+      inherits: false;
+      initial-value: 0%;
+    }
+
     .final-challenge-modal__avatar-ring {
       --progress: 0%;
       position: absolute;
       inset: -10px;
       border-radius: 999px;
       opacity: 1;
+      transition: --progress 300ms ease-out;
     }
 
     .final-challenge-modal__avatar-ring::before,
@@ -12182,7 +12212,7 @@
     }
 
     .final-challenge-modal__avatar-ring::before {
-      background: conic-gradient(from -90deg, #47f39c 0%, #2ac8ff var(--progress), rgba(255, 255, 255, 0.12) var(--progress), rgba(255, 255, 255, 0.12) 100%);
+      background: conic-gradient(from -90deg, #22ef8f 0%, #59f6ff calc(var(--progress) * 0.48), #d6ff36 var(--progress), rgba(255, 255, 255, 0.12) var(--progress), rgba(255, 255, 255, 0.12) 100%);
       -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 9px));
       mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 9px));
       box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
@@ -12190,7 +12220,7 @@
     }
 
     .final-challenge-modal__avatar-ring::after {
-      background: radial-gradient(circle at center, rgba(57, 217, 138, 0.18), rgba(57, 217, 138, 0) 68%);
+      background: radial-gradient(circle at center, rgba(89, 246, 255, 0.2), rgba(89, 246, 255, 0) 68%);
       opacity: 0;
       transition: opacity 180ms ease;
     }
@@ -12201,7 +12231,7 @@
 
     .final-challenge-modal__avatar-btn.is-success-flash .final-challenge-modal__avatar-ring::after {
       opacity: 1;
-      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.72), rgba(57, 217, 138, 0.34) 42%, rgba(57, 217, 138, 0) 72%);
+      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.78), rgba(214, 255, 54, 0.34) 42%, rgba(89, 246, 255, 0) 72%);
       animation: finalChallengeAvatarFlash 520ms ease-out;
     }
 
@@ -13406,11 +13436,11 @@ para liberar desafio</p>
           <div class="medal-transition-modal__viewport">
             <div class="medal-transition-modal__track" id="medalTransitionTrack">
               <article class="medal-transition-modal__slide medal-transition-modal__slide--from">
-                <img id="medalTransitionFromImage" src="/medals/user-level/medal-1.png" alt="Selo anterior">
+                <div class="medal-transition-modal__slide-badge" id="medalTransitionFromImage" aria-hidden="true">L1</div>
                 <p class="medal-transition-modal__level" id="medalTransitionFromLevel">Nível 1</p>
               </article>
               <article class="medal-transition-modal__slide medal-transition-modal__slide--to">
-                <img id="medalTransitionToImage" src="/medals/user-level/medal-1.png" alt="Novo selo">
+                <div class="medal-transition-modal__slide-badge" id="medalTransitionToImage" aria-hidden="true">L2</div>
                 <p class="medal-transition-modal__level" id="medalTransitionToLevel">Nível 2</p>
               </article>
             </div>
@@ -14267,7 +14297,7 @@ para liberar desafio</p>
           day: 'Di'
         }
       };
-      const PLAYTALK_APP_GRADIENT_BACKGROUND = 'radial-gradient(circle at 18% 14%, rgba(113, 233, 255, 0.96) 0%, rgba(42, 148, 255, 0.9) 22%, rgba(21, 84, 171, 0.92) 44%, rgba(7, 20, 44, 0.98) 72%), linear-gradient(135deg, rgba(35, 214, 180, 0.9) 0%, rgba(20, 129, 224, 0.82) 46%, rgba(7, 24, 58, 1) 100%)';
+      const PLAYTALK_APP_GRADIENT_BACKGROUND = 'radial-gradient(circle at 18% 14%, rgba(120, 235, 255, 0.98) 0%, rgba(58, 184, 255, 0.94) 24%, rgba(32, 116, 234, 0.92) 52%, rgba(18, 77, 184, 0.94) 74%), linear-gradient(180deg, rgba(42, 144, 247, 0.78) 0%, rgba(18, 108, 223, 0.88) 58%, rgba(83, 221, 206, 0.86) 100%)';
       const FLASHCARD_LANGUAGE_BADGE_ORDER = ['english', 'spanish', 'french', 'german', 'portuguese', 'mandarin'];
       const TARGET_LANGUAGE_DISPLAY_ORDER = ['english', 'spanish', 'french', 'german', 'portuguese', 'mandarin'];
       const WATCH_PRESENTATION_LANGUAGE_ORDER = TARGET_LANGUAGE_DISPLAY_ORDER.slice();
@@ -22900,8 +22930,7 @@ para liberar desafio</p>
           index: medalIndex,
           label: `Selo ${medalIndex}`,
           minLevel,
-          maxLevel,
-          image: `/medals/user-level/medal-${medalIndex}.png`
+          maxLevel
         };
       }));
 
@@ -23353,10 +23382,10 @@ para liberar desafio</p>
         };
       }
 
-      function setUserMedalTransitionContent(nodeImage, nodeLevel, nodeLabel, nodeRange, medal, level, altPrefix, labelText) {
+      function setUserMedalTransitionContent(nodeImage, nodeLevel, nodeLabel, nodeRange, medal, level, _altPrefix, labelText) {
         if (nodeImage) {
-          nodeImage.src = safeText(medal?.image) || '/medals/user-level/medal-1.png';
-          nodeImage.alt = `${altPrefix} ${safeText(medal?.label) || 'Selo'}`.trim();
+          nodeImage.textContent = `L${Math.max(1, Number(medal?.index) || 1)}`;
+          nodeImage.setAttribute('title', safeText(medal?.label) || 'Selo');
         }
         if (nodeLevel) {
           nodeLevel.textContent = `Nível ${Math.max(1, Number(level) || 1)}`;
@@ -33445,6 +33474,14 @@ para liberar desafio</p>
         }));
       }
 
+      function waitForFinalChallengeUiReady() {
+        return new Promise((resolve) => {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(resolve);
+          });
+        });
+      }
+
       function bufferFinalChallengePracticeAudios(card) {
         if (!card) return;
         primeFinalChallengeCardBuffer(state.ui.finalChallengeIndex, true);
@@ -33905,12 +33942,14 @@ para liberar desafio</p>
 
       function buildFinalChallengeMusicButtonMarkup(isPlaying = false) {
         return isPlaying
-          ? '<svg viewBox="0 0 24 24" focusable="false"><path d="M14 4v8.2a3.8 3.8 0 1 1-1.8-3.24V6.2l7.6-1.9v5.05a3.8 3.8 0 1 1-1.8-3.24V2L14 4Z"></path></svg>'
-          : '<svg viewBox="0 0 24 24" focusable="false"><path d="M14 4v8.2a3.8 3.8 0 1 1-1.8-3.24V6.2l7.6-1.9v5.05a3.8 3.8 0 1 1-1.8-3.24V2L14 4Z"></path><path d="m4.7 5.7 13.6 13.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path></svg>';
+          ? '<svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M9 18a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5Z" fill="currentColor"></path><path d="M17 16a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5Z" fill="currentColor"></path><path d="M11.6 13.65V6.8l8-1.8v6.85" aria-hidden="true"></path></svg>'
+          : '<svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M9 18a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5Z" fill="currentColor"></path><path d="M17 16a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5Z" fill="currentColor"></path><path d="M11.6 13.65V6.8l8-1.8v6.85" aria-hidden="true"></path><path d="M5.1 5.1 18.9 18.9" aria-hidden="true"></path></svg>';
       }
 
       function isFinalChallengeMusicPlaying() {
-        return safeText(window.playtalkGlobalRadio?.getStation?.()) === safeText(state.ui.finalChallengeMusicStation || 'station1');
+        const radioApi = window.playtalkGlobalRadio;
+        return safeText(radioApi?.getStation?.()) === safeText(state.ui.finalChallengeMusicStation || 'station1')
+          && Boolean(radioApi?.isPlaying?.());
       }
 
       function syncFinalChallengeMusicButton() {
@@ -33930,7 +33969,7 @@ para liberar desafio</p>
           radioApi.setMuted(false);
           radioApi.setStation(state.ui.finalChallengeMusicStation || 'station1');
           if (typeof radioApi.play === 'function') {
-            radioApi.play();
+            void Promise.resolve(radioApi.play()).catch(() => {});
           }
         }
         syncFinalChallengeMusicButton();
@@ -34200,6 +34239,7 @@ para liberar desafio</p>
           await waitForFinalChallengePhaseOverlayContinue();
           setFinalChallengePhaseOverlay(false);
           setFinalChallengeStatus('');
+          await waitForFinalChallengeUiReady();
           const firstPhaseTwoCard = currentFinalChallengeCard();
           if (firstPhaseTwoCard) {
             syncFinalChallengeRunUi();
@@ -34301,15 +34341,7 @@ para liberar desafio</p>
           els.finalChallengeResultStreakValue.textContent = String(activeStreak);
         }
         if (els.finalChallengeReviewBtn) {
-          els.finalChallengeReviewBtn.hidden = state.ui.finalChallengeMode !== 'voice' || !Array.isArray(state.ui.finalChallengeWrongCards) || !state.ui.finalChallengeWrongCards.length;
-          if (!els.finalChallengeReviewBtn.hidden) {
-            setFinalChallengeResultButton(
-              els.finalChallengeReviewBtn,
-              'final-challenge-modal__cta--result-blue',
-              '<svg viewBox="0 0 24 24" focusable="false"><path d="M8 5.5v13l10-6.5-10-6.5Z"/></svg>',
-              'Revisar'
-            );
-          }
+          els.finalChallengeReviewBtn.hidden = true;
         }
         if (els.finalChallengeVoiceBtn) {
           els.finalChallengeVoiceBtn.hidden = !practiceCompleted;
@@ -34591,13 +34623,14 @@ para liberar desafio</p>
         setFinalChallengeScreen('run');
         setFinalChallengeStatus('');
         syncFinalChallengeRunUi();
+        hideFinalChallengeLaunchLoader();
+        await waitForFinalChallengeUiReady();
         const firstCard = currentFinalChallengeCard();
         if (firstCard) {
           recordFinalChallengeHeardCard(firstCard);
           state.ui.finalChallengePromptCardId = safeText(firstCard?.id);
           void playFinalChallengeAudioForLanguage(firstCard, currentTargetLanguage(), { rate: 0.9, audioProgressVisual: true });
         }
-        hideFinalChallengeLaunchLoader();
       }
 
       async function playWatchAudioForLanguage(card, language, rate, sessionToken = state.watch.sessionToken) {
