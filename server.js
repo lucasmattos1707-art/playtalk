@@ -11857,10 +11857,11 @@ function buildFinalChallengeAllocationCandidates(sequenceState, targetLanguage, 
     const sourceLevel = Number.parseInt(deck?.deckLevel, 10);
     if (!source || !Number.isInteger(sourceLevel) || sourceLevel < 1) continue;
     for (const [fallbackIndex, card] of (Array.isArray(deck?.items) ? deck.items : []).entries()) {
+      const itemSource = String(card?.source || source).trim();
       const parsedSourceIndex = Number.parseInt(card?.sourceIndex, 10);
       const sourceIndex = Number.isInteger(parsedSourceIndex)
         ? parsedSourceIndex
-        : parseSequenceCardIndexFromId(card?.id, source);
+        : parseSequenceCardIndexFromId(card?.id, itemSource);
       if (!Number.isInteger(sourceIndex) || sourceIndex < 0) continue;
       const targetText = flashcardSequenceTextForLanguage(card, targetLanguage);
       const nativeText = flashcardSequenceTextForLanguage(card, nativeLanguage);
@@ -11868,8 +11869,8 @@ function buildFinalChallengeAllocationCandidates(sequenceState, targetLanguage, 
       if (!flashcardSequenceAudioForLanguage(card, targetLanguage)) continue;
       if (!flashcardSequenceAudioForLanguage(card, nativeLanguage)) continue;
       candidates.push({
-        cardId: `${source}#${sourceIndex}`,
-        source,
+        cardId: `${itemSource}#${sourceIndex}`,
+        source: itemSource,
         sourceIndex,
         sourceLevel,
         targetLength: Array.from(targetText.replace(/\s+/g, '')).length,
