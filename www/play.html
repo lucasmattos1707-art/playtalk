@@ -12219,13 +12219,12 @@
           #00ff88 0%,
           #2effab calc(var(--progress) * 0.45),
           #99ff00 var(--progress),
-          rgba(7, 34, 21, 0.44) var(--progress),
-          rgba(7, 34, 21, 0.44) 100%
+          transparent var(--progress),
+          transparent 100%
         );
       -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
       mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
       box-shadow:
-        0 0 0 2px rgba(194, 255, 225, 0.42),
         0 0 16px rgba(0, 255, 136, 0.52),
         0 0 28px rgba(46, 255, 171, 0.34),
         0 0 36px rgba(153, 255, 0, 0.2);
@@ -12251,12 +12250,14 @@
     }
 
     .final-challenge-modal__avatar-btn img {
+      position: relative;
+      z-index: 2;
       width: 100%;
       height: 100%;
       object-fit: cover;
       border-radius: 999px;
       filter: grayscale(calc(1 - var(--challenge-color-progress))) saturate(calc(0.75 + (var(--challenge-color-progress) * 0.55)));
-      border: 2px solid rgba(255, 255, 255, 0.16);
+      border: 0;
       box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
       transition: filter 420ms ease, transform 220ms ease, border-color 220ms ease;
       will-change: filter;
@@ -15267,7 +15268,14 @@
       let finalChallengeSelectionStoreCache = null;
       let finalChallengeEligibleCardsCache = null;
       let cardsCatalogLoadPromise = null;
+      const FINAL_CHALLENGE_MUSIC_TRACKS = [
+        'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/radios/stations/station-1/after-hours-desk-2.mp3',
+        'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/radios/stations/station-1/after-hours-desk-1.mp3',
+        'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev/radios/stations/station-1/after-hours-compile-1.mp3'
+      ];
       const finalChallengeProgressiveDownloadState = new Map();
+      let finalChallengeMusicAudio = null;
+      let finalChallengeMusicTrackIndex = 0;
       const finalChallengeSelectionWarmups = new Set();
 
       loadGameOptionsFromStorage();
@@ -34120,10 +34128,50 @@
           : '<svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M9 18a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5Z" fill="currentColor"></path><path d="M17 16a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5Z" fill="currentColor"></path><path d="M11.6 13.65V6.8l8-1.8v6.85" aria-hidden="true"></path><path d="M5.1 5.1 18.9 18.9" aria-hidden="true"></path></svg>';
       }
 
+      function ensureFinalChallengeMusicAudio() {
+        if (finalChallengeMusicAudio) return finalChallengeMusicAudio;
+        const audio = new Audio();
+        audio.preload = 'auto';
+        audio.loop = false;
+        audio.crossOrigin = 'anonymous';
+        audio.playsInline = true;
+        audio.addEventListener('ended', () => {
+          finalChallengeMusicTrackIndex = (finalChallengeMusicTrackIndex + 1) % FINAL_CHALLENGE_MUSIC_TRACKS.length;
+          const nextSrc = FINAL_CHALLENGE_MUSIC_TRACKS[finalChallengeMusicTrackIndex] || '';
+          if (!nextSrc) return;
+          audio.src = nextSrc;
+          audio.load();
+          void audio.play().then(() => {
+            setFinalChallengeStatus('Trilha ativa.', '', { dismissMs: 1500 });
+            syncFinalChallengeMusicButton();
+          }).catch((error) => {
+            setFinalChallengeStatus(error?.message || 'Falha ao tocar a proxima trilha.', 'error', { dismissMs: 6000 });
+            syncFinalChallengeMusicButton();
+          });
+        });
+        audio.addEventListener('play', () => {
+          syncFinalChallengeMusicButton();
+        });
+        audio.addEventListener('pause', () => {
+          syncFinalChallengeMusicButton();
+        });
+        audio.addEventListener('error', () => {
+          setFinalChallengeStatus('Falha ao carregar a trilha publica.', 'error', { dismissMs: 6000 });
+          syncFinalChallengeMusicButton();
+        });
+        finalChallengeMusicAudio = audio;
+        return finalChallengeMusicAudio;
+      }
+
+      function stopFinalChallengeMusic() {
+        const audio = finalChallengeMusicAudio;
+        if (!audio) return;
+        audio.pause();
+        syncFinalChallengeMusicButton();
+      }
+
       function isFinalChallengeMusicPlaying() {
-        const radioApi = window.playtalkGlobalRadio;
-        return safeText(radioApi?.getStation?.()) === safeText(state.ui.finalChallengeMusicStation || 'station1')
-          && Boolean(radioApi?.isEnabled?.());
+        return Boolean(finalChallengeMusicAudio && !finalChallengeMusicAudio.paused && !finalChallengeMusicAudio.ended);
       }
 
       function syncFinalChallengeMusicButton() {
@@ -34135,40 +34183,30 @@
       }
 
       function toggleFinalChallengeMusic() {
-        const radioApi = window.playtalkGlobalRadio;
-        if (!radioApi) {
-          setFinalChallengeStatus('Player de trilha nao foi carregado.', 'error', { dismissMs: 5000 });
+        const audio = ensureFinalChallengeMusicAudio();
+        if (isFinalChallengeMusicPlaying()) {
+          audio.pause();
+          setFinalChallengeStatus('Trilha pausada.', '', { dismissMs: 2500 });
+          syncFinalChallengeMusicButton();
           return;
         }
-        const stationId = safeText(state.ui.finalChallengeMusicStation || 'station1');
-        setFinalChallengeStatus('Tentando abrir a trilha...', '', { dismissMs: 4000 });
-        if (typeof radioApi.toggleStation === 'function') {
-          void Promise.resolve(radioApi.toggleStation(stationId)).catch((error) => {
-            setFinalChallengeStatus(error?.message || 'Falha ao alternar a trilha.', 'error', { dismissMs: 6000 });
-          });
-        } else if (isFinalChallengeMusicPlaying()) {
-          if (typeof radioApi.stop === 'function') {
-            radioApi.stop();
-          } else if (typeof radioApi.setStation === 'function') {
-            radioApi.setStation('off');
-          }
-          setFinalChallengeStatus('Trilha pausada.', '', { dismissMs: 2500 });
-        } else {
-          if (typeof radioApi.startStation === 'function') {
-            void Promise.resolve(radioApi.startStation(stationId)).catch((error) => {
-              setFinalChallengeStatus(error?.message || 'Falha ao iniciar a trilha.', 'error', { dismissMs: 6000 });
-            });
-          } else if (typeof radioApi.setStation === 'function') {
-            radioApi.setMuted?.(false);
-            radioApi.setStation(stationId);
-            if (typeof radioApi.play === 'function') {
-              void Promise.resolve(radioApi.play()).catch((error) => {
-                setFinalChallengeStatus(error?.message || 'Falha ao tocar a trilha.', 'error', { dismissMs: 6000 });
-              });
-            }
-          }
+        const nextSrc = FINAL_CHALLENGE_MUSIC_TRACKS[finalChallengeMusicTrackIndex] || FINAL_CHALLENGE_MUSIC_TRACKS[0] || '';
+        if (!nextSrc) {
+          setFinalChallengeStatus('Nenhuma trilha publica foi encontrada.', 'error', { dismissMs: 5000 });
+          return;
         }
-        syncFinalChallengeMusicButton();
+        if (safeText(audio.src) !== safeText(nextSrc)) {
+          audio.src = nextSrc;
+          audio.load();
+        }
+        setFinalChallengeStatus('Tentando abrir a trilha publica...', '', { dismissMs: 4000 });
+        void audio.play().then(() => {
+          setFinalChallengeStatus('Trilha ativa.', '', { dismissMs: 2500 });
+          syncFinalChallengeMusicButton();
+        }).catch((error) => {
+          setFinalChallengeStatus(error?.message || 'Falha ao tocar a trilha publica.', 'error', { dismissMs: 6000 });
+          syncFinalChallengeMusicButton();
+        });
       }
 
       function syncFinalChallengeRunUi() {
@@ -34275,6 +34313,7 @@
       function closeFinalChallengeModal() {
         cleanupGameRecognition();
         stopFinalChallengePromptAudio();
+        stopFinalChallengeMusic();
         stopFinalChallengeIntroStatsRotation();
         clearFinalChallengeSessionState();
         state.ui.finalChallengeSessionStartedAt = 0;
@@ -34300,6 +34339,7 @@
       function cancelFinalChallengeRunToIntro() {
         cleanupGameRecognition();
         stopFinalChallengePromptAudio();
+        stopFinalChallengeMusic();
         stopFinalChallengeIntroStatsRotation();
         clearFinalChallengeSessionState();
         state.ui.finalChallengeSessionStartedAt = 0;
