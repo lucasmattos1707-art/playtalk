@@ -264,6 +264,26 @@
     return Promise.resolve(true);
   }
 
+  function stopPlayback({ clearStation = true, resetTime = true } = {}) {
+    playAttemptPending = false;
+    audio.pause();
+    if (resetTime) {
+      try {
+        audio.currentTime = 0;
+      } catch (error) {
+        // ignore currentTime reset errors
+      }
+    }
+    pendingStartTime = null;
+    if (clearStation) {
+      currentStation = DEFAULT_STATION;
+      currentTrackIndex = 0;
+    }
+    saveStation();
+    savePlaybackState();
+    emitChange();
+  }
+
   function setStation(stationId) {
     const nextStation = normalizeStationId(stationId);
     const changed = nextStation !== currentStation;
@@ -281,8 +301,7 @@
     saveStation();
 
     if (currentStation === 'off') {
-      audio.pause();
-      savePlaybackState();
+      stopPlayback({ clearStation: true, resetTime: true });
     } else {
       playCurrentTrack();
     }
@@ -290,6 +309,39 @@
     if (changed) {
       emitChange();
     }
+  }
+
+  function startStation(stationId) {
+    const nextStation = normalizeStationId(stationId);
+    muted = false;
+    saveMutedState();
+    applyMutedState();
+    if (nextStation === DEFAULT_STATION) {
+      stopPlayback({ clearStation: true, resetTime: true });
+      return Promise.resolve(false);
+    }
+    if (currentStation !== nextStation) {
+      currentStation = nextStation;
+      currentTrackIndex = 0;
+      pendingStartTime = null;
+      saveStation();
+    }
+    return playCurrentTrack();
+  }
+
+  function toggleStation(stationId) {
+    const nextStation = normalizeStationId(stationId);
+    if (nextStation === DEFAULT_STATION) {
+      stopPlayback({ clearStation: true, resetTime: true });
+      return Promise.resolve(false);
+    }
+    const sameStation = currentStation === nextStation;
+    const activelyPlaying = sameStation && !audio.paused && !audio.ended && !muted;
+    if (activelyPlaying) {
+      stopPlayback({ clearStation: true, resetTime: true });
+      return Promise.resolve(false);
+    }
+    return startStation(nextStation);
   }
 
   function setMuted(nextMuted) {
@@ -356,7 +408,10 @@
     },
     setStation,
     setMuted,
-    play: playCurrentTrack
+    play: playCurrentTrack,
+    stop: stopPlayback,
+    startStation,
+    toggleStation
   };
 
   if (document.readyState === 'loading') {

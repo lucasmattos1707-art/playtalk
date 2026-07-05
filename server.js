@@ -6655,9 +6655,7 @@ const readFlashcardStateForUser = async (userId, options = {}) => {
     };
   });
 
-  return {
-    progress: progressRecords,
-    stats: {
+  const statsPayload = {
       ...normalizeFlashcardStats({
         playTimeMs: flashcardStatsRow.play_time_ms,
         speakings: flashcardStatsRow.speakings,
@@ -6674,14 +6672,27 @@ const readFlashcardStateForUser = async (userId, options = {}) => {
       heardWordsTotal: Math.max(0, Number(trainingTotalsResult.rows[0]?.heard_words_total) || 0),
       builtSentencesTotal: Math.max(0, Number(trainingTotalsResult.rows[0]?.built_sentences_total) || 0),
       bestSequenceTotal: Math.max(0, Number(trainingTotalsResult.rows[0]?.best_sequence_total) || 0)
-    },
+    };
+  const hasStats = Boolean(
+    flashcardStatsRow
+    || statsResult.rows[0]
+    || accurateResult.rows[0]
+    || speedSamplesResult.rows[0]
+    || booksEnergyXpResult.rows[0]
+    || coinsResult.rows[0]
+    || trainingTotalsResult.rows[0]
+  );
+
+  return {
+    progress: progressRecords,
+    stats: statsPayload,
     meta: {
       userLevel: normalizeUserFlashcardLevel(languageLevelResult.rows[0]?.current_level || fallbackUserLevel),
       userLevelUpdatedAt: languageLevelResult.rows[0]?.updated_at
         ? new Date(languageLevelResult.rows[0].updated_at).toISOString()
         : null,
       hasProgress: progressRecords.length > 0,
-      hasStats: Boolean(statsResult.rows[0] || accurateResult.rows[0]),
+      hasStats,
       conqueredLanguages: serializeFlashcardConqueredLanguages(conqueredLanguages),
       hiddenCardIds: hiddenResult.rows
         .map((row) => typeof row?.card_id === 'string' ? row.card_id.trim() : '')

@@ -12213,11 +12213,16 @@
 
     .final-challenge-modal__avatar-ring::before {
       background:
-        conic-gradient(from -90deg, rgba(34, 239, 143, 0.28) 0%, rgba(89, 246, 255, 0.28) 48%, rgba(214, 255, 54, 0.28) 100%),
-        conic-gradient(from -90deg, #22ef8f 0%, #59f6ff calc(var(--progress) * 0.48), #d6ff36 var(--progress), transparent var(--progress), transparent 100%);
+        conic-gradient(from -90deg, rgba(34, 239, 143, 0.62) 0%, rgba(89, 246, 255, 0.58) 48%, rgba(214, 255, 54, 0.62) 100%),
+        conic-gradient(from -90deg, #22ef8f 0%, #59f6ff calc(var(--progress) * 0.48), #d6ff36 var(--progress), rgba(11, 28, 34, 0.38) var(--progress), rgba(11, 28, 34, 0.38) 100%);
       -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 9px));
       mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 9px));
-      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.12),
+        0 0 12px rgba(34, 239, 143, 0.34),
+        0 0 18px rgba(89, 246, 255, 0.26),
+        0 0 24px rgba(214, 255, 54, 0.18);
+      filter: saturate(1.18) brightness(1.08);
       animation: finalChallengeRingSpin 15s linear infinite;
     }
 
@@ -13152,12 +13157,6 @@ para liberar desafio</p>
         <div class="final-challenge-modal__intro-actions final-challenge-modal__result-actions">
           <button class="final-challenge-modal__cta final-challenge-modal__cta--primary" id="finalChallengeRetryBtn" type="button">Tentar de novo</button>
           <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost" id="finalChallengeVoiceBtn" type="button" hidden><span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0"></path><path d="M12 18v3"></path></svg></span>Fazer desafio de voz</button>
-          <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost" id="finalChallengeReviewBtn" type="button">
-            <span style="display:inline-flex;align-items:center;gap:10px;justify-content:center;">
-              <svg viewBox="0 0 24 24" focusable="false" style="width:18px;height:18px;fill:currentColor;"><path d="M8 5.5v13l10-6.5-10-6.5Z"/></svg>
-              <span>Revisar</span>
-            </span>
-          </button>
           <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost" id="finalChallengeMenuBtn" type="button">Voltar ao menu</button>
         </div>
       </div>
@@ -18209,6 +18208,25 @@ para liberar desafio</p>
           || stats.winsSequence > 0;
       }
 
+      function cloudStatsPayloadHasValues(raw) {
+        if (!raw || typeof raw !== 'object') return false;
+        const stats = normalizeStatsSnapshot(raw);
+        return hasMeaningfulStats(stats)
+          || stats.coinsTotal > 0
+          || stats.heardWordsTotal > 0
+          || stats.builtSentencesTotal > 0
+          || stats.bestSequenceTotal > 0
+          || stats.booksEnergyXpTotal > 0
+          || stats.speedFlashcardsPerHour > 0
+          || stats.trainingTimeMs > 0
+          || stats.pronunciationSamples > 0
+          || stats.speakings > 0
+          || stats.listenings > 0
+          || stats.readings > 0
+          || Boolean(raw?.secondStarErrorHeard)
+          || Object.keys(raw).length > 0;
+      }
+
       function readUserStatsForUser(userId = state.user?.id) {
         if (!canUseLocalCompetitiveStorage(userId)) {
           return normalizeStatsSnapshot({});
@@ -22258,7 +22276,7 @@ para liberar desafio</p>
           ? cloudState.progress.map(normalizeProgressRecord).filter(Boolean)
           : [];
         const hasCloudProgress = cloudProgress.length > 0 || Boolean(cloudState?.meta?.hasProgress);
-        const hasCloudStats = Boolean(cloudState?.meta?.hasStats);
+        const hasCloudStats = Boolean(cloudState?.meta?.hasStats) || cloudStatsPayloadHasValues(cloudState?.stats);
         const shouldRestoreLocalProgress = !hasCloudProgress && localLanguageSnapshot.progress.length > 0;
         state.stats = hasCloudStats
           ? normalizeStatsSnapshot(cloudState?.stats)
@@ -30509,6 +30527,14 @@ para liberar desafio</p>
         state.ui.finalChallengePracticeRevealTimer = window.setTimeout(revealNext, 500);
       }
 
+      function finalChallengePracticeRevealDuration(words) {
+        const count = Array.isArray(words)
+          ? words.map((word) => safeText(word).trim()).filter(Boolean).length
+          : 0;
+        if (!count) return 1100;
+        return (count * 500) + 600;
+      }
+
       function typingDisplayScaleClass(text) {
         const length = countTypingDisplayLetters(text);
         if (length >= 3 && length <= 5) return 'flashcards-typing__display--size-xl';
@@ -33874,6 +33900,9 @@ para liberar desafio</p>
         };
         const markIncorrect = async (activeButton) => {
           const actionToken = nextFinalChallengeActionToken();
+          const revealSequence = Array.isArray(blockState?.primarySequence)
+            ? blockState.primarySequence.map((token) => token?.normalized)
+            : [];
           resolved = true;
           state.ui.finalChallengeBusy = true;
           state.ui.finalChallengeAttempts += 1;
@@ -33881,12 +33910,7 @@ para liberar desafio</p>
           state.ui.finalChallengeLivesLost = Math.max(0, Number(state.ui.finalChallengeLivesLost) || 0) + 1;
           state.ui.finalChallengePracticeCorrectionText = '';
           state.ui.finalChallengePracticeCorrectionTone = '';
-          startFinalChallengePracticeReveal(
-            Array.isArray(blockState?.primarySequence)
-              ? blockState.primarySequence.map((token) => token?.normalized)
-              : [],
-            actionToken
-          );
+          startFinalChallengePracticeReveal(revealSequence, actionToken);
           resetFinalChallengePracticeStreak();
           syncFinalChallengeRunUi();
           activeButton?.classList.add('is-error');
@@ -33897,12 +33921,12 @@ para liberar desafio</p>
           if (state.ui.finalChallengeLivesLost >= finalChallengeMaxLives()) {
             state.ui.finalChallengeForcedGameOver = true;
             state.ui.finalChallengeBusy = false;
-            await wait(1100);
+            await wait(finalChallengePracticeRevealDuration(revealSequence));
             await finishFinalChallengeRun();
             return;
           }
           state.ui.finalChallengeBusy = false;
-          await wait(1100);
+          await wait(finalChallengePracticeRevealDuration(revealSequence));
           resetFinalChallengePracticeRevealState();
           await advanceFinalChallengeCard();
         };
@@ -34069,17 +34093,25 @@ para liberar desafio</p>
 
       function toggleFinalChallengeMusic() {
         const radioApi = window.playtalkGlobalRadio;
-        if (!radioApi || typeof radioApi.setStation !== 'function') return;
+        if (!radioApi) return;
         const stationId = safeText(state.ui.finalChallengeMusicStation || 'station1');
-        const stationSelected = safeText(radioApi.getStation?.()) === stationId;
-        const activelyPlaying = Boolean(radioApi.isPlaying?.());
-        if (stationSelected && activelyPlaying) {
-          radioApi.setStation('off');
+        if (typeof radioApi.toggleStation === 'function') {
+          void Promise.resolve(radioApi.toggleStation(stationId)).catch(() => {});
+        } else if (isFinalChallengeMusicPlaying()) {
+          if (typeof radioApi.stop === 'function') {
+            radioApi.stop();
+          } else if (typeof radioApi.setStation === 'function') {
+            radioApi.setStation('off');
+          }
         } else {
-          radioApi.setMuted(false);
-          radioApi.setStation(stationId);
-          if (typeof radioApi.play === 'function') {
-            void Promise.resolve(radioApi.play()).catch(() => {});
+          if (typeof radioApi.startStation === 'function') {
+            void Promise.resolve(radioApi.startStation(stationId)).catch(() => {});
+          } else if (typeof radioApi.setStation === 'function') {
+            radioApi.setMuted?.(false);
+            radioApi.setStation(stationId);
+            if (typeof radioApi.play === 'function') {
+              void Promise.resolve(radioApi.play()).catch(() => {});
+            }
           }
         }
         syncFinalChallengeMusicButton();
