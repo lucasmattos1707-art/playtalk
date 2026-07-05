@@ -5,6 +5,7 @@
   };
 
   const MODEL_LABELS = {
+    'gpt-5.5': 'GPT-5.5',
     'gpt-5-nano': 'GPT-5 Nano',
     'gpt-5-mini': 'GPT-5 Mini',
     'gpt-5': 'GPT-5',
@@ -181,7 +182,7 @@
     input.focus();
   }
 
-  modelSelect.value = loadPreference(STORAGE_KEYS.model, modelSelect.value || 'gpt-5');
+  modelSelect.value = loadPreference(STORAGE_KEYS.model, modelSelect.value || 'gpt-5.5');
   systemPromptInput.value = loadPreference(STORAGE_KEYS.systemPrompt, '');
   updateCounter();
   updatePromptStatus();

@@ -88,6 +88,7 @@ const OPENAI_CHAT_FAST_MODEL = env(process.env.OPENAI_CHAT_FAST_MODEL) || 'gpt-5
 const OPENAI_USERNAME_REVIEW_MODEL = env(process.env.OPENAI_USERNAME_REVIEW_MODEL) || 'gpt-4.1';
 const OPENAI_TRANSLATE_MODEL = env(process.env.OPENAI_TRANSLATE_MODEL) || 'gpt-4.1-mini';
 const OPENAI_CHAT_ALLOWED_MODELS = new Set([
+  'gpt-5.5',
   'gpt-5-nano',
   'gpt-5-mini',
   'gpt-5',
