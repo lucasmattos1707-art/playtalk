@@ -20651,6 +20651,7 @@ para liberar desafio</p>
           : action === 'tick'
             ? 'tick'
             : 'in';
+        const suppressTimedInterruptions = normalizedAction === 'tick' && shouldSuppressTimedProgressInterruptions();
         try {
           const response = await fetch(buildApiUrl('/api/flashcards/session-clock'), {
             method: 'POST',
@@ -20691,8 +20692,10 @@ para liberar desafio</p>
             && Number.isFinite(Number(payload?.trainingTimeMs))
           ) {
             state.stats.trainingTimeMs = Math.max(0, Math.round(Number(payload.trainingTimeMs) || 0));
-            saveUserStats({ skipCloudSync: true });
-            updateSpeakingStarMicSealProgress();
+            if (!suppressTimedInterruptions) {
+              saveUserStats({ skipCloudSync: true });
+              updateSpeakingStarMicSealProgress();
+            }
           }
           if (
             !state.entry.forceProgressResetPending
@@ -20700,9 +20703,11 @@ para liberar desafio</p>
             && Number.isFinite(Number(payload?.speedPerHour))
           ) {
             state.stats.speedFlashcardsPerHour = Math.max(0, Number(Number(payload.speedPerHour).toFixed(1)) || 0);
-            saveUserStats({ skipCloudSync: true });
-            setStageSpeedLoading(false);
-            updateSpeakingStarMicSealProgress();
+            if (!suppressTimedInterruptions) {
+              saveUserStats({ skipCloudSync: true });
+              setStageSpeedLoading(false);
+              updateSpeakingStarMicSealProgress();
+            }
           }
           if (
             !state.entry.forceProgressResetPending
@@ -20714,8 +20719,7 @@ para liberar desafio</p>
             const currentLevelValue = currentUserLevel();
             const levelChanged = nextLevel !== currentLevelValue;
             const updatedAtChanged = Boolean(nextUpdatedAt && nextUpdatedAt !== safeText(state.userLevelUpdatedAt));
-            const deferVisualLevelSync = normalizedAction === 'tick'
-              && (state.game.active || state.ui.finalChallengeRunOpen);
+            const deferVisualLevelSync = suppressTimedInterruptions;
             if (deferVisualLevelSync && (levelChanged || updatedAtChanged)) {
               state.entry.pendingFlashSessionLevelSync = true;
             }
@@ -22675,8 +22679,19 @@ para liberar desafio</p>
         });
       }
 
+      function shouldSuppressTimedProgressInterruptions() {
+        return Boolean(
+          state.ui.finalChallengeRunOpen
+          || state.game.active
+          || state.game.paused
+          || state.game.transitioning
+          || state.ui.gamePausedAtWelcome
+        );
+      }
+
       function queuePendingGameEventModal(payload) {
         if (!payload || typeof payload !== 'object') return;
+        if (payload?.kind === 'level-change' && shouldSuppressTimedProgressInterruptions()) return;
         if (!Array.isArray(state.ui.pendingGameEventModals)) {
           state.ui.pendingGameEventModals = [];
         }
@@ -22708,6 +22723,9 @@ para liberar desafio</p>
         if (!hasPendingGameEventModal()) return false;
         const pending = clearPendingGameEventModal();
         if (!pending) return false;
+        if (pending?.kind === 'level-change' && shouldSuppressTimedProgressInterruptions()) {
+          return false;
+        }
         if (pending?.kind === 'level-change') {
           await animateGameEventModalEntry();
           await openUserMedalTransitionModal(
@@ -22912,7 +22930,13 @@ para liberar desafio</p>
         } else {
           syncUserMedalUi();
         }
-        if (options.allowTransition && !options.suppressVisualTransition && state.ui.userMedalReady && medalChanged) {
+        if (
+          options.allowTransition
+          && !options.suppressVisualTransition
+          && !shouldSuppressTimedProgressInterruptions()
+          && state.ui.userMedalReady
+          && medalChanged
+        ) {
           if (state.game.active) {
             queuePendingGameEventModal({
               kind: 'level-change',
@@ -22966,6 +22990,7 @@ para liberar desafio</p>
 
       function openUserMedalTransitionModal(previousLevel, nextLevel, fromMedal, toMedal, options = {}) {
         if (!els.medalTransitionModal || !fromMedal || !toMedal) return Promise.resolve();
+        if (shouldSuppressTimedProgressInterruptions()) return Promise.resolve();
         closeUserMedalTransitionModal({ preserveGameEventExit: true, resumeIdlePause: false });
         const autoCloseMs = Math.max(0, Number(options.autoCloseMs) || USER_MEDAL_TRANSITION_TOTAL_MS);
         const isAdvancing = Number(nextLevel) >= Number(previousLevel);
