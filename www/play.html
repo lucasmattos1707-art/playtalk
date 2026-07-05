@@ -12199,8 +12199,8 @@
       inset: -10px;
       border-radius: 999px;
       opacity: 1;
-      z-index: 4;
-      transition: --progress 300ms ease-out;
+      z-index: 1;
+      transition: --progress 500ms ease-out;
     }
 
     .final-challenge-modal__avatar-ring::before,
@@ -15206,6 +15206,9 @@ para liberar desafio</p>
           finalChallengePracticeRevealWords: [],
           finalChallengePracticeRevealCount: 0,
           finalChallengePracticeRevealTimer: 0,
+          finalChallengePracticeLayoutCardId: '',
+          finalChallengePracticeLayoutRows: [],
+          finalChallengeStatusTimer: 0,
           finalChallengeCurrentStreak: 0,
           finalChallengeBestStreak: 0,
           finalChallengePersistedBestStreak: 0,
@@ -30502,6 +30505,11 @@ para liberar desafio</p>
         state.ui.finalChallengePracticeRevealCount = 0;
       }
 
+      function resetFinalChallengePracticeLayoutState() {
+        state.ui.finalChallengePracticeLayoutCardId = '';
+        state.ui.finalChallengePracticeLayoutRows = [];
+      }
+
       function startFinalChallengePracticeReveal(words, actionToken) {
         const sequence = Array.isArray(words)
           ? words.map((word) => safeText(word).trim()).filter(Boolean)
@@ -33258,6 +33266,7 @@ para liberar desafio</p>
       function resetFinalChallengeRunState() {
         clearFinalChallengeResultHeartTimers();
         resetFinalChallengePracticeRevealState();
+        resetFinalChallengePracticeLayoutState();
         state.ui.finalChallengeCards = [];
         state.ui.finalChallengeMode = 'voice';
         state.ui.finalChallengePracticePhase = 1;
@@ -33433,15 +33442,32 @@ para liberar desafio</p>
         els.finalChallengeResultScreen?.classList.toggle('is-active', normalized === 'result');
       }
 
-      function setFinalChallengeStatus(message = '', tone = '') {
+      function clearFinalChallengeStatusTimer() {
+        if (state.ui.finalChallengeStatusTimer) {
+          window.clearTimeout(state.ui.finalChallengeStatusTimer);
+        }
+        state.ui.finalChallengeStatusTimer = 0;
+      }
+
+      function setFinalChallengeStatus(message = '', tone = '', options = {}) {
         if (!els.finalChallengeStatus) return;
-        els.finalChallengeStatus.hidden = true;
-        els.finalChallengeStatus.textContent = safeText(message);
+        clearFinalChallengeStatusTimer();
+        const text = safeText(message);
+        els.finalChallengeStatus.hidden = !text;
+        els.finalChallengeStatus.textContent = text;
         els.finalChallengeStatus.className = 'final-challenge-modal__status';
         if (tone === 'success') {
           els.finalChallengeStatus.classList.add('is-success');
         } else if (tone === 'error') {
           els.finalChallengeStatus.classList.add('is-error');
+        }
+        if (!text) return;
+        const dismissMs = Math.max(0, Number(options.dismissMs) || 0);
+        if (dismissMs > 0) {
+          state.ui.finalChallengeStatusTimer = window.setTimeout(() => {
+            if (safeText(els.finalChallengeStatus?.textContent) !== text) return;
+            setFinalChallengeStatus('');
+          }, dismissMs);
         }
       }
 
@@ -33854,9 +33880,22 @@ para liberar desafio</p>
           els.finalChallengeBlocks.hidden = true;
           els.finalChallengeBlocks.classList.remove('is-correction');
           els.finalChallengeBlocks.innerHTML = '';
+          resetFinalChallengePracticeLayoutState();
           return;
         }
         const blockState = buildSecondStageWordBlockState(finalChallengePracticeTypingState(card), card);
+        const layoutCardId = safeText(card?.id);
+        if (state.ui.finalChallengePracticeLayoutCardId !== layoutCardId || !Array.isArray(state.ui.finalChallengePracticeLayoutRows) || !state.ui.finalChallengePracticeLayoutRows.length) {
+          state.ui.finalChallengePracticeLayoutCardId = layoutCardId;
+          state.ui.finalChallengePracticeLayoutRows = Array.isArray(blockState?.rows)
+            ? blockState.rows.map((row) => Array.isArray(row)
+              ? row.map((block) => ({ ...block }))
+              : [])
+            : [];
+        }
+        const layoutRows = Array.isArray(state.ui.finalChallengePracticeLayoutRows) && state.ui.finalChallengePracticeLayoutRows.length
+          ? state.ui.finalChallengePracticeLayoutRows
+          : (Array.isArray(blockState?.rows) ? blockState.rows : []);
         const correctionText = safeText(state.ui.finalChallengePracticeCorrectionText || '').trim();
         if (correctionText) {
           els.finalChallengeBlocks.hidden = false;
@@ -33874,7 +33913,7 @@ para liberar desafio</p>
           return;
         }
         els.finalChallengeBlocks.classList.remove('is-correction');
-        if (!blockState?.rows?.length) {
+        if (!layoutRows.length) {
           els.finalChallengeBlocks.hidden = true;
           els.finalChallengeBlocks.innerHTML = '';
           return;
@@ -34010,7 +34049,7 @@ para liberar desafio</p>
           buttons.push(button);
           rowNode.appendChild(button);
         };
-        blockState.rows.forEach((row) => {
+        layoutRows.forEach((row) => {
           const rowNode = document.createElement('div');
           rowNode.className = 'final-challenge-modal__block-row';
           row.forEach((block) => appendBlock(block, rowNode));
@@ -34094,24 +34133,35 @@ para liberar desafio</p>
 
       function toggleFinalChallengeMusic() {
         const radioApi = window.playtalkGlobalRadio;
-        if (!radioApi) return;
+        if (!radioApi) {
+          setFinalChallengeStatus('Player de trilha nao foi carregado.', 'error', { dismissMs: 5000 });
+          return;
+        }
         const stationId = safeText(state.ui.finalChallengeMusicStation || 'station1');
+        setFinalChallengeStatus('Tentando abrir a trilha...', '', { dismissMs: 4000 });
         if (typeof radioApi.toggleStation === 'function') {
-          void Promise.resolve(radioApi.toggleStation(stationId)).catch(() => {});
+          void Promise.resolve(radioApi.toggleStation(stationId)).catch((error) => {
+            setFinalChallengeStatus(error?.message || 'Falha ao alternar a trilha.', 'error', { dismissMs: 6000 });
+          });
         } else if (isFinalChallengeMusicPlaying()) {
           if (typeof radioApi.stop === 'function') {
             radioApi.stop();
           } else if (typeof radioApi.setStation === 'function') {
             radioApi.setStation('off');
           }
+          setFinalChallengeStatus('Trilha pausada.', '', { dismissMs: 2500 });
         } else {
           if (typeof radioApi.startStation === 'function') {
-            void Promise.resolve(radioApi.startStation(stationId)).catch(() => {});
+            void Promise.resolve(radioApi.startStation(stationId)).catch((error) => {
+              setFinalChallengeStatus(error?.message || 'Falha ao iniciar a trilha.', 'error', { dismissMs: 6000 });
+            });
           } else if (typeof radioApi.setStation === 'function') {
             radioApi.setMuted?.(false);
             radioApi.setStation(stationId);
             if (typeof radioApi.play === 'function') {
-              void Promise.resolve(radioApi.play()).catch(() => {});
+              void Promise.resolve(radioApi.play()).catch((error) => {
+                setFinalChallengeStatus(error?.message || 'Falha ao tocar a trilha.', 'error', { dismissMs: 6000 });
+              });
             }
           }
         }

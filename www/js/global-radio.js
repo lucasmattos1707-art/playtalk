@@ -168,6 +168,20 @@
     document.dispatchEvent(new CustomEvent('playtalk:global-radio-change', { detail }));
   }
 
+  function emitDebug(message, tone = 'info', extra = {}) {
+    document.dispatchEvent(new CustomEvent('playtalk:global-radio-debug', {
+      detail: {
+        message: String(message || '').trim(),
+        tone: String(tone || 'info').trim().toLowerCase(),
+        stationId: currentStation,
+        trackIndex: currentTrackIndex,
+        src: String(audio.currentSrc || audio.src || '').trim(),
+        muted,
+        ...extra
+      }
+    }));
+  }
+
   function applyMutedState() {
     audio.muted = Boolean(muted);
     document.documentElement.dataset.globalRadioMuted = muted ? 'true' : 'false';
@@ -203,6 +217,7 @@
       audio.pause();
       audio.removeAttribute('src');
       audio.load();
+      emitDebug('Estacao sem faixas configuradas.', 'error', { reason: 'no-tracks' });
       return false;
     }
 
@@ -212,12 +227,14 @@
 
     const nextSrc = resolveTrackUrl(station.tracks[currentTrackIndex]);
     if (!nextSrc) {
+      emitDebug('Nao encontrei o link da faixa.', 'error', { reason: 'missing-src' });
       return false;
     }
 
     if (audio.src !== nextSrc) {
       audio.src = nextSrc;
       audio.load();
+      emitDebug('Faixa localizada. Preparando reproducao...', 'info', { reason: 'track-loaded', src: nextSrc });
     }
     applyPendingStartTime();
 
@@ -239,10 +256,12 @@
     if (!canPlay || currentStation === 'off') {
       playAttemptPending = false;
       emitChange();
+      emitDebug('Trilha indisponivel para reproduzir.', 'error', { reason: 'cannot-play' });
       return Promise.resolve(false);
     }
 
     applyMutedState();
+    emitDebug('Tentando iniciar a trilha...', 'info', { reason: 'play-request' });
     const playPromise = audio.play();
     if (playPromise && typeof playPromise.then === 'function') {
       return playPromise
@@ -250,17 +269,23 @@
           playAttemptPending = false;
           savePlaybackState();
           emitChange();
+          emitDebug('Trilha em reproducao.', 'success', { reason: 'play-started' });
           return true;
         })
-        .catch(() => {
+        .catch((error) => {
           playAttemptPending = true;
           emitChange();
+          emitDebug(error?.message || 'O player bloqueou a reproducao da trilha.', 'error', {
+            reason: 'play-failed',
+            errorMessage: String(error?.message || '').trim()
+          });
           return false;
         });
     }
     playAttemptPending = false;
     savePlaybackState();
     emitChange();
+    emitDebug('Trilha iniciada sem Promise do navegador.', 'success', { reason: 'play-started-no-promise' });
     return Promise.resolve(true);
   }
 
@@ -282,6 +307,7 @@
     saveStation();
     savePlaybackState();
     emitChange();
+    emitDebug('Trilha parada.', 'info', { reason: 'stopped' });
   }
 
   function setStation(stationId) {
@@ -355,11 +381,18 @@
     if (!playAttemptPending) {
       return;
     }
+    emitDebug('Nova tentativa apos interacao do usuario...', 'info', { reason: 'retry-after-interaction' });
     playCurrentTrack();
   }
 
-  audio.addEventListener('ended', advanceTrack);
-  audio.addEventListener('error', advanceTrack);
+  audio.addEventListener('ended', () => {
+    emitDebug('Faixa finalizada. Indo para a proxima...', 'info', { reason: 'track-ended' });
+    advanceTrack();
+  });
+  audio.addEventListener('error', () => {
+    emitDebug('Erro ao carregar a faixa atual. Tentando a proxima...', 'error', { reason: 'audio-error' });
+    advanceTrack();
+  });
 
   document.addEventListener('pointerdown', handleFirstInteraction, { passive: true });
   document.addEventListener('keydown', handleFirstInteraction);
@@ -405,6 +438,9 @@
     },
     isPlaying() {
       return currentStation !== 'off' && !audio.paused && !audio.ended && !muted;
+    },
+    getCurrentTrackSrc() {
+      return String(audio.currentSrc || audio.src || '').trim();
     },
     setStation,
     setMuted,
