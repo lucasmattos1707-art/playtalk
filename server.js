@@ -9575,6 +9575,7 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
       if (!source || !id || fallbackItemCatalog.has(catalogKey)) return;
       fallbackItemCatalog.set(catalogKey, {
         id,
+        source,
         sourceIndex: Number.isInteger(Number.parseInt(item?.sourceIndex, 10)) ? Number.parseInt(item.sourceIndex, 10) : null,
         english: String(item?.english || '').trim(),
         portuguese: String(item?.portuguese || '').trim(),
@@ -9597,11 +9598,11 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
 
   const incomingSelectedIds = new Set();
   incomingDecks.forEach((deck) => {
-    const source = String(deck?.source || '').trim();
     const items = Array.isArray(deck?.items) ? deck.items : [];
     items.forEach((item) => {
       const id = String(item?.id || '').trim();
-      if (source && id) incomingSelectedIds.add(sequenceCardCatalogKey(source, id));
+      const itemSource = String(item?.source || deck?.source || '').trim();
+      if (itemSource && id) incomingSelectedIds.add(sequenceCardCatalogKey(itemSource, id));
     });
   });
 
@@ -9614,16 +9615,19 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
     const deckLevel = reserveSlot(deck?.deckLevel ?? fallback?.deckLevel);
     const title = String(deck?.title || fallback?.title || '').trim() || String(fallback?.title || '').trim();
 
-    const usedDeckItemIds = new Set();
+    const usedDeckItemCatalogKeys = new Set();
     const orderedItems = [];
     (Array.isArray(deck?.items) ? deck.items : []).forEach((item) => {
       const rawId = String(item?.id || '').trim();
-      if (!rawId || usedDeckItemIds.has(rawId)) return;
-      const catalogItem = fallbackItemCatalog.get(sequenceCardCatalogKey(source, rawId));
+      const itemSource = String(item?.source || source).trim();
+      const itemCatalogKey = sequenceCardCatalogKey(itemSource, rawId);
+      if (!rawId || usedDeckItemCatalogKeys.has(itemCatalogKey)) return;
+      const catalogItem = fallbackItemCatalog.get(itemCatalogKey);
       if (!catalogItem) return;
-      usedDeckItemIds.add(rawId);
+      usedDeckItemCatalogKeys.add(itemCatalogKey);
       orderedItems.push({
         ...catalogItem,
+        source: itemSource,
         orderIndex: orderedItems.length
       });
     });
@@ -9632,13 +9636,14 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
       .filter((item) => {
         const id = String(item?.id || '').trim();
         if (!id) return false;
-        if (usedDeckItemIds.has(id)) return false;
+        if (usedDeckItemCatalogKeys.has(sequenceCardCatalogKey(source, id))) return false;
         // If card is already placed in another deck in sequence state, keep that move.
         if (incomingSelectedIds.has(sequenceCardCatalogKey(source, id))) return false;
         return true;
       })
       .map((item, index) => ({
         id: String(item?.id || '').trim(),
+        source,
         english: String(item?.english || '').trim(),
         portuguese: String(item?.portuguese || '').trim(),
         french: String(item?.french || '').trim(),
@@ -9679,11 +9684,13 @@ function sanitizeFlashcardsSequencePayload(payload, fallbackDecks = []) {
       items: Array.isArray(deck.items)
         ? deck.items.map((item, index) => ({
           id: String(item?.id || `${String(deck.source || '').trim()}#${index + 1}`).trim(),
+          source: String(deck.source || '').trim(),
           sourceIndex: Number.isInteger(Number.parseInt(item?.sourceIndex, 10)) ? Number.parseInt(item.sourceIndex, 10) : index,
           english: String(item?.english || '').trim(),
           portuguese: String(item?.portuguese || '').trim(),
           french: String(item?.french || '').trim(),
           mandarin: String(item?.mandarin || '').trim(),
+          mandarinPinyin: String(item?.mandarinPinyin || item?.pinyinComTons || item?.pinyin || '').trim(),
           spanish: String(item?.spanish || '').trim(),
           german: String(item?.german || '').trim(),
           image: String(item?.image || '').trim(),
@@ -9726,7 +9733,10 @@ function compactFlashcardsSequenceForStorage(state) {
       const deckLevel = Number.parseInt(deck?.deckLevel, 10);
       if (!source || !Number.isInteger(deckLevel)) return null;
       const items = (Array.isArray(deck?.items) ? deck.items : [])
-        .map((item) => ({ id: String(item?.id || '').trim() }))
+        .map((item) => ({
+          id: String(item?.id || '').trim(),
+          source: String(item?.source || deck?.source || '').trim()
+        }))
         .filter((item) => item.id);
       return { source, deckLevel, items };
     })

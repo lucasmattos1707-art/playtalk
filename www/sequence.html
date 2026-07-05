@@ -247,10 +247,12 @@
             deckLevel: parseSlot(deck?.deckLevel),
             items: Array.isArray(deck?.items) ? deck.items.map((item) => ({
               id: String(item?.id || '').trim(),
+              source: String(item?.source || deck?.source || '').trim(),
               english: String(item?.english || '').trim(),
               portuguese: String(item?.portuguese || '').trim(),
               french: String(item?.french || '').trim(),
               mandarin: String(item?.mandarin || '').trim(),
+              mandarinPinyin: String(item?.mandarinPinyin || item?.pinyinComTons || item?.pinyin || '').trim(),
               spanish: String(item?.spanish || '').trim(),
               german: String(item?.german || '').trim(),
               image: String(item?.image || '').trim(),
@@ -433,7 +435,13 @@
         state.decks.forEach((deck) => {
           deck.items.forEach((item) => {
             if (isSelectedCard(deck.source, item?.id)) {
-              movedCards.push({ item: { ...item }, fromSource: deck.source });
+              movedCards.push({
+                item: {
+                  ...item,
+                  source: String(item?.source || deck.source || '').trim()
+                },
+                fromSource: deck.source
+              });
             }
           });
         });
@@ -486,10 +494,12 @@
                 items: Array.isArray(deck.items)
                   ? deck.items.map((item) => ({
                     id: String(item?.id || '').trim(),
+                    source: String(item?.source || deck.source || '').trim(),
                     english: String(item?.english || '').trim(),
                     portuguese: String(item?.portuguese || '').trim(),
                     french: String(item?.french || '').trim(),
                     mandarin: String(item?.mandarin || '').trim(),
+                    mandarinPinyin: String(item?.mandarinPinyin || item?.pinyinComTons || item?.pinyin || '').trim(),
                     spanish: String(item?.spanish || '').trim(),
                     german: String(item?.german || '').trim(),
                     image: String(item?.image || '').trim(),
