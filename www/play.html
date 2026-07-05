@@ -12214,17 +12214,24 @@
 
     .final-challenge-modal__avatar-ring::before {
       background:
-        conic-gradient(from -90deg, rgba(0, 255, 136, 1) 0%, rgba(46, 255, 171, 1) 38%, rgba(153, 255, 0, 1) 70%, rgba(43, 255, 128, 1) 100%),
-        conic-gradient(from -90deg, #00ff88 0%, #2effab calc(var(--progress) * 0.45), #99ff00 var(--progress), rgba(0, 46, 20, 1) var(--progress), rgba(0, 46, 20, 1) 100%);
+        conic-gradient(
+          from -90deg,
+          #00ff88 0%,
+          #2effab calc(var(--progress) * 0.45),
+          #99ff00 var(--progress),
+          rgba(7, 34, 21, 0.44) var(--progress),
+          rgba(7, 34, 21, 0.44) 100%
+        );
       -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
       mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
       box-shadow:
-        0 0 0 2px rgba(194, 255, 225, 0.52),
-        0 0 18px rgba(0, 255, 136, 0.7),
-        0 0 32px rgba(46, 255, 171, 0.58),
-        0 0 42px rgba(153, 255, 0, 0.42);
+        0 0 0 2px rgba(194, 255, 225, 0.42),
+        0 0 16px rgba(0, 255, 136, 0.52),
+        0 0 28px rgba(46, 255, 171, 0.34),
+        0 0 36px rgba(153, 255, 0, 0.2);
       filter: saturate(1.5) brightness(1.18);
       animation: finalChallengeRingSpin 15s linear infinite;
+      transform-origin: center;
     }
 
     .final-challenge-modal__avatar-ring::after {
@@ -13044,9 +13051,8 @@
           </button>
         </div>
         <div class="final-challenge-modal__intro-header">
-          <p class="final-challenge-modal__eyebrow">Feedback</p>
-          <p class="final-challenge-modal__intro-feedback" id="finalChallengeIntroFeedback">Complete o treino
-para liberar desafio</p>
+          <p class="final-challenge-modal__eyebrow">FLUENT LEVEL UP</p>
+          <p class="final-challenge-modal__intro-feedback" id="finalChallengeIntroFeedback"></p>
           <div class="final-challenge-modal__level-nav">
             <button class="final-challenge-modal__level-nav-btn" id="finalChallengeLevelPrevBtn" type="button" aria-label="Nivel anterior">
               <svg viewBox="0 0 24 24" focusable="false"><path d="M14.7 5.3a1 1 0 0 1 0 1.4L10.41 11H20a1 1 0 1 1 0 2h-9.59l4.3 4.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
@@ -13058,7 +13064,7 @@ para liberar desafio</p>
           </div>
         </div>
         <div class="final-challenge-modal__intro-actions">
-          <button class="final-challenge-modal__cta final-challenge-modal__cta--primary" id="finalChallengePracticeBtn" type="button"><span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>Iniciar treino</button>
+          <button class="final-challenge-modal__cta final-challenge-modal__cta--primary" id="finalChallengePracticeBtn" type="button"><span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>INICIAR AGORA</button>
           <button class="final-challenge-modal__cta final-challenge-modal__cta--ghost" id="finalChallengeStartBtn" type="button"><span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m12 3 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 16.53l-5.3 2.78 1.01-5.9-4.29-4.18 5.93-.86L12 3Z"></path></svg></span>Desafio final</button>
         </div>
       </div>
@@ -33474,14 +33480,14 @@ para liberar desafio</p>
       function syncNativeUiStaticCopy() {
         const introEyebrow = els.finalChallengeIntroScreen?.querySelector('.final-challenge-modal__eyebrow');
         if (introEyebrow) {
-          introEyebrow.textContent = nativeUiText('feedback');
+          introEyebrow.textContent = 'FLUENT LEVEL UP';
         }
         const resultEyebrow = els.finalChallengeResultScreen?.querySelector('.final-challenge-modal__eyebrow');
         if (resultEyebrow) {
           resultEyebrow.textContent = nativeUiText('result');
         }
         if (els.finalChallengePracticeBtn) {
-          els.finalChallengePracticeBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>${escapeHtml(`INICIAR NIVEL (${currentFinalChallengeLevel()})`)}`;
+          els.finalChallengePracticeBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>INICIAR AGORA`;
         }
         if (els.finalChallengeStartBtn) {
           els.finalChallengeStartBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m12 3 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 16.53l-5.3 2.78 1.01-5.9-4.29-4.18 5.93-.86L12 3Z"></path></svg></span>${escapeHtml(nativeUiText('final_challenge'))}`;
@@ -33771,7 +33777,7 @@ para liberar desafio</p>
           if (busyLevel && state.ui.finalChallengeDownloadLaunchMode === 'practice') {
             syncFinalChallengeInlineDownloadButton();
           } else {
-            els.finalChallengePracticeBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>${escapeHtml(`INICIAR NIVEL (${selectedLevel})`)}`;
+            els.finalChallengePracticeBtn.innerHTML = `<span class="final-challenge-modal__cta-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8" fill="none"></circle><circle cx="12" cy="12" r="4" fill="none"></circle><circle cx="12" cy="12" r="1.8"></circle></svg></span>INICIAR AGORA`;
           }
         }
         if (els.finalChallengeLevelPrevBtn) {
@@ -33786,11 +33792,8 @@ para liberar desafio</p>
           els.finalChallengeIntroLevel.textContent = `Nivel ${selectedLevel}`;
         }
         if (els.finalChallengeIntroFeedback) {
-          els.finalChallengeIntroFeedback.textContent = (hasDeck || hasStoredDeck)
-            ? (challengeUnlocked ? nativeUiText('training_complete_unlock') : nativeUiText('complete_training_unlock'))
-            : hasDownloadRecord
-              ? `${nativeUiText('level')} ${selectedLevel} • ${currentTargetLanguageLabel()}`
-              : `DOWNLOADS OPCIONAIS\n${nativeUiText('level')} ${selectedLevel} • ${currentTargetLanguageLabel()}`;
+          els.finalChallengeIntroFeedback.textContent = '';
+          els.finalChallengeIntroFeedback.hidden = true;
         }
         if (record.completed) {
           if (!state.ui.finalChallengeIntroStatsTimer) {
