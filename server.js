@@ -91,9 +91,10 @@ const OPENAI_CHAT_ALLOWED_MODELS = new Set([
   'gpt-5-nano',
   'gpt-5-mini',
   'gpt-5',
-  'gpt-5.1',
   'gpt-5-chat-latest',
-  'gpt-4.1'
+  'gpt-4.1',
+  'gpt-4.1-mini',
+  'gpt-4.1-nano'
 ]);
 const PLAYTALK_PUBLIC_BASE_URL = env(process.env.PLAYTALK_PUBLIC_BASE_URL);
 const STRIPE_SECRET_KEY = env(process.env.STRIPE_SECRET_KEY);
