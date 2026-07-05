@@ -16231,13 +16231,14 @@
         const pending = state.game.runtimeAudioSourcePromises.get(safeSrc);
         if (pending) return pending;
         const sourcePromise = (async () => {
+          const offlineGameplay = shouldUseOfflineGameplayRuntime();
           try {
             const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
             let availableResponse = await cache.match(safeSrc);
             if (availableResponse) {
               return await cacheRuntimeAudioBlob(safeSrc, availableResponse);
             }
-            if (navigator.onLine !== false) {
+            if (!offlineGameplay && navigator.onLine !== false) {
               const networkResponse = await fetch(safeSrc, { cache: 'force-cache' });
               if (!networkResponse.ok) return safeSrc;
               await cache.put(safeSrc, networkResponse.clone());
@@ -16291,13 +16292,14 @@
         const pending = state.game.runtimeImageSourcePromises.get(safeSrc);
         if (pending) return pending;
         const sourcePromise = (async () => {
+          const offlineGameplay = shouldUseOfflineGameplayRuntime();
           try {
             const cache = await window.caches.open(FINAL_CHALLENGE_AUDIO_CACHE_NAME);
             const availableResponse = await cache.match(safeSrc);
             if (availableResponse) {
               return await cacheRuntimeImageBlob(safeSrc, availableResponse);
             }
-            if (navigator.onLine !== false) {
+            if (!offlineGameplay && navigator.onLine !== false) {
               const networkResponse = await fetch(safeSrc, { cache: 'force-cache' });
               if (!networkResponse.ok) return safeSrc;
               await cache.put(safeSrc, networkResponse.clone());
@@ -17090,10 +17092,19 @@
         const stored = rawStored?.serverAllocated === true ? rawStored : null;
         const currentGeneralLevelsVersion = finalChallengeGeneralLevelsVersion();
         const storedGeneralLevelsVersion = readFinalChallengeSelectionVersion(stored);
+        const downloadRecord = readFinalChallengeDownloadRecord(challengeLevel);
+        const preserveDownloadedSelection = Boolean(
+          downloadRecord?.completed
+          && (
+            (Array.isArray(stored?.ids) && stored.ids.length >= FINAL_CHALLENGE_CARD_COUNT)
+            || (Array.isArray(stored?.cards) && stored.cards.length >= FINAL_CHALLENGE_CARD_COUNT)
+          )
+        );
         const hasGeneralLevelsVersionMismatch = Boolean(
           currentGeneralLevelsVersion
           && storedGeneralLevelsVersion
           && currentGeneralLevelsVersion !== storedGeneralLevelsVersion
+          && !preserveDownloadedSelection
         );
         const storedIds = Array.isArray(stored?.ids)
           ? stored.ids.map((id) => safeText(id)).filter(Boolean)
@@ -18293,6 +18304,10 @@
           (state.ui.finalChallengeRunOpen && state.ui.finalChallengeScreen === 'run')
           || (state.game.active && !state.game.paused && !state.ui.gamePausedAtWelcome)
         );
+      }
+
+      function shouldUseOfflineGameplayRuntime() {
+        return shouldDeferGameplayNetworkSync();
       }
 
       function queueGameplayNetworkSync(kind = 'cloud') {
@@ -33952,6 +33967,12 @@
         const challengeLevel = normalizeUserLevel(level);
         updateFinalChallengeLaunchLoader('Preparando nivel', `Separando o Nivel ${challengeLevel} para ${launchMode === 'voice' ? 'desafio' : 'treino'}.`);
         let selection = resolveStoredFinalChallengeSelection(challengeLevel);
+        const localDownloadRecord = readFinalChallengeDownloadRecord(challengeLevel);
+        const hasLocalDownloadedDeck = Boolean(localDownloadRecord?.completed);
+        if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
+          await ensureCardsCatalogLoaded();
+          selection = resolveStoredFinalChallengeSelection(challengeLevel);
+        }
         if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
           updateFinalChallengeLaunchLoader('Montando deck', 'Buscando 25 cartas do deck global e organizando a rodada.');
           setFinalChallengeFlowFeedback('Montando as 25 cartas pelo deck global...', 2200);
@@ -33960,16 +33981,9 @@
         }
         const payload = finalChallengeDownloadPayload(challengeLevel);
         updateFinalChallengeLaunchLoader('Checando arquivos', 'Verificando se os audios e imagens desse nivel ja estao prontos.');
-        const ready = await finalChallengeDownloadRecordIsReady(challengeLevel, payload);
+        const ready = hasLocalDownloadedDeck && finalChallengeDownloadRecordMatches(challengeLevel, payload);
         if (!ready) {
-          updateFinalChallengeLaunchLoader('Baixando em segundo plano', 'Liberando a rodada enquanto o restante do pacote continua baixando.');
-          void startProgressiveFinalChallengeDownload(challengeLevel, {
-            launchMode,
-            releasePercent: 10,
-            background: true
-          }).catch((error) => {
-            console.warn('Falha ao baixar nivel em segundo plano durante a rodada:', error);
-          });
+          updateFinalChallengeLaunchLoader('Deck pronto', 'Abrindo com cache local e mantendo o restante fora da rodada.');
           selection = resolveStoredFinalChallengeSelection(challengeLevel);
         }
         if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
