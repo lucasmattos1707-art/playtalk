@@ -8722,7 +8722,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 9px;
+      gap: 0;
       width: 100%;
     }
 
@@ -8762,9 +8762,9 @@
       padding: 0;
       border-radius: 0;
       font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: 22px;
+      font-size: 28px;
       font-weight: 800;
-      line-height: 1.15;
+      line-height: 1.02;
       letter-spacing: 0;
       text-transform: uppercase;
       background: transparent;
@@ -12338,7 +12338,7 @@
     .final-challenge-modal__blocks {
       width: min(94vw, 680px);
       display: grid;
-      gap: 12px;
+      gap: 2px;
       justify-items: stretch;
       align-content: center;
     }
@@ -12375,18 +12375,18 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 12px;
+      gap: 0;
     }
 
     .final-challenge-modal__block {
-      min-width: min(24vw, 128px);
-      min-height: 48px;
-      padding: 8px 12px;
+      min-width: 0;
+      min-height: 0;
+      padding: 0;
       border-radius: 0;
       border: none;
       background: transparent;
       color: #f5f7fb;
-      font: 800 clamp(22px, 5.8vw, 31px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
+      font: 800 clamp(28px, 7.25vw, 39px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
       text-transform: uppercase;
       box-shadow: none;
       cursor: pointer;
@@ -14002,6 +14002,9 @@
           native_language: 'Lingua nativa',
           accent: 'Sotaque',
           typing: 'Digitacao',
+          hear_native_text: 'Ouvir texto nativo',
+          disabled: 'Desligado',
+          enabled: 'Ligado',
           manual: 'Manual',
           by_word: 'Por palavra',
           by_letter: 'Por letra',
@@ -14060,6 +14063,9 @@
           native_language: 'Native language',
           accent: 'Accent',
           typing: 'Typing',
+          hear_native_text: 'Hear native text',
+          disabled: 'Off',
+          enabled: 'On',
           manual: 'Manual',
           by_word: 'By word',
           by_letter: 'By letter',
@@ -14118,6 +14124,9 @@
           native_language: 'Idioma nativo',
           accent: 'Acento',
           typing: 'Escritura',
+          hear_native_text: 'Escuchar texto nativo',
+          disabled: 'Apagado',
+          enabled: 'Encendido',
           manual: 'Manual',
           by_word: 'Por palabra',
           by_letter: 'Por letra',
@@ -14176,6 +14185,9 @@
           native_language: 'Langue native',
           accent: 'Accent',
           typing: 'Saisie',
+          hear_native_text: 'Ecouter le texte natif',
+          disabled: 'Desactive',
+          enabled: 'Active',
           manual: 'Manuel',
           by_word: 'Par mot',
           by_letter: 'Par lettre',
@@ -14234,6 +14246,9 @@
           native_language: 'Muttersprache',
           accent: 'Akzent',
           typing: 'Tippen',
+          hear_native_text: 'Nativen Text horen',
+          disabled: 'Aus',
+          enabled: 'An',
           manual: 'Manuell',
           by_word: 'Nach Wort',
           by_letter: 'Nach Buchstabe',
@@ -14292,6 +14307,9 @@
           native_language: 'Muyu',
           accent: 'Kouyin',
           typing: 'Shuru',
+          hear_native_text: 'Ting muyu wenben',
+          disabled: 'Guanbi',
+          enabled: 'Kaiqi',
           manual: 'Shoudong',
           by_word: 'An ci',
           by_letter: 'An zi mu',
@@ -14345,6 +14363,7 @@
         speed: ['0.70', '0.80', '0.90', '1.00'],
         accent: ['mix_100_0', 'mix_90_10', 'mix_80_20', 'mix_70_30', 'mix_60_40', 'mix_50_50', 'mix_40_60', 'mix_30_70', 'mix_20_80', 'mix_10_90', 'mix_0_100'],
         fourthStageTyping: ['off', 'on'],
+        practiceNativeAudio: ['off', 'on'],
         mode: ['training'],
         targetLanguage: TARGET_LANGUAGE_DISPLAY_ORDER.slice(),
         nativeLanguage: ['portuguese', 'english', 'french', 'mandarin', 'spanish', 'german']
@@ -14354,6 +14373,7 @@
         speed: '0.90',
         accent: 'mix_100_0',
         fourthStageTyping: 'off',
+        practiceNativeAudio: 'off',
         mode: 'training',
         targetLanguage: 'english',
         nativeLanguage: 'portuguese'
@@ -15265,6 +15285,7 @@
           speed: DEFAULT_GAME_OPTIONS.speed,
           accent: DEFAULT_GAME_OPTIONS.accent,
           fourthStageTyping: DEFAULT_GAME_OPTIONS.fourthStageTyping,
+          practiceNativeAudio: DEFAULT_GAME_OPTIONS.practiceNativeAudio,
           mode: DEFAULT_GAME_OPTIONS.mode,
           targetLanguage: DEFAULT_GAME_OPTIONS.targetLanguage,
           nativeLanguage: DEFAULT_GAME_OPTIONS.nativeLanguage
@@ -15754,6 +15775,10 @@
 
       function currentAlbumsLanguage() {
         return normalizeGameOptionValue('targetLanguage', state.ui?.albumsLanguage || state.options?.targetLanguage);
+      }
+
+      function shouldUsePracticeNativeAudio() {
+        return normalizeGameOptionValue('practiceNativeAudio', state.options?.practiceNativeAudio) === 'on';
       }
 
       function currentNativeUiLanguage() {
@@ -16445,7 +16470,9 @@
       function finalChallengeDownloadPayload(level) {
         const selection = resolveStoredFinalChallengeSelection(level);
         const cards = Array.isArray(selection.cards) ? selection.cards : [];
-        const languages = Array.from(new Set([currentNativeLanguage(), currentTargetLanguage()]));
+        const languages = shouldUsePracticeNativeAudio()
+          ? Array.from(new Set([currentTargetLanguage(), currentNativeLanguage()]))
+          : [currentTargetLanguage()];
         const urls = [];
         const imageUrls = [];
         cards.forEach((card) => {
@@ -16471,6 +16498,7 @@
       function buildFinalChallengeDownloadAssets(payload) {
         const nativeLanguage = currentNativeLanguage();
         const targetLanguage = currentTargetLanguage();
+        const includeNativeAudio = shouldUsePracticeNativeAudio();
         const seen = new Set();
         const assets = [];
         const cards = Array.isArray(payload?.cards) ? payload.cards : [];
@@ -16480,7 +16508,7 @@
             seen.add(`image:${imageUrl}`);
             assets.push({ src: imageUrl, kind: 'image' });
           }
-          [targetLanguage, nativeLanguage].forEach((language) => {
+          [targetLanguage, ...(includeNativeAudio ? [nativeLanguage] : [])].forEach((language) => {
             const audioUrl = normalizeFinalChallengeDownloadUrl(resolveCardAudioUrlForLanguage(card, language, {
               accent: language === 'english' ? currentLanguageBackgroundAccent() : ''
             }));
@@ -16505,9 +16533,10 @@
         const recordCardIds = Array.isArray(record.cardIds)
           ? record.cardIds.map((id) => safeText(id)).filter(Boolean)
           : [];
-        return Number(record.audioCount) === payload.audioUrls.length
+        const recordAudioSet = new Set(recordUrls);
+        return recordUrls.length >= payload.audioUrls.length
+          && payload.audioUrls.every((url) => recordAudioSet.has(url))
           && Number(record.imageCount) === payload.imageUrls.length
-          && arraysHaveSameOrderedValues(recordUrls, payload.audioUrls)
           && arraysHaveSameOrderedValues(recordImageUrls, payload.imageUrls)
           && arraysHaveSameOrderedValues(recordCardIds, payload.cardIds);
       }
@@ -17496,7 +17525,7 @@
       }
 
       function currentGameOptionSlides() {
-        const slides = ['difficulty', 'targetLanguage', 'nativeLanguage'];
+        const slides = ['difficulty', 'targetLanguage', 'nativeLanguage', 'practiceNativeAudio'];
         if (currentTargetLanguage() === 'english') {
           slides.push('accent');
         }
@@ -17781,6 +17810,7 @@
         state.options.speed = normalizeGameOptionValue('speed', options.speed);
         state.options.accent = normalizeGameOptionValue('accent', options.accent);
         state.options.fourthStageTyping = normalizeGameOptionValue('fourthStageTyping', options.fourthStageTyping);
+        state.options.practiceNativeAudio = normalizeGameOptionValue('practiceNativeAudio', options.practiceNativeAudio);
         state.options.mode = normalizeGameOptionValue('mode', options.mode);
         state.options.targetLanguage = normalizeGameOptionValue('targetLanguage', options.targetLanguage);
         state.options.nativeLanguage = normalizeGameOptionValue('nativeLanguage', options.nativeLanguage);
@@ -24126,6 +24156,14 @@
               }
             ]))
           },
+          practiceNativeAudio: {
+            name: nativeUiText('hear_native_text'),
+            desc: '',
+            values: {
+              off: { label: nativeUiText('disabled'), desc: '' },
+              on: { label: nativeUiText('enabled'), desc: '' }
+            }
+          },
           accent: {
             name: nativeUiText('accent'),
             desc: '',
@@ -24161,6 +24199,8 @@
             return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14"></path><path d="M5 12h14"></path><path d="M5 17h14"></path><circle cx="8" cy="7" r="1.3" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"></circle><circle cx="16" cy="17" r="1.3" fill="currentColor" stroke="none"></circle></svg>';
           case 'nativeLanguage':
             return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v12H5z"></path><path d="M9 10h6"></path><path d="M9 14h4"></path></svg>';
+          case 'practiceNativeAudio':
+            return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 14V10"></path><path d="M9 16V8"></path><path d="M13 19V5"></path><path d="M17 9a4 4 0 0 1 0 6"></path><path d="M19 7a7 7 0 0 1 0 10"></path></svg>';
           case 'fourthStageTyping':
             return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="10" rx="2"></rect><circle cx="7.5" cy="11" r="0.8" fill="currentColor" stroke="none"></circle><circle cx="10.5" cy="11" r="0.8" fill="currentColor" stroke="none"></circle><circle cx="13.5" cy="11" r="0.8" fill="currentColor" stroke="none"></circle><circle cx="16.5" cy="11" r="0.8" fill="currentColor" stroke="none"></circle><path d="M8.5 14h7"></path></svg>';
           default:
@@ -24277,6 +24317,7 @@
           speed: normalizeGameOptionValue('speed', state.options?.speed),
           accent: normalizeGameOptionValue('accent', state.options?.accent),
           fourthStageTyping: normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping),
+          practiceNativeAudio: normalizeGameOptionValue('practiceNativeAudio', state.options?.practiceNativeAudio),
           mode: normalizeGameOptionValue('mode', state.options?.mode),
           targetLanguage: normalizeGameOptionValue('targetLanguage', state.options?.targetLanguage),
           nativeLanguage: normalizeGameOptionValue('nativeLanguage', state.options?.nativeLanguage)
@@ -33728,7 +33769,7 @@
         cards.slice(firstIndex, firstIndex + 3).forEach((bufferCard) => {
           preloadCardImage(bufferCard);
           preloadFinalChallengeCardAudioForLanguage(bufferCard, currentTargetLanguage());
-          if (includeNativeAudio) {
+          if (includeNativeAudio && shouldUsePracticeNativeAudio()) {
             preloadFinalChallengeCardAudioForLanguage(bufferCard, currentNativeLanguage());
           }
         });
@@ -33750,7 +33791,7 @@
 
       function bufferFinalChallengePracticeAudios(card) {
         if (!card) return;
-        primeFinalChallengeCardBuffer(state.ui.finalChallengeIndex, true);
+        primeFinalChallengeCardBuffer(state.ui.finalChallengeIndex, shouldUsePracticeNativeAudio());
       }
 
       async function prepareFinalChallengeLaunchCard(card, options = {}) {
@@ -33777,7 +33818,7 @@
           updateFinalChallengeLaunchLoader('Montando deck', '3. Preparando o MP3 principal da primeira carta.');
           await prepareRuntimeAudioSource(targetAudioSrc, 1200).catch(() => null);
         }
-        if (mode === 'practice' && nativeAudioSrc) {
+        if (mode === 'practice' && shouldUsePracticeNativeAudio() && nativeAudioSrc) {
           updateFinalChallengeLaunchLoader('Montando deck', '4. Preparando o MP3 auxiliar da primeira carta.');
           await prepareRuntimeAudioSource(nativeAudioSrc, 1200).catch(() => null);
         }
@@ -34155,10 +34196,13 @@
           });
           setFinalChallengeFlowFeedback('', 0);
           if (!isFinalChallengePracticePhaseTwo()) {
-            state.ui.finalChallengePracticeCorrectionText = safeText(resolveSourceLanguageText(card, currentTargetLanguage())) || safeText(card?.english || '');
+            const playNativeAudio = shouldUsePracticeNativeAudio();
+            state.ui.finalChallengePracticeCorrectionText = playNativeAudio
+              ? (safeText(resolveSourceLanguageText(card, currentTargetLanguage())) || safeText(card?.english || ''))
+              : (safeText(resolveSourceLanguageText(card, currentNativeLanguage())) || safeText(card?.portuguese || ''));
             state.ui.finalChallengePracticeCorrectionTone = 'success';
             syncFinalChallengeRunUi();
-            await playFinalChallengeAudioForLanguage(card, currentNativeLanguage(), {
+            await playFinalChallengeAudioForLanguage(card, playNativeAudio ? currentNativeLanguage() : currentTargetLanguage(), {
               rate: 0.9,
               audioProgressVisual: false,
               awaitEnd: true
@@ -34205,8 +34249,10 @@
                 ? state.ui.finalChallengeCards[(Number(state.ui.finalChallengeIndex) || 0) + 1] || null
                 : null;
               if (nextCard) {
-                preloadFinalChallengeCardAudioForLanguage(nextCard, currentNativeLanguage());
                 preloadFinalChallengeCardAudioForLanguage(nextCard, currentTargetLanguage());
+                if (shouldUsePracticeNativeAudio()) {
+                  preloadFinalChallengeCardAudioForLanguage(nextCard, currentNativeLanguage());
+                }
               }
             }
             if (completed) {
@@ -34794,7 +34840,6 @@
           'Voltar ao menu'
         );
         setFinalChallengeScreen('result');
-        void flushDeferredGameplayNetworkSync();
         animateFinalChallengeResultAwards({
           showStars: practiceCompleted || (!isPracticeMode && passed),
           starCount: practiceCompleted
