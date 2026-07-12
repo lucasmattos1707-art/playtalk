@@ -14395,7 +14395,7 @@
       const TYPING_KEY_BLUES = ['#6ebcff', '#76c3ff', '#7dc9ff', '#86ceff', '#8fd4ff', '#98d9ff'];
       const DEFAULT_GAME_CONTEXT_LIMIT = 12;
       const USER_LEVEL_MIN = 1;
-      const USER_LEVEL_MAX = 500;
+      const USER_LEVEL_MAX = 50000;
       const ENERGY_XP_LEVEL_MAX = 500;
       const ENERGY_XP_LEVEL_ANCHORS = [
         { level: 2, xp: 50 }, { level: 5, xp: 300 }, { level: 10, xp: 1500 }, { level: 15, xp: 4000 },
@@ -14519,7 +14519,7 @@
             { minLevel: 61, maxLevel: 70, windowSize: 20 },
             { minLevel: 71, maxLevel: 80, windowSize: 25 },
             { minLevel: 81, maxLevel: 90, windowSize: 30 },
-            { minLevel: 91, maxLevel: 500, windowSize: 40 }
+            { minLevel: 91, maxLevel: USER_LEVEL_MAX, windowSize: 40 }
           ]
         };
       }
@@ -14890,6 +14890,7 @@
           soundTestCompleted: false,
           pendingPlayStart: false,
           sequenceContinuousMaxLevel: USER_LEVEL_MAX,
+          sequencePhysicalLevels: [],
           pendingTutorialStart: false,
           pendingTutorialMuteNarration: false,
           welcomeStartRequested: false,
@@ -15718,7 +15719,16 @@
         return currentUserLevel();
       }
 
+      function normalizeSequencePhysicalLevels(levels = []) {
+        return Array.from(new Set(
+          (Array.isArray(levels) ? levels : [])
+            .map((value) => Number.parseInt(String(value ?? '').trim(), 10))
+            .filter((value) => Number.isInteger(value) && value >= USER_LEVEL_MIN && value <= USER_LEVEL_MAX)
+        )).sort((a, b) => a - b);
+      }
+
       function setDifficultyOptionsFromSequenceLevels(levels) {
+        state.entry.sequencePhysicalLevels = normalizeSequencePhysicalLevels(levels);
         state.entry.sequenceContinuousMaxLevel = resolveSequenceContinuousMaxLevel(levels);
         if (selectedGameLevel() > state.entry.sequenceContinuousMaxLevel) {
           state.ui.welcomeSelectedLevel = state.entry.sequenceContinuousMaxLevel;
@@ -15728,21 +15738,21 @@
       }
 
       function resolveSequenceContinuousMaxLevel(levels = []) {
-        const normalizedLevels = Array.from(new Set(
-          (Array.isArray(levels) ? levels : [])
-            .map((value) => Number.parseInt(String(value ?? '').trim(), 10))
-            .filter((value) => Number.isInteger(value) && value >= USER_LEVEL_MIN && value <= USER_LEVEL_MAX)
-        )).sort((a, b) => a - b);
+        const normalizedLevels = normalizeSequencePhysicalLevels(levels);
         if (!normalizedLevels.length) return USER_LEVEL_MAX;
-        let continuousMax = 0;
-        for (const level of normalizedLevels) {
-          if (level === continuousMax + 1) {
-            continuousMax = level;
-            continue;
-          }
-          if (level > continuousMax + 1) break;
-        }
-        return Math.max(USER_LEVEL_MIN, continuousMax || normalizedLevels[normalizedLevels.length - 1]);
+        return USER_LEVEL_MAX;
+      }
+
+      function resolveSequencePlayableDeckLevel(level = selectedGameLevel()) {
+        const normalizedLevel = normalizeUserLevel(level);
+        const physicalLevels = Array.isArray(state.entry.sequencePhysicalLevels)
+          ? state.entry.sequencePhysicalLevels
+          : [];
+        if (!physicalLevels.length) return normalizedLevel;
+        const directMatch = physicalLevels.find((entry) => entry === normalizedLevel);
+        if (Number.isInteger(directMatch)) return directMatch;
+        const index = (Math.max(USER_LEVEL_MIN, normalizedLevel) - USER_LEVEL_MIN) % physicalLevels.length;
+        return physicalLevels[index] || physicalLevels[physicalLevels.length - 1] || normalizedLevel;
       }
 
       function maxSelectableGameLevel() {
@@ -23108,8 +23118,8 @@
         const normalized = safeText(modeKey).toLowerCase();
         if (!WELCOME_MODE_CONFIG[normalized]) return;
         if (!areWelcomeExtraModesEnabledForCurrentUser()) return;
-        if (normalized === 'scale') {
-          setSelectedGameLevel(1);
+        if (normalized === 'scale' && !selectedGameLevel()) {
+          setSelectedGameLevel(currentUserLevel());
         }
         state.entry.welcomeModeKey = normalized;
         syncWelcomeModeModal();
@@ -25961,7 +25971,11 @@
         }
         if (difficultyMode === 'manual') {
           const manualLevel = normalizeUserLevel(level || currentUserLevel());
-          return applyDeckCardsLimit(allPlayableCards.filter((card) => cardDeckLevel(card) === manualLevel), manualLevel);
+          const playableDeckLevel = resolveSequencePlayableDeckLevel(manualLevel);
+          return applyDeckCardsLimit(
+            allPlayableCards.filter((card) => cardDeckLevel(card) === playableDeckLevel),
+            manualLevel
+          );
         }
         if (Number(level) === 0 || !Number.isInteger(Number(level))) {
           return applyDeckCardsLimit(allPlayableCards, targetLevel);
@@ -33285,8 +33299,9 @@
       function buildExactLevelModeSourceCards(level = selectedGameLevel()) {
         const targetLevel = normalizeUserLevel(Number(level) > 0 ? level : currentUserLevel());
         const allPlayableCards = state.allCards.filter(isCardPlayableInLevelMode);
+        const playableDeckLevel = resolveSequencePlayableDeckLevel(targetLevel);
         return applyDeckCardsLimit(
-          allPlayableCards.filter((card) => cardDeckLevel(card) === targetLevel),
+          allPlayableCards.filter((card) => cardDeckLevel(card) === playableDeckLevel),
           targetLevel
         );
       }
@@ -36720,8 +36735,8 @@
           if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
           const scaleMode = !options.audioOnly && !options.textOnly;
           const listenMode = Boolean(options.audioOnly);
-          if (scaleMode) {
-            setSelectedGameLevel(1);
+          if (scaleMode && !selectedGameLevel()) {
+            setSelectedGameLevel(currentUserLevel());
           }
           state.game.levelMode = true;
           state.game.levelScaleMode = scaleMode;
