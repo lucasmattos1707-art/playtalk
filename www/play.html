@@ -16082,7 +16082,8 @@
           availableAt: promoted.availableAt,
           returnedAt: promoted.returnedAt,
           lastCompletedAt: promoted.lastCompletedAt,
-          sealImage: promoted.sealImage
+          sealImage: promoted.sealImage,
+          forceNetwork: true
         }).catch(() => {});
         return promoted;
       }
@@ -16185,6 +16186,7 @@
           headers: buildAuthHeaders({
             'Content-Type': 'application/json'
           }),
+          keepalive: Boolean(payload?.keepalive),
           credentials: 'include',
           body: JSON.stringify({
             targetLanguage: normalizedLanguage,
@@ -16219,14 +16221,15 @@
         return savedPayload;
       }
 
-      async function flushPendingFinalChallengeStateSync() {
+      async function flushPendingFinalChallengeStateSync(options = {}) {
         const pending = state.ui.finalChallengePendingStateSync;
         if (!pending || !state.user?.id) return null;
         state.ui.finalChallengePendingStateSync = null;
         try {
           return await persistFinalChallengeStateForLanguage(pending.language, {
             ...pending.payload,
-            forceNetwork: true
+            forceNetwork: true,
+            keepalive: Boolean(options?.keepalive)
           });
         } catch (error) {
           state.ui.finalChallengePendingStateSync = pending;
@@ -18607,7 +18610,7 @@
           }
         }
         try {
-          const finalChallengeStateSynced = await flushPendingFinalChallengeStateSync();
+          const finalChallengeStateSynced = await flushPendingFinalChallengeStateSync(options);
           flushed = flushed || Boolean(finalChallengeStateSynced);
         } catch (_error) {
           // keep pending state queued for the next flush
@@ -35011,7 +35014,8 @@
               availableAt: savedLevelRecord.availableAt,
               returnedAt: savedLevelRecord.returnedAt,
               lastCompletedAt: savedLevelRecord.lastCompletedAt,
-              sealImage: savedLevelRecord.sealImage
+              sealImage: savedLevelRecord.sealImage,
+              forceNetwork: true
             }).catch((error) => {
             console.warn('Falha ao liberar proximo nivel do treino final:', error);
             });
