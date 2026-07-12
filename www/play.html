@@ -15283,6 +15283,7 @@
           finalChallengePromptAudio: null,
           finalChallengeAudioToken: 0,
           finalChallengePromptCardId: '',
+          finalChallengeTargetPlayCount: 0,
           finalChallengeAvatarColorProgress: 0,
           finalChallengeReviewOpen: false,
           finalChallengeReviewIndex: 0,
@@ -15349,6 +15350,7 @@
       let finalChallengePromptCleanup = null;
       let finalChallengePhaseOverlayResolver = null;
       let finalChallengeFlowFeedbackTimer = 0;
+      let finalChallengeTargetReplayTimer = 0;
       let finalChallengeGeneralLevelsPromise = null;
       let finalChallengeDownloadsStoreCache = null;
       let finalChallengeSelectionStoreCache = null;
@@ -30002,6 +30004,8 @@
         return { american: normalizedAmerican, british: normalizedBritish };
       }
 
+      const FINAL_CHALLENGE_TARGET_REPLAY_DELAY_MS = 3000;
+
       function pickCardAccent(card) {
         const primary = safeText(card?.audioUrl);
         const british = safeText(card?.audioUrlBritish);
@@ -33446,6 +33450,38 @@
         state.ui.finalChallengeHeardWords += finalChallengeWordCount(targetText);
       }
 
+      function clearFinalChallengeTargetReplayTimer() {
+        if (!finalChallengeTargetReplayTimer) return;
+        window.clearTimeout(finalChallengeTargetReplayTimer);
+        finalChallengeTargetReplayTimer = 0;
+      }
+
+      function shouldAutoReplayFinalChallengeTarget(card, language) {
+        return Boolean(
+          state.ui.finalChallengeRunOpen
+          && state.ui.finalChallengeScreen === 'run'
+          && state.ui.finalChallengeMode === 'practice'
+          && !state.ui.finalChallengeExitConfirmOpen
+          && safeText(card?.id)
+          && safeText(currentFinalChallengeCard()?.id) === safeText(card?.id)
+          && normalizeGameOptionValue('targetLanguage', language) === currentTargetLanguage()
+        );
+      }
+
+      function scheduleFinalChallengeTargetReplay(card, language, options = {}) {
+        clearFinalChallengeTargetReplayTimer();
+        if (!shouldAutoReplayFinalChallengeTarget(card, language)) return;
+        finalChallengeTargetReplayTimer = window.setTimeout(() => {
+          finalChallengeTargetReplayTimer = 0;
+          if (!shouldAutoReplayFinalChallengeTarget(card, language)) return;
+          void playFinalChallengeAudioForLanguage(card, language, {
+            ...options,
+            audioProgressVisual: true,
+            isAutoReplay: true
+          }).catch(() => false);
+        }, FINAL_CHALLENGE_TARGET_REPLAY_DELAY_MS);
+      }
+
       function recordFinalChallengeBuiltCard(card) {
         if (state.ui.finalChallengeMode !== 'practice' || !card) return;
         const answerLanguage = isFinalChallengePracticePhaseTwo() ? currentNativeLanguage() : currentTargetLanguage();
@@ -33692,6 +33728,7 @@
         state.ui.finalChallengeRunId = '';
         state.ui.finalChallengeHeardKeys = new Set();
         state.ui.finalChallengeHeardSentences = 0;
+        state.ui.finalChallengeTargetPlayCount = 0;
         state.ui.finalChallengeHeardWords = 0;
         state.ui.finalChallengeBuiltSentences = 0;
         state.ui.finalChallengeCurrentStreak = 0;
@@ -33706,6 +33743,7 @@
           window.clearTimeout(finalChallengeFlowFeedbackTimer);
           finalChallengeFlowFeedbackTimer = 0;
         }
+        clearFinalChallengeTargetReplayTimer();
         clearFinalChallengeSessionState();
       }
 
@@ -33970,6 +34008,7 @@
       }
 
       function stopFinalChallengePromptAudio() {
+        clearFinalChallengeTargetReplayTimer();
         state.ui.finalChallengeAudioToken = Math.max(0, Number(state.ui.finalChallengeAudioToken) || 0) + 1;
         if (typeof finalChallengePromptCleanup === 'function') {
           try {
@@ -34135,6 +34174,9 @@
           finalChallengePromptCleanup = null;
           return false;
         }
+        if (normalizeGameOptionValue('targetLanguage', language) === currentTargetLanguage()) {
+          state.ui.finalChallengeTargetPlayCount = Math.max(0, Number(state.ui.finalChallengeTargetPlayCount) || 0) + 1;
+        }
         if (playbackToken !== Math.max(0, Number(state.ui.finalChallengeAudioToken) || 0)) {
           try {
             audio.pause();
@@ -34146,6 +34188,7 @@
         }
         audio.addEventListener('ended', () => {
           finalizePlayback();
+          scheduleFinalChallengeTargetReplay(card, language, { rate: options.rate });
           finalizeAwaitedPlayback();
         }, { once: true });
         audio.addEventListener('error', () => {
@@ -35038,7 +35081,7 @@
           els.finalChallengeResultStats.hidden = !isPracticeMode;
         }
         if (els.finalChallengeResultHeardValue) {
-          els.finalChallengeResultHeardValue.textContent = String(Math.max(0, Number(state.ui.finalChallengeHeardSentences) || 0));
+          els.finalChallengeResultHeardValue.textContent = String(Math.max(0, Number(state.ui.finalChallengeTargetPlayCount) || 0));
         }
         if (els.finalChallengeResultBuiltValue) {
           els.finalChallengeResultBuiltValue.textContent = String(Math.max(0, Number(state.ui.finalChallengeBuiltSentences) || 0));
