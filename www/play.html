@@ -11489,6 +11489,47 @@
       text-align: center;
     }
 
+    .final-challenge-modal__level-stack {
+      display: grid;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .final-challenge-modal__level-heading {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .final-challenge-modal__level-seal {
+      width: 30px;
+      height: 30px;
+      object-fit: contain;
+      filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.28));
+      flex: 0 0 auto;
+    }
+
+    .final-challenge-modal__level-progress {
+      width: min(100%, 210px);
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      overflow: hidden;
+      justify-self: center;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    }
+
+    .final-challenge-modal__level-progress span {
+      display: block;
+      width: var(--progress, 0%);
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(255, 210, 92, 0.9) 0%, rgba(255, 245, 169, 0.98) 100%);
+      transition: width 220ms ease;
+    }
+
     .final-challenge-modal__level-nav {
       display: grid;
       grid-template-columns: 44px minmax(0, 1fr) 44px;
@@ -13050,7 +13091,15 @@
             <button class="final-challenge-modal__level-nav-btn" id="finalChallengeLevelPrevBtn" type="button" aria-label="Nivel anterior">
               <svg viewBox="0 0 24 24" focusable="false"><path d="M14.7 5.3a1 1 0 0 1 0 1.4L10.41 11H20a1 1 0 1 1 0 2h-9.59l4.3 4.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
             </button>
-            <h2 class="final-challenge-modal__level" id="finalChallengeIntroLevel">Nivel 1</h2>
+            <div class="final-challenge-modal__level-stack">
+              <div class="final-challenge-modal__level-heading">
+                <img class="final-challenge-modal__level-seal" id="finalChallengeIntroSeal" src="/medalhas/vidro.png" alt="Selo do nivel" hidden>
+                <h2 class="final-challenge-modal__level" id="finalChallengeIntroLevel">Nivel 1</h2>
+              </div>
+              <div class="final-challenge-modal__level-progress" id="finalChallengeIntroSealProgress" hidden aria-hidden="true">
+                <span id="finalChallengeIntroSealProgressBar"></span>
+              </div>
+            </div>
             <button class="final-challenge-modal__level-nav-btn" id="finalChallengeLevelNextBtn" type="button" aria-label="Proximo nivel">
               <svg viewBox="0 0 24 24" focusable="false"><path d="M9.3 18.7a1 1 0 0 1 0-1.4L13.59 13H4a1 1 0 1 1 0-2h9.59L9.3 6.7a1 1 0 0 1 1.4-1.4l6 6a1 1 0 0 1 0 1.4l-6 6a1 1 0 0 1-1.4 0Z"/></svg>
             </button>
@@ -15342,6 +15391,9 @@
         finalChallengeIntroFeedback: document.getElementById('finalChallengeIntroFeedback'),
         finalChallengeLevelPrevBtn: document.getElementById('finalChallengeLevelPrevBtn'),
         finalChallengeLevelNextBtn: document.getElementById('finalChallengeLevelNextBtn'),
+        finalChallengeIntroSeal: document.getElementById('finalChallengeIntroSeal'),
+        finalChallengeIntroSealProgress: document.getElementById('finalChallengeIntroSealProgress'),
+        finalChallengeIntroSealProgressBar: document.getElementById('finalChallengeIntroSealProgressBar'),
         finalChallengeExitRunBtn: document.getElementById('finalChallengeExitRunBtn'),
         finalChallengeIntroLevel: document.getElementById('finalChallengeIntroLevel'),
         finalChallengeProgressCopy: document.getElementById('finalChallengeProgressCopy'),
@@ -15918,6 +15970,45 @@
         if (record.status !== 'memorizing') return true;
         const availableAt = Math.max(0, Number(record.availableAt) || 0);
         return !availableAt || availableAt <= now;
+      }
+
+      function isFinalChallengeReplayRequired(record = currentFinalChallengeRecord()) {
+        if (!record || safeText(record.status).toLowerCase() !== 'ready') return false;
+        const phaseIndex = Math.max(0, Number(record.phaseIndex) || 0);
+        const returnedAt = Math.max(0, Number(record.returnedAt) || 0);
+        const lastCompletedAt = Math.max(0, Number(record.lastCompletedAt) || 0);
+        return phaseIndex > 0 && returnedAt > 0 && returnedAt >= lastCompletedAt;
+      }
+
+      function refreshDueFinalChallengeRecords(language = currentFinalChallengeLanguage()) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        const records = currentFinalChallengeRecordsMap(normalizedLanguage);
+        Object.keys(records || {}).forEach((levelKey) => {
+          promoteDueFinalChallengeLevelRecord(levelKey, normalizedLanguage);
+        });
+      }
+
+      function resolveRequiredFinalChallengeReplayLevel(language = currentFinalChallengeLanguage()) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        const records = currentFinalChallengeRecordsMap(normalizedLanguage);
+        return Object.keys(records || {})
+          .map((level) => normalizeUserLevel(level))
+          .sort((left, right) => left - right)
+          .find((level) => isFinalChallengeReplayRequired(currentFinalChallengeRecord(level, normalizedLanguage)))
+          || 0;
+      }
+
+      function finalChallengeMemorizingProgressPercent(record = currentFinalChallengeRecord(), now = getNowMs()) {
+        if (!record) return 0;
+        if (safeText(record.status).toLowerCase() !== 'memorizing') {
+          return isFinalChallengeReplayRequired(record) ? 100 : 0;
+        }
+        const startedAt = Math.max(0, Number(record.memorizingStartedAt) || 0);
+        const availableAt = Math.max(0, Number(record.availableAt) || 0);
+        const durationMs = Math.max(1, Number(record.memorizingDurationMs) || Math.max(1, availableAt - startedAt));
+        if (!availableAt || availableAt <= now) return 100;
+        const elapsedMs = Math.max(0, now - startedAt);
+        return Math.max(0, Math.min(100, (elapsedMs / durationMs) * 100));
       }
 
       function setCurrentFinalChallengeRecord(level = currentFinalChallengeLevel(), updates = {}, language = currentFinalChallengeLanguage()) {
@@ -34073,32 +34164,36 @@
       }
 
       function syncFinalChallengeIntroUi() {
-        const promotedRecord = promoteDueFinalChallengeLevelRecord();
-        const selection = resolveStoredFinalChallengeSelection();
-        const storedSelectionRecord = readFinalChallengeSelectionRecord();
+        refreshDueFinalChallengeRecords();
+        const requiredReplayLevel = resolveRequiredFinalChallengeReplayLevel();
+        if (requiredReplayLevel && currentFinalChallengeLevel() !== requiredReplayLevel) {
+          setSelectedFinalChallengeLevel(requiredReplayLevel);
+        }
+        const selectedLevel = requiredReplayLevel || currentFinalChallengeLevel();
+        const selection = resolveStoredFinalChallengeSelection(selectedLevel);
+        const storedSelectionRecord = readFinalChallengeSelectionRecord(currentFinalChallengeLanguage(), selectedLevel);
         const storedSelectionCount = Math.max(
           Array.isArray(storedSelectionRecord?.ids) ? storedSelectionRecord.ids.length : 0,
           Array.isArray(storedSelectionRecord?.cards) ? storedSelectionRecord.cards.length : 0
         );
         const hasDeck = selection.cards.length >= FINAL_CHALLENGE_CARD_COUNT;
         const hasStoredDeck = storedSelectionCount >= FINAL_CHALLENGE_CARD_COUNT;
-        const selectedLevel = currentFinalChallengeLevel();
         const payload = finalChallengeDownloadPayload(selectedLevel);
         const hasDownloadRecord = finalChallengeDownloadRecordMatches(selectedLevel, payload);
         const challengeUnlocked = (hasDeck || hasStoredDeck) && (selection.practiceComplete || Boolean(storedSelectionRecord?.practiceComplete));
         const unlockedLevel = currentUnlockedFinalChallengeLevel();
-        const record = selectedLevel === currentFinalChallengeLevel()
-          ? promotedRecord || currentFinalChallengeRecord(selectedLevel)
-          : currentFinalChallengeRecord(selectedLevel);
+        const record = currentFinalChallengeRecord(selectedLevel);
         const levelAvailable = finalChallengeLevelAvailable(record);
         const sealPhase = finalChallengeLevelSealPhase(record);
-        const remainingMs = Math.max(0, (Number(record.availableAt) || 0) - getNowMs());
+        const displaySealPhase = Math.max(1, sealPhase || 1);
+        const sealMeta = phaseMeta(displaySealPhase);
+        const memorizingProgress = finalChallengeMemorizingProgressPercent(record);
         const busyLevel = Math.max(0, Number(state.ui.finalChallengeDownloadsBusyLevel) || 0);
         if (!busyLevel) {
           syncFinalChallengeInlineDownloadButton();
         }
         if (els.finalChallengeStartBtn) {
-          els.finalChallengeStartBtn.disabled = Boolean(busyLevel) || !challengeUnlocked || !levelAvailable;
+          els.finalChallengeStartBtn.disabled = Boolean(busyLevel) || !challengeUnlocked || !levelAvailable || Boolean(requiredReplayLevel && selectedLevel !== requiredReplayLevel);
           els.finalChallengeStartBtn.classList.toggle('final-challenge-modal__cta--challenge-complete', Boolean(record.completed));
           if (busyLevel && state.ui.finalChallengeDownloadLaunchMode === 'voice') {
             syncFinalChallengeInlineDownloadButton();
@@ -34109,7 +34204,7 @@
           }
         }
         if (els.finalChallengePracticeBtn) {
-          els.finalChallengePracticeBtn.disabled = Boolean(busyLevel) || !state.user?.id || !levelAvailable;
+          els.finalChallengePracticeBtn.disabled = Boolean(busyLevel) || !state.user?.id || !levelAvailable || Boolean(requiredReplayLevel && selectedLevel !== requiredReplayLevel);
           if (busyLevel && state.ui.finalChallengeDownloadLaunchMode === 'practice') {
             syncFinalChallengeInlineDownloadButton();
           } else {
@@ -34129,9 +34224,19 @@
         if (els.finalChallengeIntroLevel) {
           els.finalChallengeIntroLevel.textContent = `Nivel ${selectedLevel}`;
         }
+        if (els.finalChallengeIntroSeal) {
+          els.finalChallengeIntroSeal.src = sealMeta?.sealPath?.startsWith('/') ? sealMeta.sealPath : `/${sealMeta.sealPath}`;
+          els.finalChallengeIntroSeal.alt = `Selo ${sealMeta.label}`;
+          els.finalChallengeIntroSeal.hidden = false;
+        }
+        if (els.finalChallengeIntroSealProgress && els.finalChallengeIntroSealProgressBar) {
+          const showProgress = safeText(record.status).toLowerCase() === 'memorizing' || isFinalChallengeReplayRequired(record);
+          els.finalChallengeIntroSealProgress.hidden = !showProgress;
+          els.finalChallengeIntroSealProgressBar.style.setProperty('--progress', `${showProgress ? memorizingProgress.toFixed(2) : '0'}%`);
+        }
         if (els.finalChallengeIntroFeedback) {
-          if (!levelAvailable && sealPhase > 0) {
-            els.finalChallengeIntroFeedback.textContent = `${phaseMeta(sealPhase).label} volta em ${formatDuration(remainingMs)}.`;
+          if ((safeText(record.status).toLowerCase() === 'memorizing' || isFinalChallengeReplayRequired(record)) && sealPhase > 0) {
+            els.finalChallengeIntroFeedback.textContent = `Memorizing | Selo ${sealMeta.label}`;
             els.finalChallengeIntroFeedback.hidden = false;
           } else {
             els.finalChallengeIntroFeedback.textContent = '';
@@ -34832,29 +34937,15 @@
         if (isPracticeMode && !state.ui.finalChallengeForcedGameOver && state.ui.finalChallengeIndex >= state.ui.finalChallengeCards.length) {
           playLevelPassedAudio();
           const previousCycleRecord = currentFinalChallengeRecord(currentLevel);
-          const resolvedPhase = previousCycleRecord.status === 'memorizing'
-            ? Math.max(0, Number(previousCycleRecord.targetPhaseIndex) || Number(previousCycleRecord.phaseIndex) || 0)
-            : Math.max(0, Number(previousCycleRecord.phaseIndex) || 0);
           const cycleRecord = buildNextFinalChallengeMemorizingRecord(currentLevel);
-          const unlockedNextLevel = resolvedPhase >= REVIEW_PHASE_MAX;
-          const nextUnlockedLevel = unlockedNextLevel
-            ? normalizeUserLevel(currentLevel + 1)
-            : currentLevel;
-          const savedLevelRecord = unlockedNextLevel
-            ? {
-                ...cycleRecord,
-                completed: true,
-                phaseIndex: REVIEW_PHASE_MAX,
-                targetPhaseIndex: REVIEW_PHASE_MAX,
-                status: 'ready',
-                memorizingStartedAt: 0,
-                memorizingDurationMs: 0,
-                availableAt: getNowMs(),
-                returnedAt: getNowMs(),
-                lastCompletedAt: getNowMs(),
-                sealImage: phaseMeta(REVIEW_PHASE_MAX).sealPath
-              }
-            : cycleRecord;
+          const nextUnlockedLevel = normalizeUserLevel(currentLevel + 1);
+          const savedLevelRecord = {
+            ...previousCycleRecord,
+            ...cycleRecord,
+            completed: Boolean(previousCycleRecord.completed),
+            bestPercent: Math.max(0, Number(previousCycleRecord.bestPercent) || 0),
+            bestTimeMs: Math.max(0, Number(previousCycleRecord.bestTimeMs) || 0)
+          };
           setCurrentFinalChallengeRecord(currentLevel, savedLevelRecord);
           setFinalChallengePracticeCompleted(currentLevel, true);
           setStoredFinalChallengeState(
@@ -34866,7 +34957,7 @@
           void persistFinalChallengeStateForLanguage(currentFinalChallengeLanguage(), {
               unlockedLevel: Math.max(unlockedLevelBefore, nextUnlockedLevel),
               challengeLevel: currentLevel,
-              completed: unlockedNextLevel,
+              completed: savedLevelRecord.completed,
               bestPercent: currentFinalChallengeRecord(currentLevel).bestPercent,
               bestTimeMs: currentFinalChallengeRecord(currentLevel).bestTimeMs,
               phaseIndex: savedLevelRecord.phaseIndex,
@@ -34923,15 +35014,13 @@
           && !state.ui.finalChallengeForcedGameOver
           && currentFinalChallengePracticePhase() === 2
           && state.ui.finalChallengeIndex >= state.ui.finalChallengeCards.length;
-        const postPracticeRecord = isPracticeMode ? currentFinalChallengeRecord(currentLevel) : null;
         const practiceUnlockedNextLevel = Boolean(
           isPracticeMode
           && practiceCompleted
-          && postPracticeRecord?.completed
           && currentUnlockedFinalChallengeLevel() > currentLevel
         );
         const finalResultTitle = isPracticeMode
-          ? (practiceCompleted ? (practiceUnlockedNextLevel ? 'Nível desbloqueado' : 'Entrou no memorizing') : 'Tente novamente')
+          ? (practiceCompleted ? 'Nível desbloqueado' : 'Tente novamente')
           : (passed
             ? 'Voce passou de fase'
             : (state.ui.finalChallengeForcedGameOver ? 'Game over' : 'Voce nao passou de fase'));
@@ -34968,7 +35057,7 @@
           els.finalChallengeReviewBtn.hidden = true;
         }
         if (els.finalChallengeVoiceBtn) {
-          els.finalChallengeVoiceBtn.hidden = !practiceUnlockedNextLevel;
+          els.finalChallengeVoiceBtn.hidden = true;
           if (!els.finalChallengeVoiceBtn.hidden) {
             setFinalChallengeResultButton(
               els.finalChallengeVoiceBtn,
@@ -34983,17 +35072,13 @@
             setFinalChallengeResultButton(
               els.finalChallengeRetryBtn,
               practiceCompleted ? 'final-challenge-modal__cta--result-green' : 'final-challenge-modal__cta--result-orange',
-              practiceUnlockedNextLevel
-                ? '<svg viewBox="0 0 24 24" focusable="false"><path d="M5 12h12"></path><path d="m13 6 6 6-6 6"></path></svg>'
-                : '<svg viewBox="0 0 24 24" focusable="false"><path d="M7 4h10"></path><path d="M12 4v8"></path><path d="M8 16a4 4 0 1 0 8 0"></path></svg>',
+              '<svg viewBox="0 0 24 24" focusable="false"><path d="M5 12h12"></path><path d="m13 6 6 6-6 6"></path></svg>',
               practiceCompleted
-                ? (practiceUnlockedNextLevel
-                  ? `Avançar para Nível ${normalizeUserLevel(currentLevel + 1)}`
-                  : 'Aguardar memorizing')
+                ? `Avançar para Nível ${normalizeUserLevel(currentLevel + 1)}`
                 : 'Tentar de novo'
             );
             state.ui.finalChallengeResultAction = practiceCompleted
-              ? (practiceUnlockedNextLevel ? 'next-level-intro' : 'back-intro')
+              ? 'next-level-intro'
               : 'retry-practice';
           } else if (passed) {
             setFinalChallengeResultButton(
@@ -35161,8 +35246,13 @@
       }
 
       async function startFinalChallengeRun() {
-        const challengeLevel = currentFinalChallengeLevel();
-        const levelRecord = promoteDueFinalChallengeLevelRecord(challengeLevel);
+        refreshDueFinalChallengeRecords();
+        const requiredReplayLevel = resolveRequiredFinalChallengeReplayLevel();
+        const challengeLevel = requiredReplayLevel || currentFinalChallengeLevel();
+        if (requiredReplayLevel) {
+          setSelectedFinalChallengeLevel(requiredReplayLevel);
+        }
+        const levelRecord = currentFinalChallengeRecord(challengeLevel);
         if (!finalChallengeLevelAvailable(levelRecord)) {
           syncFinalChallengeIntroUi();
           return;
@@ -35231,8 +35321,13 @@
       }
 
       async function startFinalChallengePracticeRun() {
-        const challengeLevel = currentFinalChallengeLevel();
-        const levelRecord = promoteDueFinalChallengeLevelRecord(challengeLevel);
+        refreshDueFinalChallengeRecords();
+        const requiredReplayLevel = resolveRequiredFinalChallengeReplayLevel();
+        const challengeLevel = requiredReplayLevel || currentFinalChallengeLevel();
+        if (requiredReplayLevel) {
+          setSelectedFinalChallengeLevel(requiredReplayLevel);
+        }
+        const levelRecord = currentFinalChallengeRecord(challengeLevel);
         if (!finalChallengeLevelAvailable(levelRecord)) {
           syncFinalChallengeIntroUi();
           return;
