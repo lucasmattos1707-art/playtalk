@@ -2549,6 +2549,15 @@ const ensureFlashcardUserStateTables = async () => {
           completed boolean NOT NULL DEFAULT false,
           best_percent integer NOT NULL DEFAULT 0,
           best_time_ms integer NOT NULL DEFAULT 0,
+          phase_index integer NOT NULL DEFAULT 0,
+          target_phase_index integer NOT NULL DEFAULT 1,
+          status text NOT NULL DEFAULT 'ready',
+          memorizing_started_at timestamptz,
+          memorizing_duration_ms integer NOT NULL DEFAULT 0,
+          available_at timestamptz,
+          returned_at timestamptz,
+          last_completed_at timestamptz,
+          seal_image text NOT NULL DEFAULT '',
           updated_at timestamptz NOT NULL DEFAULT now(),
           PRIMARY KEY (user_id, target_language, challenge_level)
         )
@@ -2568,6 +2577,42 @@ const ensureFlashcardUserStateTables = async () => {
       await pool.query(`
         ALTER TABLE public.user_flashcard_final_challenge_records
         ADD COLUMN IF NOT EXISTS best_time_ms integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS phase_index integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS target_phase_index integer NOT NULL DEFAULT 1
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'ready'
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS memorizing_started_at timestamptz
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS memorizing_duration_ms integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS available_at timestamptz
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS returned_at timestamptz
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS last_completed_at timestamptz
+      `);
+      await pool.query(`
+        ALTER TABLE public.user_flashcard_final_challenge_records
+        ADD COLUMN IF NOT EXISTS seal_image text NOT NULL DEFAULT ''
       `);
       await pool.query(`
         ALTER TABLE public.user_flashcard_final_challenge_records
@@ -7475,7 +7520,10 @@ const readFinalChallengeLevelForUser = async (userId, targetLanguage) => {
   );
   const row = rowResult.rows[0] || {};
   const recordsResult = await pool.query(
-    `SELECT challenge_level, completed, best_percent, best_time_ms
+    `SELECT challenge_level, completed, best_percent, best_time_ms,
+            phase_index, target_phase_index, status,
+            memorizing_started_at, memorizing_duration_ms,
+            available_at, returned_at, last_completed_at, seal_image
      FROM public.user_flashcard_final_challenge_records
      WHERE user_id = $1
        AND target_language = $2
@@ -7485,11 +7533,7 @@ const readFinalChallengeLevelForUser = async (userId, targetLanguage) => {
   const records = {};
   for (const record of recordsResult.rows || []) {
     const levelKey = normalizeUserFlashcardLevel(record.challenge_level || 1);
-    records[levelKey] = {
-      completed: Boolean(record.completed),
-      bestPercent: Math.max(0, Math.min(100, Number(record.best_percent) || 0)),
-      bestTimeMs: Math.max(0, Number(record.best_time_ms) || 0)
-    };
+    records[levelKey] = mapStoredFinalChallengeCycleRecord(record);
   }
   const selections = await readFinalChallengeCardSelections(normalizedUserId, normalizedTargetLanguage);
   return {
@@ -7515,6 +7559,19 @@ const saveFinalChallengeLevelForUser = async (userId, targetLanguage, payload = 
   const requestedBestPercent = Math.max(0, Math.min(100, Math.round(Number(payload?.bestPercent) || 0)));
   const requestedBestTimeMs = Math.max(0, Math.round(Number(payload?.bestTimeMs) || 0));
   const completed = Boolean(payload?.completed);
+  const phaseIndex = Math.max(0, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(payload?.phaseIndex, 10) || 0));
+  const targetPhaseIndex = Math.max(1, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(payload?.targetPhaseIndex, 10) || phaseIndex || 1));
+  const cycleStatus = normalizeFinalChallengeCycleStatus(payload?.status);
+  const memorizingDurationMs = Math.max(0, Math.round(Number(payload?.memorizingDurationMs) || 0));
+  const memorizingStartedAt = flashcardTimestampFromMillis(payload?.memorizingStartedAt);
+  const availableAt = flashcardTimestampFromMillis(payload?.availableAt);
+  const returnedAt = flashcardTimestampFromMillis(payload?.returnedAt);
+  const lastCompletedAt = flashcardTimestampFromMillis(payload?.lastCompletedAt);
+  const sealImage = safeText(payload?.sealImage || resolveFlashcardSealImage({
+    status: cycleStatus,
+    phaseIndex,
+    targetPhaseIndex
+  }));
   const result = await pool.query(
     `INSERT INTO public.user_flashcard_final_challenge_levels (
        user_id,
@@ -7540,9 +7597,18 @@ const saveFinalChallengeLevelForUser = async (userId, targetLanguage, payload = 
        completed,
        best_percent,
        best_time_ms,
+       phase_index,
+       target_phase_index,
+       status,
+       memorizing_started_at,
+       memorizing_duration_ms,
+       available_at,
+       returned_at,
+       last_completed_at,
+       seal_image,
        updated_at
      )
-     VALUES ($1, $2, $3, $4, $5, $6, now())
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now())
      ON CONFLICT (user_id, target_language, challenge_level)
      DO UPDATE SET
        completed = public.user_flashcard_final_challenge_records.completed OR EXCLUDED.completed,
@@ -7552,6 +7618,15 @@ const saveFinalChallengeLevelForUser = async (userId, targetLanguage, payload = 
          WHEN public.user_flashcard_final_challenge_records.best_time_ms <= 0 THEN EXCLUDED.best_time_ms
          ELSE LEAST(public.user_flashcard_final_challenge_records.best_time_ms, EXCLUDED.best_time_ms)
        END,
+       phase_index = EXCLUDED.phase_index,
+       target_phase_index = EXCLUDED.target_phase_index,
+       status = EXCLUDED.status,
+       memorizing_started_at = EXCLUDED.memorizing_started_at,
+       memorizing_duration_ms = EXCLUDED.memorizing_duration_ms,
+       available_at = EXCLUDED.available_at,
+       returned_at = EXCLUDED.returned_at,
+       last_completed_at = EXCLUDED.last_completed_at,
+       seal_image = EXCLUDED.seal_image,
        updated_at = now()`,
     [
       normalizedUserId,
@@ -7559,7 +7634,16 @@ const saveFinalChallengeLevelForUser = async (userId, targetLanguage, payload = 
       challengeLevel,
       completed,
       requestedBestPercent,
-      requestedBestTimeMs
+      requestedBestTimeMs,
+      phaseIndex,
+      targetPhaseIndex,
+      cycleStatus,
+      memorizingStartedAt,
+      memorizingDurationMs,
+      availableAt,
+      returnedAt,
+      lastCompletedAt,
+      sealImage
     ]
   );
   const row = result.rows[0] || {};
@@ -7572,6 +7656,44 @@ const saveFinalChallengeLevelForUser = async (userId, targetLanguage, payload = 
     updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
     records: reloaded.records || {},
     selections: reloaded.selections || {}
+  };
+};
+
+const normalizeFinalChallengeCycleStatus = (value) => (
+  safeText(value).toLowerCase() === 'memorizing' ? 'memorizing' : 'ready'
+);
+
+const mapStoredFinalChallengeCycleRecord = (row) => {
+  const status = normalizeFinalChallengeCycleStatus(row?.status);
+  const phaseIndex = Math.max(0, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(row?.phase_index, 10) || 0));
+  const targetPhaseIndex = Math.max(1, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(row?.target_phase_index, 10) || phaseIndex || 1));
+  const memorizingDurationMs = Math.max(0, Math.round(Number(row?.memorizing_duration_ms) || 0))
+    || FLASHCARD_REVIEW_PHASES[targetPhaseIndex]?.durationMs
+    || FLASHCARD_REVIEW_PHASES[1].durationMs;
+  const availableAt = flashcardMillisFromTimestamp(row?.available_at);
+  const returnedAt = flashcardMillisFromTimestamp(row?.returned_at);
+  const lastCompletedAt = flashcardMillisFromTimestamp(row?.last_completed_at);
+  const memorizingStartedAt = flashcardMillisFromTimestamp(row?.memorizing_started_at);
+  const sealImage = safeText(row?.seal_image || resolveFlashcardSealImage({
+    status,
+    phaseIndex,
+    targetPhaseIndex
+  }));
+  return {
+    completed: Boolean(row?.completed),
+    bestPercent: Math.max(0, Math.min(100, Number(row?.best_percent) || 0)),
+    bestTimeMs: Math.max(0, Number(row?.best_time_ms) || 0),
+    phaseIndex,
+    targetPhaseIndex,
+    status,
+    memorizingStartedAt: status === 'memorizing' ? (memorizingStartedAt || Date.now()) : 0,
+    memorizingDurationMs,
+    availableAt: status === 'memorizing'
+      ? (availableAt || ((memorizingStartedAt || Date.now()) + memorizingDurationMs))
+      : (availableAt || returnedAt || lastCompletedAt || 0),
+    returnedAt,
+    lastCompletedAt,
+    sealImage
   };
 };
 
