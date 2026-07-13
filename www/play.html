@@ -35199,7 +35199,8 @@
             currentFinalChallengeBestPercent(),
             currentFinalChallengeRecordsMap()
           );
-          void persistFinalChallengeStateForLanguage(currentFinalChallengeLanguage(), {
+          try {
+            await persistFinalChallengeStateForLanguage(currentFinalChallengeLanguage(), {
               unlockedLevel: Math.max(unlockedLevelBefore, nextUnlockedLevel),
               challengeLevel: currentLevel,
               completed: savedLevelRecord.completed,
@@ -35214,10 +35215,12 @@
               returnedAt: savedLevelRecord.returnedAt,
               lastCompletedAt: savedLevelRecord.lastCompletedAt,
               sealImage: savedLevelRecord.sealImage,
-              forceNetwork: true
-            }).catch((error) => {
-            console.warn('Falha ao liberar proximo nivel do treino final:', error);
+              forceNetwork: true,
+              keepalive: true
             });
+          } catch (error) {
+            console.warn('Falha ao liberar proximo nivel do treino final:', error);
+          }
         }
         if (!isPracticeMode) {
           const previousRecord = currentFinalChallengeRecord(currentLevel);

@@ -7562,6 +7562,17 @@ const saveFinalChallengeLevelForUser = async (userId, targetLanguage, payload = 
   const phaseIndex = Math.max(0, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(payload?.phaseIndex, 10) || 0));
   const targetPhaseIndex = Math.max(1, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(payload?.targetPhaseIndex, 10) || phaseIndex || 1));
   const cycleStatus = normalizeFinalChallengeCycleStatus(payload?.status);
+  const hasCycleState = [
+    'status',
+    'phaseIndex',
+    'targetPhaseIndex',
+    'memorizingStartedAt',
+    'memorizingDurationMs',
+    'availableAt',
+    'returnedAt',
+    'lastCompletedAt',
+    'sealImage'
+  ].some((field) => Object.prototype.hasOwnProperty.call(payload || {}, field));
   const memorizingDurationMs = Math.max(0, Math.round(Number(payload?.memorizingDurationMs) || 0));
   const memorizingStartedAt = flashcardTimestampFromMillis(payload?.memorizingStartedAt);
   const availableAt = flashcardTimestampFromMillis(payload?.availableAt);
@@ -7608,7 +7619,16 @@ const saveFinalChallengeLevelForUser = async (userId, targetLanguage, payload = 
        seal_image,
        updated_at
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now())
+     VALUES (
+       $1, $2, $3, $4, $5, $6, $7, $8, $9,
+       CASE WHEN $9 = 'memorizing' THEN now() ELSE $10 END,
+       $11,
+       CASE WHEN $9 = 'memorizing' THEN now() + ($11 * interval '1 millisecond') ELSE $12 END,
+       CASE WHEN $9 = 'memorizing' THEN now() ELSE $13 END,
+       CASE WHEN $9 = 'memorizing' THEN now() ELSE $14 END,
+       $15,
+       now()
+     )
      ON CONFLICT (user_id, target_language, challenge_level)
      DO UPDATE SET
        completed = public.user_flashcard_final_challenge_records.completed OR EXCLUDED.completed,
@@ -7618,15 +7638,15 @@ const saveFinalChallengeLevelForUser = async (userId, targetLanguage, payload = 
          WHEN public.user_flashcard_final_challenge_records.best_time_ms <= 0 THEN EXCLUDED.best_time_ms
          ELSE LEAST(public.user_flashcard_final_challenge_records.best_time_ms, EXCLUDED.best_time_ms)
        END,
-       phase_index = EXCLUDED.phase_index,
-       target_phase_index = EXCLUDED.target_phase_index,
-       status = EXCLUDED.status,
-       memorizing_started_at = EXCLUDED.memorizing_started_at,
-       memorizing_duration_ms = EXCLUDED.memorizing_duration_ms,
-       available_at = EXCLUDED.available_at,
-       returned_at = EXCLUDED.returned_at,
-       last_completed_at = EXCLUDED.last_completed_at,
-       seal_image = EXCLUDED.seal_image,
+       phase_index = CASE WHEN $16 THEN EXCLUDED.phase_index ELSE public.user_flashcard_final_challenge_records.phase_index END,
+       target_phase_index = CASE WHEN $16 THEN EXCLUDED.target_phase_index ELSE public.user_flashcard_final_challenge_records.target_phase_index END,
+       status = CASE WHEN $16 THEN EXCLUDED.status ELSE public.user_flashcard_final_challenge_records.status END,
+       memorizing_started_at = CASE WHEN $16 THEN EXCLUDED.memorizing_started_at ELSE public.user_flashcard_final_challenge_records.memorizing_started_at END,
+       memorizing_duration_ms = CASE WHEN $16 THEN EXCLUDED.memorizing_duration_ms ELSE public.user_flashcard_final_challenge_records.memorizing_duration_ms END,
+       available_at = CASE WHEN $16 THEN EXCLUDED.available_at ELSE public.user_flashcard_final_challenge_records.available_at END,
+       returned_at = CASE WHEN $16 THEN EXCLUDED.returned_at ELSE public.user_flashcard_final_challenge_records.returned_at END,
+       last_completed_at = CASE WHEN $16 THEN EXCLUDED.last_completed_at ELSE public.user_flashcard_final_challenge_records.last_completed_at END,
+       seal_image = CASE WHEN $16 THEN EXCLUDED.seal_image ELSE public.user_flashcard_final_challenge_records.seal_image END,
        updated_at = now()`,
     [
       normalizedUserId,
@@ -7643,7 +7663,8 @@ const saveFinalChallengeLevelForUser = async (userId, targetLanguage, payload = 
       availableAt,
       returnedAt,
       lastCompletedAt,
-      sealImage
+      sealImage,
+      hasCycleState
     ]
   );
   const row = result.rows[0] || {};
