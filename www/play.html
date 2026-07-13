@@ -14052,6 +14052,7 @@
           accent: 'Sotaque',
           typing: 'Digitacao',
           hear_native_text: 'Ouvir texto nativo',
+          baby_mode: 'Modo baby',
           disabled: 'Desligado',
           enabled: 'Ligado',
           manual: 'Manual',
@@ -14113,6 +14114,7 @@
           accent: 'Accent',
           typing: 'Typing',
           hear_native_text: 'Hear native text',
+          baby_mode: 'Baby mode',
           disabled: 'Off',
           enabled: 'On',
           manual: 'Manual',
@@ -14174,6 +14176,7 @@
           accent: 'Acento',
           typing: 'Escritura',
           hear_native_text: 'Escuchar texto nativo',
+          baby_mode: 'Modo baby',
           disabled: 'Apagado',
           enabled: 'Encendido',
           manual: 'Manual',
@@ -14235,6 +14238,7 @@
           accent: 'Accent',
           typing: 'Saisie',
           hear_native_text: 'Ecouter le texte natif',
+          baby_mode: 'Mode baby',
           disabled: 'Desactive',
           enabled: 'Active',
           manual: 'Manuel',
@@ -14296,6 +14300,7 @@
           accent: 'Akzent',
           typing: 'Tippen',
           hear_native_text: 'Nativen Text horen',
+          baby_mode: 'Baby-Modus',
           disabled: 'Aus',
           enabled: 'An',
           manual: 'Manuell',
@@ -14357,6 +14362,7 @@
           accent: 'Kouyin',
           typing: 'Shuru',
           hear_native_text: 'Ting muyu wenben',
+          baby_mode: 'Baby moshi',
           disabled: 'Guanbi',
           enabled: 'Kaiqi',
           manual: 'Shoudong',
@@ -14413,6 +14419,7 @@
         accent: ['mix_100_0', 'mix_90_10', 'mix_80_20', 'mix_70_30', 'mix_60_40', 'mix_50_50', 'mix_40_60', 'mix_30_70', 'mix_20_80', 'mix_10_90', 'mix_0_100'],
         fourthStageTyping: ['off', 'on'],
         practiceNativeAudio: ['off', 'on'],
+        babyMode: ['off', 'on'],
         mode: ['training'],
         targetLanguage: TARGET_LANGUAGE_DISPLAY_ORDER.slice(),
         nativeLanguage: ['portuguese', 'english', 'french', 'mandarin', 'spanish', 'german']
@@ -14423,6 +14430,7 @@
         accent: 'mix_100_0',
         fourthStageTyping: 'off',
         practiceNativeAudio: 'off',
+        babyMode: 'off',
         mode: 'training',
         targetLanguage: 'english',
         nativeLanguage: 'portuguese'
@@ -14436,6 +14444,7 @@
       const FINAL_CHALLENGE_SELECTION_STORAGE_KEY = 'playtalk-final-challenge-selection-v1';
       const FINAL_CHALLENGE_GENERAL_LEVELS_URL = '/api/flashcards/general-levels';
       const FINAL_CHALLENGE_SESSION_STORAGE_KEY = 'playtalk-final-challenge-session-v1';
+      const FINAL_CHALLENGE_SELECTED_LEVEL_STORAGE_KEY = 'playtalk-final-challenge-selected-level-v1';
       const WATCH_SETTINGS_KEY = 'playtalk-flashcards-watch-v1';
       const FLASHCARDS_PAGE_SIZE = 30;
       const ADMIN_USERNAMES = new Set(['admin', 'adm', 'adminst']);
@@ -15031,6 +15040,9 @@
           currentCardTrainingId: '',
           currentCardTrainingStartedAt: 0,
           canListen: false,
+          babyModeSession: false,
+          babySourceIds: [],
+          babyRecentIds: [],
           micUnlockTimer: 0,
           micUnlockCardId: '',
           levelBufferedSeenCount: 0,
@@ -16096,6 +16108,7 @@
           ...(state.ui.finalChallengeSelectedLevels || {}),
           [normalizedLanguage]: nextLevel
         };
+        writeStoredFinalChallengeSelectedLevel(nextLevel, normalizedLanguage);
         return nextLevel;
       }
 
@@ -16109,10 +16122,15 @@
           ...(state.ui.finalChallengeBestPercents || {}),
           [normalizedLanguage]: Math.max(0, Math.min(100, Math.round(Number(bestPercent) || 0)))
         };
+        const storedSelectedLevel = readStoredFinalChallengeSelectedLevel(normalizedLanguage);
         state.ui.finalChallengeSelectedLevels = {
           ...(state.ui.finalChallengeSelectedLevels || {}),
           [normalizedLanguage]: Math.min(
-            normalizeUserLevel(state.ui.finalChallengeSelectedLevels?.[normalizedLanguage] || normalizeUserLevel(level)),
+            normalizeUserLevel(
+              state.ui.finalChallengeSelectedLevels?.[normalizedLanguage]
+              || storedSelectedLevel
+              || normalizeUserLevel(level)
+            ),
             normalizeUserLevel(level)
           )
         };
@@ -17753,12 +17771,20 @@
       }
 
       function currentGameOptionSlides() {
-        const slides = ['difficulty', 'targetLanguage', 'nativeLanguage', 'practiceNativeAudio'];
+        const slides = ['difficulty', 'targetLanguage', 'nativeLanguage', 'practiceNativeAudio', 'babyMode'];
         if (currentTargetLanguage() === 'english') {
           slides.push('accent');
         }
         slides.push('fourthStageTyping');
         return slides;
+      }
+
+      function isBabyModeEnabled() {
+        return normalizeGameOptionValue('babyMode', state.options?.babyMode) === 'on';
+      }
+
+      function isBabyModeSessionActive() {
+        return Boolean(state.game?.active && state.game?.babyModeSession);
       }
 
       function resolveSourceLanguageText(card, language) {
@@ -18263,6 +18289,32 @@
       function storageKeyForUserLanguage(baseKey, userId = state.user?.id, language = currentProgressLanguage()) {
         const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
         return storageKeyForUser(`${baseKey}:${normalizedLanguage}`, userId);
+      }
+
+      function readStoredFinalChallengeSelectedLevel(language = currentFinalChallengeLanguage(), userId = state.user?.id) {
+        if (!canUseLocalCompetitiveStorage(userId)) return 0;
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        try {
+          const raw = window.localStorage.getItem(
+            storageKeyForUserLanguage(FINAL_CHALLENGE_SELECTED_LEVEL_STORAGE_KEY, userId, normalizedLanguage)
+          );
+          return normalizeUserLevel(raw || 0);
+        } catch (_error) {
+          return 0;
+        }
+      }
+
+      function writeStoredFinalChallengeSelectedLevel(level, language = currentFinalChallengeLanguage(), userId = state.user?.id) {
+        if (!canUseLocalCompetitiveStorage(userId)) return;
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        try {
+          window.localStorage.setItem(
+            storageKeyForUserLanguage(FINAL_CHALLENGE_SELECTED_LEVEL_STORAGE_KEY, userId, normalizedLanguage),
+            String(normalizeUserLevel(level))
+          );
+        } catch (_error) {
+          // ignore
+        }
       }
 
       function userScopedStorageKey(baseKey) {
@@ -24392,6 +24444,14 @@
               on: { label: nativeUiText('enabled'), desc: '' }
             }
           },
+          babyMode: {
+            name: nativeUiText('baby_mode'),
+            desc: '',
+            values: {
+              off: { label: nativeUiText('disabled'), desc: '' },
+              on: { label: nativeUiText('enabled'), desc: '' }
+            }
+          },
           accent: {
             name: nativeUiText('accent'),
             desc: '',
@@ -24429,6 +24489,8 @@
             return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14v12H5z"></path><path d="M9 10h6"></path><path d="M9 14h4"></path></svg>';
           case 'practiceNativeAudio':
             return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 14V10"></path><path d="M9 16V8"></path><path d="M13 19V5"></path><path d="M17 9a4 4 0 0 1 0 6"></path><path d="M19 7a7 7 0 0 1 0 10"></path></svg>';
+          case 'babyMode':
+            return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 12a5 5 0 0 1 10 0"></path><path d="M9 12v5"></path><path d="M15 12v5"></path><path d="M8 19h8"></path><circle cx="9" cy="8.5" r="1" fill="currentColor" stroke="none"></circle><circle cx="15" cy="8.5" r="1" fill="currentColor" stroke="none"></circle></svg>';
           case 'fourthStageTyping':
             return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="10" rx="2"></rect><circle cx="7.5" cy="11" r="0.8" fill="currentColor" stroke="none"></circle><circle cx="10.5" cy="11" r="0.8" fill="currentColor" stroke="none"></circle><circle cx="13.5" cy="11" r="0.8" fill="currentColor" stroke="none"></circle><circle cx="16.5" cy="11" r="0.8" fill="currentColor" stroke="none"></circle><path d="M8.5 14h7"></path></svg>';
           default:
@@ -24546,6 +24608,7 @@
           accent: normalizeGameOptionValue('accent', state.options?.accent),
           fourthStageTyping: normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping),
           practiceNativeAudio: normalizeGameOptionValue('practiceNativeAudio', state.options?.practiceNativeAudio),
+          babyMode: normalizeGameOptionValue('babyMode', state.options?.babyMode),
           mode: normalizeGameOptionValue('mode', state.options?.mode),
           targetLanguage: normalizeGameOptionValue('targetLanguage', state.options?.targetLanguage),
           nativeLanguage: normalizeGameOptionValue('nativeLanguage', state.options?.nativeLanguage)
@@ -24562,6 +24625,8 @@
         const nextDifficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
         const previousFourthTyping = normalizeGameOptionValue('fourthStageTyping', previousOptions.fourthStageTyping);
         const nextFourthTyping = normalizeGameOptionValue('fourthStageTyping', state.options?.fourthStageTyping);
+        const previousBabyMode = normalizeGameOptionValue('babyMode', previousOptions.babyMode);
+        const nextBabyMode = normalizeGameOptionValue('babyMode', state.options?.babyMode);
         const previousMode = normalizeGameOptionValue('mode', previousOptions.mode);
         const nextMode = normalizeGameOptionValue('mode', state.options?.mode);
         const previousTargetLanguage = normalizeGameOptionValue('targetLanguage', previousOptions.targetLanguage);
@@ -24570,6 +24635,7 @@
         const nextNativeLanguage = normalizeGameOptionValue('nativeLanguage', state.options?.nativeLanguage);
         const difficultyChanged = previousDifficulty !== nextDifficulty;
         const fourthTypingChanged = previousFourthTyping !== nextFourthTyping;
+        const babyModeChanged = previousBabyMode !== nextBabyMode;
         const modeChanged = previousMode !== nextMode;
         const targetLanguageChanged = previousTargetLanguage !== nextTargetLanguage;
         const nativeLanguageChanged = previousNativeLanguage !== nextNativeLanguage;
@@ -24609,7 +24675,7 @@
           applySelectedLanguageProjectionToAllCards();
           refreshLibrary();
         }
-        if (modeChanged) {
+        if (modeChanged || babyModeChanged) {
           clearGameSessionLocally();
           state.game.entries.clear();
           state.game.queue = [];
@@ -28229,6 +28295,7 @@
 
       function resolveStageTutorialKind(entry) {
         if (!ENABLE_STAGE_TUTORIALS) return '';
+        if (isBabyModeSessionActive()) return '';
         if (isFirstStageTutorialEligible(entry)) return 'first';
         if (isSecondStageTutorialEligible(entry)) return 'second';
         return '';
@@ -28324,6 +28391,18 @@
         if (Number(state.game.typingSkipRunId) !== Number(runId)) return;
         state.game.typingSkipActive = false;
         state.game.typingSkipEntryId = '';
+      }
+
+      function triggerBabyModeTouchSuccess() {
+        if (!isBabyModeSessionActive() || state.game.paused || state.game.listening || state.game.typingSkipActive) return false;
+        const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+        if (!entry || state.game.currentId !== entry.id) return false;
+        const advanceBtn = els.gameAdvanceBtn;
+        if (advanceBtn && !advanceBtn.hidden && !advanceBtn.disabled) {
+          advanceBtn.click();
+          return true;
+        }
+        return false;
       }
 
       function clearStageTwoHintTimer() {
@@ -29618,6 +29697,53 @@
         return finishPromptReflection(false);
       }
 
+      async function playGameAudioForLanguage(card, language, options = {}) {
+        const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        const src = resolveCardAudioUrlForLanguage(card, normalizedLanguage, {
+          accent: normalizedLanguage === 'english' ? currentLanguageBackgroundAccent() : ''
+        });
+        const rate = Math.max(0.1, Math.min(2.5, Number(options?.rate || 1) * resolveSelectedGameSpeed()));
+        if (src) {
+          stopActiveAudio();
+          await ensureRuntimeAudioSource(src);
+          const audio = new Audio(runtimeAudioSourceFor(src));
+          audio.playbackRate = rate;
+          audio.defaultPlaybackRate = rate;
+          audio.preservesPitch = true;
+          await playAudioWithSoftEnd(audio, { registerAsActive: true });
+          addListeningCharsForCard(card);
+          updateGameChips();
+          return true;
+        }
+        const fallbackText = safeText(resolveSourceLanguageText(card, normalizedLanguage));
+        if (!fallbackText || !window.speechSynthesis) return false;
+        stopActiveAudio();
+        await new Promise((resolve) => {
+          const utterance = new SpeechSynthesisUtterance(fallbackText);
+          utterance.lang = normalizedLanguage === 'english'
+            ? (pickCardAccent(card) === 'british' ? 'en-GB' : 'en-US')
+            : (FLASHCARD_LANGUAGE_OPTIONS[normalizedLanguage]?.speechCode || currentTargetSpeechCode());
+          utterance.rate = rate;
+          utterance.onend = () => resolve(true);
+          utterance.onerror = () => resolve(false);
+          try {
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+          } catch (_error) {
+            resolve(false);
+          }
+        });
+        return true;
+      }
+
+      async function playBabyModeResponseSequence(card) {
+        if (!card) return;
+        await playGameAudioForLanguage(card, currentNativeLanguage(), { rate: 0.9 }).catch(() => false);
+        if (!state.game.active || !isBabyModeSessionActive()) return;
+        await wait(140);
+        await playGameAudioForLanguage(card, currentTargetLanguage(), { rate: 0.9 }).catch(() => false);
+      }
+
       function playSuccessAudio() {
         if (isNoEnergyMediaLocked()) return;
         if (!state.game.successAudio) {
@@ -30288,6 +30414,66 @@
         return { id: card.id, stars: 0, stage: 1, missesWithoutStars: 0, typingMistakes: 0, pool };
       }
 
+      function resetBabyModeRuntime() {
+        state.game.babyModeSession = false;
+        state.game.babySourceIds = [];
+        state.game.babyRecentIds = [];
+      }
+
+      function babyModeEligibleCards() {
+        return uniqueCardsById((Array.isArray(state.allCards) ? state.allCards : []).filter((card) => {
+          if (!card || !hasCoreFlashcardText(card) || !hasPlayableFlashcardImage(card)) return false;
+          const targetText = safeText(resolveSourceLanguageText(card, currentTargetLanguage())).trim();
+          return targetText.length > 0 && countTypingDisplayCharacters(targetText) <= 15;
+        }));
+      }
+
+      function seedBabyModeSourceIds() {
+        const ids = shuffleList(babyModeEligibleCards().map((card) => safeText(card.id)).filter(Boolean));
+        state.game.babySourceIds = ids;
+        if (!Array.isArray(state.game.babyRecentIds)) {
+          state.game.babyRecentIds = [];
+        }
+        return ids;
+      }
+
+      function nextBabyModeCard(excludedIds = []) {
+        const excluded = new Set((Array.isArray(excludedIds) ? excludedIds : []).map((value) => safeText(value)).filter(Boolean));
+        let sourceIds = Array.isArray(state.game.babySourceIds) ? state.game.babySourceIds.filter(Boolean) : [];
+        if (!sourceIds.length) {
+          sourceIds = seedBabyModeSourceIds();
+        }
+        let nextId = '';
+        while (sourceIds.length) {
+          const candidateId = safeText(sourceIds.shift());
+          if (!candidateId || excluded.has(candidateId)) continue;
+          nextId = candidateId;
+          break;
+        }
+        state.game.babySourceIds = sourceIds;
+        if (!nextId) {
+          const fallback = shuffleList(babyModeEligibleCards())
+            .find((card) => card?.id && !excluded.has(safeText(card.id)));
+          nextId = safeText(fallback?.id);
+        }
+        if (!nextId) return null;
+        state.game.babyRecentIds = [...(Array.isArray(state.game.babyRecentIds) ? state.game.babyRecentIds : []), nextId].slice(-24);
+        return cardById(nextId);
+      }
+
+      function refillBabyModeEntry() {
+        if (!isBabyModeSessionActive()) return false;
+        const excludedIds = Array.from(state.game.entries.keys());
+        const nextCard = nextBabyModeCard(excludedIds);
+        if (!nextCard) return false;
+        const entry = createGameEntry(nextCard, 'baby');
+        entry.stage = 2;
+        entry.stars = 0;
+        state.game.entries.set(entry.id, entry);
+        state.game.queue.push(entry.id);
+        return true;
+      }
+
       function normalizeOnTableEntry(raw) {
         const id = safeText(raw?.cardId || raw?.id);
         if (!id) return null;
@@ -30766,6 +30952,15 @@
 
       function resolveTypingStageState(entry, card) {
         const stageConfig = STAGES[resolveEntryStageNumber(entry)] || STAGES[1];
+        if (isBabyModeSessionActive()) {
+          const sourceText = safeText(resolveSourceLanguageText(card, currentTargetLanguage()) || card?.english || card?.portuguese || card?.deckTitle || '');
+          return {
+            typingMode: 'english',
+            sourceText,
+            normalizedTarget: normalizeTypingSource(sourceText),
+            acceptedAnswer: sourceText
+          };
+        }
         const typingMode = stageConfig.typingMode === 'portuguese' ? 'portuguese' : 'english';
         const sourceText = typingMode === 'portuguese'
           ? (card?.portuguese || card?.english || card?.deckTitle || '')
@@ -32435,9 +32630,11 @@
             els.gamePhaseWord.classList.remove('is-visible', 'is-english', 'is-portuguese', 'is-fading');
           }
         }
-        els.gameStep.textContent = isLevelModeActive() && !isTrainingMode()
-          ? formatSelectedGameLevelLabel()
-          : stageConfig.badge;
+        els.gameStep.textContent = isBabyModeSessionActive()
+          ? nativeUiText('baby_mode')
+          : (isLevelModeActive() && !isTrainingMode()
+            ? formatSelectedGameLevelLabel()
+            : stageConfig.badge);
         els.gameWord.className = `game-word${stageConfig.showWord === false ? ' is-hidden' : ' is-chip'}`;
         els.gameSubword.className = `game-subword${subword ? ' is-chip' : ' is-hidden'}`;
         els.gameWord.classList.remove('is-stage-swap-hidden');
@@ -32518,7 +32715,9 @@
         } else {
           if (isLevelModeActive()) {
             els.gameStars.innerHTML = '';
-            els.gameStarCopy.textContent = formatSelectedGameLevelLabel();
+            els.gameStarCopy.textContent = isBabyModeSessionActive()
+              ? nativeUiText('baby_mode')
+              : formatSelectedGameLevelLabel();
             syncGameLevelNavigator();
           } else {
             renderStars(entry.stars);
@@ -35626,6 +35825,9 @@
         hideGameStageTutorial({ resume: false });
         clearStageTwoHintTimer();
         clearFirstStageIdleTimer();
+        if (isBabyModeSessionActive() && !state.game.queue.length) {
+          refillBabyModeEntry();
+        }
         if (!state.game.queue.length) {
           if (isTrainingMode() && refillTrainingCycle()) {
             renderTrainingSequence();
@@ -35657,7 +35859,7 @@
           }
         }
         state.game.currentId = state.game.queue.shift();
-        if (!state.game.sessionClockActive) {
+        if (!isBabyModeSessionActive() && !state.game.sessionClockActive) {
           void signalFlashcardSessionClock('in');
         }
         if (isTrainingMode()) {
@@ -35886,6 +36088,7 @@
         clearStageHintLoop({ clearStatus: true });
         state.game.fifthStarHintDismissed = false;
         clearPendingRewardSeal();
+        resetBabyModeRuntime();
         resetGameOrderedPoolCursor();
         state.game.levelMode = true;
         state.game.levelScaleMode = false;
@@ -35894,6 +36097,66 @@
         state.game.levelTypingMode = false;
         resetTutorialRuntime({ preserveCompletion: true });
         seedLevelModeEntries();
+
+        els.topbar.classList.add('is-hidden');
+        els.catalog.classList.add('is-hidden');
+        closeGameSetup();
+        document.body.classList.add('game-open');
+        document.body.classList.add('gameplay-active');
+        els.game.classList.add('is-visible');
+        window.requestAnimationFrame(() => els.game.classList.add('is-active'));
+        updateLevelProgressBar();
+
+        if (!state.game.entries.size) {
+          renderCurrentCard();
+          return;
+        }
+
+        updateGameChips();
+        scheduleGameIdleAutoPause();
+        advanceToNextCard();
+      }
+
+      function beginBabyModeGame() {
+        state.ui.gamePausedAtWelcome = false;
+        resetTrainingRuntime();
+        hideWelcomeGate();
+        clearScheduledOnboardingGate();
+        clearGameSessionLocally();
+        cleanupGameRecognition();
+        stopActiveAudio();
+        clearGameLanguageSwapTimer();
+        clearTypingPromptLoop();
+        clearTypingSkipAutomation();
+        clearStageTutorialReminder();
+        hideGameStageTutorial({ resume: false });
+        clearStageTwoHintTimer();
+        clearFirstStageIdleTimer();
+        clearStageHintLoop({ clearStatus: true });
+        state.game.fifthStarHintDismissed = false;
+        clearPendingRewardSeal();
+        resetBabyModeRuntime();
+        resetTutorialRuntime({ preserveCompletion: true });
+        clearCurrentLevelPriorityCards({ refreshHud: false });
+        state.game.entries.clear();
+        state.game.queue = [];
+        resetGameOrderedPoolCursor();
+        state.game.currentId = null;
+        state.game.listening = false;
+        state.game.paused = false;
+        state.game.canListen = false;
+        state.game.active = true;
+        state.game.transitioning = false;
+        state.game.sessionStartedAt = 0;
+        state.game.levelMode = true;
+        state.game.levelScaleMode = false;
+        state.game.levelAudioMode = false;
+        state.game.levelTextMode = false;
+        state.game.levelTypingMode = true;
+        state.game.levelTextHitStreak = 0;
+        state.game.babyModeSession = true;
+        seedBabyModeSourceIds();
+        refillBabyModeEntry();
 
         els.topbar.classList.add('is-hidden');
         els.catalog.classList.add('is-hidden');
@@ -36062,11 +36325,14 @@
 
       async function exitGame() {
         state.ui.gamePausedAtWelcome = false;
+        const babyModeSessionActive = isBabyModeSessionActive();
         clearGameIdleAutoPauseTimer();
         state.game.sessionClockActive = false;
         stopFlashcardSessionTick();
-        await signalFlashcardSessionClock('out', { forceNetwork: true });
-        await flushDeferredGameplayNetworkSync();
+        if (!babyModeSessionActive) {
+          await signalFlashcardSessionClock('out', { forceNetwork: true });
+          await flushDeferredGameplayNetworkSync();
+        }
         clearGameStatusRankTimer();
         commitCurrentCardTrainingTime();
         if (state.game.active && !state.game.tutorial.active && state.game.entries.size) {
@@ -36085,6 +36351,7 @@
         clearStageHintLoop({ clearStatus: true });
         state.game.fifthStarHintDismissed = false;
         clearPendingRewardSeal();
+        resetBabyModeRuntime();
         resetTutorialRuntime({ preserveCompletion: true });
         resetTrainingRuntime();
         state.game.active = false;
@@ -36104,7 +36371,7 @@
         state.game.listening = false;
         state.game.paused = false;
         updateLevelProgressBar();
-        if (state.game.sessionStartedAt) {
+        if (!babyModeSessionActive && state.game.sessionStartedAt) {
           state.stats.playTimeMs += Date.now() - state.game.sessionStartedAt;
           state.game.sessionStartedAt = 0;
           saveUserStats({ skipCloudSync: true });
@@ -36176,6 +36443,21 @@
           pushPronunciationSample(score);
         }
         updateGameChips();
+
+        if (isBabyModeSessionActive()) {
+          clearStageHintLoop({ clearStatus: true });
+          clearFirstStageMicHint({ clearStatus: true });
+          clearStageTwoHintTimer();
+          entry.typingMistakes = 0;
+          entry.missesWithoutStars = 0;
+          setGameStatus('', 'hit');
+          await playBabyModeResponseSequence(card);
+          if (!state.game.active || state.game.paused || state.game.currentId !== entry.id) return;
+          removeGameEntry(entry.id);
+          refillBabyModeEntry();
+          await advanceToNextCard();
+          return;
+        }
 
         if (isTrainingMode()) {
           clearStageHintLoop({ clearStatus: true });
@@ -36937,6 +37219,10 @@
             state.entry.welcomeFlashStartAt = 0;
             window.PlaytalkLoader?.hide?.('welcome-flash-start', { force: true });
             window.PlaytalkLoader?.hide?.('page-init', { force: true });
+            if (isBabyModeEnabled()) {
+              beginBabyModeGame();
+              return;
+            }
             if (!state.user?.id) {
               setAuthStatus('Entre para liberar treino e desafio.', 'error');
               return;
@@ -37467,6 +37753,13 @@
           if (!state.game.active) return;
           if (Date.now() - (Number(state.ui.gameSwipeTriggeredAt) || 0) < 400) return;
           if (event.target.closest('.btn-close')) return;
+          if (isBabyModeSessionActive()) {
+            if (event.target.closest('.game-home-btn')) return;
+            if (event.target.closest('.game-mission-btn')) return;
+            if (event.target.closest('.game-report-trigger')) return;
+            if (event.target.closest('.game-remember-btn')) return;
+            if (triggerBabyModeTouchSuccess()) return;
+          }
           if (event.target.closest('.flashcards-typing')) return;
           if (event.target.closest('.game-home-btn')) return;
           if (event.target.closest('.game-mission-btn')) return;
@@ -37677,6 +37970,7 @@
         });
         els.gameTouchBtn.addEventListener('click', (event) => {
           event.stopPropagation();
+          if (triggerBabyModeTouchSuccess()) return;
           const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
           if (phaseKey === 'first-star') {
             void handleFirstStarTouchFlow();
