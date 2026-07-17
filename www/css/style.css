@@ -2266,6 +2266,8 @@ body.dark-mode #texto-exibicao {
   right: 0;
   bottom: 0;
   width: 100%;
+  max-width: 100vw;
+  overflow: hidden;
 }
 
 #main-nav {
@@ -2283,6 +2285,9 @@ body.dark-mode #texto-exibicao {
   z-index: 1200;
   box-sizing: border-box;
   gap: 12px;
+  width: 100%;
+  max-width: 100vw;
+  overflow: hidden;
 }
 
 #main-nav .nav-item {
@@ -2296,6 +2301,8 @@ body.dark-mode #texto-exibicao {
   height: 56px;
   border-radius: 18px;
   transition: transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+  min-width: 0;
+  flex: 1 1 0;
 }
 
 #main-nav .nav-item:hover,
@@ -3938,6 +3945,8 @@ body.page-play #play-content.stats-wrapper {
   gap: 20px;
   padding: 0 12px 20px;
   box-sizing: border-box;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 .stats-mode-selector {
@@ -4185,12 +4194,15 @@ body.page-play #play-content.stats-wrapper {
   align-items: stretch;
   gap: 24px;
   width: 100%;
+  min-width: 0;
 }
 
 .stats-layout {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  width: 100%;
+  min-width: 0;
 }
 
 .stats-block {
@@ -4198,6 +4210,7 @@ body.page-play #play-content.stats-wrapper {
   flex-direction: column;
   gap: 14px;
   width: 100%;
+  min-width: 0;
 }
 
 .stats-block--title {
@@ -4228,6 +4241,8 @@ body.page-play #play-content.stats-wrapper {
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  width: 100%;
+  min-width: 0;
 }
 
 .stats-block__content--modes {
@@ -4306,6 +4321,8 @@ body.theme-blue .stat-bar-track {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 18px;
   width: min(520px, 90vw);
+  max-width: 100%;
+  min-width: 0;
 }
 
 .stats-numbers-slider {
@@ -4333,6 +4350,8 @@ body.theme-blue .stat-bar-track {
   border: none;
   background: transparent;
   cursor: default;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .performance-card__glow {
@@ -4353,6 +4372,10 @@ body.theme-blue .stat-bar-track {
   padding: clamp(14px, 3vw, 18px) clamp(16px, 4vw, 24px);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .performance-card__line {
@@ -4379,6 +4402,8 @@ body.theme-blue .stat-bar-track {
   align-items: center;
   justify-content: space-between;
   gap: clamp(12px, 3vw, 24px);
+  width: 100%;
+  min-width: 0;
 }
 
 .performance-card__player {
@@ -4386,6 +4411,7 @@ body.theme-blue .stat-bar-track {
   align-items: center;
   gap: clamp(10px, 2.4vw, 18px);
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .performance-card__level {
@@ -4426,6 +4452,7 @@ body.theme-blue .stat-bar-track {
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .performance-card__name-row {
@@ -4458,6 +4485,9 @@ body.theme-blue .stat-bar-track {
   border-radius: 999px;
   background: #1f2937;
   overflow: hidden;
+  max-width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .performance-card__progress-fill {
@@ -4475,6 +4505,8 @@ body.theme-blue .stat-bar-track {
   color: #fff;
   font-weight: 600;
   white-space: nowrap;`r`n  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .performance-card__status-icon {
@@ -4579,6 +4611,8 @@ body.theme-blue .stat-bar-track {
   justify-content: center;
   overflow: hidden;
   text-align: center;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .stats-performance__slide {
@@ -4601,6 +4635,7 @@ body.theme-blue .stat-bar-track {
   color: #fff;
   font-family: var(--app-font-family, 'Open Sans', sans-serif);
   visibility: hidden;
+  box-sizing: border-box;
 }
 
 .stats-performance__slide.is-active {
@@ -4656,6 +4691,7 @@ body.theme-blue .stat-bar-track {
   gap: 14px;
   transform: translate(-50%, -50%);
   pointer-events: none;
+  box-sizing: border-box;
 }
 
 .stats-numbers-slide.is-active {
@@ -4897,11 +4933,13 @@ body.theme-blue .stats-medal-board__empty {
   .stats-wrapper {
     gap: 16px;
     align-items: center;
+    width: 100%;
   }
 
   .stats-layout {
     gap: 18px;
     align-items: center;
+    width: 100%;
   }
 
   .stat-bar {
@@ -4911,6 +4949,7 @@ body.theme-blue .stats-medal-board__empty {
   .stats-metrics {
     width: 100%;
     gap: 14px;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .stat-metric {
@@ -4959,6 +4998,7 @@ body.theme-blue .stats-medal-board__empty {
 
   .stats-hub {
     align-items: center;
+    padding-inline: 8px;
   }
 
   .stats-section,
@@ -4970,6 +5010,44 @@ body.theme-blue .stats-medal-board__empty {
   .stats-section__header {
     flex-direction: column;
     align-items: center;
+  }
+
+  .performance-card,
+  .performance-card__body,
+  .performance-card__content,
+  .performance-card__player,
+  .performance-card__text,
+  .performance-card__status,
+  .stats-performance__slider,
+  .stats-performance__slide,
+  .stats-numbers-slider,
+  .stats-numbers-slide {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .performance-card__body,
+  .stats-performance__slide,
+  .stats-numbers-slide {
+    padding-inline: 12px;
+  }
+
+  .performance-card__status {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  #main-nav {
+    padding-left: max(10px, env(safe-area-inset-left, 0px));
+    padding-right: max(10px, env(safe-area-inset-right, 0px));
+    gap: 6px;
+  }
+
+  #main-nav .nav-item {
+    width: auto;
+    height: min(56px, calc(var(--nav-height) - 8px));
+    border-radius: 14px;
   }
 }
 

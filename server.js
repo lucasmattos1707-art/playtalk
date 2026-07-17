@@ -85,6 +85,7 @@ const OPENAI_STORY_MODEL = env(process.env.OPENAI_STORY_MODEL) || 'gpt-5.4-nano'
 const OPENAI_TTS_MODEL = env(process.env.OPENAI_TTS_MODEL) || 'gpt-4o-mini-tts';
 const OPENAI_STT_MODEL = env(process.env.OPENAI_STT_MODEL) || 'gpt-4o-mini-transcribe';
 const OPENAI_CHAT_FAST_MODEL = env(process.env.OPENAI_CHAT_FAST_MODEL) || 'gpt-5-mini';
+const INSONIC_TEXT_MODEL = env(process.env.INSONIC_TEXT_MODEL) || OPENAI_CHAT_FAST_MODEL;
 const OPENAI_USERNAME_REVIEW_MODEL = env(process.env.OPENAI_USERNAME_REVIEW_MODEL) || 'gpt-4.1';
 const OPENAI_TRANSLATE_MODEL = env(process.env.OPENAI_TRANSLATE_MODEL) || 'gpt-4.1-mini';
 const OPENAI_CHAT_ALLOWED_MODELS = new Set([
@@ -7996,6 +7997,8 @@ const staticDir = (() => {
 
   return __dirname;
 })();
+
+const insonicDir = path.join(__dirname, 'wilton');
 
 const FINAL_CHALLENGE_GENERAL_LEVELS_FILE_NAME = 'final-challenge-general-levels.json';
 const FINAL_CHALLENGE_GENERAL_LEVELS_PATH = path.join(staticDir, 'data', FINAL_CHALLENGE_GENERAL_LEVELS_FILE_NAME);
@@ -23420,7 +23423,10 @@ app.use(async (req, res, next) => {
     '/auth/avatar',
     '/auth/google-quick',
     '/auth/session',
-    '/config.js'
+    '/config.js',
+    '/insonic',
+    '/insonic/',
+    '/insonic/index.html'
   ]);
 
   if (
@@ -23436,6 +23442,7 @@ app.use(async (req, res, next) => {
     || pathName.startsWith('/newfonts/')
     || pathName.startsWith('/medalhas/')
     || pathName.startsWith('/Avatar/')
+    || pathName.startsWith('/insonic/')
     || pathName.startsWith('/backgrounds/')
     || pathName.startsWith('/data/')
     || pathName === '/favicon.ico'
@@ -23488,6 +23495,20 @@ app.get(['/chat/', '/chat/index.html'], (req, res) => {
 app.get(['/thata', '/thata/', '/thata.html'], (req, res) => {
   res.sendFile(path.join(staticDir, 'thata.html'));
 });
+
+app.get(/^\/insonic$/, (_req, res) => {
+  res.redirect(302, '/insonic/');
+});
+
+app.get(['/insonic/', '/insonic/index.html'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(insonicDir, 'index.html'));
+});
+
+app.use('/insonic', express.static(insonicDir, {
+  index: false,
+  maxAge: NODE_ENV === 'production' ? '1h' : 0
+}));
 
 app.get('/', (req, res) => {
   res.redirect(302, '/entrar');
@@ -23926,6 +23947,16 @@ app.post('/api/stt/openai', async (req, res) => {
   }
 });
 
+app.get('/api/insonic/content', (_req, res) => {
+  const contentPath = path.join(insonicDir, 'data', 'content.json');
+  if (!fs.existsSync(contentPath)) {
+    res.status(404).json({ error: 'Conteudo InSonic nao encontrado.' });
+    return;
+  }
+  res.setHeader('Cache-Control', NODE_ENV === 'production' ? 'public, max-age=300' : 'no-store');
+  res.sendFile(contentPath);
+});
+
 app.post('/api/chat/openai', async (req, res) => {
   const messages = Array.isArray(req.body?.messages) ? req.body.messages : [];
   const requestedSystemPrompt = typeof req.body?.systemPrompt === 'string' ? req.body.systemPrompt.trim() : '';
@@ -24020,6 +24051,87 @@ app.post('/api/chat/openai', async (req, res) => {
       error: 'Erro ao conectar com a OpenAI.',
       details: error.message
     });
+  }
+});
+
+app.post('/api/insonic/assistant', async (req, res) => {
+  const messages = (Array.isArray(req.body?.messages) ? req.body.messages : [])
+    .map((message) => ({
+      role: message?.role === 'assistant' ? 'assistant' : 'user',
+      content: typeof message?.content === 'string' ? message.content.trim() : ''
+    }))
+    .filter((message) => message.content)
+    .slice(-10);
+
+  if (!messages.length) {
+    res.status(400).json({ error: 'Envie ao menos uma mensagem para o assistente InSonic.' });
+    return;
+  }
+
+  if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
+    res.status(503).json({
+      error: 'OpenAI nao configurada para a InSonic.',
+      instructions: 'Preencha OPENAI_API_KEY no .env do servidor.'
+    });
+    return;
+  }
+
+  const instructions = [
+    'Voce e o assistente tecnico da InSonic Ambientes.',
+    'Responda em portugues do Brasil com clareza, acolhimento e foco pratico.',
+    'Ajude a organizar necessidades de acustica para auditorios, podcasts, igrejas, estudios e empresas.',
+    'Explique quando uma recomendacao depende de metragem, materiais, uso, nivel de ruido ou medicao presencial.',
+    'Nunca apresente uma estimativa remota como laudo, medicao definitiva ou garantia tecnica.',
+    'Quando fizer sentido, recomende Planejamento, Projecao, Experiencia, Hora Tecnica, Semana Sonora ou Parceria Anual.',
+    'Nao invente disponibilidade, prazo final ou preco diferente dos dados publicados pela InSonic.'
+  ].join(' ');
+
+  try {
+    const upstreamResponse = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: INSONIC_TEXT_MODEL,
+        instructions,
+        input: messages.map((message) => ({
+          type: 'message',
+          role: message.role,
+          content: [{
+            type: message.role === 'assistant' ? 'output_text' : 'input_text',
+            text: message.content
+          }]
+        }))
+      })
+    });
+
+    const responseText = await upstreamResponse.text();
+    let payload = null;
+    try {
+      payload = responseText ? JSON.parse(responseText) : null;
+    } catch (_error) {
+      payload = null;
+    }
+
+    if (!upstreamResponse.ok) {
+      res.status(upstreamResponse.status).json({
+        error: 'Falha ao gerar resposta do assistente InSonic.',
+        details: payload?.error?.message || responseText.slice(0, 500)
+      });
+      return;
+    }
+
+    const text = extractResponseText(payload);
+    if (!text) {
+      res.status(502).json({ error: 'A OpenAI nao retornou texto utilizavel para a InSonic.' });
+      return;
+    }
+
+    res.json({ success: true, text, model: INSONIC_TEXT_MODEL, usage: payload?.usage || null });
+  } catch (error) {
+    res.status(502).json({ error: 'Erro ao conectar o assistente InSonic.', details: error.message });
   }
 });
 

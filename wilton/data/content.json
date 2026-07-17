@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-17",
+  "plans": {
+    "presencial": [
+      {
+        "id": "planejamento",
+        "title": "Planejamento",
+        "owner": "Wilton Rogers",
+        "priceLabel": "Ambiente",
+        "currency": "R$",
+        "price": "4.000,00",
+        "period": "a partir de",
+        "logline": "Plano completo, imersivo e personalizado para o seu ambiente.",
+        "tags": ["Presencial", "12 horas", "3 videoconferências"],
+        "features": [
+          "Expertise sonora de ambientes",
+          "Plano de acústica completo",
+          "Equipamentos pelo menor preço",
+          "Relatório avançado",
+          "Plano completo: 12 horas",
+          "3 videoconferências"
+        ],
+        "detail": "Uma leitura aprofundada do ambiente conduzida por Wilton Rogers, com diagnóstico, decisões técnicas, seleção de equipamentos e relatório para orientar a execução."
+      },
+      {
+        "id": "projecao",
+        "title": "Projeção",
+        "owner": "Equipe Smart",
+        "priceLabel": "Ambiente",
+        "currency": "R$",
+        "price": "8.800,00",
+        "period": "a partir de",
+        "logline": "O melhor custo-benefício em um plano inteligente de acústica moderna.",
+        "tags": ["Presencial", "1 semana", "Equipe Smart"],
+        "features": [
+          "Tudo do plano Planejamento",
+          "Montagem elementar",
+          "Projeto completo",
+          "Experiência sonora",
+          "Plano de 1 semana",
+          "3 videoconferências"
+        ],
+        "detail": "Planejamento e projeção unidos a uma primeira etapa de montagem. A Equipe Smart organiza materiais, integração técnica e execução elementar do projeto."
+      },
+      {
+        "id": "experiencia",
+        "title": "Experiência",
+        "owner": "InSonic Team",
+        "priceLabel": "Ambiente",
+        "currency": "R$",
+        "price": "15.900,00",
+        "period": "a partir de",
+        "logline": "O mais completo e avançado plano para ambientes com o time InSonic.",
+        "tags": ["Presencial", "4 integrantes", "Projeto avançado"],
+        "features": [
+          "Tudo do plano Projeção",
+          "4 integrantes",
+          "Projeto avançado",
+          "Montagem de estrutura",
+          "Experiência acústica",
+          "6 videoconferências"
+        ],
+        "detail": "A experiência completa da InSonic: quatro especialidades trabalhando juntas da estratégia à estrutura, com execução avançada e acompanhamento do resultado acústico."
+      }
+    ],
+    "digital": [
+      {
+        "id": "hora-tecnica",
+        "title": "Hora Técnica",
+        "owner": "Consultoria avulsa",
+        "priceLabel": "1 hora",
+        "currency": "R$",
+        "price": "600,00",
+        "period": "encontro online",
+        "logline": "Uma sessão objetiva para destravar uma decisão acústica do seu ambiente.",
+        "tags": ["Digital", "1 hora", "Diagnóstico direto"],
+        "features": [
+          "Análise prévia do problema",
+          "1 videoconferência técnica",
+          "Orientação de materiais",
+          "Revisão de equipamentos",
+          "Resumo com próximos passos"
+        ],
+        "detail": "Ideal para validar uma escolha, investigar um problema de eco, rever equipamentos ou receber uma orientação especializada antes de investir."
+      },
+      {
+        "id": "semana-sonora",
+        "title": "Semana Sonora",
+        "owner": "Acompanhamento digital",
+        "priceLabel": "4 horas",
+        "currency": "R$",
+        "price": "1.200,00",
+        "period": "por semana",
+        "logline": "Quatro horas de acompanhamento para transformar dúvidas em um plano acústico executável.",
+        "tags": ["Digital", "4 horas", "Plano de ação"],
+        "features": [
+          "Diagnóstico remoto do ambiente",
+          "Até 4 horas de consultoria",
+          "Planejamento acústico inicial",
+          "Mapa de materiais e equipamentos",
+          "Revisão de orçamento",
+          "Suporte durante 7 dias"
+        ],
+        "detail": "Uma semana de trabalho lado a lado, com análise de vídeos, medidas e necessidades para construir um plano claro, revisar custos e orientar a execução local."
+      },
+      {
+        "id": "parceria-anual",
+        "title": "Parceria Anual",
+        "owner": "InSonic Digital",
+        "priceLabel": "36 horas",
+        "currency": "R$",
+        "price": "7.200,00",
+        "period": "por ano",
+        "logline": "Inteligência acústica ao longo do ano para decisões, evolução e novos ambientes.",
+        "tags": ["Digital", "36 horas", "Visita opcional"],
+        "features": [
+          "36 horas de acompanhamento anual",
+          "Planejamento acústico contínuo",
+          "Revisões de projeto e orçamento",
+          "Database de preços e prazos",
+          "Prioridade no atendimento",
+          "Visita presencial opcional"
+        ],
+        "detail": "Uma parceria contínua para empresas, igrejas, estúdios e profissionais que precisam tomar decisões acústicas durante todo o ano, com visita presencial opcional sob agendamento."
+      }
+    ]
+  }
+}

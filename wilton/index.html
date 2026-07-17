@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="InSonic Ambientes — planejamento, projeção e experiências acústicas para ambientes fechados.">
+  <meta name="theme-color" content="#07100f">
+  <title>InSonic Ambientes | Arquitetura acústica</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="insonic.css">
+</head>
+<body>
+  <!-- Base visual derivada do TemplateMo 621 Luminary. -->
+  <div class="noise" aria-hidden="true"></div>
+  <div class="cursor-glow" id="cursorGlow" aria-hidden="true"></div>
+
+  <header class="site-header" id="siteHeader">
+    <a class="brand" href="#inicio" aria-label="InSonic Ambientes — início">
+      <strong>INSONIC</strong><span>AMBIENTES</span>
+    </a>
+    <nav class="desktop-nav" aria-label="Navegação principal">
+      <a href="#especialidades">Especialidades</a>
+      <a href="#equipe">Equipe</a>
+      <a href="#planos">Planos</a>
+      <a href="#processo">Processo</a>
+    </nav>
+    <a class="header-cta" href="#planos">Planejar ambiente</a>
+    <button class="menu-button" id="menuButton" type="button" aria-label="Abrir menu" aria-controls="mobileMenu" aria-expanded="false">
+      <span></span><span></span>
+    </button>
+  </header>
+
+  <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+    <nav aria-label="Navegação móvel">
+      <a href="#inicio">Início</a><a href="#especialidades">Especialidades</a><a href="#equipe">Equipe</a><a href="#planos">Planos</a><a href="#processo">Processo</a>
+    </nav>
+  </div>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="hero-grid" aria-hidden="true"></div>
+      <div class="hero-copy">
+        <p class="eyebrow reveal">Arquitetura acústica • Ambientes fechados</p>
+        <h1 class="reveal delay-1">Leve a acústica do seu ambiente a <em>um outro nível.</em></h1>
+        <p class="hero-text reveal delay-2">Planejamento técnico, equipamentos inteligentes e execução cuidadosa para transformar completamente a experiência de comunicação em auditórios, podcasts, igrejas, estúdios e empresas.</p>
+        <div class="hero-actions reveal delay-3">
+          <a class="button button-primary" href="#planos">Conhecer os planos</a>
+          <a class="button button-ghost" href="#equipe">Conhecer a equipe</a>
+        </div>
+      </div>
+
+      <div class="sound-object reveal delay-2" aria-label="Representação visual de propagação sonora">
+        <div class="sound-orbit orbit-one"></div><div class="sound-orbit orbit-two"></div><div class="sound-orbit orbit-three"></div>
+        <div class="sound-core"><span>IS</span></div>
+        <svg class="sound-wave" viewBox="0 0 600 160" role="img" aria-label="Onda sonora InSonic">
+          <path d="M0 80 C35 80 42 80 61 80 C78 80 82 42 101 42 C120 42 119 122 140 122 C161 122 158 20 182 20 C206 20 202 142 227 142 C252 142 247 55 270 55 C293 55 288 105 311 105 C334 105 330 67 352 67 C374 67 371 94 392 94 C413 94 411 75 431 75 C451 75 450 84 470 84 C490 84 490 80 510 80 H600"/>
+        </svg>
+        <div class="sound-caption"><span>SOM</span><span>ESPAÇO</span><span>EXPERIÊNCIA</span></div>
+      </div>
+
+      <div class="hero-stats reveal delay-4">
+        <div><strong>360°</strong><span>Leitura do ambiente</span></div><div><strong>01</strong><span>Time integrado</span></div><div><strong>BR</strong><span>Atendimento digital</span></div>
+      </div>
+    </section>
+
+    <section class="section specialties" id="especialidades">
+      <div class="section-heading reveal">
+        <p class="eyebrow">Inteligência aplicada ao som</p>
+        <h2>Do primeiro eco ao <strong>último detalhe.</strong></h2>
+        <p>A InSonic reúne projeto, instalação e acompanhamento digital para que cada decisão técnica produza uma diferença que você realmente consiga ouvir.</p>
+      </div>
+      <div class="seal-grid">
+        <article class="seal-card reveal"><div class="seal-icon"><img src="icons/equipamentos.svg" alt=""></div><p class="seal-number">01</p><h3>Equipamentos</h3><p>Database digital com os melhores preços e prazos do Brasil.</p></article>
+        <article class="seal-card reveal delay-1"><div class="seal-icon"><img src="icons/expertise.svg" alt=""></div><p class="seal-number">02</p><h3>Expertise</h3><p>Alta experiência em acústica, com especialidade em ambientes fechados.</p></article>
+        <article class="seal-card reveal delay-2"><div class="seal-icon"><img src="icons/digital.svg" alt=""></div><p class="seal-number">03</p><h3>Digital</h3><p>Acompanhamento completo a longa distância, com método e resultados garantidos.</p></article>
+      </div>
+    </section>
+
+    <section class="section team-section" id="equipe">
+      <div class="section-heading reveal"><p class="eyebrow">InSonic Team</p><h2>Quatro especialidades. <strong>Uma só frequência.</strong></h2></div>
+      <div class="team-grid">
+        <article class="team-card maestro reveal"><div class="team-portrait" aria-hidden="true"><span>WR</span><i></i></div><div class="team-index">01 / MAESTRO</div><h3>Wilton Rogers</h3><p class="team-role">Arquiteto acústico</p><p>Transforma o som de qualquer ambiente e conduz a experiência de comunicação em auditórios, podcasts, igrejas, estúdios e espaços corporativos. É o maestro da equipe.</p></article>
+        <article class="team-card reveal delay-1"><div class="team-portrait" aria-hidden="true"><span>TM</span><i></i></div><div class="team-index">02 / CAMPO</div><h3>Thiago Machado</h3><p class="team-role">Especialista em instalação</p><p>Responsável por montagem, instalação, projeção e integração dos equipamentos que materializam cada solução acústica.</p></article>
+        <article class="team-card reveal delay-2"><div class="team-portrait" aria-hidden="true"><span>JP</span><i></i></div><div class="team-index">03 / ESTRUTURA</div><h3>João Paulo</h3><p class="team-role">Montador e gerente digital</p><p>Especialista em drywall e MDF, auxiliar de montagem e gerente do acompanhamento digital entre cliente, projeto e equipe.</p></article>
+        <article class="team-card reveal delay-3"><div class="team-portrait" aria-hidden="true"><span>LS</span><i></i></div><div class="team-index">04 / DADOS</div><h3>Lucas Souza</h3><p class="team-role">Programador InSonic</p><p>Especialista em dados, preços e logística. Conecta tecnologia, database e inteligência operacional às decisões de cada projeto.</p></article>
+      </div>
+    </section>
+
+    <section class="section pricing-section" id="planos">
+      <div class="section-heading centered reveal"><p class="eyebrow">Planos InSonic</p><h2>Escolha como quer <strong>transformar o ambiente.</strong></h2><p>Alterne entre presença completa no projeto e acompanhamento técnico digital.</p></div>
+      <div class="pricing-toggle reveal delay-1" aria-label="Modalidade dos planos">
+        <button class="toggle-label active" id="presencialLabel" type="button">Presencial</button>
+        <button class="toggle-switch" id="pricingToggle" type="button" role="switch" aria-checked="false" aria-label="Alternar entre planos presenciais e digitais"><span></span></button>
+        <button class="toggle-label" id="digitalLabel" type="button">Digital</button>
+      </div>
+      <div class="pricing-stage" id="pricingStage" aria-live="polite"><div class="pricing-grid" id="pricingGrid"></div></div>
+      <p class="pricing-note reveal">Valores e escopo podem ser ajustados conforme metragem, complexidade técnica, deslocamento e necessidades do ambiente.</p>
+    </section>
+
+    <section class="section process-section" id="processo">
+      <div class="section-heading reveal"><p class="eyebrow">Método InSonic</p><h2>Escutar. Calcular. <strong>Transformar.</strong></h2></div>
+      <div class="process-grid">
+        <article class="process-card reveal"><span>01</span><h3>Leitura</h3><p>Entendemos o uso, o volume, os materiais e os principais conflitos sonoros do ambiente.</p></article>
+        <article class="process-card reveal delay-1"><span>02</span><h3>Plano</h3><p>Organizamos decisões, equipamentos, estrutura, orçamento e prazos em um caminho claro.</p></article>
+        <article class="process-card reveal delay-2"><span>03</span><h3>Execução</h3><p>Integramos equipe e montagem com acompanhamento técnico até o resultado final.</p></article>
+        <article class="process-card reveal delay-3"><span>04</span><h3>Evolução</h3><p>Revisamos o desempenho e orientamos melhorias presenciais ou a distância.</p></article>
+      </div>
+    </section>
+
+    <section class="section final-cta reveal"><div><p class="eyebrow">Seu ambiente tem uma voz</p><h2>Vamos fazer essa voz <strong>soar melhor?</strong></h2></div><a class="button button-primary" href="#planos">Começar um projeto</a></section>
+  </main>
+
+  <footer class="site-footer"><a class="brand footer-brand" href="#inicio"><strong>INSONIC</strong><span>AMBIENTES</span></a><p>Arquitetura acústica, tecnologia e experiência.</p><p class="copyright">© <span id="year"></span> InSonic.</p></footer>
+
+  <dialog class="plan-modal" id="planModal">
+    <button class="modal-close" id="modalClose" type="button" aria-label="Fechar detalhes">×</button>
+    <p class="eyebrow" id="modalMode"></p><h2 id="modalTitle"></h2><p class="modal-logline" id="modalLogline"></p><div class="modal-meta" id="modalMeta"></div><ul class="modal-features" id="modalFeatures"></ul>
+    <a class="button button-primary modal-action" href="#processo" id="modalAction">Quero conversar sobre este plano</a>
+  </dialog>
+
+  <script src="insonic.js" defer></script>
+</body>
+</html>
