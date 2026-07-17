@@ -9,7 +9,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="insonic.css">
+  <link rel="stylesheet" href="insonic.css?v=20260717-3">
+  <style>
+    /* Impede que o fluxo apareça como conteúdo comum se um asset ainda estiver em atualização. */
+    #projectFlow { position: fixed; z-index: 24; top: 70px; right: 0; bottom: 0; left: 0; visibility: hidden; overflow: hidden; opacity: 0; pointer-events: none; }
+    #projectFlow.open { visibility: visible; opacity: 1; pointer-events: auto; }
+    #projectFlow[hidden] { display: none !important; }
+  </style>
 </head>
 <body>
   <!-- Base visual derivada do TemplateMo 621 Luminary. -->
@@ -114,12 +120,12 @@
 
   <footer class="site-footer"><a class="brand footer-brand" href="#inicio"><strong>INSONIC</strong><span>AMBIENTES</span></a><p>Arquitetura acústica, tecnologia e experiência.</p><p class="copyright">© <span id="year"></span> InSonic.</p></footer>
 
-  <section class="project-flow" id="projectFlow" aria-hidden="true" aria-label="Planejamento acústico InSonic">
+  <section class="project-flow" id="projectFlow" aria-hidden="true" aria-label="Planejamento acústico InSonic" hidden>
     <form class="flow-form" id="projectForm" novalidate>
       <div class="flow-topline">
         <div>
           <p class="eyebrow">Planejamento acústico</p>
-          <p class="flow-step-label"><span id="flowStepNumber">01</span> / <span id="flowStepTotal">10</span></p>
+          <p class="flow-step-label"><span id="flowStepNumber">01</span> / <span id="flowStepTotal">11</span></p>
         </div>
         <button class="flow-close" id="flowClose" type="button" aria-label="Fechar planejamento">Fechar</button>
       </div>
@@ -145,6 +151,6 @@
     <a class="button button-primary modal-action" href="#processo" id="modalAction">Quero conversar sobre este plano</a>
   </dialog>
 
-  <script src="insonic.js" defer></script>
+  <script src="insonic.js?v=20260717-3" defer></script>
 </body>
 </html>

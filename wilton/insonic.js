@@ -510,6 +510,8 @@ function openProjectFlow() {
   const flow = $('#projectFlow');
   if (flow.classList.contains('open')) return;
   closePlan();
+  flow.hidden = false;
+  void flow.offsetWidth;
   flow.classList.add('open');
   flow.setAttribute('aria-hidden', 'false');
   document.body.classList.add('flow-open');
@@ -521,6 +523,9 @@ function closeProjectFlow() {
   flow.classList.remove('open');
   flow.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('flow-open');
+  window.setTimeout(() => {
+    if (!flow.classList.contains('open')) flow.hidden = true;
+  }, 500);
 }
 
 async function submitIntake() {

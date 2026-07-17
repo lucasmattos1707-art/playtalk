@@ -23553,7 +23553,17 @@ app.get(['/insonic/', '/insonic/index.html'], (req, res) => {
 
 app.use('/insonic', express.static(insonicDir, {
   index: false,
-  maxAge: NODE_ENV === 'production' ? '1h' : 0
+  etag: true,
+  lastModified: true,
+  maxAge: 0,
+  setHeaders: (res, filePath) => {
+    const extension = path.extname(filePath).toLowerCase();
+    if (['.css', '.js', '.html', '.json'].includes(extension)) {
+      res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+      return;
+    }
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+  }
 }));
 
 app.get('/', (req, res) => {
