@@ -26,7 +26,7 @@
       <a href="#planos">Planos</a>
       <a href="#processo">Processo</a>
     </nav>
-    <a class="header-cta" href="#planos">Planejar ambiente</a>
+    <a class="header-cta" href="#planejar" data-open-intake>Planejar ambiente</a>
     <button class="menu-button" id="menuButton" type="button" aria-label="Abrir menu" aria-controls="mobileMenu" aria-expanded="false">
       <span></span><span></span>
     </button>
@@ -34,7 +34,7 @@
 
   <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
     <nav aria-label="Navegação móvel">
-      <a href="#inicio">Início</a><a href="#especialidades">Especialidades</a><a href="#equipe">Equipe</a><a href="#planos">Planos</a><a href="#processo">Processo</a>
+      <a href="#inicio">Início</a><a href="#especialidades">Especialidades</a><a href="#equipe">Equipe</a><a href="#planos">Planos</a><a href="#processo">Processo</a><a href="#planejar" data-open-intake>Planejar ambiente</a>
     </nav>
   </div>
 
@@ -109,10 +109,35 @@
       </div>
     </section>
 
-    <section class="section final-cta reveal"><div><p class="eyebrow">Seu ambiente tem uma voz</p><h2>Vamos fazer essa voz <strong>soar melhor?</strong></h2></div><a class="button button-primary" href="#planos">Começar um projeto</a></section>
+    <section class="section final-cta reveal"><div><p class="eyebrow">Seu ambiente tem uma voz</p><h2>Vamos fazer essa voz <strong>soar melhor?</strong></h2></div><a class="button button-primary" href="#planejar" data-open-intake>Começar um projeto</a></section>
   </main>
 
   <footer class="site-footer"><a class="brand footer-brand" href="#inicio"><strong>INSONIC</strong><span>AMBIENTES</span></a><p>Arquitetura acústica, tecnologia e experiência.</p><p class="copyright">© <span id="year"></span> InSonic.</p></footer>
+
+  <section class="project-flow" id="projectFlow" aria-hidden="true" aria-label="Planejamento acústico InSonic">
+    <form class="flow-form" id="projectForm" novalidate>
+      <div class="flow-topline">
+        <div>
+          <p class="eyebrow">Planejamento acústico</p>
+          <p class="flow-step-label"><span id="flowStepNumber">01</span> / <span id="flowStepTotal">10</span></p>
+        </div>
+        <button class="flow-close" id="flowClose" type="button" aria-label="Fechar planejamento">Fechar</button>
+      </div>
+
+      <div class="flow-viewport">
+        <div class="flow-track" id="flowTrack"></div>
+      </div>
+
+      <div class="flow-feedback" id="flowFeedback" role="alert" aria-live="polite"></div>
+      <footer class="flow-footer">
+        <div class="flow-navigation" id="flowNavigation">
+          <button class="flow-back" id="flowBack" type="button">Voltar</button>
+          <button class="button button-primary flow-next" id="flowNext" type="submit">Continuar</button>
+        </div>
+        <div class="flow-progress" aria-hidden="true"><span id="flowProgressBar"></span></div>
+      </footer>
+    </form>
+  </section>
 
   <dialog class="plan-modal" id="planModal">
     <button class="modal-close" id="modalClose" type="button" aria-label="Fechar detalhes">×</button>

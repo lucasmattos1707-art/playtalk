@@ -358,6 +358,7 @@ let flashcardLevelRulesSettingsReadyPromise = null;
 let flashcardSpeedCurveSettingsReadyPromise = null;
 let flashcardLevelDynamicsSettingsReadyPromise = null;
 let flashcardLevelWindowSettingsReadyPromise = null;
+let insonicIntakesTableReadyPromise = null;
 let flashcardXpLevelCurveSettingsReadyPromise = null;
 let flashcardCardValueSettingsReadyPromise = null;
 let flashcardXpValueSettingsReadyPromise = null;
@@ -2838,6 +2839,51 @@ const ensurePremiumAccessTables = async () => {
   }
 
   return premiumAccessTablesReadyPromise;
+};
+
+const ensureInsonicIntakesTable = async () => {
+  if (!pool) return false;
+
+  if (!insonicIntakesTableReadyPromise) {
+    insonicIntakesTableReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.insonic_project_intakes (
+          access_code varchar(6) PRIMARY KEY,
+          client_name varchar(180) NOT NULL,
+          phone varchar(60) NOT NULL,
+          email varchar(254) NOT NULL,
+          city varchar(180) NOT NULL,
+          environment_size_m2 integer NOT NULL CHECK (environment_size_m2 > 0),
+          project_objective text NOT NULL,
+          coverage text NOT NULL,
+          roof_material text NOT NULL,
+          wall_material text NOT NULL,
+          audience_capacity integer NOT NULL CHECK (audience_capacity > 0),
+          acoustic_problems text NOT NULL,
+          existing_equipment text NOT NULL,
+          answers_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          CONSTRAINT insonic_project_intakes_code_format
+            CHECK (access_code ~ '^[A-Z]{3}[0-9]{3}$')
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS insonic_project_intakes_created_idx
+        ON public.insonic_project_intakes (created_at DESC)
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS insonic_project_intakes_email_idx
+        ON public.insonic_project_intakes (lower(email), created_at DESC)
+      `);
+      return true;
+    })().catch((error) => {
+      insonicIntakesTableReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return insonicIntakesTableReadyPromise;
 };
 
 const ensureSpeakingRealtimeTables = async () => {
@@ -23955,6 +24001,116 @@ app.get('/api/insonic/content', (_req, res) => {
   }
   res.setHeader('Cache-Control', NODE_ENV === 'production' ? 'public, max-age=300' : 'no-store');
   res.sendFile(contentPath);
+});
+
+const normalizeInsonicIntakeText = (value, maxLength = 2000) => (
+  typeof value === 'string' ? value.trim().slice(0, maxLength) : ''
+);
+
+const createInsonicAccessCode = () => {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  let code = '';
+  for (let index = 0; index < 3; index += 1) code += letters[crypto.randomInt(0, letters.length)];
+  for (let index = 0; index < 3; index += 1) code += digits[crypto.randomInt(0, digits.length)];
+  return code;
+};
+
+app.post('/api/insonic/intakes', async (req, res) => {
+  if (!pool) {
+    res.status(503).json({ error: 'Postgres nao configurado para receber planejamentos InSonic.' });
+    return;
+  }
+
+  const intake = {
+    clientName: normalizeInsonicIntakeText(req.body?.clientName, 180),
+    phone: normalizeInsonicIntakeText(req.body?.phone, 60),
+    email: normalizeInsonicIntakeText(req.body?.email, 254).toLowerCase(),
+    city: normalizeInsonicIntakeText(req.body?.city, 180),
+    environmentSizeM2: Number.parseInt(req.body?.environmentSizeM2, 10),
+    projectObjective: normalizeInsonicIntakeText(req.body?.projectObjective, 600),
+    coverage: normalizeInsonicIntakeText(req.body?.coverage, 600),
+    roofMaterial: normalizeInsonicIntakeText(req.body?.roofMaterial, 600),
+    wallMaterial: normalizeInsonicIntakeText(req.body?.wallMaterial, 600),
+    audienceCapacity: Number.parseInt(req.body?.audienceCapacity, 10),
+    acousticProblems: normalizeInsonicIntakeText(req.body?.acousticProblems, 4000),
+    existingEquipment: normalizeInsonicIntakeText(req.body?.existingEquipment, 4000)
+  };
+
+  const requiredTextFields = [
+    'clientName', 'phone', 'email', 'city', 'projectObjective', 'coverage',
+    'roofMaterial', 'wallMaterial', 'acousticProblems', 'existingEquipment'
+  ];
+  const missingField = requiredTextFields.find((field) => !intake[field]);
+  if (missingField) {
+    res.status(400).json({ error: 'Preencha todas as etapas obrigatorias antes de salvar.' });
+    return;
+  }
+  if (!/^\S+@\S+\.\S+$/.test(intake.email)) {
+    res.status(400).json({ error: 'Digite um e-mail valido.' });
+    return;
+  }
+  if (intake.phone.replace(/\D/g, '').length < 8) {
+    res.status(400).json({ error: 'Digite um celular valido.' });
+    return;
+  }
+  const allowedSizes = new Set([100, 300, 500, 1000, 2000, 4000]);
+  if (!allowedSizes.has(intake.environmentSizeM2)) {
+    res.status(400).json({ error: 'Selecione uma metragem valida para o ambiente.' });
+    return;
+  }
+  if (!Number.isInteger(intake.audienceCapacity) || intake.audienceCapacity < 1 || intake.audienceCapacity > 1000000) {
+    res.status(400).json({ error: 'Digite uma capacidade de publico valida.' });
+    return;
+  }
+
+  try {
+    await ensureInsonicIntakesTable();
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const accessCode = createInsonicAccessCode();
+      const result = await pool.query(
+        `INSERT INTO public.insonic_project_intakes (
+           access_code, client_name, phone, email, city, environment_size_m2,
+           project_objective, coverage, roof_material, wall_material,
+           audience_capacity, acoustic_problems, existing_equipment, answers_json
+         ) VALUES (
+           $1, $2, $3, $4, $5, $6,
+           $7, $8, $9, $10,
+           $11, $12, $13, $14::jsonb
+         )
+         ON CONFLICT (access_code) DO NOTHING
+         RETURNING access_code, created_at`,
+        [
+          accessCode,
+          intake.clientName,
+          intake.phone,
+          intake.email,
+          intake.city,
+          intake.environmentSizeM2,
+          intake.projectObjective,
+          intake.coverage,
+          intake.roofMaterial,
+          intake.wallMaterial,
+          intake.audienceCapacity,
+          intake.acousticProblems,
+          intake.existingEquipment,
+          JSON.stringify(intake)
+        ]
+      );
+      if (result.rowCount > 0) {
+        res.status(201).json({
+          success: true,
+          accessCode: result.rows[0].access_code,
+          createdAt: result.rows[0].created_at
+        });
+        return;
+      }
+    }
+    res.status(503).json({ error: 'Nao foi possivel gerar uma chave unica. Tente novamente.' });
+  } catch (error) {
+    console.error('Erro ao salvar planejamento InSonic:', error);
+    res.status(500).json({ error: 'Nao foi possivel salvar o planejamento InSonic.' });
+  }
 });
 
 app.post('/api/chat/openai', async (req, res) => {
