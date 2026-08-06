@@ -14420,7 +14420,7 @@
         fourthStageTyping: ['off', 'on'],
         practiceNativeAudio: ['off', 'on'],
         babyMode: ['off', 'on'],
-        mode: ['training'],
+        mode: ['training', 'journey'],
         targetLanguage: TARGET_LANGUAGE_DISPLAY_ORDER.slice(),
         nativeLanguage: ['portuguese', 'english', 'french', 'mandarin', 'spanish', 'german']
       };
@@ -15875,15 +15875,15 @@
       }
 
       function currentGameMode() {
-        return 'manual';
+        return normalizeGameOptionValue('mode', state.options?.mode);
       }
 
       function isJourneyGameMode() {
-        return false;
+        return currentGameMode() === 'journey';
       }
 
       function isJourneyLevelingLanguage() {
-        return false;
+        return isJourneyGameMode() && currentTargetLanguage() !== 'english';
       }
 
       function currentTargetLanguageLabel() {
@@ -15915,8 +15915,24 @@
       function currentFinalChallengeLevel() {
         const language = currentFinalChallengeLanguage();
         const unlockedLevel = currentUnlockedFinalChallengeLevel();
+        const selectableMaxLevel = currentFinalChallengeSelectableMaxLevel();
         const selectedLevel = normalizeUserLevel(state.ui.finalChallengeSelectedLevels?.[language] || unlockedLevel);
-        return Math.max(1, Math.min(unlockedLevel, selectedLevel));
+        return Math.max(1, Math.min(selectableMaxLevel, selectedLevel));
+      }
+
+      function currentPublishedFinalChallengeMaxLevel() {
+        const pair = state.ui.finalChallengeGeneralLevels?.pairs?.[finalChallengeGeneralLevelsPairKey()];
+        const configuredLevelCount = Math.max(0, Number.parseInt(pair?.levelCount, 10) || 0);
+        const publishedLevels = Object.keys(pair?.levels || {})
+          .map((value) => Number.parseInt(value, 10))
+          .filter((value) => Number.isInteger(value) && value >= USER_LEVEL_MIN && value <= USER_LEVEL_MAX);
+        return Math.max(configuredLevelCount, ...publishedLevels, 0);
+      }
+
+      function currentFinalChallengeSelectableMaxLevel() {
+        const unlockedLevel = currentUnlockedFinalChallengeLevel();
+        if (isJourneyGameMode()) return unlockedLevel;
+        return Math.max(unlockedLevel, currentPublishedFinalChallengeMaxLevel());
       }
 
       function currentFinalChallengeBestPercent() {
@@ -16102,8 +16118,8 @@
 
       function setSelectedFinalChallengeLevel(level, language = currentFinalChallengeLanguage()) {
         const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
-        const unlockedLevel = normalizeUserLevel(state.ui.finalChallengeLevels?.[normalizedLanguage] || 1);
-        const nextLevel = Math.max(1, Math.min(unlockedLevel, normalizeUserLevel(level)));
+        const selectableMaxLevel = currentFinalChallengeSelectableMaxLevel();
+        const nextLevel = Math.max(1, Math.min(selectableMaxLevel, normalizeUserLevel(level)));
         state.ui.finalChallengeSelectedLevels = {
           ...(state.ui.finalChallengeSelectedLevels || {}),
           [normalizedLanguage]: nextLevel
@@ -16125,13 +16141,10 @@
         const storedSelectedLevel = readStoredFinalChallengeSelectedLevel(normalizedLanguage);
         state.ui.finalChallengeSelectedLevels = {
           ...(state.ui.finalChallengeSelectedLevels || {}),
-          [normalizedLanguage]: Math.min(
-            normalizeUserLevel(
-              state.ui.finalChallengeSelectedLevels?.[normalizedLanguage]
-              || storedSelectedLevel
-              || normalizeUserLevel(level)
-            ),
-            normalizeUserLevel(level)
+          [normalizedLanguage]: normalizeUserLevel(
+            state.ui.finalChallengeSelectedLevels?.[normalizedLanguage]
+            || storedSelectedLevel
+            || normalizeUserLevel(level)
           )
         };
         if (records && typeof records === 'object') {
@@ -17771,7 +17784,7 @@
       }
 
       function currentGameOptionSlides() {
-        const slides = ['difficulty', 'targetLanguage', 'nativeLanguage', 'practiceNativeAudio', 'babyMode'];
+        const slides = ['mode', 'difficulty', 'targetLanguage', 'nativeLanguage', 'practiceNativeAudio', 'babyMode'];
         if (currentTargetLanguage() === 'english') {
           slides.push('accent');
         }
@@ -24407,6 +24420,14 @@
 
       function gameOptionSlideMeta() {
         return {
+          mode: {
+            name: 'Modo de jogo',
+            desc: 'Escolha para onde o botao Jogar leva voce.',
+            values: {
+              training: { label: 'Modo Explorador', desc: 'Navegue e jogue livremente qualquer nivel publicado.' },
+              journey: { label: 'Modo Cartas', desc: 'Conquiste cinco estrelas e acumule as cartas no album.' }
+            }
+          },
           difficulty: {
             name: nativeUiText('level'),
             desc: '',
@@ -34410,7 +34431,7 @@
 
       function syncFinalChallengeIntroUi() {
         refreshDueFinalChallengeRecords();
-        const requiredReplayLevel = resolveRequiredFinalChallengeReplayLevel();
+        const requiredReplayLevel = isJourneyGameMode() ? resolveRequiredFinalChallengeReplayLevel() : 0;
         if (requiredReplayLevel && currentFinalChallengeLevel() !== requiredReplayLevel) {
           setSelectedFinalChallengeLevel(requiredReplayLevel);
         }
@@ -34425,8 +34446,9 @@
         const hasStoredDeck = storedSelectionCount >= FINAL_CHALLENGE_CARD_COUNT;
         const payload = finalChallengeDownloadPayload(selectedLevel);
         const hasDownloadRecord = finalChallengeDownloadRecordMatches(selectedLevel, payload);
-        const challengeUnlocked = (hasDeck || hasStoredDeck) && (selection.practiceComplete || Boolean(storedSelectionRecord?.practiceComplete));
-        const unlockedLevel = currentUnlockedFinalChallengeLevel();
+        const challengeUnlocked = !isJourneyGameMode()
+          || ((hasDeck || hasStoredDeck) && (selection.practiceComplete || Boolean(storedSelectionRecord?.practiceComplete)));
+        const selectableMaxLevel = currentFinalChallengeSelectableMaxLevel();
         const record = currentFinalChallengeRecord(selectedLevel);
         const levelAvailable = finalChallengeLevelAvailable(record);
         const sealPhase = finalChallengeLevelSealPhase(record);
@@ -34460,11 +34482,11 @@
         }
         if (els.finalChallengeLevelPrevBtn) {
           els.finalChallengeLevelPrevBtn.disabled = selectedLevel <= 1;
-          els.finalChallengeLevelPrevBtn.hidden = unlockedLevel <= 1;
+          els.finalChallengeLevelPrevBtn.hidden = selectableMaxLevel <= 1;
         }
         if (els.finalChallengeLevelNextBtn) {
-          els.finalChallengeLevelNextBtn.disabled = selectedLevel >= unlockedLevel;
-          els.finalChallengeLevelNextBtn.hidden = unlockedLevel <= 1;
+          els.finalChallengeLevelNextBtn.disabled = selectedLevel >= selectableMaxLevel;
+          els.finalChallengeLevelNextBtn.hidden = selectableMaxLevel <= 1;
         }
         if (els.finalChallengeIntroLevel) {
           els.finalChallengeIntroLevel.textContent = `Nivel ${selectedLevel}`;
@@ -35001,6 +35023,14 @@
         syncFinalChallengeLevelCopy();
         setFinalChallengeStatus('');
         setFinalChallengeScreen('intro');
+        void loadFinalChallengeGeneralLevels()
+          .then(() => {
+            syncFinalChallengeLevelCopy();
+            syncFinalChallengeIntroUi();
+          })
+          .catch((error) => {
+            console.warn('Falha ao carregar niveis livres do Explorador:', error);
+          });
       }
 
       function closeFinalChallengeModal() {
@@ -37228,6 +37258,24 @@
             }
             if (!state.user?.id) {
               setAuthStatus('Entre para liberar treino e desafio.', 'error');
+              return;
+            }
+            if (isJourneyGameMode()) {
+              if (canResumePausedFlashGame()) {
+                state.ui.gamePausedAtWelcome = true;
+              }
+              if (resumeFlashcardsGameFromWelcome()) return;
+              if (await handleManualWelcomeNoEnergy(event.currentTarget)) return;
+              if (!(await guardWelcomeEnergy({ previewTarget: event.currentTarget }))) return;
+              state.game.levelMode = false;
+              state.game.levelScaleMode = false;
+              state.game.levelAudioMode = false;
+              state.game.levelTextMode = false;
+              state.game.levelTypingMode = false;
+              resetScaleBatchProgress();
+              state.entry.welcomeStartRequested = true;
+              state.entry.welcomeFlashStartAt = Date.now();
+              void openAudioCheck();
               return;
             }
             syncFinalChallengeLevelCopy();
