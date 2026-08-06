@@ -14726,6 +14726,11 @@
       const WELCOME_COPY_ROTATION_MS = 2000;
       const WELCOME_COPY_MESSAGES = ['Flu\u00eancia f\u00e1cil', 'Toque para come\u00e7ar'];
       const WELCOME_MODE_CONFIG = {
+        cards: {
+          title: 'Modo Cartas',
+          description: 'Escolha o nivel e conquiste cada carta completando as cinco estrelas.',
+          usesLevelSelector: true
+        },
         playing: {
           title: 'Playing',
           description: 'Veja e ouca cartas em ciclo leve, sem microfone.',
@@ -18870,8 +18875,12 @@
         );
       }
 
+      function isFiveStarCardsModeActive() {
+        return Boolean(isLevelModeAcquisitionFlowActive() && isJourneyGameMode());
+      }
+
       function currentGameStarTarget() {
-        return isLevelModeAcquisitionFlowActive()
+        return isLevelModeAcquisitionFlowActive() && !isFiveStarCardsModeActive()
           ? LEVEL_MODE_ACQUISITION_STAGE_SEQUENCE.length
           : GAME_STAR_TARGET;
       }
@@ -18882,6 +18891,7 @@
       }
 
       function resolveLevelModeInitialStage() {
+        if (isFiveStarCardsModeActive()) return 1;
         return isLevelModeAcquisitionFlowActive()
           ? resolveLevelModeAcquisitionStage(0)
           : resolveLevelModeStage();
@@ -23246,6 +23256,45 @@
         return WELCOME_MODE_CONFIG[modeKey] || null;
       }
 
+      function isCardsWelcomeMode() {
+        return safeText(state.entry?.welcomeModeKey).toLowerCase() === 'cards';
+      }
+
+      function isCardPlayableInCardsMode(card) {
+        return !isCardHiddenForUser(card?.id)
+          && hasCoreFlashcardText(card)
+          && hasPlayableFlashcardImage(card)
+          && isCardEligibleForGame(card);
+      }
+
+      function cardsModeAvailableLevels() {
+        return Array.from(new Set(
+          state.allCards
+            .filter(isCardPlayableInCardsMode)
+            .map(cardDeckLevel)
+            .filter(Number.isInteger)
+        )).sort((left, right) => left - right);
+      }
+
+      function resolveCardsModeLevel(level = selectedGameLevel()) {
+        const levels = cardsModeAvailableLevels();
+        if (!levels.length) return 0;
+        const playableLevel = resolveSequencePlayableDeckLevel(
+          Number(level) > 0 ? level : currentUserLevel()
+        );
+        if (levels.includes(playableLevel)) return playableLevel;
+        return levels.find((entry) => entry >= playableLevel) || levels[0];
+      }
+
+      function nudgeCardsModeLevel(delta) {
+        const levels = cardsModeAvailableLevels();
+        if (!levels.length) return;
+        const currentLevel = resolveCardsModeLevel();
+        const currentIndex = Math.max(0, levels.indexOf(currentLevel));
+        const nextIndex = Math.max(0, Math.min(levels.length - 1, currentIndex + (delta < 0 ? -1 : 1)));
+        setSelectedGameLevel(levels[nextIndex]);
+      }
+
       function syncWelcomeModeModal() {
         const mode = currentWelcomeModeConfig();
         const visible = Boolean(mode);
@@ -23257,32 +23306,59 @@
         if (els.welcomeModeModalTitle) {
           els.welcomeModeModalTitle.textContent = mode.title;
         }
-        if (els.welcomeModeModalDescription) {
-          els.welcomeModeModalDescription.textContent = mode.description;
+        const cardsMode = isCardsWelcomeMode();
+        const cardsLevels = cardsMode ? cardsModeAvailableLevels() : [];
+        const cardsLevel = cardsMode ? resolveCardsModeLevel() : 0;
+        if (cardsMode && cardsLevel && selectedGameLevel() !== cardsLevel) {
+          state.ui.welcomeSelectedLevel = cardsLevel;
         }
-        const levelSelectorVisible = Boolean(mode.usesLevelSelector && normalizeGameOptionValue('difficulty', state.options?.difficulty) === 'manual');
+        if (els.welcomeModeModalDescription) {
+          els.welcomeModeModalDescription.textContent = cardsMode && !cardsLevels.length
+            ? 'Nenhum nivel com cartas jogaveis foi encontrado para este idioma.'
+            : mode.description;
+        }
+        if (els.welcomeModeModalPlayBtn) {
+          els.welcomeModeModalPlayBtn.disabled = Boolean(cardsMode && !cardsLevels.length);
+        }
+        const levelSelectorVisible = Boolean(
+          mode.usesLevelSelector
+          && (cardsMode || normalizeGameOptionValue('difficulty', state.options?.difficulty) === 'manual')
+        );
         if (els.welcomeModeModalLevel) {
           els.welcomeModeModalLevel.hidden = !levelSelectorVisible;
         }
         if (els.welcomeModeModalLevelValue) {
-          els.welcomeModeModalLevelValue.textContent = formatSelectedGameLevelLabel();
+          els.welcomeModeModalLevelValue.textContent = cardsMode && cardsLevel
+            ? 'Nivel ' + cardsLevel
+            : formatSelectedGameLevelLabel();
         }
         if (els.welcomeModeModalLevelPrevBtn) {
-          els.welcomeModeModalLevelPrevBtn.disabled = !levelSelectorVisible || selectedGameLevel() <= 0;
+          const cardsLevelIndex = cardsMode ? cardsLevels.indexOf(cardsLevel) : -1;
+          els.welcomeModeModalLevelPrevBtn.disabled = !levelSelectorVisible
+            || (cardsMode ? cardsLevelIndex <= 0 : selectedGameLevel() <= 0);
         }
         if (els.welcomeModeModalLevelNextBtn) {
-          els.welcomeModeModalLevelNextBtn.disabled = !levelSelectorVisible || selectedGameLevel() >= maxSelectableGameLevel();
+          const cardsLevelIndex = cardsMode ? cardsLevels.indexOf(cardsLevel) : -1;
+          els.welcomeModeModalLevelNextBtn.disabled = !levelSelectorVisible
+            || (cardsMode ? cardsLevelIndex < 0 || cardsLevelIndex >= cardsLevels.length - 1 : selectedGameLevel() >= maxSelectableGameLevel());
         }
       }
 
       function openWelcomeModeModal(modeKey) {
         const normalized = safeText(modeKey).toLowerCase();
         if (!WELCOME_MODE_CONFIG[normalized]) return;
-        if (!areWelcomeExtraModesEnabledForCurrentUser()) return;
+        const cardsMode = normalized === 'cards';
+        if (!cardsMode && !areWelcomeExtraModesEnabledForCurrentUser()) return;
+        state.entry.welcomeModeKey = normalized;
+        if (cardsMode) {
+          const cardsLevel = resolveCardsModeLevel();
+          if (cardsLevel) {
+            state.ui.welcomeSelectedLevel = cardsLevel;
+          }
+        }
         if (normalized === 'scale' && !selectedGameLevel()) {
           setSelectedGameLevel(currentUserLevel());
         }
-        state.entry.welcomeModeKey = normalized;
         syncWelcomeModeModal();
       }
 
@@ -26146,9 +26222,20 @@
       }
 
       function buildLevelModeSourceCards(level = selectedGameLevel()) {
-        const allPlayableCards = state.allCards.filter(isCardPlayableInLevelMode);
+        const cardsMode = isJourneyGameMode();
+        const allPlayableCards = state.allCards.filter(
+          cardsMode ? isCardPlayableInCardsMode : isCardPlayableInLevelMode
+        );
         const difficultyMode = normalizeGameOptionValue('difficulty', state.options?.difficulty);
         const targetLevel = normalizeUserLevel(Number(level) > 0 ? level : currentUserLevel());
+        if (cardsMode) {
+          const playableDeckLevel = resolveCardsModeLevel(targetLevel);
+          if (!playableDeckLevel) return [];
+          return applyDeckCardsLimit(
+            allPlayableCards.filter((card) => cardDeckLevel(card) === playableDeckLevel),
+            targetLevel
+          );
+        }
         if (difficultyMode !== 'manual' && Number(level) === 0) {
           level = targetLevel;
         }
@@ -36612,7 +36699,7 @@
           const starTarget = currentGameStarTarget();
           entry.stars += 1;
           incrementWinsSequenceForStarGain();
-          if (isLevelModeAcquisitionFlowActive()) {
+          if (isLevelModeAcquisitionFlowActive() && !isFiveStarCardsModeActive()) {
             entry.stage = resolveLevelModeAcquisitionStage(entry.stars);
           } else {
             entry.stage = Math.min(entry.stars + 1, GAME_STAR_TARGET);
@@ -37241,6 +37328,27 @@
           hideWelcomeGate();
           startWatch({ useDefaults: true });
         };
+        const startCardsModeFromWelcome = async (event) => {
+          const cardsLevel = resolveCardsModeLevel();
+          if (!cardsLevel) {
+            syncWelcomeModeModal();
+            return;
+          }
+          const previewTargets = [event?.currentTarget, els.welcomeModeModalPlayBtn, els.welcomeStartBtn].filter(Boolean);
+          if (await handleManualWelcomeNoEnergy(els.welcomeModeModalPlayBtn || els.welcomeStartBtn || event?.currentTarget)) return;
+          if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
+          setSelectedGameLevel(cardsLevel);
+          state.game.levelMode = true;
+          state.game.levelScaleMode = false;
+          state.game.levelAudioMode = false;
+          state.game.levelTextMode = false;
+          state.game.levelTypingMode = false;
+          resetScaleBatchProgress();
+          closeWelcomeModeModal();
+          state.entry.welcomeStartRequested = true;
+          state.entry.welcomeFlashStartAt = Date.now();
+          void openAudioCheck();
+        };
         els.welcomeStartBtn?.addEventListener('click', (event) => {
           void (async () => {
             playStatusCueAudio(WELCOME_PLAY_SOUND_PATH);
@@ -37261,21 +37369,7 @@
               return;
             }
             if (isJourneyGameMode()) {
-              if (canResumePausedFlashGame()) {
-                state.ui.gamePausedAtWelcome = true;
-              }
-              if (resumeFlashcardsGameFromWelcome()) return;
-              if (await handleManualWelcomeNoEnergy(event.currentTarget)) return;
-              if (!(await guardWelcomeEnergy({ previewTarget: event.currentTarget }))) return;
-              state.game.levelMode = false;
-              state.game.levelScaleMode = false;
-              state.game.levelAudioMode = false;
-              state.game.levelTextMode = false;
-              state.game.levelTypingMode = false;
-              resetScaleBatchProgress();
-              state.entry.welcomeStartRequested = true;
-              state.entry.welcomeFlashStartAt = Date.now();
-              void openAudioCheck();
+              openWelcomeModeModal('cards');
               return;
             }
             syncFinalChallengeLevelCopy();
@@ -37422,13 +37516,25 @@
           }
         });
         els.welcomeModeModalLevelPrevBtn?.addEventListener('click', () => {
+          if (isCardsWelcomeMode()) {
+            nudgeCardsModeLevel(-1);
+            return;
+          }
           nudgeSelectedGameLevel(-1);
         });
         els.welcomeModeModalLevelNextBtn?.addEventListener('click', () => {
+          if (isCardsWelcomeMode()) {
+            nudgeCardsModeLevel(1);
+            return;
+          }
           nudgeSelectedGameLevel(1);
         });
         els.welcomeModeModalPlayBtn?.addEventListener('click', (event) => {
           const modeKey = safeText(state.entry.welcomeModeKey).toLowerCase();
+          if (modeKey === 'cards') {
+            void startCardsModeFromWelcome(event);
+            return;
+          }
           if (modeKey === 'playing') {
             void startPlayingModeFromWelcome(event);
             return;
