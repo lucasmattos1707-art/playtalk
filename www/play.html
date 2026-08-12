@@ -8999,9 +8999,28 @@
     .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] #gameVisual .mini-card__fallback,
     .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] #gameVisual .game-card__placeholder,
     .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] #gameVisual .game-card__reveal-image {
-      opacity: 1;
-      visibility: visible;
-      pointer-events: none;
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: none !important;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] #gameVisual .game-card__reveal-image {
+      display: block !important;
+      position: absolute !important;
+      inset: 0 !important;
+      z-index: 1 !important;
+      object-fit: cover !important;
+      border-radius: 50% !important;
+      clip-path: circle(50% at 50% 50%) !important;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] #gameVisual .game-card__placeholder {
+      display: grid !important;
+      position: absolute !important;
+      inset: 0 !important;
+      z-index: 1 !important;
     }
 
     .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] #gameVisual .flashcards-typing__display--visual {
@@ -9013,11 +9032,20 @@
       margin: 0 !important;
       transform: translate(-50%, -50%) !important;
       z-index: 4;
-      font-size: clamp(41.25px, 11.5vw, 65px);
       text-shadow:
         0 2px 0 rgba(0, 22, 72, 0.98),
         0 0 12px rgba(2, 28, 92, 0.92),
         0 0 24px rgba(6, 54, 141, 0.74);
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen {
+      align-items: flex-start !important;
+      justify-content: center !important;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen .keyboardscreen-host {
+      align-items: flex-start !important;
+      padding-top: 8px !important;
     }
 
     .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen .keyboardscreen-host,
@@ -9031,7 +9059,7 @@
     }
 
     .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen .flashcards-typing__key {
-      font-size: clamp(67.5px, 21.0875vw, 121.25px);
+      font-size: clamp(67.5px, 21.0875vw, 121.25px) !important;
     }
 
     .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen .flashcards-typing__grid.is-word-blocks {
@@ -9039,7 +9067,8 @@
     }
 
     .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key {
-      font-size: 40px;
+      font-size: 40px !important;
+      line-height: 1.02 !important;
     }
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__word-row.is-long-word-row .flashcards-typing__key,
@@ -19423,6 +19452,18 @@
         state.ui.albumsLanguageLoading = false;
       }
 
+      function mergeAlbumsConqueredLanguages(rawLanguages) {
+        const incoming = normalizeConqueredLanguagesPayload(rawLanguages || {});
+        incoming.forEach((languages, cardId) => {
+          const current = normalizeConqueredLanguageEntry(state.userCardLanguages.get(cardId));
+          const next = normalizeConqueredLanguageEntry(languages);
+          state.userCardLanguages.set(cardId, {
+            ...current,
+            ...next
+          });
+        });
+      }
+
       function markCardConqueredLanguage(cardId, language = currentTargetLanguage(), rawMeta = {}) {
         const normalizedCardId = safeText(cardId);
         const normalizedLanguage = normalizeFlashcardLanguageCode(language, '');
@@ -20184,6 +20225,22 @@
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload?.success) {
           const error = new Error(payload?.message || 'Falha ao carregar seus flashcards salvos.');
+          error.statusCode = response.status;
+          throw error;
+        }
+        return payload;
+      }
+
+      async function fetchFlashcardAcquisitionState(targetLanguage) {
+        const normalizedTargetLanguage = normalizeGameOptionValue('targetLanguage', targetLanguage);
+        const response = await fetch(buildApiUrl(`/api/flashcards/acquisition-state?targetLanguage=${encodeURIComponent(normalizedTargetLanguage)}`), {
+          headers: buildAuthHeaders(),
+          cache: 'no-store',
+          credentials: 'include'
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success) {
+          const error = new Error(payload?.message || 'Falha ao carregar as cartas conquistadas.');
           error.statusCode = response.status;
           throw error;
         }
@@ -25654,45 +25711,68 @@
 
       function getAlbumsLanguageProgressRecords(language = currentAlbumsLanguage()) {
         const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
+        const cached = state.ui.albumsLanguageCache instanceof Map
+          ? state.ui.albumsLanguageCache.get(normalizedLanguage)
+          : null;
+        if (Array.isArray(cached?.progress)) {
+          return cached.progress;
+        }
         if (normalizedLanguage === currentProgressLanguage()) {
           advanceReadyMemorizations();
           return Array.from(state.userCards.values());
         }
-        const cached = state.ui.albumsLanguageCache instanceof Map
-          ? state.ui.albumsLanguageCache.get(normalizedLanguage)
-          : null;
-        return Array.isArray(cached?.progress) ? cached.progress : [];
+        return [];
       }
 
-      async function ensureAlbumsLanguageLoaded(language = currentAlbumsLanguage()) {
+      async function ensureAlbumsLanguageLoaded(language = currentAlbumsLanguage(), options = {}) {
         const normalizedLanguage = normalizeGameOptionValue('targetLanguage', language);
-        if (normalizedLanguage === currentProgressLanguage()) {
-          return;
-        }
-        if (state.ui.albumsLanguageCache instanceof Map && state.ui.albumsLanguageCache.has(normalizedLanguage)) {
+        const force = Boolean(options?.force);
+        if (!force && state.ui.albumsLanguageCache instanceof Map && state.ui.albumsLanguageCache.has(normalizedLanguage)) {
           return;
         }
         state.ui.albumsLanguageLoading = true;
         try {
           let progress = [];
           if (state.user?.id) {
-            const payload = await fetchFlashcardCloudState(normalizedLanguage);
-            progress = Array.isArray(payload?.progress)
-              ? payload.progress.map(normalizeProgressRecord).filter(Boolean)
-              : [];
+            const [cloudResult, acquisitionsResult] = await Promise.allSettled([
+              fetchFlashcardCloudState(normalizedLanguage),
+              fetchFlashcardAcquisitionState(normalizedLanguage)
+            ]);
+            const payloads = [cloudResult, acquisitionsResult]
+              .filter((result) => result.status === 'fulfilled')
+              .map((result) => result.value);
+            if (!payloads.length) {
+              throw cloudResult.reason || acquisitionsResult.reason || new Error('Falha ao carregar o album.');
+            }
+            const recordsByCardId = new Map();
+            payloads.forEach((payload) => {
+              const rawLanguages = payload?.conqueredLanguages || payload?.meta?.conqueredLanguages || {};
+              mergeAlbumsConqueredLanguages(rawLanguages);
+              (Array.isArray(payload?.progress) ? payload.progress : [])
+                .map(normalizeProgressRecord)
+                .filter(Boolean)
+                .forEach((record) => recordsByCardId.set(record.cardId, record));
+            });
+            progress = Array.from(recordsByCardId.values());
           } else {
             progress = Array.from(readUserProgressForUser(0, normalizedLanguage).values());
           }
+          progress.forEach((record) => {
+            markCardConqueredLanguage(record.cardId, normalizedLanguage, record);
+          });
           if (!(state.ui.albumsLanguageCache instanceof Map)) {
             state.ui.albumsLanguageCache = new Map();
           }
           state.ui.albumsLanguageCache.set(normalizedLanguage, { progress });
         } catch (error) {
-          console.warn('Falha ao carregar flashcards do album por idioma:', error);
+          console.warn('Falha ao atualizar flashcards do album por idioma; mantendo o estado carregado:', error);
+          const fallbackProgress = normalizedLanguage === currentProgressLanguage()
+            ? Array.from(state.userCards.values())
+            : Array.from(readUserProgressForUser(state.user?.id, normalizedLanguage).values());
           if (!(state.ui.albumsLanguageCache instanceof Map)) {
             state.ui.albumsLanguageCache = new Map();
           }
-          state.ui.albumsLanguageCache.set(normalizedLanguage, { progress: [] });
+          state.ui.albumsLanguageCache.set(normalizedLanguage, { progress: fallbackProgress });
         } finally {
           state.ui.albumsLanguageLoading = false;
         }
@@ -25701,7 +25781,6 @@
       function albumFlashcardsItems() {
         const selectedLanguage = currentAlbumsLanguage();
         return buildCardsFromProgressRecords(getAlbumsLanguageProgressRecords(selectedLanguage))
-          .filter((card) => getOwnedLanguagesForCard(card?.id).includes(selectedLanguage))
           .map(buildLibraryCardView);
       }
 
@@ -26077,9 +26156,18 @@
           els.albumsModal.classList.add('is-visible');
           els.albumsModal.setAttribute('aria-hidden', 'false');
         }
+        const selectedLanguage = currentAlbumsLanguage();
+        const languageLoadPromise = ensureAlbumsLanguageLoaded(selectedLanguage, { force: true });
         renderAlbumsSection();
-        await ensureAlbumsSealsLoaded();
+        await Promise.all([
+          languageLoadPromise,
+          ensureAlbumsSealsLoaded(),
+          ensureCardsCatalogLoaded().catch(() => state.allCards)
+        ]);
         state.ui.albumsSealIndex = albumsCurrentDayIndex();
+        if (state.ui.albumsOpen && state.ui.albumsSectionIndex === 0 && currentAlbumsLanguage() === selectedLanguage) {
+          renderAlbumsFlashcards();
+        }
         if (state.ui.albumsOpen && state.ui.albumsSectionIndex === 1) {
           renderAlbumsSeals();
         }
