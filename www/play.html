@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -1417,6 +1417,7 @@
     }
 
     .welcome-mode-modal__play {
+      position: relative;
       width: 88px;
       height: 88px;
       border: 0;
@@ -1450,6 +1451,32 @@
       height: 34px;
       fill: currentColor;
       margin-left: 4px;
+      transition: opacity 140ms ease;
+    }
+
+    .welcome-mode-modal__play.is-loading {
+      cursor: wait;
+      transform: none;
+      filter: saturate(0.88);
+    }
+
+    .welcome-mode-modal__play.is-loading svg {
+      opacity: 0;
+    }
+
+    .welcome-mode-modal__play.is-loading::after {
+      content: "";
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      border: 4px solid rgba(6, 36, 19, 0.2);
+      border-top-color: #062413;
+      border-radius: 50%;
+      animation: welcome-mode-play-spin 620ms linear infinite;
+    }
+
+    @keyframes welcome-mode-play-spin {
+      to { transform: rotate(360deg); }
     }
 
     .welcome-mode-modal__description {
@@ -15051,6 +15078,7 @@
           preloadImages: new Map(),
           preloadImagePromises: new Map(),
           cardsModePreparedCardIds: [],
+          cardsModeBufferRevision: 0,
           preloadAudios: new Map(),
           preloadAudioPromises: new Map(),
           runtimeAudioUrls: new Map(),
@@ -17352,6 +17380,16 @@
         return selection;
       }
 
+      async function bufferCardsModeImagesInBackground(cards, revision) {
+        const sourceCards = Array.isArray(cards) ? cards : [];
+        for (let index = 1; index < sourceCards.length; index += 1) {
+          if (revision !== state.game.cardsModeBufferRevision) return;
+          await preloadCardImage(sourceCards[index]).catch(() => false);
+          if (revision !== state.game.cardsModeBufferRevision) return;
+          await wait(24);
+        }
+      }
+
       async function prepareCardsModeLevelFromGeneralLevels(level = selectedGameLevel()) {
         const cardsLevel = normalizeUserLevel(Number(level) > 0 ? level : currentUserLevel());
         await Promise.all([
@@ -17362,12 +17400,20 @@
         if (selection.cards.length < FINAL_CHALLENGE_CARD_COUNT) {
           throw new Error(nativeUiText('download_unavailable'));
         }
+        if (resolveCardsModeLevel() !== cardsLevel) {
+          throw new Error('O nivel mudou antes de terminar a preparacao.');
+        }
         const preparedCards = shuffle(selection.cards.slice());
+        const bufferRevision = Math.max(0, Number(state.game.cardsModeBufferRevision) || 0) + 1;
+        state.game.cardsModeBufferRevision = bufferRevision;
         state.game.cardsModePreparedCardIds = preparedCards.map((card) => safeText(card?.id)).filter(Boolean);
-        preparedCards.slice(0, 8).forEach((card) => {
-          void preloadCardImage(card);
-        });
-        return selection;
+        const firstCard = preparedCards[0] || null;
+        if (!firstCard) {
+          throw new Error(nativeUiText('download_unavailable'));
+        }
+        await waitForCardImageBuffer(firstCard, CARDS_IMAGE_BUFFER_WAIT_MS);
+        void bufferCardsModeImagesInBackground(preparedCards, bufferRevision);
+        return { ...selection, firstCard };
       }
 
       async function ensureFinalChallengeSelection(level = currentFinalChallengeLevel()) {
@@ -20215,6 +20261,7 @@
         state.entry.flashStartInFlight = true;
         try {
           const loader = window.PlaytalkLoader;
+          const fastCardsStart = isFiveStarCardsModeActive();
           if (loader) {
             loader.show('welcome-flash-start');
           }
@@ -20222,9 +20269,9 @@
           hideWelcomeGate();
           saveSelectedGameCount(selectedCount);
           state.game.selectedCount = selectedCount;
-          if (loader && typeof loader.waitForAudioCycle === 'function') {
+          if (!fastCardsStart && loader && typeof loader.waitForAudioCycle === 'function') {
             await loader.waitForAudioCycle({ timeoutMs: 32000 });
-          } else if (WELCOME_FLASH_LOADER_MS > 0) {
+          } else if (!fastCardsStart && WELCOME_FLASH_LOADER_MS > 0) {
             await new Promise((resolve) => window.setTimeout(resolve, WELCOME_FLASH_LOADER_MS));
           }
           if (loader) {
@@ -29365,7 +29412,8 @@
 
       async function playFirstStarPromptAudio() {
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
-        if (!entry || !isFirstStarEntry(entry) || state.game.paused || state.game.listening) return false;
+        const allowParallelCardsMic = Boolean(entry && isFiveStarCardsModeActive());
+        if (!entry || !isFirstStarEntry(entry) || state.game.paused || (state.game.listening && !allowParallelCardsMic)) return false;
         const playbackKey = `${safeText(entry.id)}:${Number(entry.stage) || 0}`;
         if (
           state.game.firstStarAudioPlayingEntryKey === playbackKey
@@ -29377,7 +29425,7 @@
         const card = cardById(entry.id);
         if (!card) return false;
         clearFirstStarAutoPlayRetryTimer();
-        state.game.canListen = false;
+        state.game.canListen = allowParallelCardsMic;
         state.game.firstStarAudioPlayingEntryKey = playbackKey;
         renderGameTouchButton(resolveGameStageConfig(entry), entry);
         renderFirstStarSeals(entry);
@@ -30235,13 +30283,11 @@
         if (stageNumber === 1 && isFiveStarCardsModeActive()) {
           revealFirstStarTargetLanguage(card);
           await wait(160);
-          await playPromptAudio(card, { enableMicDuringPlayback: false });
           return;
         }
         if (stageNumber === 2 && isFiveStarCardsModeActive()) {
           revealFirstStarTargetLanguage(card);
           await wait(160);
-          await playPromptAudio(card, { enableMicDuringPlayback: false });
           return;
         }
         if (stageNumber === 2) {
@@ -30728,6 +30774,15 @@
             ? (Array.isArray(card?.portugueseAnswers) && card.portugueseAnswers.length ? card.portugueseAnswers : [card?.portuguese || ''])
             : (Array.isArray(card?.englishAnswers) && card.englishAnswers.length ? card.englishAnswers : [card?.english || '']);
           return uniqueAnswerList(textModeAnswers.map(repairDisplayText).map(item => safeText(item)).filter(Boolean));
+        }
+        if (isCardsModeSecondSpeakingEntry(entry)) {
+          return uniqueAnswerList(
+            resolveSourceLanguageAnswers(
+              card,
+              currentTargetLanguage(),
+              resolveSourceLanguageText(card, currentTargetLanguage())
+            ).map(repairDisplayText).map(item => safeText(item)).filter(Boolean)
+          );
         }
         const answers = stageConfig.expected === 'portuguese'
           ? (Array.isArray(card?.portugueseAnswers) && card.portugueseAnswers.length ? card.portugueseAnswers : [card?.portuguese || ''])
@@ -33158,7 +33213,7 @@
           return;
         }
 
-        if (stageConfig.autoAudio && !(stageConfig.key === 'first-star' && isFiveStarCardsModeActive())) {
+        if (stageConfig.autoAudio && !isCardsModeSecondSpeakingEntry(entry)) {
           if (state.game.skipAutoAudioOnce) {
             state.game.skipAutoAudioOnce = false;
             state.game.canListen = !isLevelAudioModeActive();
@@ -33174,7 +33229,8 @@
             ? FIRST_STAR_AUTO_PLAY_AFTER_ENTRY_MS
             : 0;
           window.setTimeout(() => {
-            if (!state.game.active || state.game.currentId !== entry.id || state.game.paused || state.game.listening) return;
+            const allowParallelCardsMic = stageConfig.key === 'first-star' && isFiveStarCardsModeActive();
+            if (!state.game.active || state.game.currentId !== entry.id || state.game.paused || (state.game.listening && !allowParallelCardsMic)) return;
             runAutoAudioPlaybackAttempt(entry, card, stageConfig, 1);
           }, Math.max(0, autoStartDelayMs));
         }
@@ -37567,6 +37623,7 @@
       }
 
       function bindEvents() {
+        let cardsModeStartInFlight = false;
         const startLevelModeFromWelcome = async (event, options = {}) => {
           const previewTargets = [event?.currentTarget, els.welcomeModeModalPlayBtn, els.welcomeStartBtn].filter(Boolean);
           if (await handleManualWelcomeNoEnergy(els.welcomeModeModalPlayBtn || els.welcomeStartBtn || event?.currentTarget)) return;
@@ -37623,41 +37680,84 @@
           startWatch({ useDefaults: true });
         };
         const startCardsModeFromWelcome = async (event) => {
+          event?.preventDefault?.();
+          event?.stopPropagation?.();
+          if (cardsModeStartInFlight) return;
+          cardsModeStartInFlight = true;
           const cardsLevel = resolveCardsModeLevel();
           const previewTargets = [event?.currentTarget, els.welcomeModeModalPlayBtn, els.welcomeStartBtn].filter(Boolean);
-          if (await handleManualWelcomeNoEnergy(els.welcomeModeModalPlayBtn || els.welcomeStartBtn || event?.currentTarget)) return;
-          if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
-          if (els.welcomeModeModalPlayBtn) {
-            els.welcomeModeModalPlayBtn.disabled = true;
+          const playButton = els.welcomeModeModalPlayBtn;
+          const loader = window.PlaytalkLoader;
+          let startError = '';
+          if (playButton) {
+            playButton.disabled = true;
+            playButton.setAttribute('aria-busy', 'true');
+            playButton.classList.add('is-loading');
+          }
+          if (els.welcomeModeModalDescription) {
+            els.welcomeModeModalDescription.textContent = `Carregando a primeira carta do Nivel ${cardsLevel}...`;
           }
           try {
-            await prepareCardsModeLevelFromGeneralLevels(cardsLevel);
+            if (await handleManualWelcomeNoEnergy(playButton || els.welcomeStartBtn || event?.currentTarget)) return;
+            if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
+
+            setSelectedGameLevel(cardsLevel);
+            state.game.levelMode = true;
+            state.game.levelScaleMode = false;
+            state.game.levelAudioMode = false;
+            state.game.levelTextMode = false;
+            state.game.levelTypingMode = false;
+            resetScaleBatchProgress();
+            state.entry.pendingPlayStart = true;
+
+            let timeoutId = 0;
+            try {
+              await Promise.race([
+                prepareCardsModeLevelFromGeneralLevels(cardsLevel),
+                new Promise((_resolve, reject) => {
+                  timeoutId = window.setTimeout(() => {
+                    reject(new Error('A carga deste nivel demorou demais. Toque em Play para tentar novamente.'));
+                  }, 12000);
+                })
+              ]);
+            } finally {
+              if (timeoutId) window.clearTimeout(timeoutId);
+            }
             if (resolveCardsModeLevel() !== cardsLevel) {
-              syncWelcomeModeModal();
-              return;
+              throw new Error('O nivel mudou durante a preparacao. Toque em Play novamente.');
             }
+            state.entry.pendingPlayStart = false;
+            state.entry.welcomeStartRequested = true;
+            state.entry.welcomeFlashStartAt = Date.now();
+            closeWelcomeModeModal();
+            await openAudioCheck();
           } catch (error) {
-            syncWelcomeModeModal();
+            startError = safeText(error?.message) || nativeUiText('download_unavailable');
+            console.warn('Falha ao iniciar Modo Cartas:', error);
+            state.entry.pendingPlayStart = false;
+            state.entry.welcomeStartRequested = false;
+            state.entry.welcomeFlashStartAt = 0;
+            state.game.levelMode = false;
+            state.game.levelScaleMode = false;
+            state.game.levelAudioMode = false;
+            state.game.levelTextMode = false;
+            state.game.levelTypingMode = false;
+            loader?.hide?.('welcome-flash-start', { force: true });
+            openWelcomeModeModal('cards');
             if (els.welcomeModeModalDescription) {
-              els.welcomeModeModalDescription.textContent = safeText(error?.message) || nativeUiText('download_unavailable');
+              els.welcomeModeModalDescription.textContent = startError;
             }
-            return;
           } finally {
-            if (els.welcomeModeModalPlayBtn) {
-              els.welcomeModeModalPlayBtn.disabled = false;
+            cardsModeStartInFlight = false;
+            if (playButton) {
+              playButton.disabled = false;
+              playButton.removeAttribute('aria-busy');
+              playButton.classList.remove('is-loading');
+            }
+            if (!startError && state.entry.welcomeModeKey) {
+              syncWelcomeModeModal();
             }
           }
-          setSelectedGameLevel(cardsLevel);
-          state.game.levelMode = true;
-          state.game.levelScaleMode = false;
-          state.game.levelAudioMode = false;
-          state.game.levelTextMode = false;
-          state.game.levelTypingMode = false;
-          resetScaleBatchProgress();
-          closeWelcomeModeModal();
-          state.entry.welcomeStartRequested = true;
-          state.entry.welcomeFlashStartAt = Date.now();
-          void openAudioCheck();
         };
         els.welcomeStartBtn?.addEventListener('click', (event) => {
           void (async () => {
