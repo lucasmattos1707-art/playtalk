@@ -1,0 +1,116 @@
+:root {
+  --playtalk-video-fallback: #020610;
+  --playtalk-video-shade: linear-gradient(180deg, rgba(1, 5, 13, 0.3), rgba(1, 5, 13, 0.66));
+}
+
+html {
+  background: var(--playtalk-video-fallback) !important;
+}
+
+body.playtalk-video-bg-active {
+  position: relative;
+  isolation: isolate;
+  background: transparent !important;
+  background-image: none !important;
+}
+
+.playtalk-video-background {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: -2 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  background: var(--playtalk-video-fallback) !important;
+}
+
+.playtalk-video-background__media {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  pointer-events: none !important;
+}
+
+.playtalk-video-background__shade {
+  position: absolute;
+  inset: 0;
+  background: var(--playtalk-video-shade);
+  pointer-events: none;
+}
+
+body.playtalk-video-bg-active .container,
+body.playtalk-video-bg-active .welcome-gate__bg {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+body.playtalk-video-bg-active .game::before,
+body.playtalk-video-bg-active .game::after {
+  background: transparent !important;
+  background-image: none !important;
+  animation: none !important;
+}
+
+body.playtalk-video-bg-active .welcome-mode-modal,
+body.playtalk-video-bg-active .daily-plan-modal,
+body.playtalk-video-bg-active .robotcheck__touch,
+body.playtalk-video-bg-active .sound-test-gate,
+body.playtalk-video-bg-active .auth-gate,
+body.playtalk-video-bg-active .premium-gate,
+body.playtalk-video-bg-active .identity-gate {
+  background: rgba(2, 7, 16, 0.78) !important;
+  background-image: none !important;
+  backdrop-filter: blur(12px) saturate(0.92);
+  -webkit-backdrop-filter: blur(12px) saturate(0.92);
+}
+
+body.playtalk-video-bg-active .daily-plan-modal__panel {
+  background: rgba(2, 7, 16, 0.34) !important;
+}
+
+body.playtalk-video-bg-active .auth-gate .auth-card,
+body.playtalk-video-bg-active.auth-page .auth-card {
+  background: rgba(1, 8, 22, 0.76) !important;
+  border-color: rgba(115, 205, 255, 0.3) !important;
+  color: #ffffff !important;
+  backdrop-filter: blur(14px) saturate(0.96);
+  -webkit-backdrop-filter: blur(14px) saturate(0.96);
+}
+
+body.playtalk-video-bg-active.auth-page {
+  background: transparent !important;
+}
+
+body.playtalk-video-bg-active .albums-modal {
+  background: var(--playtalk-video-fallback) !important;
+  background-image: none !important;
+  isolation: isolate;
+}
+
+.albums-modal > .playtalk-video-background--surface {
+  position: absolute !important;
+  z-index: 0 !important;
+}
+
+.albums-modal > .playtalk-video-background--surface ~ .albums-modal__shell {
+  position: relative;
+  z-index: 2;
+}
+
+.albums-modal > .playtalk-video-background--surface + .albums-modal__shell {
+  background: rgba(1, 6, 15, 0.34);
+  backdrop-filter: blur(3px) saturate(0.94);
+  -webkit-backdrop-filter: blur(3px) saturate(0.94);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playtalk-video-background__media {
+    animation: none !important;
+  }
+}

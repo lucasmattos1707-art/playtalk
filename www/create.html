@@ -6,7 +6,7 @@
   <title>Criar aula | Fluent LevelUp</title>
   <meta
     name="description"
-    content="Crie aulas com quadros de imagem, áudio, vídeo, texto e alternativas."
+    content="Crie aulas com quadros de imagem, ï¿½udio, vï¿½deo, texto e alternativas."
   >
   <link rel="icon" type="image/png" href="/favicon.png">
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
@@ -14,6 +14,7 @@
   <script src="js/settings.js"></script>
   <script src="js/lens.js"></script>
   <script src="js/site-nav.js"></script>
+  <link rel="stylesheet" href="css/video-background.css">
 </head>
 <body class="page-create" data-lens-context="menus">
   <header class="site-header" id="global-header">
@@ -28,7 +29,7 @@
       <div class="create-panel__header">
         <div>
           <h1 class="create-title">Criador de aulas</h1>
-          <p class="create-subtitle">Monte quadros um de cada vez, com visualização imediata.</p>
+          <p class="create-subtitle">Monte quadros um de cada vez, com visualizaï¿½ï¿½o imediata.</p>
         </div>
         <div class="create-actions">
           <button id="create-frame-btn" class="btn-primary create-action-btn create-action-btn--add" type="button">Adicionar</button>
@@ -36,7 +37,7 @@
       </div>
       <div class="create-lesson-info">
         <label class="create-field">
-          <span>Título da aula</span>
+          <span>Tï¿½tulo da aula</span>
           <input id="lesson-title" type="text" placeholder="Ex: Present simple" autocomplete="off">
         </label>
       </div>
@@ -58,7 +59,7 @@
                   <path d="M14 3v11.5a3.5 3.5 0 1 1-2-3.15V7.5l8-2v9.5a3.5 3.5 0 1 1-2-3.15V4.5l-4 1z"></path>
                 </svg>
               </span>
-              <span class="create-menu__label">Quadro 2: Áudio</span>
+              <span class="create-menu__label">Quadro 2: ï¿½udio</span>
             </button>
             <button class="create-menu__card create-menu__card--video" data-frame-type="video" type="button">
               <span class="create-menu__icon" aria-hidden="true">
@@ -66,7 +67,7 @@
                   <path d="M4 6h11a1 1 0 0 1 1 1v3.2l4-2.3v8.2l-4-2.3V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"></path>
                 </svg>
               </span>
-              <span class="create-menu__label">Quadro 4: Vídeo</span>
+              <span class="create-menu__label">Quadro 4: Vï¿½deo</span>
             </button>
             <button class="create-menu__card create-menu__card--quiz" data-frame-type="quiz" type="button">
               <span class="create-menu__icon" aria-hidden="true">
@@ -114,7 +115,7 @@
                   <path d="M4 6h11a1 1 0 0 1 1 1v3.2l4-2.3v8.2l-4-2.3V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"></path>
                 </svg>
               </span>
-              <span class="create-menu__label">Vídeo</span>
+              <span class="create-menu__label">Vï¿½deo</span>
             </button>
           </div>
           <button id="close-visual-menu-btn" class="btn-secondary create-menu__close" type="button">Fechar</button>
@@ -127,7 +128,7 @@
         </section>
         <section class="create-preview">
           <div class="create-preview__header">
-            <h2 class="create-section-title">Prévia do quadro</h2>
+            <h2 class="create-section-title">Prï¿½via do quadro</h2>
             <div class="create-preview__controls">
               <button id="preview-play" class="btn-secondary" type="button">?? Reproduzir</button>
               <label class="create-preview__time" aria-label="Tempo em milissegundos">
@@ -150,7 +151,7 @@
     <section id="lesson-overview" class="create-overview" aria-live="polite">
       <div class="create-overview__header">
         <div>
-          <h2 class="create-section-title">Visão da aula</h2>
+          <h2 class="create-section-title">Visï¿½o da aula</h2>
           <p id="lesson-total" class="create-overview__total">Tempo total: 0s</p>
         </div>
         <div class="create-overview__actions">
@@ -163,11 +164,12 @@
   </main>
   <div id="lesson-player" class="lesson-player" role="dialog" aria-modal="true">
     <div class="lesson-player__container">
-      <button id="lesson-player-close" class="lesson-player__close" type="button" aria-label="Fechar reprodução">?</button>
+      <button id="lesson-player-close" class="lesson-player__close" type="button" aria-label="Fechar reproduï¿½ï¿½o">?</button>
       <div id="lesson-player-frame" class="class-frame lesson-player__frame"></div>
     </div>
   </div>
   <script src="js/create-page.js"></script>
+  <script src="js/video-background.js"></script>
 </body>
 </html>
 
