@@ -14145,6 +14145,7 @@
       const CARDS_CACHE_STORAGE_KEY = 'playtalk-flashcards-cards-v3-postgres';
       const USER_PROGRESS_STORAGE_KEY = 'playtalk-flashcards-progress-v3';
       const USER_CARD_LANGUAGES_STORAGE_KEY = 'playtalk-flashcards-card-languages-v1';
+      const PENDING_CARD_ACQUISITIONS_STORAGE_KEY = 'playtalk-flashcards-pending-acquisitions-v1';
       const USER_LANGUAGE_META_STORAGE_KEY = 'playtalk-flashcards-language-meta-v1';
       const USER_HIDDEN_STORAGE_KEY = 'playtalk-flashcards-hidden-v1';
       const USER_STATS_STORAGE_KEY = 'playtalk-flashcards-stats-v1';
@@ -18650,6 +18651,7 @@
           USER_PROGRESS_STORAGE_KEY,
           USER_CARD_LANGUAGES_STORAGE_KEY,
           USER_HIDDEN_STORAGE_KEY,
+          PENDING_CARD_ACQUISITIONS_STORAGE_KEY,
           USER_STATS_STORAGE_KEY,
           TUTORIAL_PROGRESS_STORAGE_KEY,
           GAME_SESSION_STORAGE_KEY,
@@ -18958,6 +18960,12 @@
         state.entry.pendingCloudSyncAfterGameplay = false;
         state.entry.pendingCardsReloadAfterGameplay = false;
         let flushed = false;
+        try {
+          const acquisitionsSynced = await flushPendingCardAcquisitions(options);
+          flushed = flushed || Boolean(acquisitionsSynced);
+        } catch (_error) {
+          // keep acquisitions queued for the next flush
+        }
         if (shouldSyncCloud) {
           try {
             await syncFlashcardCloudNow(currentProgressLanguage(), {
@@ -19554,7 +19562,20 @@
       }
 
       function saveUserProgress(options = {}) {
-        syncOwnedIdsFromProgress();
+        persistUserProgressLocally();
+        persistUserCardLanguagesLocally();
+        persistHiddenCardIdsLocally();
+        if (!options.skipCloudSync) {
+          if (options.immediateCloudSync) {
+            void syncFlashcardCloudNow(currentProgressLanguage(), { forceNetwork: true, keepalive: options.keepalive === true });
+            return;
+          }
+          if (shouldDeferGameplayNetworkSync()) {
+            queueGameplayNetworkSync('cloud');
+            return;
+          }
+          scheduleFlashcardCloudSync(options.cloudSyncDelayMs);
+        }
       }
 
       function buildApiUrl(path) {
@@ -19919,6 +19940,186 @@
         };
       }
 
+      function serializeAcquisitionProgressRecord(record) {
+        const normalized = normalizeProgressRecord(record);
+        if (!normalized) return null;
+        const card = cardById(normalized.cardId);
+        const cardText = safeText(card?.english || card?.portuguese || '');
+        return {
+          cardId: normalized.cardId,
+          phaseIndex: normalized.phaseIndex,
+          targetPhaseIndex: normalized.targetPhaseIndex,
+          reviewScaleVersion: REVIEW_SCALE_VERSION,
+          status: normalized.status,
+          typePortuguese: Boolean(normalized.typePortuguese),
+          memorizingStartedAt: normalized.memorizingStartedAt,
+          memorizingDurationMs: normalized.memorizingDurationMs,
+          availableAt: normalized.availableAt,
+          returnedAt: normalized.returnedAt,
+          createdAt: normalized.createdAt,
+          cardChars: Math.max(1, countFlashcardCharacters(cardText) || 10),
+          sealImage: normalized.sealImage
+        };
+      }
+
+      function normalizePendingCardAcquisition(raw) {
+        const targetLanguage = normalizeGameOptionValue('targetLanguage', raw?.targetLanguage);
+        const progress = serializeAcquisitionProgressRecord(raw?.progress || raw);
+        if (!progress?.cardId) return null;
+        return {
+          key: [progress.cardId, targetLanguage].join('::'),
+          targetLanguage,
+          sourceLevel: normalizeUserLevel(raw?.sourceLevel || 1),
+          progress
+        };
+      }
+
+      function readPendingCardAcquisitions(userId = state.user?.id) {
+        if (!Number.isInteger(Number(userId)) || Number(userId) <= 0) return [];
+        const parsed = readScopedStorage(PENDING_CARD_ACQUISITIONS_STORAGE_KEY, [], userId);
+        return Array.isArray(parsed)
+          ? parsed.map(normalizePendingCardAcquisition).filter(Boolean)
+          : [];
+      }
+
+      function writePendingCardAcquisitions(items, userId = state.user?.id) {
+        if (!Number.isInteger(Number(userId)) || Number(userId) <= 0) return;
+        try {
+          localStorage.setItem(
+            storageKeyForUser(PENDING_CARD_ACQUISITIONS_STORAGE_KEY, userId),
+            JSON.stringify(Array.isArray(items) ? items : [])
+          );
+        } catch (_error) {
+          // keep the in-memory acquisition even if local persistence is unavailable
+        }
+      }
+
+      function queuePendingCardAcquisition(record, targetLanguage = currentProgressLanguage(), sourceLevel = currentUserLevel()) {
+        const pending = normalizePendingCardAcquisition({
+          targetLanguage,
+          sourceLevel,
+          progress: record
+        });
+        if (!pending || !state.user?.id) return pending;
+        const items = readPendingCardAcquisitions();
+        const nextItems = items.filter((item) => item.key !== pending.key);
+        nextItems.push(pending);
+        writePendingCardAcquisitions(nextItems);
+        return pending;
+      }
+
+      function removePendingCardAcquisition(pending) {
+        if (!pending?.key || !state.user?.id) return;
+        const nextItems = readPendingCardAcquisitions().filter((item) => item.key !== pending.key);
+        writePendingCardAcquisitions(nextItems);
+      }
+
+      async function postPendingCardAcquisition(pending, options = {}) {
+        if (!pending?.progress?.cardId || !state.user?.id) return null;
+        const response = await fetch(buildApiUrl('/api/flashcards/acquisition-state'), {
+          method: 'POST',
+          headers: buildAuthHeaders({
+            'Content-Type': 'application/json'
+          }),
+          credentials: 'include',
+          keepalive: Boolean(options.keepalive),
+          body: JSON.stringify({
+            event: 'card-acquired',
+            targetLanguage: pending.targetLanguage,
+            gameOptions: {
+              targetLanguage: pending.targetLanguage
+            },
+            userLevel: pending.sourceLevel,
+            progress: [pending.progress]
+          })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success) {
+          throw new Error(payload?.message || 'Falha ao salvar a carta conquistada.');
+        }
+        if (Number.isFinite(Number(payload.serverTimeMs)) && Number(payload.serverTimeMs) > 0) {
+          state.timeOffsetMs = Math.round(Number(payload.serverTimeMs) - Date.now());
+          saveTimeOffsetMs();
+        }
+        return payload;
+      }
+
+      async function flushPendingCardAcquisitions(options = {}) {
+        if (!state.user?.id || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+          return false;
+        }
+        const items = readPendingCardAcquisitions();
+        if (!items.length) return false;
+        let flushed = false;
+        for (const pending of items) {
+          try {
+            await postPendingCardAcquisition(pending, options);
+            removePendingCardAcquisition(pending);
+            flushed = true;
+          } catch (error) {
+            console.warn('Carta conquistada ainda pendente de sincronizacao:', error);
+          }
+        }
+        return flushed;
+      }
+
+      async function persistConqueredCardDurably(record, targetLanguage = currentProgressLanguage(), sourceLevel = currentUserLevel()) {
+        persistUserProgressLocally(targetLanguage);
+        persistUserCardLanguagesLocally();
+        if (!state.user?.id) return true;
+        const pending = queuePendingCardAcquisition(record, targetLanguage, sourceLevel);
+        if (!pending) return false;
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          try {
+            await postPendingCardAcquisition(pending);
+            removePendingCardAcquisition(pending);
+            return true;
+          } catch (error) {
+            if (attempt === 0 && (typeof navigator === 'undefined' || navigator.onLine !== false)) {
+              await wait(250);
+              continue;
+            }
+            console.warn('Falha ao persistir carta conquistada no Postgres:', error);
+          }
+        }
+        queueGameplayNetworkSync('cloud');
+        return false;
+      }
+
+      function mergePendingCardAcquisitionsIntoCloudState(cloudState) {
+        const items = readPendingCardAcquisitions();
+        if (!items.length) return cloudState;
+        const progressByCardId = new Map(
+          (Array.isArray(cloudState?.progress) ? cloudState.progress : [])
+            .map(normalizeProgressRecord)
+            .filter(Boolean)
+            .map((record) => [record.cardId, record])
+        );
+        const conqueredLanguages = normalizeConqueredLanguagesPayload(
+          cloudState?.conqueredLanguages || cloudState?.meta?.conqueredLanguages || {}
+        );
+        items.forEach((pending) => {
+          const record = normalizeProgressRecord(pending.progress);
+          if (!record) return;
+          if (!progressByCardId.has(record.cardId)) {
+            progressByCardId.set(record.cardId, record);
+          }
+          const currentEntry = normalizeConqueredLanguageEntry(conqueredLanguages.get(record.cardId));
+          currentEntry[pending.targetLanguage] = normalizeConqueredLanguageMeta(pending.targetLanguage, record);
+          conqueredLanguages.set(record.cardId, currentEntry);
+        });
+        const serializedLanguages = serializeConqueredLanguagesMap(conqueredLanguages);
+        return {
+          ...(cloudState || {}),
+          progress: Array.from(progressByCardId.values()),
+          conqueredLanguages: serializedLanguages,
+          meta: {
+            ...(cloudState?.meta || {}),
+            conqueredLanguages: serializedLanguages
+          }
+        };
+      }
+
       async function fetchFlashcardCloudState(targetLanguage) {
         const hasExplicitTargetLanguage = safeText(targetLanguage).length > 0;
         const normalizedTargetLanguage = hasExplicitTargetLanguage
@@ -20016,7 +20217,18 @@
       }
 
       function scheduleFlashcardCloudSync(delayMs = 900) {
-        return;
+        if (!state.user?.id) return;
+        if (shouldDeferGameplayNetworkSync()) {
+          queueGameplayNetworkSync('cloud');
+          return;
+        }
+        if (state.flashcardsSyncTimer) {
+          window.clearTimeout(state.flashcardsSyncTimer);
+        }
+        state.flashcardsSyncTimer = window.setTimeout(() => {
+          state.flashcardsSyncTimer = 0;
+          void syncFlashcardCloudNow().catch(() => queueGameplayNetworkSync('cloud'));
+        }, Math.max(0, Number(delayMs) || 0));
       }
 
       function applyFlashcardStatePayloadForLanguage(cloudState, targetLanguage, options = {}) {
@@ -22945,7 +23157,8 @@
 
         let cloudState = null;
         try {
-          cloudState = await fetchFlashcardCloudState();
+          await flushPendingCardAcquisitions();
+          cloudState = mergePendingCardAcquisitionsIntoCloudState(await fetchFlashcardCloudState());
         } catch (error) {
           if (Number(error?.statusCode) === 401) {
             console.warn('Sessao recusada ao carregar estado em nuvem; mantendo estado local.');
@@ -37480,6 +37693,11 @@
                 state.userCards.set(entry.id, nextRecord);
                 markCardConqueredLanguage(entry.id, currentTargetLanguage(), nextRecord);
                 syncOwnedIdsFromProgress();
+                await persistConqueredCardDurably(
+                  nextRecord,
+                  currentTargetLanguage(),
+                  selectedGameLevel()
+                );
               }
               state.ui.levelModeProgress[selectedGameLevel()] = Math.max(
                 0,

@@ -6538,6 +6538,7 @@ const readFlashcardStateForUser = async (userId, options = {}) => {
   }
 
   await ensureFlashcardUserStateTables();
+  await ensureFlashcardAcquisitionTable();
   await ensureUserFlashcardSpeedSamplesTable();
   await ensureUserBooksEnergyXpStatsTable();
   await ensureUserCoinsTable();
@@ -6567,7 +6568,7 @@ const readFlashcardStateForUser = async (userId, options = {}) => {
     ? normalizeFlashcardTargetLanguage(explicitTargetLanguage)
     : normalizeFlashcardTargetLanguage(flashcardStatsRow.game_option_target_language);
 
-  const [progressResult, accurateResult, hiddenResult, onTableResult, userLevelResult, booksEnergyXpResult, coinsResult, trainingTotalsResult, speedSamplesResult, conqueredLanguagesResult] = await Promise.all([
+  const [progressResult, accurateResult, hiddenResult, onTableResult, userLevelResult, booksEnergyXpResult, coinsResult, trainingTotalsResult, speedSamplesResult, conqueredLanguagesResult, acquisitionsResult] = await Promise.all([
     pool.query(
       `SELECT
          card_id,
@@ -6673,10 +6674,45 @@ const readFlashcardStateForUser = async (userId, options = {}) => {
        WHERE user_id = $1
        ORDER BY updated_at DESC, created_at DESC, card_id ASC, target_language ASC`,
       [normalizedUserId]
+    ),
+    pool.query(
+      `SELECT
+         card_id,
+         target_language,
+         phase_index,
+         target_phase_index,
+         status,
+         type_portuguese,
+         memorizing_started_at,
+         memorizing_duration_ms,
+         available_at,
+         returned_at,
+         card_chars,
+         seal_image,
+         created_at,
+         updated_at
+       FROM public.user_flashcard_acquisitions
+       WHERE user_id = $1
+         AND target_language = $2
+       ORDER BY updated_at DESC, acquired_at DESC, card_id ASC`,
+      [normalizedUserId, selectedTargetLanguage]
     )
   ]);
 
-  const progressRecords = progressResult.rows.map(mapStoredFlashcardProgressRow).filter((item) => item.cardId);
+  const progressRecordsByCardId = new Map();
+  progressResult.rows
+    .map(mapStoredFlashcardProgressRow)
+    .filter((item) => item.cardId)
+    .forEach((item) => progressRecordsByCardId.set(item.cardId, item));
+  acquisitionsResult.rows
+    .map(mapStoredFlashcardProgressRow)
+    .filter((item) => item.cardId)
+    .forEach((item) => {
+      if (!progressRecordsByCardId.has(item.cardId)) {
+        progressRecordsByCardId.set(item.cardId, item);
+      }
+    });
+  const progressRecords = Array.from(progressRecordsByCardId.values());
   await syncFlashcardRankingForUser(normalizedUserId, flashcardProgressRankingScoreTotal(progressRecords));
   const accurateAggregate = getFlashcardAccurateAggregateFromRow(accurateResult.rows[0]);
   const gameOptions = normalizeFlashcardGameOptions({
@@ -6743,6 +6779,22 @@ const readFlashcardStateForUser = async (userId, options = {}) => {
       phaseIndex: Math.max(0, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(row?.phase_index, 10) || 0)),
       targetPhaseIndex: Math.max(1, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(row?.target_phase_index, 10) || 1)),
       status: safeText(row?.status).toLowerCase() === 'memorizing' ? 'memorizing' : 'ready',
+      sealImage: safeText(row?.seal_image || resolveFlashcardSealImage(row || {}))
+    };
+  });
+  acquisitionsResult.rows.forEach((row) => {
+    const cardId = typeof row?.card_id === 'string' ? row.card_id.trim() : '';
+    const targetLanguage = normalizeFlashcardTargetLanguage(row?.target_language);
+    if (!cardId || !targetLanguage) return;
+    if (!conqueredLanguages.has(cardId)) {
+      conqueredLanguages.set(cardId, {});
+    }
+    const current = conqueredLanguages.get(cardId);
+    if (current[targetLanguage]) return;
+    current[targetLanguage] = {
+      phaseIndex: Math.max(0, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(row?.phase_index, 10) || 0)),
+      targetPhaseIndex: Math.max(1, Math.min(FLASHCARD_REVIEW_PHASE_MAX, Number.parseInt(row?.target_phase_index, 10) || 1)),
+      status: safeText(row?.status).toLowerCase() === 'ready' ? 'ready' : 'memorizing',
       sealImage: safeText(row?.seal_image || resolveFlashcardSealImage(row || {}))
     };
   });
@@ -17492,6 +17544,7 @@ app.post('/api/flashcards/acquisition-state', express.json({ limit: '2mb' }), as
     await ensureFlashcardAcquisitionTable();
     const targetLanguage = normalizeFlashcardTargetLanguage(req.body?.gameOptions?.targetLanguage || req.body?.targetLanguage);
     const allowProgressReset = req.body?.forceProgressReset === true;
+    const useServerAcquisitionTime = req.body?.event === 'card-acquired';
     const progress = Array.isArray(req.body?.progress)
       ? req.body.progress.map((item) => normalizeFlashcardProgressRecord(item)).filter(Boolean)
       : [];
@@ -17503,6 +17556,11 @@ app.post('/api/flashcards/acquisition-state', express.json({ limit: '2mb' }), as
         const params = [];
         progress.forEach((item, index) => {
           const offset = index * 15;
+          const serverNow = useServerAcquisitionTime ? new Date() : null;
+          const memorizingDurationMs = Math.max(0, Math.round(Number(item.memorizingDurationMs) || 0));
+          const memorizingStartedAt = serverNow && item.status === 'memorizing' ? serverNow : flashcardTimestampFromMillis(item.memorizingStartedAt);
+          const availableAt = serverNow && item.status === 'memorizing' ? new Date(serverNow.getTime() + memorizingDurationMs) : flashcardTimestampFromMillis(item.availableAt);
+          const createdAt = serverNow || flashcardTimestampFromMillis(item.createdAt);
           values.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14}, $${offset + 15}, now(), now())`);
           params.push(
             Number(authUser.id),
@@ -17513,13 +17571,13 @@ app.post('/api/flashcards/acquisition-state', express.json({ limit: '2mb' }), as
             item.targetPhaseIndex,
             item.status,
             Boolean(item.typePortuguese),
-            flashcardTimestampFromMillis(item.memorizingStartedAt),
-            item.memorizingDurationMs,
-            flashcardTimestampFromMillis(item.availableAt),
+            memorizingStartedAt,
+            memorizingDurationMs,
+            availableAt,
             flashcardTimestampFromMillis(item.returnedAt),
             Math.max(1, Math.round(Number(item.cardChars) || 10)),
             item.sealImage,
-            flashcardTimestampFromMillis(item.createdAt)
+            createdAt
           );
         });
         await client.query(
@@ -17545,18 +17603,18 @@ app.post('/api/flashcards/acquisition-state', express.json({ limit: '2mb' }), as
            VALUES ${values.join(', ')}
            ON CONFLICT (user_id, card_id, target_language)
            DO UPDATE SET
-             source_level = EXCLUDED.source_level,
-             phase_index = EXCLUDED.phase_index,
-             target_phase_index = EXCLUDED.target_phase_index,
-             status = EXCLUDED.status,
-             type_portuguese = EXCLUDED.type_portuguese,
-             memorizing_started_at = EXCLUDED.memorizing_started_at,
-             memorizing_duration_ms = EXCLUDED.memorizing_duration_ms,
-             available_at = EXCLUDED.available_at,
-             returned_at = EXCLUDED.returned_at,
-             card_chars = EXCLUDED.card_chars,
-             seal_image = EXCLUDED.seal_image,
-             created_at = EXCLUDED.created_at,
+             source_level = LEAST(user_flashcard_acquisitions.source_level, EXCLUDED.source_level),
+             phase_index = GREATEST(user_flashcard_acquisitions.phase_index, EXCLUDED.phase_index),
+             target_phase_index = GREATEST(user_flashcard_acquisitions.target_phase_index, EXCLUDED.target_phase_index),
+             status = CASE WHEN user_flashcard_acquisitions.status = 'ready' OR EXCLUDED.status = 'ready' THEN 'ready' ELSE 'memorizing' END,
+             type_portuguese = user_flashcard_acquisitions.type_portuguese OR EXCLUDED.type_portuguese,
+             memorizing_started_at = COALESCE(user_flashcard_acquisitions.memorizing_started_at, EXCLUDED.memorizing_started_at),
+             memorizing_duration_ms = GREATEST(user_flashcard_acquisitions.memorizing_duration_ms, EXCLUDED.memorizing_duration_ms),
+             available_at = COALESCE(user_flashcard_acquisitions.available_at, EXCLUDED.available_at),
+             returned_at = COALESCE(EXCLUDED.returned_at, user_flashcard_acquisitions.returned_at),
+             card_chars = GREATEST(user_flashcard_acquisitions.card_chars, EXCLUDED.card_chars),
+             seal_image = CASE WHEN EXCLUDED.seal_image <> '' THEN EXCLUDED.seal_image ELSE user_flashcard_acquisitions.seal_image END,
+             created_at = LEAST(user_flashcard_acquisitions.created_at, EXCLUDED.created_at),
              updated_at = now()`,
           params
         );
@@ -17575,7 +17633,7 @@ app.post('/api/flashcards/acquisition-state', express.json({ limit: '2mb' }), as
     } finally {
       client.release();
     }
-    res.json({ success: true, saved: progress.length });
+    res.json({ success: true, saved: progress.length, serverTimeMs: Date.now() });
   } catch (error) {
     console.error('Erro ao salvar aquisicoes de flashcards:', error);
     res.status(500).json({ success: false, message: 'Erro ao salvar cartas conquistadas.' });
