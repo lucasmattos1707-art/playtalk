@@ -8994,6 +8994,54 @@
       box-shadow: none;
     }
 
+    /* Modo Cartas personalizado: o Stage 4 mantém a palavra sobre a imagem da carta. */
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] #gameVisual > img:not(.game-card__seal),
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] #gameVisual .mini-card__fallback,
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] #gameVisual .game-card__placeholder,
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] #gameVisual .game-card__reveal-image {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: none;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] #gameVisual .flashcards-typing__display--visual {
+      position: absolute !important;
+      top: 50% !important;
+      left: 50% !important;
+      width: min(94%, 320px) !important;
+      min-height: 0;
+      margin: 0 !important;
+      transform: translate(-50%, -50%) !important;
+      z-index: 4;
+      font-size: clamp(41.25px, 11.5vw, 65px);
+      text-shadow:
+        0 2px 0 rgba(0, 22, 72, 0.98),
+        0 0 12px rgba(2, 28, 92, 0.92),
+        0 0 24px rgba(6, 54, 141, 0.74);
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen .keyboardscreen-host,
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .game-controls-proxy:not(.is-hidden),
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen .flashcards-typing,
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen .flashcards-typing__grid {
+      width: 100vw !important;
+      max-width: 100vw !important;
+      margin-inline: 0 !important;
+      padding-inline: 0 !important;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen .flashcards-typing__key {
+      font-size: clamp(67.5px, 21.0875vw, 121.25px);
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen .flashcards-typing__grid.is-word-blocks {
+      padding-inline: 0;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key {
+      font-size: 40px;
+    }
+
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__word-row.is-long-word-row .flashcards-typing__key,
     .game[data-phase-key="fourth-star"] .textscreen .flashcards-typing__word-row.is-long-word-row .flashcards-typing__key {
       flex: 1 1 100%;
@@ -23854,6 +23902,20 @@
         return Boolean(isFiveStarCardsModeActive() && selectedCardsModePracticeStage());
       }
 
+      function isCardsModeCustomFourthStageEntry(entry) {
+        return Boolean(
+          entry
+          && isCardsModeFixedStageActive()
+          && selectedCardsModePracticeStage() === 4
+          && resolveEntryStageNumber(entry) === 4
+        );
+      }
+
+      function shouldPlayCustomFourthStageEnglishBeforeInput(entry) {
+        const earnedStars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(entry?.stars) || 0));
+        return isCardsModeCustomFourthStageEntry(entry) && earnedStars < 3;
+      }
+
       function resolveCardsModePracticeEntryStage(fallbackStage = 1) {
         return isCardsModeFixedStageActive()
           ? selectedCardsModePracticeStage()
@@ -32220,6 +32282,46 @@
         });
       }
 
+      function gateCustomFourthStageInputUntilEnglishAudio(entry, card, grid, advanceBtn = null) {
+        if (!shouldPlayCustomFourthStageEnglishBeforeInput(entry) || !grid) return false;
+        const earnedStars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(entry?.stars) || 0));
+        const promptKey = `${entry.id}:${earnedStars}:stage-4-english`;
+        if (entry._customFourthStagePromptPlayedKey === promptKey) return false;
+
+        setTypingKeysDisabled(grid, true);
+        if (advanceBtn && !isTrainingMode()) advanceBtn.disabled = true;
+
+        if (
+          entry._customFourthStagePromptPendingKey !== promptKey
+          || !entry._customFourthStagePromptPromise
+        ) {
+          entry._customFourthStagePromptPendingKey = promptKey;
+          entry._customFourthStagePromptPromise = wait(160)
+            .then(() => {
+              if (!state.game.active || state.game.paused || state.game.currentId !== entry.id) return false;
+              return playGameAudioForLanguage(card, 'english', { rate: 0.8 });
+            })
+            .catch(() => false)
+            .finally(() => {
+              entry._customFourthStagePromptPlayedKey = promptKey;
+              entry._customFourthStagePromptPendingKey = '';
+              entry._customFourthStagePromptPromise = null;
+            });
+        }
+
+        Promise.resolve(entry._customFourthStagePromptPromise).finally(() => {
+          if (
+            !state.game.active
+            || state.game.paused
+            || state.game.currentId !== entry.id
+            || safeText(els.game?.dataset?.phaseKey || '') !== 'fourth-star'
+          ) return;
+          setTypingKeysDisabled(grid, false);
+          if (advanceBtn && !isTrainingMode()) syncGameAdvanceButton(entry);
+        });
+        return true;
+      }
+
       function currentTypingKeySoundPath() {
         return safeText(els.game?.dataset?.phaseKey || '') === 'fourth-star'
           ? FOURTH_STAR_TYPING_KEY_SOUND_PATH
@@ -33145,13 +33247,18 @@
           els.gameTypingKeyboard.innerHTML = '';
           els.gameTypingKeyboard.appendChild(toolbar);
           if (fourthStarBlocksTranslationDisplay) {
-            els.gameTypingKeyboard.appendChild(fourthStarBlocksTranslationDisplay);
+            if (isCardsModeCustomFourthStageEntry(entry)) {
+              els.gameVisual.appendChild(fourthStarBlocksTranslationDisplay);
+            } else {
+              els.gameTypingKeyboard.appendChild(fourthStarBlocksTranslationDisplay);
+            }
           }
           els.gameTypingKeyboard.appendChild(grid);
           els.gameTypingKeyboard.classList.add('is-visible');
           els.gameTypingKeyboard.classList.remove('is-portuguese');
           els.gameTypingKeyboard.setAttribute('aria-hidden', 'false');
           renderSelected();
+          gateCustomFourthStageInputUntilEnglishAudio(entry, card, grid, advanceBtn);
           return;
         }
 
@@ -33369,7 +33476,11 @@
         }
         els.gameTypingKeyboard.innerHTML = '';
         if (useSmartKeyboard) {
-          els.gameTypingKeyboard.appendChild(display);
+          if (isCardsModeCustomFourthStageEntry(entry)) {
+            els.gameVisual.appendChild(display);
+          } else {
+            els.gameTypingKeyboard.appendChild(display);
+          }
         } else {
           els.gameVisual.appendChild(display);
         }
@@ -33380,6 +33491,7 @@
         els.gameTypingKeyboard.setAttribute('aria-hidden', 'false');
         clearTypingPromptLoop();
         clearSecondStarIdleHintTimers();
+        gateCustomFourthStageInputUntilEnglishAudio(entry, card, grid, advanceBtn);
       }
 
       function syncGamePhaseWordHost(phaseKey) {
@@ -33429,6 +33541,7 @@
           clearStageTutorialReminder();
           hideGameStageTutorial({ resume: false });
           els.game.removeAttribute('data-phase-key');
+          els.game.removeAttribute('data-cards-fixed-stage');
           clearGameStatusRankTimer();
           clearGameLanguageSwapTimer();
           clearTypingPromptLoop();
@@ -33490,6 +33603,11 @@
         }
         const stageConfig = resolveGameStageConfig(entry);
         els.game.dataset.phaseKey = stageConfig.key || '';
+        if (isCardsModeFixedStageActive()) {
+          els.game.dataset.cardsFixedStage = String(selectedCardsModePracticeStage());
+        } else {
+          els.game.removeAttribute('data-cards-fixed-stage');
+        }
         enforceBottomInfoContainersLayout();
         if (stageConfig.key === 'second-star' && isTypingStage(entry)) {
           setSecondStarVisualPhase('input');
