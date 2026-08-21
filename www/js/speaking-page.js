@@ -1046,6 +1046,16 @@
     syncBattleCardsReadyState();
   }
 
+  const SPEECH_SEQUENCE_MIN_LENGTH = 2;
+
+  function normalizeSpeechSequenceText(value) {
+    return String(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\p{Script=Han}a-z0-9]+/gu, '');
+  }
+
   function countLetterBlocksCoverage(expected, spoken) {
     const expectedRaw = lettersOnly(expected);
     const spokenRaw = lettersOnly(spoken);
@@ -1075,19 +1085,121 @@
     return covered.filter(Boolean).length;
   }
 
-  function calculateSpeechMatchStats(expected, spoken) {
-    const expectedRaw = lettersOnly(expected);
-    if (!expectedRaw) return { matched: 0, total: 0, percent: 0 };
-    if (hasCommonLetterSequence(expected, spoken, 2) || hasOneLetterWordMatch(expected, spoken)) {
-      return { matched: expectedRaw.length, total: expectedRaw.length, percent: 100 };
+  function countStageSpeechCoverage(expected, spoken) {
+    const expectedRaw = normalizeSpeechSequenceText(expected);
+    const spokenChunks = String(spoken || '')
+      .split(/\s+/)
+      .map(normalizeSpeechSequenceText)
+      .filter((chunk) => chunk.length >= SPEECH_SEQUENCE_MIN_LENGTH);
+    if (!expectedRaw || !spokenChunks.length) return 0;
+
+    const covered = Array(expectedRaw.length).fill(false);
+    spokenChunks.forEach((chunk) => {
+      let best = null;
+      for (let spokenStart = 0; spokenStart < chunk.length; spokenStart += 1) {
+        for (let expectedStart = 0; expectedStart < expectedRaw.length; expectedStart += 1) {
+          let length = 0;
+          while (
+            spokenStart + length < chunk.length
+            && expectedStart + length < expectedRaw.length
+            && chunk[spokenStart + length] === expectedRaw[expectedStart + length]
+          ) {
+            length += 1;
+          }
+          if (length < SPEECH_SEQUENCE_MIN_LENGTH) continue;
+          const candidate = { expectedStart, spokenStart, length };
+          if (!best
+            || candidate.length > best.length
+            || (candidate.length === best.length && candidate.spokenStart < best.spokenStart)
+            || (
+              candidate.length === best.length
+              && candidate.spokenStart === best.spokenStart
+              && candidate.expectedStart < best.expectedStart
+            )) {
+            best = candidate;
+          }
+        }
+      }
+      if (!best) return;
+      for (let index = best.expectedStart; index < best.expectedStart + best.length; index += 1) {
+        covered[index] = true;
+      }
+    });
+
+    return covered.filter(Boolean).length;
+  }
+
+  function expandEnglishSpeechContractions(text) {
+    return String(text || '')
+      .replace(/\bi'm\b/g, 'i am')
+      .replace(/\byou're\b/g, 'you are')
+      .replace(/\bhe's\b/g, 'he is')
+      .replace(/\bshe's\b/g, 'she is')
+      .replace(/\bit's\b/g, 'it is')
+      .replace(/\bwe're\b/g, 'we are')
+      .replace(/\bthey're\b/g, 'they are')
+      .replace(/\bthat's\b/g, 'that is')
+      .replace(/\bthere's\b/g, 'there is')
+      .replace(/\bhere's\b/g, 'here is')
+      .replace(/\bwhat's\b/g, 'what is')
+      .replace(/\bwho's\b/g, 'who is')
+      .replace(/\bwhere's\b/g, 'where is')
+      .replace(/\bwhen's\b/g, 'when is')
+      .replace(/\bwhy's\b/g, 'why is')
+      .replace(/\bhow's\b/g, 'how is')
+      .replace(/\bcan't\b/g, 'cannot')
+      .replace(/\bwon't\b/g, 'will not')
+      .replace(/\bn't\b/g, ' not')
+      .replace(/\b(\w+)'ll\b/g, '$1 will')
+      .replace(/\b(\w+)'ve\b/g, '$1 have')
+      .replace(/\b(\w+)'re\b/g, '$1 are')
+      .replace(/\b(\w+)'d\b/g, '$1 would')
+      .replace(/\b(\w+)'s\b/g, '$1 is')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function getSpeechComparisonCandidates(text) {
+    const raw = safeText(text);
+    const normalized = /[\p{Script=Han}]/u.test(raw)
+      ? raw
+        .toLowerCase()
+        .replace(/[，。！？；：、“”"'‘’（）()\[\]{}<>《》【】,.!?;:/\\|@#$%^&*_+=~-]/gu, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+      : normalizeText(raw);
+    if (!normalized) return [];
+    const variants = new Set([normalized, normalized.replace(/'/g, '').trim()]);
+    const expanded = expandEnglishSpeechContractions(normalized);
+    if (expanded) {
+      variants.add(expanded);
+      variants.add(expanded.replace(/'/g, '').trim());
     }
-    const matched = countLetterBlocksCoverage(expected, spoken);
-    const baseScore = Math.max(0, Math.min(100, Math.round((matched / expectedRaw.length) * 100)));
-    return {
-      matched,
-      total: expectedRaw.length,
-      percent: Math.max(0, Math.min(100, Math.round(baseScore * 1.1)))
-    };
+    return Array.from(variants).filter(Boolean);
+  }
+
+  function calculateSpeechMatchStats(expected, spoken) {
+    const expectedCandidates = getSpeechComparisonCandidates(expected);
+    const spokenCandidates = getSpeechComparisonCandidates(spoken);
+    const fallbackTotal = normalizeSpeechSequenceText(expected).length;
+    if (!expectedCandidates.length || !spokenCandidates.length) {
+      return { matched: 0, total: fallbackTotal, percent: 0 };
+    }
+
+    let best = { matched: 0, total: fallbackTotal, percent: 0 };
+    expectedCandidates.forEach((expectedCandidate) => {
+      const total = normalizeSpeechSequenceText(expectedCandidate).length;
+      spokenCandidates.forEach((spokenCandidate) => {
+        const matched = countStageSpeechCoverage(expectedCandidate, spokenCandidate);
+        const percent = total > 0
+          ? Math.max(0, Math.min(100, Math.round((matched / total) * 100)))
+          : 0;
+        if (percent > best.percent) {
+          best = { matched, total, percent };
+        }
+      });
+    });
+    return best;
   }
 
   function calculateSpeechMatchPercent(expected, spoken) {
