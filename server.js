@@ -468,6 +468,7 @@ const SPEAKING_DUEL_SMARTBOOKS_MODE = 'smartbooks';
 const SPEAKING_DUEL_CARDS_MODE = 'battle-cards';
 const SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS = 35;
 const SPEAKING_DUEL_INTRO_SECONDS = 10;
+const SPEAKING_DUEL_CARDS_INTRO_SECONDS = 30;
 const SPEAKING_DUEL_BATTLE_SECONDS = 180;
 const SPEAKING_MATCHMAKING_ACTIVE_SECONDS = 30;
 const SPEAKING_MATCHMAKING_WAIT_MS = 20000;
@@ -11697,10 +11698,18 @@ function computeSpeakingDuelWinnerUserId(session) {
   return 0;
 }
 
+function resolveSpeakingDuelIntroSeconds(session) {
+  const configured = Number(session?.intro_countdown_seconds);
+  if (Number.isFinite(configured) && configured > 0) return Math.max(1, configured);
+  return normalizeSpeakingChallengeMode(session?.mode) === SPEAKING_DUEL_CARDS_MODE
+    ? SPEAKING_DUEL_CARDS_INTRO_SECONDS
+    : SPEAKING_DUEL_INTRO_SECONDS;
+}
+
 function isSpeakingDuelBattleExpired(session) {
   const createdAtMs = Date.parse(String(session?.created_at || '').trim());
   if (!Number.isFinite(createdAtMs) || createdAtMs <= 0) return false;
-  const introSeconds = Math.max(1, Number(session?.intro_countdown_seconds) || SPEAKING_DUEL_INTRO_SECONDS);
+  const introSeconds = resolveSpeakingDuelIntroSeconds(session);
   const battleSeconds = Math.max(1, Number(session?.battle_duration_seconds) || SPEAKING_DUEL_BATTLE_SECONDS);
   const deadlineMs = createdAtMs + ((introSeconds + battleSeconds) * 1000);
   return Date.now() >= deadlineMs;
@@ -11764,7 +11773,7 @@ function buildBotProgressSnapshot(session, botUserId, botConfig) {
     return { progress: 0, percent: 0, finished: false, score: 0 };
   }
 
-  const introSeconds = Math.max(1, Number(session?.intro_countdown_seconds) || SPEAKING_DUEL_INTRO_SECONDS);
+  const introSeconds = resolveSpeakingDuelIntroSeconds(session);
   const battleStartedAtMs = createdAtMs + (introSeconds * 1000);
   const elapsedMs = Math.max(0, Date.now() - battleStartedAtMs);
   if (elapsedMs <= 0) {
@@ -22073,6 +22082,7 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
     const meRole = userId === challengerUserId ? 'challenger' : 'opponent';
     const rivalUserId = meRole === 'challenger' ? opponentUserId : challengerUserId;
     const cardList = Array.isArray(session.cards) ? session.cards : [];
+    const battleIntroSeconds = resolveSpeakingDuelIntroSeconds(session);
 
     const statsResult = await pool.query(
       `SELECT user_id, pronunciation_samples, pronunciation_sum, pronunciation_samples_count
@@ -22099,12 +22109,12 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
         createdAt: session.created_at,
         updatedAt: session.updated_at,
         battleStartsAt: new Date(
-          Date.parse(String(session.created_at || '').trim()) + (SPEAKING_DUEL_INTRO_SECONDS * 1000)
+          Date.parse(String(session.created_at || '').trim()) + (battleIntroSeconds * 1000)
         ).toISOString(),
         battleEndsAt: new Date(
-          Date.parse(String(session.created_at || '').trim()) + ((SPEAKING_DUEL_INTRO_SECONDS + SPEAKING_DUEL_BATTLE_SECONDS) * 1000)
+          Date.parse(String(session.created_at || '').trim()) + ((battleIntroSeconds + SPEAKING_DUEL_BATTLE_SECONDS) * 1000)
         ).toISOString(),
-        introCountdownSeconds: SPEAKING_DUEL_INTRO_SECONDS,
+        introCountdownSeconds: battleIntroSeconds,
         battleDurationSeconds: SPEAKING_DUEL_BATTLE_SECONDS,
         targetScore: normalizeDuelTargetScore(session.target_score, session.mode),
         selectedLevel: meRole === 'challenger'

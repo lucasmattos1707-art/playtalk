@@ -1666,6 +1666,12 @@
     });
   }
 
+  function playDuelCardsPreviewAudio(card) {
+    if (!card) return;
+    stopBattleCardsPromptAudio();
+    void playBattleCardsTargetReveal(card);
+  }
+
   function renderDuelCardsPreview(cardIndex) {
     const cards = Array.isArray(state.activeCards) ? state.activeCards : [];
     const index = Math.max(0, Math.min(cards.length - 1, Number(cardIndex) || 0));
@@ -1690,6 +1696,15 @@
       image.decoding = 'async';
       image.src = nextImageUrl;
     }
+    const nextAudioUrl = safeText(cards[index + 1]?.audioUrl || cards[index + 1]?.audio);
+    if (nextAudioUrl) {
+      try {
+        const audio = new Audio();
+        audio.preload = 'auto';
+        audio.src = nextAudioUrl;
+        audio.load();
+      } catch (_error) {}
+    }
   }
 
   async function runBattleCardsPresentation() {
@@ -1705,13 +1720,15 @@
     setDuelIntroVisible(true);
     resetDuelIntroVisuals();
     els.duelIntro?.classList.add('is-cards-preview');
-    void playBattleIntroAudio();
+    stopBattleIntroAudio();
+    stopBattleCardsPromptAudio();
     while (state.duel.enabled && !state.duel.completed && Date.now() < battleStartsAtMs) {
       const elapsedMs = Math.max(0, Date.now() - presentationStartedAtMs);
       const cardIndex = Math.min(state.activeCards.length - 1, Math.floor(elapsedMs / cardDurationMs));
       if (cardIndex !== previousIndex) {
         previousIndex = cardIndex;
         renderDuelCardsPreview(cardIndex);
+        playDuelCardsPreviewAudio(state.activeCards[cardIndex]);
       }
       if (els.duelIntroCountdown) {
         const seconds = Math.max(1, Math.ceil((battleStartsAtMs - Date.now()) / 1000));
@@ -1719,6 +1736,7 @@
       }
       await new Promise((resolve) => window.setTimeout(resolve, 80));
     }
+    stopBattleCardsPromptAudio();
     if (state.duel.enabled && !state.duel.completed && els.duelIntroCountdown) {
       els.duelIntroCountdown.textContent = 'Valendo!';
       await new Promise((resolve) => window.setTimeout(resolve, 180));
