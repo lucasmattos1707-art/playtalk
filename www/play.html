@@ -1587,6 +1587,123 @@
       stroke-linejoin: round;
     }
 
+    .welcome-mode-modal__online {
+      width: min(360px, 100%);
+      min-height: 56px;
+      border: 1px solid rgba(101, 218, 255, 0.48);
+      border-radius: 20px;
+      padding: 13px 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background:
+        radial-gradient(circle at 22% 0%, rgba(116, 229, 255, 0.24), transparent 48%),
+        linear-gradient(145deg, rgba(19, 77, 131, 0.94), rgba(34, 126, 178, 0.92));
+      color: #f6fcff;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(17px, 4vw, 21px);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      box-shadow: 0 0 26px rgba(72, 190, 255, 0.24);
+      cursor: pointer;
+    }
+
+    .welcome-mode-modal__online[hidden] {
+      display: none;
+    }
+
+    .welcome-mode-modal__online svg {
+      width: 23px;
+      height: 23px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .cards-battle-search {
+      position: fixed;
+      inset: 0;
+      z-index: 4;
+      display: none;
+      place-items: center;
+      padding: 22px;
+      background:
+        radial-gradient(circle at 50% 24%, rgba(44, 180, 255, 0.18), transparent 32%),
+        rgba(1, 7, 17, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .cards-battle-search.is-visible {
+      display: grid;
+    }
+
+    .cards-battle-search__panel {
+      width: min(430px, 100%);
+      display: grid;
+      justify-items: center;
+      gap: 18px;
+      padding: 34px 26px 28px;
+      border: 1px solid rgba(115, 218, 255, 0.26);
+      border-radius: 30px;
+      background: linear-gradient(160deg, rgba(10, 32, 62, 0.96), rgba(4, 15, 31, 0.98));
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.48), 0 0 34px rgba(74, 198, 255, 0.18);
+      text-align: center;
+    }
+
+    .cards-battle-search__radar {
+      position: relative;
+      width: 112px;
+      height: 112px;
+      border-radius: 50%;
+      border: 1px solid rgba(120, 228, 255, 0.36);
+      background:
+        radial-gradient(circle, rgba(111, 235, 255, 0.88) 0 5px, transparent 6px),
+        repeating-radial-gradient(circle, transparent 0 21px, rgba(111, 218, 255, 0.18) 22px 23px);
+      overflow: hidden;
+      box-shadow: inset 0 0 28px rgba(53, 191, 255, 0.16), 0 0 28px rgba(53, 191, 255, 0.2);
+    }
+
+    .cards-battle-search__radar::after {
+      content: "";
+      position: absolute;
+      inset: 50% 50% 0 0;
+      transform-origin: 100% 0;
+      background: linear-gradient(35deg, transparent 42%, rgba(96, 231, 255, 0.74));
+      animation: cards-battle-radar 1.25s linear infinite;
+    }
+
+    @keyframes cards-battle-radar {
+      to { transform: rotate(360deg); }
+    }
+
+    .cards-battle-search__title {
+      margin: 0;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(27px, 6vw, 38px);
+      color: #ffffff;
+    }
+
+    .cards-battle-search__status {
+      min-height: 2.8em;
+      margin: 0;
+      color: rgba(222, 244, 255, 0.86);
+      font: 650 16px/1.4 "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
+    .cards-battle-search__cancel {
+      min-width: 170px;
+      min-height: 48px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      font: 750 16px "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
     .cards-stage-modal {
       position: fixed;
       inset: 0;
@@ -13352,6 +13469,18 @@
               <button class="welcome-mode-modal__level-btn" id="welcomeModeModalLevelNextBtn" type="button" aria-label="Proximo nivel">&#8250;</button>
             </div>
           </div>
+          <button class="welcome-mode-modal__online" id="welcomeModeModalOnlineBtn" type="button" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v6M22 11h-6"></path></svg>
+            <span>Jogar Online</span>
+          </button>
+        </div>
+        <div class="cards-battle-search" id="cardsBattleSearchModal" aria-hidden="true">
+          <div class="cards-battle-search__panel" role="dialog" aria-modal="true" aria-labelledby="cardsBattleSearchTitle">
+            <div class="cards-battle-search__radar" aria-hidden="true"></div>
+            <h3 class="cards-battle-search__title" id="cardsBattleSearchTitle">Procurando usuario</h3>
+            <p class="cards-battle-search__status" id="cardsBattleSearchStatus">Buscando alguem online no mesmo par de idiomas...</p>
+            <button class="cards-battle-search__cancel" id="cardsBattleSearchCancelBtn" type="button">Cancelar</button>
+          </div>
         </div>
         <div class="cards-stage-modal" id="cardsStageModal" aria-hidden="true">
           <div class="cards-stage-modal__panel" role="dialog" aria-modal="true" aria-labelledby="cardsStageModalTitle">
@@ -15714,6 +15843,9 @@
       let finalChallengeMusicAudio = null;
       let finalChallengeMusicTrackIndex = 0;
       const finalChallengeSelectionWarmups = new Set();
+      let cardsBattleSearchTimer = 0;
+      let cardsBattleSearchInFlight = false;
+      let cardsBattleSearchActive = false;
 
       loadGameOptionsFromStorage();
 
@@ -15730,6 +15862,10 @@
         welcomeModeModalLevelPrevBtn: document.getElementById('welcomeModeModalLevelPrevBtn'),
         welcomeModeModalLevelValue: document.getElementById('welcomeModeModalLevelValue'),
         welcomeModeModalLevelNextBtn: document.getElementById('welcomeModeModalLevelNextBtn'),
+        welcomeModeModalOnlineBtn: document.getElementById('welcomeModeModalOnlineBtn'),
+        cardsBattleSearchModal: document.getElementById('cardsBattleSearchModal'),
+        cardsBattleSearchStatus: document.getElementById('cardsBattleSearchStatus'),
+        cardsBattleSearchCancelBtn: document.getElementById('cardsBattleSearchCancelBtn'),
         welcomeModeModalStageEntry: document.getElementById('welcomeModeModalStageEntry'),
         welcomeModeModalStageEditBtn: document.getElementById('welcomeModeModalStageEditBtn'),
         welcomeModeModalStageSummary: document.getElementById('welcomeModeModalStageSummary'),
@@ -23503,6 +23639,17 @@
         return isNativeRuntime() ? 'users.html' : '/users';
       }
 
+      function resolveSpeakingSessionHref(sessionId) {
+        const normalizedSessionId = safeText(sessionId);
+        const search = `?session=${encodeURIComponent(normalizedSessionId)}`;
+        if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
+          return window.PlaytalkNative.resolveRouteHref('/speaking', { search });
+        }
+        return isNativeRuntime()
+          ? `speaking.html${search}`
+          : `/speaking${search}`;
+      }
+
       function resolveRewardUsernameHref() {
         const target = '/avataradd?return=%2Fflashcards';
         if (window.PlaytalkNative && typeof window.PlaytalkNative.resolveRouteHref === 'function') {
@@ -24001,6 +24148,108 @@
         setSelectedGameLevel(resolveCardsModeLevel() + step);
       }
 
+      function setCardsBattleSearchVisible(visible) {
+        const isVisible = Boolean(visible);
+        els.cardsBattleSearchModal?.classList.toggle('is-visible', isVisible);
+        els.cardsBattleSearchModal?.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
+      }
+
+      function stopCardsBattleSearchTimer() {
+        if (cardsBattleSearchTimer) {
+          window.clearTimeout(cardsBattleSearchTimer);
+          cardsBattleSearchTimer = 0;
+        }
+      }
+
+      function scheduleCardsBattleSearch(delayMs = 700) {
+        stopCardsBattleSearchTimer();
+        if (!cardsBattleSearchActive) return;
+        cardsBattleSearchTimer = window.setTimeout(() => {
+          cardsBattleSearchTimer = 0;
+          void pollCardsBattleMatchmaking();
+        }, Math.max(250, Number(delayMs) || 700));
+      }
+
+      async function pollCardsBattleMatchmaking() {
+        if (!cardsBattleSearchActive || cardsBattleSearchInFlight) return;
+        cardsBattleSearchInFlight = true;
+        const level = resolveCardsModeLevel();
+        try {
+          const response = await fetch(buildApiUrl('/api/speaking/matchmaking/join'), {
+            method: 'POST',
+            credentials: 'include',
+            headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+              level,
+              targetLanguage: currentTargetLanguage(),
+              nativeLanguage: currentNativeLanguage()
+            })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            const error = new Error(payload?.message || 'Nao foi possivel procurar um usuario agora.');
+            error.statusCode = response.status;
+            throw error;
+          }
+          if (!cardsBattleSearchActive) return;
+          if (safeText(payload?.status) === 'matched' && safeText(payload?.sessionId)) {
+            cardsBattleSearchActive = false;
+            stopCardsBattleSearchTimer();
+            if (els.cardsBattleSearchStatus) {
+              els.cardsBattleSearchStatus.textContent = 'Usuario encontrado! Preparando as mesmas 12 cartas para voces...';
+            }
+            window.setTimeout(() => {
+              window.location.href = resolveSpeakingSessionHref(payload.sessionId);
+            }, 260);
+            return;
+          }
+          if (els.cardsBattleSearchStatus) {
+            els.cardsBattleSearchStatus.textContent = `Procurando usuario online para jogar no Nivel ${level}...`;
+          }
+          scheduleCardsBattleSearch(700);
+        } catch (error) {
+          if (!cardsBattleSearchActive) return;
+          if (els.cardsBattleSearchStatus) {
+            els.cardsBattleSearchStatus.textContent = safeText(error?.message) || 'Conexao instavel. Tentando novamente...';
+          }
+          if (Number(error?.statusCode) === 401 || Number(error?.statusCode) === 403 || Number(error?.statusCode) === 409) {
+            cardsBattleSearchActive = false;
+            stopCardsBattleSearchTimer();
+          } else {
+            scheduleCardsBattleSearch(1200);
+          }
+        } finally {
+          cardsBattleSearchInFlight = false;
+        }
+      }
+
+      function startCardsBattleSearch() {
+        if (!isCardsWelcomeMode() || cardsBattleSearchActive) return;
+        closeCardsModeStageModal();
+        cardsBattleSearchActive = true;
+        if (els.cardsBattleSearchStatus) {
+          els.cardsBattleSearchStatus.textContent = `Procurando usuario online para jogar no Nivel ${resolveCardsModeLevel()}...`;
+        }
+        setCardsBattleSearchVisible(true);
+        void pollCardsBattleMatchmaking();
+      }
+
+      async function cancelCardsBattleSearch() {
+        cardsBattleSearchActive = false;
+        stopCardsBattleSearchTimer();
+        setCardsBattleSearchVisible(false);
+        try {
+          await fetch(buildApiUrl('/api/speaking/matchmaking/cancel'), {
+            method: 'POST',
+            credentials: 'include',
+            headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: '{}'
+          });
+        } catch (_error) {
+          // A fila expira automaticamente se a rede cair durante o cancelamento.
+        }
+      }
+
       let welcomeModeLevelHoldDelayTimer = 0;
       let welcomeModeLevelHoldRepeatTimer = 0;
       let welcomeModeLevelHoldConsumedClick = false;
@@ -24090,6 +24339,10 @@
         syncCardsModeStagePicker();
         if (els.welcomeModeModalPlayBtn) {
           els.welcomeModeModalPlayBtn.disabled = Boolean(cardsMode && !cardsLevels.length);
+        }
+        if (els.welcomeModeModalOnlineBtn) {
+          els.welcomeModeModalOnlineBtn.hidden = !cardsMode;
+          els.welcomeModeModalOnlineBtn.disabled = !cardsMode || !cardsLevels.length;
         }
         const levelSelectorVisible = Boolean(
           mode.usesLevelSelector
@@ -38732,6 +38985,12 @@
         });
         bindWelcomeModeLevelArrowHold(els.welcomeModeModalLevelPrevBtn, -1);
         bindWelcomeModeLevelArrowHold(els.welcomeModeModalLevelNextBtn, 1);
+        els.welcomeModeModalOnlineBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          startCardsBattleSearch();
+        });
+        els.cardsBattleSearchCancelBtn?.addEventListener('click', () => { void cancelCardsBattleSearch(); });
         els.welcomeModeModalPlayBtn?.addEventListener('click', (event) => {
           const modeKey = safeText(state.entry.welcomeModeKey).toLowerCase();
           if (modeKey === 'cards') {

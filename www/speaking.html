@@ -458,6 +458,81 @@
       margin-top: 10px;
     }
 
+    .duel-cards-preview {
+      display: none;
+      width: min(520px, 92vw);
+      justify-items: center;
+      gap: 13px;
+    }
+
+    .duel-intro.is-cards-preview .duel-cards-preview {
+      display: grid;
+    }
+
+    .duel-intro.is-cards-preview .duel-intro__avatars,
+    .duel-intro.is-cards-preview .duel-intro__book-stage {
+      display: none !important;
+    }
+
+    .duel-cards-preview__kicker,
+    .duel-cards-preview__counter {
+      margin: 0;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(193, 235, 255, 0.86);
+    }
+
+    .duel-cards-preview__visual {
+      width: min(360px, 78vw);
+      aspect-ratio: 1 / 1;
+      border-radius: 32px;
+      overflow: hidden;
+      border: 1px solid rgba(129, 224, 255, 0.34);
+      background: linear-gradient(150deg, rgba(26, 75, 119, 0.9), rgba(10, 29, 55, 0.96));
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42), 0 0 36px rgba(74, 198, 255, 0.16);
+    }
+
+    .duel-cards-preview__visual img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+      background: rgba(3, 12, 25, 0.72);
+    }
+
+    .duel-cards-preview__native,
+    .duel-cards-preview__target {
+      margin: 0;
+      max-width: 18ch;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      line-height: 1.12;
+      text-align: center;
+    }
+
+    .duel-cards-preview__native {
+      font-size: clamp(25px, 6vw, 38px);
+      color: #ffffff;
+      font-weight: 850;
+    }
+
+    .duel-cards-preview__target {
+      font-size: clamp(20px, 4.6vw, 29px);
+      color: #7fe2ff;
+      font-weight: 750;
+    }
+
+    .duel-cards-preview.is-switching .duel-cards-preview__visual,
+    .duel-cards-preview.is-switching .duel-cards-preview__native,
+    .duel-cards-preview.is-switching .duel-cards-preview__target {
+      animation: battleCardPreviewIn 420ms ease both;
+    }
+
+    @keyframes battleCardPreviewIn {
+      from { opacity: 0; transform: translateX(22px) scale(0.98); }
+      to { opacity: 1; transform: translateX(0) scale(1); }
+    }
+
     .duel-intro__avatars.is-hidden {
       opacity: 0;
       pointer-events: none;
@@ -1308,15 +1383,16 @@
       position: fixed;
       inset: 0;
       z-index: 120;
+      padding: max(24px, env(safe-area-inset-top, 0px)) 20px max(24px, env(safe-area-inset-bottom, 0px));
       background:
-        radial-gradient(circle at center, rgba(255, 219, 147, 0.18), transparent 28%),
+        radial-gradient(circle at 50% 18%, rgba(72, 207, 255, 0.18), transparent 30%),
         linear-gradient(180deg, rgba(4, 10, 22, 0.92), rgba(6, 15, 32, 0.98));
       align-items: center;
       justify-content: center;
       flex-direction: column;
-      gap: 14px;
+      gap: 18px;
       text-align: center;
-      animation: winnerFlash 360ms ease-in-out infinite alternate;
+      overflow-y: auto;
     }
 
     .winner-reveal.is-visible {
@@ -1324,25 +1400,90 @@
     }
 
     .winner-reveal__avatar {
-      width: min(56vw, 280px);
+      width: min(30vw, 150px);
       aspect-ratio: 1 / 1;
       border-radius: 50%;
       object-fit: cover;
       border: 4px solid rgba(255, 255, 255, 0.82);
       box-shadow: 0 16px 34px rgba(0, 0, 0, 0.36);
-      animation: winnerPulse 2000ms ease-in-out infinite;
-      will-change: transform;
     }
 
     .winner-reveal__text {
       margin: 0;
-      font-size: clamp(34px, 9vw, 72px);
-      letter-spacing: 0.08em;
+      font-size: clamp(30px, 7vw, 54px);
+      letter-spacing: 0.03em;
       color: #fff3d8;
       text-shadow: 0 0 24px rgba(255, 210, 140, 0.5);
       font-weight: 900;
-      animation: winnerPulse 2000ms ease-in-out infinite;
-      will-change: transform;
+    }
+
+    .winner-reveal__kicker,
+    .winner-reveal__status {
+      margin: 0;
+      color: rgba(205, 237, 255, 0.8);
+      font-weight: 700;
+    }
+
+    .winner-reveal__scores {
+      width: min(560px, 100%);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .winner-reveal__player {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      padding: 18px 12px;
+      border: 1px solid rgba(141, 218, 255, 0.22);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .winner-reveal__player img {
+      width: clamp(68px, 17vw, 100px);
+      height: clamp(68px, 17vw, 100px);
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .winner-reveal__name {
+      margin: 0;
+      max-width: 15ch;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #e9f8ff;
+      font-weight: 750;
+    }
+
+    .winner-reveal__percent {
+      margin: 0;
+      font-size: clamp(30px, 7vw, 46px);
+      color: #7fe2ff;
+      font-weight: 900;
+    }
+
+    .winner-reveal__actions {
+      width: min(420px, 100%);
+      display: grid;
+      gap: 10px;
+    }
+
+    .winner-reveal__button {
+      min-height: 52px;
+      border: 0;
+      border-radius: 17px;
+      background: linear-gradient(145deg, #72e8ff, #39aef4);
+      color: #05182b;
+      font: 850 17px "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
+    .winner-reveal__button.is-secondary {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.08);
+      color: #f4fbff;
     }
 
     @keyframes fadeIn {
@@ -1638,6 +1779,13 @@
 
     <section class="speaking-card speaking-game" id="speakingGame">
       <section class="duel-intro" id="duelIntro" hidden>
+        <div class="duel-cards-preview" id="duelCardsPreview">
+          <p class="duel-cards-preview__kicker">As 12 cartas do battle</p>
+          <div class="duel-cards-preview__visual"><img id="duelCardsPreviewImage" alt="Carta da apresentacao"></div>
+          <p class="duel-cards-preview__native" id="duelCardsPreviewNative">-</p>
+          <p class="duel-cards-preview__target" id="duelCardsPreviewTarget">-</p>
+          <p class="duel-cards-preview__counter" id="duelCardsPreviewCounter">1 / 12</p>
+        </div>
         <div class="duel-intro__avatars" id="duelIntroAvatars">
           <article class="duel-intro__player duel-intro__player--me" id="duelIntroMePlayer">
             <img class="duel-intro__avatar" id="duelIntroMeAvatar" src="//Avatar/profile-neon-blue.svg" alt="Seu avatar grande">
@@ -1731,7 +1879,25 @@
       </div>
       <section class="winner-reveal" id="winnerReveal" hidden>
         <img class="winner-reveal__avatar" id="winnerRevealAvatar" src="//Avatar/profile-neon-blue.svg" alt="Avatar do vencedor">
-        <p class="winner-reveal__text">WINNER</p>
+        <p class="winner-reveal__kicker">Battle finalizado</p>
+        <p class="winner-reveal__text" id="winnerRevealTitle">Resultado</p>
+        <div class="winner-reveal__scores">
+          <article class="winner-reveal__player">
+            <img id="winnerRevealMeAvatar" src="//Avatar/profile-neon-blue.svg" alt="Seu avatar">
+            <p class="winner-reveal__name" id="winnerRevealMeName">Voce</p>
+            <p class="winner-reveal__percent" id="winnerRevealMePercent">0%</p>
+          </article>
+          <article class="winner-reveal__player">
+            <img id="winnerRevealRivalAvatar" src="//Avatar/profile-neon-blue.svg" alt="Avatar do adversario">
+            <p class="winner-reveal__name" id="winnerRevealRivalName">Adversario</p>
+            <p class="winner-reveal__percent" id="winnerRevealRivalPercent">0%</p>
+          </article>
+        </div>
+        <p class="winner-reveal__status" id="winnerRevealStatus">A maior media de pronuncia vence.</p>
+        <div class="winner-reveal__actions">
+          <button class="winner-reveal__button" id="winnerPlayAgainBtn" type="button">Jogar de novo</button>
+          <button class="winner-reveal__button is-secondary" id="winnerBackToCardsBtn" type="button">Voltar ao Modo Cartas</button>
+        </div>
       </section>
     </section>
   </main>
