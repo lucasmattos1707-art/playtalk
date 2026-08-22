@@ -1465,6 +1465,24 @@
       font-weight: 900;
     }
 
+    .league-standing {
+      width: min(520px, calc(100% - 24px));
+      margin: 4px auto 12px;
+      padding: 10px;
+      border: 1px solid rgba(116, 219, 255, 0.22);
+      border-radius: 18px;
+      background: rgba(4, 22, 43, 0.78);
+      display: grid;
+      gap: 7px;
+    }
+
+    .league-standing[hidden] { display: none; }
+    .league-standing__title { margin: 0; color: #83e7ff; font: 850 12px/1.2 "Exo 2", "Open Sans", Arial, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; }
+    .league-standing__row { display: grid; grid-template-columns: 28px 34px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 38px; padding: 4px 8px; border-radius: 11px; color: rgba(235, 248, 255, 0.78); font: 750 13px "Exo 2", "Open Sans", Arial, sans-serif; }
+    .league-standing__row.is-me { background: linear-gradient(145deg, rgba(42, 142, 192, 0.52), rgba(30, 163, 128, 0.38)); color: #fff; }
+    .league-standing__row img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+    .league-standing__points { color: #79edc6; font-weight: 900; }
+
     .winner-reveal__actions {
       width: min(420px, 100%);
       display: grid;
@@ -1821,6 +1839,10 @@
         <div class="speaking-percent" id="speakingPercent">Pontos 0</div>
         <div class="enemy-speaking" id="enemySpeakingPercent">Rival 0</div>
       </div>
+      <section class="league-standing" id="leagueStandingStrip" hidden>
+        <p class="league-standing__title">Liga · sua posicao</p>
+        <div id="leagueStandingRows"></div>
+      </section>
       <p class="duel-timer" id="duelTimerLabel" hidden>
         <svg class="duel-timer__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path fill="currentColor" d="M12 6.4a.9.9 0 0 1 .9.9v4.22l2.69 1.56a.9.9 0 0 1-.9 1.55l-3.14-1.82a.9.9 0 0 1-.45-.78V7.3a.9.9 0 0 1 .9-.9M12 2.8a9.2 9.2 0 1 1 0 18.4 9.2 9.2 0 0 1 0-18.4m0 1.8a7.4 7.4 0 1 0 0 14.8 7.4 7.4 0 0 0 0-14.8"/>

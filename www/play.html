@@ -1704,6 +1704,110 @@
       font: 750 16px "Exo 2", "Open Sans", Arial, sans-serif;
     }
 
+    .cards-battle-search__searching { width: 100%; display: grid; justify-items: center; gap: 18px; }
+
+    .cards-battle-search__fallback {
+      width: 100%;
+      display: grid;
+      gap: 14px;
+    }
+
+    .cards-battle-search__fallback[hidden],
+    .cards-battle-search__searching[hidden] {
+      display: none;
+    }
+
+    .cards-battle-search__modes {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .cards-battle-search__mode {
+      min-height: 44px;
+      border: 1px solid rgba(117, 217, 255, 0.2);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(231, 248, 255, 0.8);
+      font: 800 14px "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
+    .cards-battle-search__mode.is-active {
+      border-color: rgba(101, 224, 255, 0.8);
+      background: linear-gradient(145deg, rgba(28, 117, 177, 0.96), rgba(31, 168, 178, 0.9));
+      color: #fff;
+      box-shadow: 0 0 20px rgba(82, 209, 255, 0.2);
+    }
+
+    .cards-battle-search__expected {
+      margin: 0;
+      color: #8be7ff;
+      font: 800 14px/1.35 "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
+    .cards-battle-search__bots {
+      width: 100%;
+      max-height: min(43dvh, 390px);
+      overflow-y: auto;
+      display: grid;
+      gap: 8px;
+      padding: 2px 5px 2px 0;
+      overscroll-behavior: contain;
+    }
+
+    .cards-battle-search__bot {
+      width: 100%;
+      min-height: 66px;
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 11px;
+      border: 1px solid rgba(127, 217, 255, 0.17);
+      border-radius: 17px;
+      padding: 8px 11px;
+      background: rgba(255, 255, 255, 0.055);
+      color: #fff;
+      text-align: left;
+    }
+
+    .cards-battle-search__bot img {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .cards-battle-search__bot-name {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font: 800 16px "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
+    .cards-battle-search__bot-level {
+      display: block;
+      margin-top: 3px;
+      color: rgba(220, 241, 251, 0.68);
+      font: 650 12px "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
+    .cards-battle-search__bot-score {
+      color: #78edc5;
+      font: 900 17px "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
+    .cards-battle-search__start-mode {
+      min-height: 52px;
+      border: 1px solid rgba(96, 235, 204, 0.5);
+      border-radius: 16px;
+      background: linear-gradient(145deg, #147e7f, #22a968);
+      color: #fff;
+      font: 850 16px "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
     .cards-stage-modal {
       position: fixed;
       inset: 0;
@@ -13476,9 +13580,23 @@
         </div>
         <div class="cards-battle-search" id="cardsBattleSearchModal" aria-hidden="true">
           <div class="cards-battle-search__panel" role="dialog" aria-modal="true" aria-labelledby="cardsBattleSearchTitle">
-            <div class="cards-battle-search__radar" aria-hidden="true"></div>
-            <h3 class="cards-battle-search__title" id="cardsBattleSearchTitle">Procurando usuario</h3>
-            <p class="cards-battle-search__status" id="cardsBattleSearchStatus">Buscando alguem online no mesmo par de idiomas...</p>
+            <div class="cards-battle-search__searching" id="cardsBattleSearchingView">
+              <div class="cards-battle-search__radar" aria-hidden="true"></div>
+              <h3 class="cards-battle-search__title" id="cardsBattleSearchTitle">Procurando usuario</h3>
+              <p class="cards-battle-search__status" id="cardsBattleSearchStatus">Buscando alguem online no mesmo par de idiomas...</p>
+            </div>
+            <div class="cards-battle-search__fallback" id="cardsBattleFallbackView" hidden>
+              <h3 class="cards-battle-search__title">Escolha o battle</h3>
+              <p class="cards-battle-search__expected" id="cardsBattleExpected">Seu nivel esperado: calculando...</p>
+              <div class="cards-battle-search__modes" id="cardsBattleModeTabs">
+                <button class="cards-battle-search__mode is-active" type="button" data-battle-format="simple">Simples</button>
+                <button class="cards-battle-search__mode" type="button" data-battle-format="cup">Copa</button>
+                <button class="cards-battle-search__mode" type="button" data-battle-format="league">Liga</button>
+              </div>
+              <p class="cards-battle-search__status" id="cardsBattleFallbackStatus">Escolha um dos 20 adversarios.</p>
+              <div class="cards-battle-search__bots" id="cardsBattleBotsList"></div>
+              <button class="cards-battle-search__start-mode" id="cardsBattleStartModeBtn" type="button" hidden>Comecar</button>
+            </div>
             <button class="cards-battle-search__cancel" id="cardsBattleSearchCancelBtn" type="button">Cancelar</button>
           </div>
         </div>
@@ -15846,6 +15964,11 @@
       let cardsBattleSearchTimer = 0;
       let cardsBattleSearchInFlight = false;
       let cardsBattleSearchActive = false;
+      let cardsBattleSearchStartedAt = 0;
+      let cardsBattleFallbackVisible = false;
+      let cardsBattleFallbackBusy = false;
+      let cardsBattleSelectedFormat = 'simple';
+      let cardsBattleBots = [];
 
       loadGameOptionsFromStorage();
 
@@ -15864,7 +15987,14 @@
         welcomeModeModalLevelNextBtn: document.getElementById('welcomeModeModalLevelNextBtn'),
         welcomeModeModalOnlineBtn: document.getElementById('welcomeModeModalOnlineBtn'),
         cardsBattleSearchModal: document.getElementById('cardsBattleSearchModal'),
+        cardsBattleSearchingView: document.getElementById('cardsBattleSearchingView'),
         cardsBattleSearchStatus: document.getElementById('cardsBattleSearchStatus'),
+        cardsBattleFallbackView: document.getElementById('cardsBattleFallbackView'),
+        cardsBattleExpected: document.getElementById('cardsBattleExpected'),
+        cardsBattleFallbackStatus: document.getElementById('cardsBattleFallbackStatus'),
+        cardsBattleModeTabs: document.getElementById('cardsBattleModeTabs'),
+        cardsBattleBotsList: document.getElementById('cardsBattleBotsList'),
+        cardsBattleStartModeBtn: document.getElementById('cardsBattleStartModeBtn'),
         cardsBattleSearchCancelBtn: document.getElementById('cardsBattleSearchCancelBtn'),
         welcomeModeModalStageEntry: document.getElementById('welcomeModeModalStageEntry'),
         welcomeModeModalStageEditBtn: document.getElementById('welcomeModeModalStageEditBtn'),
@@ -24154,6 +24284,124 @@
         els.cardsBattleSearchModal?.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
       }
 
+      function setCardsBattleFallbackView(visible) {
+        cardsBattleFallbackVisible = Boolean(visible);
+        if (els.cardsBattleSearchingView) els.cardsBattleSearchingView.hidden = cardsBattleFallbackVisible;
+        if (els.cardsBattleFallbackView) els.cardsBattleFallbackView.hidden = !cardsBattleFallbackVisible;
+      }
+
+      function renderCardsBattleFallback() {
+        const format = ['simple', 'cup', 'league'].includes(cardsBattleSelectedFormat)
+          ? cardsBattleSelectedFormat
+          : 'simple';
+        els.cardsBattleModeTabs?.querySelectorAll('[data-battle-format]').forEach((button) => {
+          button.classList.toggle('is-active', safeText(button.dataset.battleFormat) === format);
+        });
+        const visibleBots = format === 'cup'
+          ? [...cardsBattleBots].sort((left, right) => (Number(right.expectedPercent) || 0) - (Number(left.expectedPercent) || 0)).slice(0, 15)
+          : cardsBattleBots;
+        if (els.cardsBattleFallbackStatus) {
+          els.cardsBattleFallbackStatus.textContent = format === 'simple'
+            ? 'Escolha um dos 20 adversarios para jogar agora.'
+            : format === 'cup'
+              ? 'Voce + os 15 melhores. O melhor enfrenta o 16o, depois quartas, semifinal e final.'
+              : 'Voce + 19 bots. Um dos cinco mais fracos fica fora e a tabela mostra apenas seu entorno.';
+        }
+        if (els.cardsBattleStartModeBtn) {
+          els.cardsBattleStartModeBtn.hidden = format === 'simple';
+          els.cardsBattleStartModeBtn.disabled = cardsBattleFallbackBusy;
+          els.cardsBattleStartModeBtn.textContent = format === 'cup' ? 'Comecar Copa' : 'Comecar Liga';
+        }
+        if (!els.cardsBattleBotsList) return;
+        els.cardsBattleBotsList.innerHTML = visibleBots.map((bot) => {
+          const minPercent = Math.max(0, Number(bot.minPercent) || 0);
+          const maxPercent = Math.min(100, Number(bot.maxPercent) || 0);
+          const content = `
+            <img src="${escapeHtml(safeText(bot.avatarImage) || '/Avatar/profile-neon-blue.svg')}" alt="">
+            <span>
+              <span class="cards-battle-search__bot-name">${escapeHtml(safeText(bot.username) || 'Bot')}</span>
+              <span class="cards-battle-search__bot-level">Nivel ${Math.max(1, Number(bot.chosenLevel) || 1)} · varia ${minPercent}%–${maxPercent}%</span>
+            </span>
+            <strong class="cards-battle-search__bot-score">${Math.max(0, Number(bot.expectedPercent) || 0)}%</strong>`;
+          return format === 'simple'
+            ? `<button class="cards-battle-search__bot" type="button" data-battle-bot="${escapeHtml(safeText(bot.key))}">${content}</button>`
+            : `<div class="cards-battle-search__bot">${content}</div>`;
+        }).join('');
+      }
+
+      async function openCardsBattleFallback() {
+        if (cardsBattleFallbackBusy || cardsBattleFallbackVisible) return;
+        cardsBattleSearchActive = false;
+        stopCardsBattleSearchTimer();
+        cardsBattleFallbackBusy = true;
+        cardsBattleSelectedFormat = 'simple';
+        setCardsBattleFallbackView(true);
+        if (els.cardsBattleFallbackStatus) els.cardsBattleFallbackStatus.textContent = 'Carregando os 20 adversarios...';
+        try {
+          await fetch(buildApiUrl('/api/speaking/matchmaking/cancel'), {
+            method: 'POST',
+            credentials: 'include',
+            headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: '{}'
+          }).catch(() => null);
+          const response = await fetch(buildApiUrl('/api/speaking/battle/bots'), {
+            credentials: 'include',
+            cache: 'no-store',
+            headers: buildAuthHeaders()
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) {
+            throw new Error(payload?.message || 'Nao foi possivel carregar os adversarios.');
+          }
+          cardsBattleBots = Array.isArray(payload.bots) ? payload.bots : [];
+          if (els.cardsBattleExpected) {
+            els.cardsBattleExpected.textContent = `Seu nivel esperado: ${Math.max(0, Number(payload.expectedPercent) || 0)}% · ultimos ${Array.isArray(payload.history) ? payload.history.length : 0}/10 battles`;
+          }
+          renderCardsBattleFallback();
+        } catch (error) {
+          if (els.cardsBattleFallbackStatus) {
+            els.cardsBattleFallbackStatus.textContent = safeText(error?.message) || 'Nao foi possivel carregar os adversarios.';
+          }
+        } finally {
+          cardsBattleFallbackBusy = false;
+          renderCardsBattleFallback();
+        }
+      }
+
+      async function startCardsBotBattle(botKey = '') {
+        if (cardsBattleFallbackBusy) return;
+        cardsBattleFallbackBusy = true;
+        renderCardsBattleFallback();
+        if (els.cardsBattleFallbackStatus) {
+          els.cardsBattleFallbackStatus.textContent = 'Preparando as mesmas 12 cartas para o battle...';
+        }
+        try {
+          const response = await fetch(buildApiUrl('/api/speaking/battle/start'), {
+            method: 'POST',
+            credentials: 'include',
+            headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+              format: cardsBattleSelectedFormat,
+              botKey,
+              level: resolveCardsModeLevel(),
+              targetLanguage: currentTargetLanguage(),
+              nativeLanguage: currentNativeLanguage()
+            })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success || !safeText(payload?.sessionId)) {
+            throw new Error(payload?.message || 'Nao foi possivel iniciar este battle.');
+          }
+          window.location.href = resolveSpeakingSessionHref(payload.sessionId);
+        } catch (error) {
+          cardsBattleFallbackBusy = false;
+          renderCardsBattleFallback();
+          if (els.cardsBattleFallbackStatus) {
+            els.cardsBattleFallbackStatus.textContent = safeText(error?.message) || 'Nao foi possivel iniciar este battle.';
+          }
+        }
+      }
+
       function stopCardsBattleSearchTimer() {
         if (cardsBattleSearchTimer) {
           window.clearTimeout(cardsBattleSearchTimer);
@@ -24203,12 +24451,21 @@
             }, 260);
             return;
           }
+          if ((Date.now() - cardsBattleSearchStartedAt) >= 15000) {
+            void openCardsBattleFallback();
+            return;
+          }
           if (els.cardsBattleSearchStatus) {
-            els.cardsBattleSearchStatus.textContent = `Procurando usuario online para jogar no Nivel ${level}...`;
+            const elapsedSeconds = Math.max(0, Math.floor((Date.now() - cardsBattleSearchStartedAt) / 1000));
+            els.cardsBattleSearchStatus.textContent = `Procurando usuario online para jogar no Nivel ${level}... ${elapsedSeconds}s`;
           }
           scheduleCardsBattleSearch(700);
         } catch (error) {
           if (!cardsBattleSearchActive) return;
+          if ((Date.now() - cardsBattleSearchStartedAt) >= 15000) {
+            void openCardsBattleFallback();
+            return;
+          }
           if (els.cardsBattleSearchStatus) {
             els.cardsBattleSearchStatus.textContent = safeText(error?.message) || 'Conexao instavel. Tentando novamente...';
           }
@@ -24227,6 +24484,11 @@
         if (!isCardsWelcomeMode() || cardsBattleSearchActive) return;
         closeCardsModeStageModal();
         cardsBattleSearchActive = true;
+        cardsBattleSearchStartedAt = Date.now();
+        cardsBattleBots = [];
+        cardsBattleSelectedFormat = 'simple';
+        cardsBattleFallbackBusy = false;
+        setCardsBattleFallbackView(false);
         if (els.cardsBattleSearchStatus) {
           els.cardsBattleSearchStatus.textContent = `Procurando usuario online para jogar no Nivel ${resolveCardsModeLevel()}...`;
         }
@@ -24236,7 +24498,10 @@
 
       async function cancelCardsBattleSearch() {
         cardsBattleSearchActive = false;
+        cardsBattleSearchStartedAt = 0;
+        cardsBattleFallbackBusy = false;
         stopCardsBattleSearchTimer();
+        setCardsBattleFallbackView(false);
         setCardsBattleSearchVisible(false);
         try {
           await fetch(buildApiUrl('/api/speaking/matchmaking/cancel'), {
@@ -38991,6 +39256,23 @@
           startCardsBattleSearch();
         });
         els.cardsBattleSearchCancelBtn?.addEventListener('click', () => { void cancelCardsBattleSearch(); });
+        els.cardsBattleModeTabs?.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-battle-format]');
+          if (!button || cardsBattleFallbackBusy) return;
+          const format = safeText(button.dataset.battleFormat);
+          if (!['simple', 'cup', 'league'].includes(format)) return;
+          cardsBattleSelectedFormat = format;
+          renderCardsBattleFallback();
+        });
+        els.cardsBattleBotsList?.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-battle-bot]');
+          if (!button || cardsBattleSelectedFormat !== 'simple') return;
+          void startCardsBotBattle(safeText(button.dataset.battleBot));
+        });
+        els.cardsBattleStartModeBtn?.addEventListener('click', () => {
+          if (cardsBattleSelectedFormat === 'simple') return;
+          void startCardsBotBattle('');
+        });
         els.welcomeModeModalPlayBtn?.addEventListener('click', (event) => {
           const modeKey = safeText(state.entry.welcomeModeKey).toLowerCase();
           if (modeKey === 'cards') {

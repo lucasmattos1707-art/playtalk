@@ -472,11 +472,41 @@ const SPEAKING_DUEL_CARDS_INTRO_SECONDS = 30;
 const SPEAKING_DUEL_BATTLE_SECONDS = 180;
 const SPEAKING_MATCHMAKING_ACTIVE_SECONDS = 30;
 const SPEAKING_MATCHMAKING_WAIT_MS = 20000;
+const SPEAKING_BATTLE_BOT_FALLBACK_SECONDS = 15;
+const SPEAKING_BATTLE_HISTORY_LIMIT = 10;
 const BOT_DAILY_FLASHCARD_TRAINING_MINUTES = 5;
 const BOT_PRONUNCIATION_VARIANCE_PERCENT = 3;
-const BOT_SPEAKING_DUEL_VARIANCE_PERCENT = 5;
+const BOT_SPEAKING_DUEL_VARIANCE_PERCENT = 4;
 const BOT_FLASHCARDS_SPEED_VARIANCE_PERCENT = 6;
 const BOT_RESPONSE_VARIANCE_SECONDS = 1;
+const SPEAKING_BATTLE_BOTS = Object.freeze([
+  { key: 'mortadela', name: 'Mortadela', pronunciationBase: 30, avatar: '/Avatar/chicken-svgrepo-com.svg' },
+  { key: 'cafecore', name: 'CafeCore', pronunciationBase: 33, avatar: '/Avatar/cooker-svgrepo-com.svg' },
+  { key: 'pixelpato', name: 'PixelPato', pronunciationBase: 37, avatar: '/Avatar/avatar-boy-kid-svgrepo-com.svg' },
+  { key: 'bruxinhaxp', name: 'BruxinhaXP', pronunciationBase: 40, avatar: '/Avatar/avatar-female-girl-svgrepo-com.svg' },
+  { key: 'gatomistico', name: 'GatoMistico', pronunciationBase: 44, avatar: '/Avatar/ninja-svgrepo-com.svg' },
+  { key: 'levelzero', name: 'LevelZero', pronunciationBase: 47, avatar: '/Avatar/nerd-svgrepo-com.svg' },
+  { key: 'capitaojpeg', name: 'CapitaoJPEG', pronunciationBase: 51, avatar: '/Avatar/photographer-svgrepo-com.svg' },
+  { key: 'sushinervoso', name: 'SushiNervoso', pronunciationBase: 54, avatar: '/Avatar/asian-svgrepo-com.svg' },
+  { key: 'luasombria', name: 'LuaSombria', pronunciationBase: 58, avatar: '/Avatar/avatar-nun-sister-svgrepo-com.svg' },
+  { key: 'cybermonk', name: 'CyberMonk', pronunciationBase: 61, avatar: '/Avatar/monk-svgrepo-com.svg' },
+  { key: 'pandaquantico', name: 'PandaQuantico', pronunciationBase: 65, avatar: '/Avatar/avatar-einstein-professor-svgrepo-com.svg' },
+  { key: 'neonrider', name: 'NeonRider', pronunciationBase: 68, avatar: '/Avatar/pilot-svgrepo-com.svg' },
+  { key: 'ninjadocafe', name: 'NinjaDoCafe', pronunciationBase: 72, avatar: '/Avatar/ninja-svgrepo-com.svg' },
+  { key: 'feiticeiro404', name: 'Feiticeiro404', pronunciationBase: 75, avatar: '/Avatar/priest-svgrepo-com.svg' },
+  { key: 'stormbyte', name: 'StormByte', pronunciationBase: 79, avatar: '/Avatar/fighter-luchador-man-svgrepo-com.svg' },
+  { key: 'thewitcher12', name: 'TheWitcher12', pronunciationBase: 82, avatar: '/Avatar/gentleman-svgrepo-com.svg' },
+  { key: 'dragonight', name: 'Dragonight', pronunciationBase: 86, avatar: '/Avatar/avatar-batman-comics-svgrepo-com.svg' },
+  { key: 'shadowqueen', name: 'ShadowQueen', pronunciationBase: 89, avatar: '/Avatar/afro-female-person-svgrepo-com.svg' },
+  { key: 'titandigital', name: 'TitanDigital', pronunciationBase: 92, avatar: '/Avatar/afro-avatar-male-2-svgrepo-com.svg' },
+  { key: 'lenda94', name: 'Lenda94', pronunciationBase: 94, avatar: '/Avatar/avatar-bad-breaking-svgrepo-com.svg' }
+].map((bot, index) => Object.freeze({
+  ...bot,
+  username: `battlebot_${bot.key}`,
+  email: `battlebot-${String(index + 1).padStart(2, '0')}@playtalk.bot`,
+  chosenLevel: Math.max(1, Math.min(100, bot.pronunciationBase)),
+  responseSeconds: Number((5.2 - ((bot.pronunciationBase - 30) / 25)).toFixed(2))
+})));
 const SPEAKING_CARD_CACHE_TTL_MS = 60 * 1000;
 const ADMIN_MINIBOOKS_SUMMARY_CACHE_TTL_MS = 5 * 60 * 1000;
 const BATTLE_STORIES_ROOT_CANDIDATES = Array.from(new Set([
@@ -3021,6 +3051,54 @@ const ensureSpeakingRealtimeTables = async () => {
           native_language,
           updated_at ASC
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.speaking_duel_sessions
+        ADD COLUMN IF NOT EXISTS battle_variant text NOT NULL DEFAULT 'online',
+        ADD COLUMN IF NOT EXISTS competition_id text NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS competition_round integer NOT NULL DEFAULT 0
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.speaking_battle_results (
+          id bigserial PRIMARY KEY,
+          session_id text NOT NULL REFERENCES public.speaking_duel_sessions(id) ON DELETE CASCADE,
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          opponent_user_id integer REFERENCES public.users(id) ON DELETE SET NULL,
+          battle_variant text NOT NULL DEFAULT 'online',
+          pronunciation_percent integer NOT NULL DEFAULT 0,
+          opponent_percent integer NOT NULL DEFAULT 0,
+          won boolean NOT NULL DEFAULT false,
+          draw boolean NOT NULL DEFAULT false,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          UNIQUE (session_id, user_id)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS speaking_battle_results_user_idx
+        ON public.speaking_battle_results (user_id, created_at DESC)
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.speaking_battle_competitions (
+          id text PRIMARY KEY,
+          owner_user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          format text NOT NULL,
+          status text NOT NULL DEFAULT 'active',
+          chosen_level integer NOT NULL DEFAULT 1,
+          target_language text NOT NULL DEFAULT 'english',
+          native_language text NOT NULL DEFAULT 'portuguese',
+          state jsonb NOT NULL DEFAULT '{}'::jsonb,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          finished_at timestamptz
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS speaking_battle_competitions_owner_idx
+        ON public.speaking_battle_competitions (owner_user_id, created_at DESC)
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS speaking_duel_sessions_competition_idx
+        ON public.speaking_duel_sessions (competition_id, created_at DESC)
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS speaking_duel_sessions_challenger_idx
@@ -11640,9 +11718,516 @@ async function markSpeakingChallengeCompletedBySessionId(client, sessionId) {
   );
 }
 
+function normalizeSpeakingBattleVariant(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return ['simple', 'cup', 'league', 'online'].includes(normalized) ? normalized : 'simple';
+}
+
+function battleBotDefinitionByKey(value) {
+  const key = String(value || '').trim().toLowerCase();
+  return SPEAKING_BATTLE_BOTS.find((bot) => bot.key === key) || null;
+}
+
+function speakingBattleDisplayName(user, fallback = 'Usuario') {
+  const rawConfig = user?.bot_config && typeof user.bot_config === 'object'
+    ? user.bot_config
+    : (() => {
+        try { return JSON.parse(String(user?.bot_config || '')); } catch (_error) { return {}; }
+      })();
+  return String(
+    (user?.is_bot ? rawConfig?.displayName : '')
+    || user?.username
+    || user?.email
+    || fallback
+  ).trim() || fallback;
+}
+
+async function ensureSpeakingBattleBots(client = pool) {
+  if (!client) throw new Error('DATABASE_URL nao configurada.');
+  const emails = SPEAKING_BATTLE_BOTS.map((bot) => bot.email);
+  const existing = await client.query(
+    `SELECT id, email, username, avatar_image, is_bot, bot_config
+     FROM public.users
+     WHERE email = ANY($1::text[])`,
+    [emails]
+  );
+  const byEmail = new Map(existing.rows.map((row) => [String(row.email || '').toLowerCase(), row]));
+  const missing = SPEAKING_BATTLE_BOTS.filter((bot) => !byEmail.has(bot.email.toLowerCase()));
+  const passwordHash = missing.length
+    ? await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 10)
+    : '';
+
+  for (let index = 0; index < SPEAKING_BATTLE_BOTS.length; index += 1) {
+    const bot = SPEAKING_BATTLE_BOTS[index];
+    if (byEmail.has(bot.email.toLowerCase())) continue;
+    const config = {
+      username: bot.username,
+      displayName: bot.name,
+      battleBotKey: bot.key,
+      chosenLevel: bot.chosenLevel,
+      flashcardsCount: 1200 + (index * 180),
+      pronunciationBase: bot.pronunciationBase,
+      flashcardsPerHour: 420 + (index * 18),
+      responseSeconds: bot.responseSeconds,
+      updateHour: 6
+    };
+    const saved = await client.query(
+      `INSERT INTO public.users (
+         email, username, password_hash, avatar_image,
+         onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
+         is_bot, bot_config, bot_avatar_status
+       )
+       VALUES ($1, $2, $3, $4, true, true, true, true, $5::jsonb, 'ready')
+       ON CONFLICT (email)
+       DO UPDATE SET
+         avatar_image = EXCLUDED.avatar_image,
+         is_bot = true,
+         bot_config = EXCLUDED.bot_config,
+         bot_avatar_status = 'ready'
+       RETURNING id, email, username, avatar_image, is_bot, bot_config`,
+      [bot.email, bot.username, passwordHash || crypto.randomBytes(32).toString('hex'), bot.avatar, JSON.stringify(config)]
+    );
+    byEmail.set(bot.email.toLowerCase(), saved.rows[0]);
+  }
+
+  return SPEAKING_BATTLE_BOTS.map((definition) => {
+    const row = byEmail.get(definition.email.toLowerCase()) || {};
+    return {
+      userId: Number(row.id) || 0,
+      key: definition.key,
+      username: definition.name,
+      avatarImage: String(row.avatar_image || definition.avatar).trim(),
+      expectedPercent: definition.pronunciationBase,
+      minPercent: Math.max(0, definition.pronunciationBase - BOT_SPEAKING_DUEL_VARIANCE_PERCENT),
+      maxPercent: Math.min(100, definition.pronunciationBase + BOT_SPEAKING_DUEL_VARIANCE_PERCENT),
+      chosenLevel: definition.chosenLevel,
+      responseSeconds: definition.responseSeconds,
+      isBot: true
+    };
+  }).filter((bot) => bot.userId > 0);
+}
+
+async function readSpeakingBattleHistory(client, userId) {
+  const result = await client.query(
+    `SELECT r.session_id, r.battle_variant, r.pronunciation_percent,
+            r.opponent_percent, r.won, r.draw, r.created_at,
+            COALESCE(NULLIF(u.username, ''), u.email, 'Usuario') AS opponent_name,
+            COALESCE(u.avatar_image, '') AS opponent_avatar,
+            COALESCE(u.is_bot, false) AS opponent_is_bot,
+            u.bot_config AS opponent_bot_config
+     FROM public.speaking_battle_results r
+     LEFT JOIN public.users u ON u.id = r.opponent_user_id
+     WHERE r.user_id = $1
+     ORDER BY r.created_at DESC
+     LIMIT $2`,
+    [Number(userId) || 0, SPEAKING_BATTLE_HISTORY_LIMIT]
+  );
+  return result.rows.map((row) => ({
+    sessionId: String(row.session_id || '').trim(),
+    format: normalizeSpeakingBattleVariant(row.battle_variant),
+    pronunciationPercent: clampPercent(row.pronunciation_percent),
+    opponentPercent: clampPercent(row.opponent_percent),
+    won: Boolean(row.won),
+    draw: Boolean(row.draw),
+    opponentName: speakingBattleDisplayName({
+      username: row.opponent_name,
+      avatar_image: row.opponent_avatar,
+      is_bot: row.opponent_is_bot,
+      bot_config: row.opponent_bot_config
+    }, 'Adversario'),
+    opponentAvatar: String(row.opponent_avatar || '').trim(),
+    createdAt: row.created_at
+  }));
+}
+
+async function readSpeakingBattleExpectedPercent(client, userId) {
+  const history = await readSpeakingBattleHistory(client, userId);
+  if (history.length) {
+    return clampPercent(history.reduce((sum, item) => sum + item.pronunciationPercent, 0) / history.length);
+  }
+  const stats = await client.query(
+    `SELECT pronunciation_samples, pronunciation_sum, pronunciation_samples_count
+     FROM public.flashcards_accurate
+     WHERE user_id = $1
+     LIMIT 1`,
+    [Number(userId) || 0]
+  );
+  const row = stats.rows[0] || null;
+  if (row) return clampPercent(getFlashcardAccurateAggregateFromRow(row).pronunciationPercent);
+  return 50;
+}
+
+async function recordSpeakingBattleSessionResults(client, sessionId) {
+  const result = await client.query(
+    `SELECT s.*, cu.is_bot AS challenger_is_bot, ou.is_bot AS opponent_is_bot
+     FROM public.speaking_duel_sessions s
+     INNER JOIN public.users cu ON cu.id = s.challenger_user_id
+     INNER JOIN public.users ou ON ou.id = s.opponent_user_id
+     WHERE s.id = $1 AND s.status = 'completed'
+     LIMIT 1`,
+    [String(sessionId || '').trim()]
+  );
+  const session = result.rows[0] || null;
+  if (!session || normalizeSpeakingChallengeMode(session.mode) !== SPEAKING_DUEL_CARDS_MODE) return false;
+  const winnerId = Number(session.winner_user_id) || 0;
+  const entries = [
+    {
+      userId: Number(session.challenger_user_id) || 0,
+      opponentId: Number(session.opponent_user_id) || 0,
+      isBot: Boolean(session.challenger_is_bot),
+      percent: clampPercent(session.challenger_percent),
+      opponentPercent: clampPercent(session.opponent_percent)
+    },
+    {
+      userId: Number(session.opponent_user_id) || 0,
+      opponentId: Number(session.challenger_user_id) || 0,
+      isBot: Boolean(session.opponent_is_bot),
+      percent: clampPercent(session.opponent_percent),
+      opponentPercent: clampPercent(session.challenger_percent)
+    }
+  ];
+  for (const entry of entries.filter((item) => item.userId > 0 && !item.isBot)) {
+    await client.query(
+      `INSERT INTO public.speaking_battle_results (
+         session_id, user_id, opponent_user_id, battle_variant,
+         pronunciation_percent, opponent_percent, won, draw, created_at
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, now()))
+       ON CONFLICT (session_id, user_id)
+       DO UPDATE SET
+         pronunciation_percent = EXCLUDED.pronunciation_percent,
+         opponent_percent = EXCLUDED.opponent_percent,
+         won = EXCLUDED.won,
+         draw = EXCLUDED.draw`,
+      [
+        session.id,
+        entry.userId,
+        entry.opponentId,
+        normalizeSpeakingBattleVariant(session.battle_variant),
+        entry.percent,
+        entry.opponentPercent,
+        winnerId === entry.userId,
+        winnerId <= 0,
+        session.finished_at
+      ]
+    );
+  }
+  return true;
+}
+
+async function createSpeakingBattleBotSession(client, options = {}) {
+  const challengerUserId = Number(options.userId) || 0;
+  const opponentUserId = Number(options.botUserId) || 0;
+  const challengerLevel = normalizeUserFlashcardLevel(options.userLevel);
+  const opponentLevel = normalizeUserFlashcardLevel(options.botLevel);
+  const minLevel = Math.min(challengerLevel, opponentLevel);
+  const maxLevel = Math.max(challengerLevel, opponentLevel);
+  const targetLanguage = normalizeFlashcardTargetLanguage(options.targetLanguage);
+  const nativeLanguage = normalizeFlashcardNativeLanguage(options.nativeLanguage);
+  const cards = await buildLevelRangeBattleCards(challengerLevel, opponentLevel, targetLanguage, nativeLanguage);
+  if (cards.length !== SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS) {
+    const error = new Error(`Nao existem ${SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS} cartas jogaveis entre os niveis ${minLevel} e ${maxLevel}.`);
+    error.statusCode = 409;
+    throw error;
+  }
+  const sessionId = buildSpeakingSessionId();
+  await client.query(
+    `INSERT INTO public.speaking_duel_sessions (
+       id, challenger_user_id, opponent_user_id, mode, cards, target_score,
+       challenger_level, opponent_level, min_level, max_level,
+       target_language, native_language, battle_variant, competition_id,
+       competition_round, status, updated_at
+     )
+     VALUES ($1, $2, $3, $4, $5::jsonb, 0, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'active', now())`,
+    [
+      sessionId,
+      challengerUserId,
+      opponentUserId,
+      SPEAKING_DUEL_CARDS_MODE,
+      JSON.stringify(cards),
+      challengerLevel,
+      opponentLevel,
+      minLevel,
+      maxLevel,
+      targetLanguage,
+      nativeLanguage,
+      normalizeSpeakingBattleVariant(options.format),
+      String(options.competitionId || '').trim(),
+      Math.max(0, Number(options.round) || 0)
+    ]
+  );
+  return sessionId;
+}
+
+function simulateSpeakingBattlePercent(participant, seed) {
+  return clampPercent(computeBotVariance(
+    Number(participant?.expectedPercent) || 0,
+    BOT_SPEAKING_DUEL_VARIANCE_PERCENT,
+    seed
+  ));
+}
+
+function updateLeagueStanding(standing, ownPercent, rivalPercent) {
+  if (!standing) return;
+  standing.played = Math.max(0, Number(standing.played) || 0) + 1;
+  standing.percentSum = Math.max(0, Number(standing.percentSum) || 0) + clampPercent(ownPercent);
+  if (ownPercent > rivalPercent) {
+    standing.wins = Math.max(0, Number(standing.wins) || 0) + 1;
+    standing.points = Math.max(0, Number(standing.points) || 0) + 3;
+  } else if (ownPercent === rivalPercent) {
+    standing.draws = Math.max(0, Number(standing.draws) || 0) + 1;
+    standing.points = Math.max(0, Number(standing.points) || 0) + 1;
+  } else {
+    standing.losses = Math.max(0, Number(standing.losses) || 0) + 1;
+  }
+}
+
+function sortedLeagueStandings(state) {
+  return [...(Array.isArray(state?.standings) ? state.standings : [])].sort((left, right) => {
+    const pointsDelta = (Number(right.points) || 0) - (Number(left.points) || 0);
+    if (pointsDelta) return pointsDelta;
+    const leftAvg = Number(left.played) > 0 ? Number(left.percentSum) / Number(left.played) : Number(left.expectedPercent) || 0;
+    const rightAvg = Number(right.played) > 0 ? Number(right.percentSum) / Number(right.played) : Number(right.expectedPercent) || 0;
+    return rightAvg - leftAvg;
+  });
+}
+
+function buildLeagueWindow(state) {
+  const rows = sortedLeagueStandings(state);
+  const userIndex = Math.max(0, rows.findIndex((entry) => Boolean(entry.isUser)));
+  const start = Math.max(0, Math.min(rows.length - 3, userIndex - 1));
+  return rows.slice(start, start + 3).map((entry, index) => ({
+    ...entry,
+    position: start + index + 1,
+    averagePercent: Number(entry.played) > 0
+      ? clampPercent(Number(entry.percentSum) / Number(entry.played))
+      : clampPercent(entry.expectedPercent)
+  }));
+}
+
+function speakingBattleParticipantFromBot(bot) {
+  return {
+    userId: Number(bot?.userId) || 0,
+    name: String(bot?.username || 'Bot').trim(),
+    avatarImage: String(bot?.avatarImage || '').trim(),
+    expectedPercent: clampPercent(bot?.expectedPercent),
+    chosenLevel: normalizeUserFlashcardLevel(bot?.chosenLevel),
+    isUser: false,
+    isBot: true,
+    seed: 0
+  };
+}
+
+function speakingBattleRoundLabel(size) {
+  const total = Math.max(2, Number(size) || 2);
+  if (total >= 16) return 'Oitavas de final';
+  if (total >= 8) return 'Quartas de final';
+  if (total >= 4) return 'Semifinal';
+  return 'Final';
+}
+
+function speakingBattleCupOrder(participants) {
+  const sorted = [...participants].sort((left, right) => {
+    const delta = (Number(right.expectedPercent) || 0) - (Number(left.expectedPercent) || 0);
+    return delta || (Number(left.userId) || 0) - (Number(right.userId) || 0);
+  }).map((entry, index) => ({ ...entry, seed: index + 1 }));
+  const order = sorted.length === 16
+    ? [1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15]
+    : sorted.map((_entry, index) => index + 1);
+  return order.map((seed) => sorted[seed - 1]).filter(Boolean);
+}
+
+async function saveSpeakingBattleCompetition(client, competitionId, status, state) {
+  await client.query(
+    `UPDATE public.speaking_battle_competitions
+     SET status = $2,
+         state = $3::jsonb,
+         updated_at = now(),
+         finished_at = CASE WHEN $2 IN ('completed', 'eliminated') THEN COALESCE(finished_at, now()) ELSE NULL END
+     WHERE id = $1`,
+    [competitionId, status, JSON.stringify(state || {})]
+  );
+}
+
+async function prepareSpeakingCupRound(client, competition, state) {
+  const participants = Array.isArray(state.participants) ? state.participants : [];
+  if (participants.length <= 1) {
+    state.champion = participants[0] || null;
+    state.currentSessionId = '';
+    await saveSpeakingBattleCompetition(client, competition.id, 'completed', state);
+    return { status: 'completed', sessionId: '', state };
+  }
+
+  const roundNumber = Math.max(1, Number(state.roundNumber) || 1);
+  const round = {
+    number: roundNumber,
+    label: speakingBattleRoundLabel(participants.length),
+    matches: []
+  };
+  let userMatch = null;
+  const winners = [];
+  for (let index = 0; index < participants.length; index += 2) {
+    const left = participants[index];
+    const right = participants[index + 1];
+    if (!right) {
+      winners.push(left);
+      round.matches.push({ left, right: null, winner: left, leftPercent: 0, rightPercent: 0 });
+      continue;
+    }
+    if (left.isUser || right.isUser) {
+      const user = left.isUser ? left : right;
+      const rival = left.isUser ? right : left;
+      userMatch = { index: round.matches.length, user, rival };
+      round.matches.push({ left, right, winner: null, sessionId: '', leftPercent: 0, rightPercent: 0 });
+      winners.push(null);
+      continue;
+    }
+    const leftPercent = simulateSpeakingBattlePercent(left, `${competition.id}:cup:${roundNumber}:${index}:left`);
+    const rightPercent = simulateSpeakingBattlePercent(right, `${competition.id}:cup:${roundNumber}:${index}:right`);
+    const winner = leftPercent === rightPercent
+      ? (Number(left.seed) <= Number(right.seed) ? left : right)
+      : (leftPercent > rightPercent ? left : right);
+    winners.push(winner);
+    round.matches.push({ left, right, winner, leftPercent, rightPercent });
+  }
+
+  if (!userMatch) {
+    state.participants = winners.filter(Boolean);
+    state.roundNumber = roundNumber + 1;
+    state.rounds = [...(state.rounds || []), round];
+    return prepareSpeakingCupRound(client, competition, state);
+  }
+
+  const sessionId = await createSpeakingBattleBotSession(client, {
+    userId: competition.owner_user_id,
+    botUserId: userMatch.rival.userId,
+    userLevel: competition.chosen_level,
+    botLevel: userMatch.rival.chosenLevel,
+    targetLanguage: competition.target_language,
+    nativeLanguage: competition.native_language,
+    format: 'cup',
+    competitionId: competition.id,
+    round: roundNumber
+  });
+  round.matches[userMatch.index].sessionId = sessionId;
+  state.pendingWinners = winners;
+  state.userMatchIndex = userMatch.index;
+  state.currentSessionId = sessionId;
+  state.currentOpponent = userMatch.rival;
+  state.currentRoundLabel = round.label;
+  state.rounds = [...(state.rounds || []), round];
+  await saveSpeakingBattleCompetition(client, competition.id, 'active', state);
+  return { status: 'active', sessionId, state };
+}
+
+async function advanceSpeakingCup(client, competition, state, session) {
+  const rounds = Array.isArray(state.rounds) ? state.rounds : [];
+  const round = rounds[rounds.length - 1];
+  const matchIndex = Math.max(0, Number(state.userMatchIndex) || 0);
+  const match = round?.matches?.[matchIndex];
+  if (!match || String(match.sessionId || '') !== String(session.id || '')) {
+    const error = new Error('Confronto atual da Copa nao encontrado.');
+    error.statusCode = 409;
+    throw error;
+  }
+  const userId = Number(competition.owner_user_id) || 0;
+  const leftIsUser = Number(match.left?.userId) === userId;
+  const userPercent = clampPercent(session.challenger_percent);
+  const rivalPercent = clampPercent(session.opponent_percent);
+  let winner = Number(session.winner_user_id) === userId
+    ? (leftIsUser ? match.left : match.right)
+    : (leftIsUser ? match.right : match.left);
+  if (!Number(session.winner_user_id)) {
+    winner = Number(match.left?.seed) <= Number(match.right?.seed) ? match.left : match.right;
+  }
+  match.winner = winner;
+  match.leftPercent = leftIsUser ? userPercent : rivalPercent;
+  match.rightPercent = leftIsUser ? rivalPercent : userPercent;
+  const winners = Array.isArray(state.pendingWinners) ? [...state.pendingWinners] : [];
+  winners[matchIndex] = winner;
+  state.currentSessionId = '';
+  state.currentOpponent = null;
+  state.pendingWinners = [];
+  if (!winner?.isUser) {
+    state.eliminatedIn = round.label;
+    await saveSpeakingBattleCompetition(client, competition.id, 'eliminated', state);
+    return { status: 'eliminated', sessionId: '', state };
+  }
+  state.participants = winners.filter(Boolean);
+  state.roundNumber = Math.max(1, Number(state.roundNumber) || 1) + 1;
+  return prepareSpeakingCupRound(client, competition, state);
+}
+
+async function prepareSpeakingLeagueFixture(client, competition, state) {
+  const fixtures = Array.isArray(state.fixtures) ? state.fixtures : [];
+  const index = Math.max(0, Number(state.fixtureIndex) || 0);
+  if (index >= fixtures.length) {
+    state.currentSessionId = '';
+    state.leagueWindow = buildLeagueWindow(state);
+    state.finalStandings = sortedLeagueStandings(state);
+    await saveSpeakingBattleCompetition(client, competition.id, 'completed', state);
+    return { status: 'completed', sessionId: '', state };
+  }
+  const rival = fixtures[index];
+  const sessionId = await createSpeakingBattleBotSession(client, {
+    userId: competition.owner_user_id,
+    botUserId: rival.userId,
+    userLevel: competition.chosen_level,
+    botLevel: rival.chosenLevel,
+    targetLanguage: competition.target_language,
+    nativeLanguage: competition.native_language,
+    format: 'league',
+    competitionId: competition.id,
+    round: index + 1
+  });
+  state.currentSessionId = sessionId;
+  state.currentOpponent = rival;
+  state.leagueWindow = buildLeagueWindow(state);
+  await saveSpeakingBattleCompetition(client, competition.id, 'active', state);
+  return { status: 'active', sessionId, state };
+}
+
+async function advanceSpeakingLeague(client, competition, state, session) {
+  const userId = Number(competition.owner_user_id) || 0;
+  const rival = state.currentOpponent || null;
+  const userIsChallenger = Number(session.challenger_user_id) === userId;
+  const userPercent = clampPercent(userIsChallenger ? session.challenger_percent : session.opponent_percent);
+  const rivalPercent = clampPercent(userIsChallenger ? session.opponent_percent : session.challenger_percent);
+  const standings = Array.isArray(state.standings) ? state.standings : [];
+  const userStanding = standings.find((entry) => Boolean(entry.isUser));
+  const rivalStanding = standings.find((entry) => Number(entry.userId) === Number(rival?.userId));
+  updateLeagueStanding(userStanding, userPercent, rivalPercent);
+  updateLeagueStanding(rivalStanding, rivalPercent, userPercent);
+  state.fixtureIndex = Math.max(0, Number(state.fixtureIndex) || 0) + 1;
+  state.currentSessionId = '';
+  state.currentOpponent = null;
+  state.leagueWindow = buildLeagueWindow(state);
+  return prepareSpeakingLeagueFixture(client, competition, state);
+}
+
+function mapSpeakingCompetitionState(format, status, state) {
+  const normalizedFormat = normalizeSpeakingBattleVariant(format);
+  return {
+    id: String(state?.competitionId || '').trim(),
+    format: normalizedFormat,
+    status: String(status || 'active').trim(),
+    currentSessionId: String(state?.currentSessionId || '').trim(),
+    currentRoundLabel: String(state?.currentRoundLabel || '').trim(),
+    currentOpponent: state?.currentOpponent || null,
+    roundNumber: Math.max(0, Number(state?.roundNumber) || 0),
+    fixtureIndex: Math.max(0, Number(state?.fixtureIndex) || 0),
+    fixtureTotal: Array.isArray(state?.fixtures) ? state.fixtures.length : 0,
+    leagueWindow: normalizedFormat === 'league' ? buildLeagueWindow(state) : [],
+    champion: state?.champion || null,
+    eliminatedIn: String(state?.eliminatedIn || '').trim()
+  };
+}
+
 async function awardSpeakingBattleWin(client, sessionId, winnerUserId) {
   const normalizedWinnerUserId = Number(winnerUserId) || 0;
-  if (!sessionId || !normalizedWinnerUserId) return false;
+  if (!sessionId) return false;
+  await recordSpeakingBattleSessionResults(client, sessionId);
+  if (!normalizedWinnerUserId) return false;
 
   const sessionResult = await client.query(
     `UPDATE public.speaking_duel_sessions
@@ -11735,12 +12320,12 @@ function buildBotPronunciationSamples(botConfig, sessionId, totalCards) {
   const count = Math.max(0, Number(totalCards) || 0);
   const base = clampPercent(Number(botConfig?.pronunciationBase) || 0);
   if (!count) return [];
-
-  return Array.from({ length: count }, (_, index) => {
-    const unit = seededUnitInterval(`${sessionId}:pron-seed:${index}`);
-    const offset = ((unit * 2) - 1) * BOT_SPEAKING_DUEL_VARIANCE_PERCENT;
-    return clampPercent(Math.round(base + offset));
-  });
+  const roundPercent = clampPercent(computeBotVariance(
+    base,
+    BOT_SPEAKING_DUEL_VARIANCE_PERCENT,
+    `${sessionId}:round-pronunciation`
+  ));
+  return Array.from({ length: count }, () => roundPercent);
 }
 
 function buildBotResponseTimeline(botConfig, sessionId, totalCards) {
@@ -11890,12 +12475,15 @@ async function syncBotStateIntoSpeakingSession(client, session) {
 
   const battleExpired = isSpeakingDuelBattleExpired(session);
   const cardsModeFinished = next.mode === SPEAKING_DUEL_CARDS_MODE
-    && next.targetScore > 0
     && (
-      next.challengerScore >= next.targetScore
-      || next.opponentScore >= next.targetScore
-      || next.challengerFinished
-      || next.opponentFinished
+      (next.challengerFinished && next.opponentFinished)
+      || (
+        next.targetScore > 0
+        && (
+          next.challengerScore >= next.targetScore
+          || next.opponentScore >= next.targetScore
+        )
+      )
     );
   if ((battleExpired || cardsModeFinished) && next.status !== 'completed') {
     next.status = 'completed';
@@ -21173,6 +21761,342 @@ app.post('/api/speaking/presence/ping', async (req, res) => {
   }
 });
 
+app.get('/api/speaking/battle/bots', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    await ensureSpeakingRealtimeTables();
+    const bots = await ensureSpeakingBattleBots(pool);
+    const history = await readSpeakingBattleHistory(pool, authUser.id);
+    const expectedPercent = await readSpeakingBattleExpectedPercent(pool, authUser.id);
+    const onlineResult = await pool.query(
+      `SELECT COUNT(*)::int AS total
+       FROM public.speaking_matchmaking_queue q
+       INNER JOIN public.users u ON u.id = q.user_id
+       WHERE q.status = 'searching'
+         AND q.user_id <> $1
+         AND COALESCE(u.is_bot, false) = false
+         AND q.updated_at >= (now() - interval '${SPEAKING_MATCHMAKING_ACTIVE_SECONDS} seconds')`,
+      [Number(authUser.id)]
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      success: true,
+      fallbackSeconds: SPEAKING_BATTLE_BOT_FALLBACK_SECONDS,
+      variancePercent: BOT_SPEAKING_DUEL_VARIANCE_PERCENT,
+      expectedPercent,
+      history,
+      onlineUsers: Math.max(0, Number(onlineResult.rows[0]?.total) || 0),
+      modes: ['simple', 'cup', 'league'],
+      bots
+    });
+  } catch (error) {
+    console.error('Erro ao listar bots do battle:', error);
+    res.status(Number(error?.statusCode || 500)).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel carregar os adversarios.'
+    });
+  }
+});
+
+app.post('/api/speaking/battle/start', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    if (isNoEnergyUserRecord(authUser)) {
+      res.status(403).json({ success: false, message: 'Mais energias amanha.' });
+      return;
+    }
+    await ensureSpeakingRealtimeTables();
+    const userId = Number(authUser.id) || 0;
+    const format = normalizeSpeakingBattleVariant(req.body?.format);
+    const chosenLevel = normalizeUserFlashcardLevel(req.body?.level);
+    const targetLanguage = normalizeFlashcardTargetLanguage(req.body?.targetLanguage);
+    const nativeLanguage = normalizeFlashcardNativeLanguage(req.body?.nativeLanguage);
+    if (targetLanguage === nativeLanguage) {
+      res.status(400).json({ success: false, message: 'Escolha idiomas diferentes para o battle.' });
+      return;
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`playtalk-battle-start:${userId}`]);
+      const active = await client.query(
+        `SELECT id FROM public.speaking_duel_sessions
+         WHERE status = 'active'
+           AND (challenger_user_id = $1 OR opponent_user_id = $1)
+         ORDER BY created_at DESC LIMIT 1`,
+        [userId]
+      );
+      if (active.rows[0]?.id) {
+        await client.query('COMMIT');
+        res.json({ success: true, status: 'active', sessionId: String(active.rows[0].id) });
+        return;
+      }
+      await client.query(
+        `UPDATE public.speaking_matchmaking_queue
+         SET status = 'cancelled', updated_at = now()
+         WHERE user_id = $1 AND status = 'searching'`,
+        [userId]
+      );
+      const bots = await ensureSpeakingBattleBots(client);
+      if (bots.length !== SPEAKING_BATTLE_BOTS.length) {
+        const error = new Error('Os 20 adversarios ainda nao estao disponiveis.');
+        error.statusCode = 503;
+        throw error;
+      }
+
+      if (format === 'simple') {
+        const definition = battleBotDefinitionByKey(req.body?.botKey) || SPEAKING_BATTLE_BOTS[0];
+        const bot = bots.find((entry) => entry.key === definition.key) || bots[0];
+        const sessionId = await createSpeakingBattleBotSession(client, {
+          userId,
+          botUserId: bot.userId,
+          userLevel: chosenLevel,
+          botLevel: bot.chosenLevel,
+          targetLanguage,
+          nativeLanguage,
+          format: 'simple'
+        });
+        await client.query('COMMIT');
+        res.json({ success: true, status: 'matched', format, sessionId });
+        return;
+      }
+
+      const identityResult = await client.query(
+        `SELECT id, username, email, avatar_image FROM public.users WHERE id = $1 LIMIT 1`,
+        [userId]
+      );
+      const identity = identityResult.rows[0] || {};
+      const expectedPercent = await readSpeakingBattleExpectedPercent(client, userId);
+      const userParticipant = {
+        userId,
+        name: speakingBattleDisplayName(identity, 'Voce'),
+        avatarImage: String(identity.avatar_image || '').trim(),
+        expectedPercent,
+        chosenLevel,
+        isUser: true,
+        isBot: false,
+        seed: 0
+      };
+      const competitionId = buildSpeakingSessionId();
+      const competition = {
+        id: competitionId,
+        owner_user_id: userId,
+        chosen_level: chosenLevel,
+        target_language: targetLanguage,
+        native_language: nativeLanguage
+      };
+
+      if (format === 'cup') {
+        const topBots = [...bots].sort((a, b) => b.expectedPercent - a.expectedPercent).slice(0, 15);
+        const participants = speakingBattleCupOrder([
+          userParticipant,
+          ...topBots.map(speakingBattleParticipantFromBot)
+        ]);
+        const state = {
+          competitionId,
+          format: 'cup',
+          participants,
+          roundNumber: 1,
+          rounds: [],
+          expectedPercent
+        };
+        await client.query(
+          `INSERT INTO public.speaking_battle_competitions (
+             id, owner_user_id, format, status, chosen_level,
+             target_language, native_language, state
+           )
+           VALUES ($1, $2, 'cup', 'active', $3, $4, $5, $6::jsonb)`,
+          [competitionId, userId, chosenLevel, targetLanguage, nativeLanguage, JSON.stringify(state)]
+        );
+        const prepared = await prepareSpeakingCupRound(client, competition, state);
+        await client.query('COMMIT');
+        res.json({
+          success: true,
+          status: prepared.status,
+          format,
+          sessionId: prepared.sessionId,
+          competition: mapSpeakingCompetitionState(format, prepared.status, prepared.state)
+        });
+        return;
+      }
+
+      const bottomFive = [...bots].sort((a, b) => a.expectedPercent - b.expectedPercent).slice(0, 5);
+      const dropIndex = Math.min(4, Math.floor(seededUnitInterval(`${userId}:${new Date().toISOString().slice(0, 10)}:league-drop`) * 5));
+      const droppedBotId = Number(bottomFive[dropIndex]?.userId) || 0;
+      const leagueBots = bots.filter((bot) => Number(bot.userId) !== droppedBotId);
+      const standings = [
+        {
+          ...userParticipant,
+          played: 0,
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          points: 0,
+          percentSum: 0
+        },
+        ...leagueBots.map((bot) => ({
+          ...speakingBattleParticipantFromBot(bot),
+          played: 0,
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          points: 0,
+          percentSum: 0
+        }))
+      ];
+      for (let leftIndex = 1; leftIndex < standings.length; leftIndex += 1) {
+        for (let rightIndex = leftIndex + 1; rightIndex < standings.length; rightIndex += 1) {
+          const left = standings[leftIndex];
+          const right = standings[rightIndex];
+          const leftPercent = simulateSpeakingBattlePercent(left, `${competitionId}:league:${left.userId}:${right.userId}:left`);
+          const rightPercent = simulateSpeakingBattlePercent(right, `${competitionId}:league:${left.userId}:${right.userId}:right`);
+          updateLeagueStanding(left, leftPercent, rightPercent);
+          updateLeagueStanding(right, rightPercent, leftPercent);
+        }
+      }
+      const fixtures = leagueBots
+        .map(speakingBattleParticipantFromBot)
+        .sort((left, right) => Math.abs(left.expectedPercent - expectedPercent) - Math.abs(right.expectedPercent - expectedPercent));
+      const state = {
+        competitionId,
+        format: 'league',
+        standings,
+        fixtures,
+        fixtureIndex: 0,
+        expectedPercent
+      };
+      state.leagueWindow = buildLeagueWindow(state);
+      await client.query(
+        `INSERT INTO public.speaking_battle_competitions (
+           id, owner_user_id, format, status, chosen_level,
+           target_language, native_language, state
+         )
+         VALUES ($1, $2, 'league', 'active', $3, $4, $5, $6::jsonb)`,
+        [competitionId, userId, chosenLevel, targetLanguage, nativeLanguage, JSON.stringify(state)]
+      );
+      const prepared = await prepareSpeakingLeagueFixture(client, competition, state);
+      await client.query('COMMIT');
+      res.json({
+        success: true,
+        status: prepared.status,
+        format,
+        sessionId: prepared.sessionId,
+        competition: mapSpeakingCompetitionState(format, prepared.status, prepared.state)
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Erro ao iniciar battle com bots:', error);
+    res.status(Number(error?.statusCode || 500)).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel iniciar este battle.'
+    });
+  }
+});
+
+app.post('/api/speaking/battle/competitions/:competitionId/advance', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    await ensureSpeakingRealtimeTables();
+    const competitionId = String(req.params.competitionId || '').trim();
+    const userId = Number(authUser.id) || 0;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const competitionResult = await client.query(
+        `SELECT * FROM public.speaking_battle_competitions
+         WHERE id = $1 AND owner_user_id = $2
+         FOR UPDATE`,
+        [competitionId, userId]
+      );
+      const competition = competitionResult.rows[0] || null;
+      if (!competition) {
+        const error = new Error('Competicao nao encontrada.');
+        error.statusCode = 404;
+        throw error;
+      }
+      const state = competition.state && typeof competition.state === 'object' ? competition.state : {};
+      state.competitionId = competitionId;
+      if (String(competition.status || '') !== 'active') {
+        await client.query('COMMIT');
+        res.json({
+          success: true,
+          status: competition.status,
+          sessionId: '',
+          competition: mapSpeakingCompetitionState(competition.format, competition.status, state)
+        });
+        return;
+      }
+      const sessionId = String(state.currentSessionId || '').trim();
+      const sessionResult = await client.query(
+        `SELECT * FROM public.speaking_duel_sessions
+         WHERE id = $1 AND competition_id = $2
+         LIMIT 1`,
+        [sessionId, competitionId]
+      );
+      const session = sessionResult.rows[0] || null;
+      if (!session || String(session.status || '') !== 'completed') {
+        const error = new Error('A partida atual ainda nao terminou.');
+        error.statusCode = 409;
+        throw error;
+      }
+      await recordSpeakingBattleSessionResults(client, session.id);
+      const advanced = normalizeSpeakingBattleVariant(competition.format) === 'cup'
+        ? await advanceSpeakingCup(client, competition, state, session)
+        : await advanceSpeakingLeague(client, competition, state, session);
+      await client.query('COMMIT');
+      res.json({
+        success: true,
+        status: advanced.status,
+        sessionId: advanced.sessionId,
+        competition: mapSpeakingCompetitionState(competition.format, advanced.status, advanced.state)
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    res.status(Number(error?.statusCode || 500)).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel avancar na competicao.'
+    });
+  }
+});
+
 app.post('/api/speaking/matchmaking/join', async (req, res) => {
   try {
     if (!pool) {
@@ -21939,7 +22863,9 @@ app.get('/api/speaking/sessions/:sessionId/updates', async (req, res) => {
            s.*,
            wu.id AS winner_id,
            COALESCE(NULLIF(wu.username, ''), wu.email) AS winner_name,
-           COALESCE(wu.avatar_image, '') AS winner_avatar
+           COALESCE(wu.avatar_image, '') AS winner_avatar,
+           wu.is_bot AS winner_is_bot,
+           wu.bot_config AS winner_bot_config
          FROM public.speaking_duel_sessions s
          LEFT JOIN public.users wu ON wu.id = s.winner_user_id
          WHERE s.id = $1
@@ -21982,7 +22908,7 @@ app.get('/api/speaking/sessions/:sessionId/updates', async (req, res) => {
             rivalFinished: isChallenger ? Boolean(session.opponent_finished) : Boolean(session.challenger_finished),
             winner: Number(session.winner_id) ? {
               userId: Number(session.winner_id) || 0,
-              username: String(session.winner_name || '').trim() || 'Usuario',
+              username: speakingBattleDisplayName({ username: session.winner_name, is_bot: session.winner_is_bot, bot_config: session.winner_bot_config }),
               avatarImage: String(session.winner_avatar || '').trim()
             } : null
           }
@@ -22046,12 +22972,18 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
            cu.id AS challenger_id,
            COALESCE(NULLIF(cu.username, ''), cu.email) AS challenger_name,
            COALESCE(cu.avatar_image, '') AS challenger_avatar,
+           cu.is_bot AS challenger_db_is_bot,
+           cu.bot_config AS challenger_bot_config,
            ou.id AS opponent_id,
            COALESCE(NULLIF(ou.username, ''), ou.email) AS opponent_name,
            COALESCE(ou.avatar_image, '') AS opponent_avatar,
+           ou.is_bot AS opponent_db_is_bot,
+           ou.bot_config AS opponent_bot_config,
            wu.id AS winner_id,
            COALESCE(NULLIF(wu.username, ''), wu.email) AS winner_name,
-           COALESCE(wu.avatar_image, '') AS winner_avatar
+           COALESCE(wu.avatar_image, '') AS winner_avatar,
+           wu.is_bot AS winner_is_bot,
+           wu.bot_config AS winner_bot_config
          FROM public.speaking_duel_sessions s
          INNER JOIN public.users cu ON cu.id = s.challenger_user_id
          INNER JOIN public.users ou ON ou.id = s.opponent_user_id
@@ -22099,12 +23031,37 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
 
     const meGeneralPercent = Number(statsByUser.get(userId)) || 0;
     const rivalGeneralPercent = Number(statsByUser.get(rivalUserId)) || 0;
+    let competitionSummary = null;
+    const competitionId = String(session.competition_id || '').trim();
+    if (competitionId) {
+      const competitionResult = await pool.query(
+        `SELECT format, status, state
+         FROM public.speaking_battle_competitions
+         WHERE id = $1 AND owner_user_id = $2
+         LIMIT 1`,
+        [competitionId, userId]
+      );
+      const competition = competitionResult.rows[0] || null;
+      if (competition) {
+        const competitionState = competition.state && typeof competition.state === 'object' ? competition.state : {};
+        competitionState.competitionId = competitionId;
+        competitionSummary = mapSpeakingCompetitionState(
+          competition.format,
+          competition.status,
+          competitionState
+        );
+      }
+    }
 
     res.json({
       success: true,
       session: {
         id: session.id,
         mode: normalizeSpeakingChallengeMode(session.mode),
+        battleVariant: normalizeSpeakingBattleVariant(session.battle_variant),
+        competitionId,
+        competitionRound: Math.max(0, Number(session.competition_round) || 0),
+        competition: competitionSummary,
         status: String(session.status || '').trim() || 'active',
         createdAt: session.created_at,
         updatedAt: session.updated_at,
@@ -22141,19 +23098,19 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
         rivalFinished: meRole === 'challenger' ? Boolean(session.opponent_finished) : Boolean(session.challenger_finished),
         challenger: {
           userId: Number(session.challenger_id) || 0,
-          username: String(session.challenger_name || '').trim() || 'Usuario',
+          username: speakingBattleDisplayName({ username: session.challenger_name, is_bot: session.challenger_db_is_bot, bot_config: session.challenger_bot_config }),
           avatarImage: String(session.challenger_avatar || '').trim(),
           isBot: Boolean(session.challenger_is_bot)
         },
         opponent: {
           userId: Number(session.opponent_id) || 0,
-          username: String(session.opponent_name || '').trim() || 'Usuario',
+          username: speakingBattleDisplayName({ username: session.opponent_name, is_bot: session.opponent_db_is_bot, bot_config: session.opponent_bot_config }),
           avatarImage: String(session.opponent_avatar || '').trim(),
           isBot: Boolean(session.opponent_is_bot)
         },
         winner: Number(session.winner_id) ? {
           userId: Number(session.winner_id) || 0,
-          username: String(session.winner_name || '').trim() || 'Usuario',
+          username: speakingBattleDisplayName({ username: session.winner_name, is_bot: session.winner_is_bot, bot_config: session.winner_bot_config }),
           avatarImage: String(session.winner_avatar || '').trim()
         } : null
       }

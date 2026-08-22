@@ -68,6 +68,8 @@
     miniBookCloseEditorBtn: document.getElementById('miniBookCloseEditorBtn'),
     speakingPercent: document.getElementById('speakingPercent'),
     enemySpeakingPercent: document.getElementById('enemySpeakingPercent'),
+    leagueStandingStrip: document.getElementById('leagueStandingStrip'),
+    leagueStandingRows: document.getElementById('leagueStandingRows'),
     gameProgressBar: document.getElementById('gameProgressBar'),
     enemyProgressWrap: document.getElementById('enemyProgressWrap'),
     enemyProgressBar: document.getElementById('enemyProgressBar'),
@@ -154,6 +156,11 @@
       completedRedirectTimer: 0,
       meFinished: false,
       mode: 'battle-mode',
+      battleVariant: 'online',
+      competitionId: '',
+      competitionRound: 0,
+      competition: null,
+      competitionBusy: false,
       targetScore: 0,
       meScore: 0,
       mePercent: 0,
@@ -456,6 +463,23 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function renderLeagueStanding() {
+    const competition = state.duel.competition;
+    const rows = Array.isArray(competition?.leagueWindow) ? competition.leagueWindow : [];
+    const visible = safeText(state.duel.battleVariant) === 'league' && rows.length > 0;
+    if (els.leagueStandingStrip) els.leagueStandingStrip.hidden = !visible;
+    if (!els.leagueStandingRows) return;
+    els.leagueStandingRows.innerHTML = visible
+      ? rows.map((entry) => `
+        <div class="league-standing__row${entry?.isUser ? ' is-me' : ''}">
+          <strong>#${Math.max(1, Number(entry?.position) || 1)}</strong>
+          <img src="${escapeHtml(safeText(entry?.avatarImage) || DEFAULT_PROFILE_AVATAR)}" alt="">
+          <span>${escapeHtml(safeText(entry?.name) || (entry?.isUser ? 'Voce' : 'Usuario'))}</span>
+          <span class="league-standing__points">${Math.max(0, Number(entry?.points) || 0)} pts</span>
+        </div>`).join('')
+      : '';
   }
 
   function normalizeBookTitle(value) {
@@ -2430,6 +2454,12 @@
     const me = isChallenger ? session?.challenger : session?.opponent;
     const rival = isChallenger ? session?.opponent : session?.challenger;
     state.duel.mode = safeText(session?.mode || 'battle-mode') || 'battle-mode';
+    state.duel.battleVariant = safeText(session?.battleVariant) || state.duel.battleVariant || 'online';
+    state.duel.competitionId = safeText(session?.competitionId) || state.duel.competitionId;
+    state.duel.competitionRound = Math.max(0, Number(session?.competitionRound) || state.duel.competitionRound || 0);
+    if (session?.competition && typeof session.competition === 'object') {
+      state.duel.competition = session.competition;
+    }
     state.duel.targetScore = Math.max(0, Number(session?.targetScore) || 0);
     state.currentIndex = Math.max(Math.max(0, Number(state.currentIndex) || 0), Math.max(0, Number(session?.meProgress) || 0));
     state.duel.meScore = Math.max(Math.max(0, Number(state.duel.meScore) || 0), Math.max(0, Number(session?.meScore) || 0));
@@ -2475,6 +2505,7 @@
     }
     updateTopPercents();
     updateProgressBars();
+    renderLeagueStanding();
 
     if (safeText(session?.status) === 'completed' && !state.duel.completed) {
       state.duel.completed = true;
@@ -2507,16 +2538,24 @@
     if (els.winnerRevealMePercent) els.winnerRevealMePercent.textContent = `${Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0))}%`;
     if (els.winnerRevealRivalPercent) els.winnerRevealRivalPercent.textContent = `${Math.max(0, Math.min(100, Number(state.duel.rivalPercent) || 0))}%`;
     if (els.winnerRevealStatus) {
-      els.winnerRevealStatus.textContent = isBattleCardsMode()
-        ? `12 cartas dos niveis ${state.duel.minLevel} a ${state.duel.maxLevel}. A maior media de pronuncia vence.`
-        : 'Batalha finalizada.';
+      els.winnerRevealStatus.textContent = state.duel.battleVariant === 'cup'
+        ? `${safeText(state.duel.competition?.currentRoundLabel) || 'Copa'} finalizada. Avance para atualizar o chaveamento.`
+        : state.duel.battleVariant === 'league'
+          ? `Partida ${Math.max(1, Number(state.duel.competition?.fixtureIndex) + 1)}/${Math.max(1, Number(state.duel.competition?.fixtureTotal) || 1)} finalizada. A tabela sera atualizada ao avancar.`
+          : isBattleCardsMode()
+            ? `12 cartas dos niveis ${state.duel.minLevel} a ${state.duel.maxLevel}. A maior media de pronuncia vence.`
+            : 'Batalha finalizada.';
     }
     state.duel.rematchSearching = false;
     clearBattleRematchTimer();
     if (els.winnerPlayAgainBtn) {
       els.winnerPlayAgainBtn.hidden = !isBattleCardsMode();
       els.winnerPlayAgainBtn.disabled = false;
-      els.winnerPlayAgainBtn.textContent = 'Jogar de novo';
+      els.winnerPlayAgainBtn.textContent = state.duel.battleVariant === 'cup'
+        ? 'Avancar na Copa'
+        : state.duel.battleVariant === 'league'
+          ? 'Proxima partida da Liga'
+          : 'Jogar de novo';
     }
     if (els.winnerBackToCardsBtn) {
       els.winnerBackToCardsBtn.textContent = isBattleCardsMode() ? 'Voltar ao Modo Cartas' : 'Voltar aos usuarios';
@@ -2557,6 +2596,11 @@
     state.duel.sessionId = '';
     state.duel.completed = false;
     state.duel.mode = 'battle-mode';
+    state.duel.battleVariant = 'online';
+    state.duel.competitionId = '';
+    state.duel.competitionRound = 0;
+    state.duel.competition = null;
+    state.duel.competitionBusy = false;
     state.duel.targetScore = 0;
     if (state.duel.completedRedirectTimer) {
       window.clearTimeout(state.duel.completedRedirectTimer);
@@ -2598,6 +2642,7 @@
     writeSessionIdToUrl('');
     setGameMode('offline-game');
     applyOfflineIdentity();
+    renderLeagueStanding();
     if (els.winnerReveal) {
       els.winnerReveal.hidden = true;
       els.winnerReveal.classList.remove('is-visible');
@@ -2681,6 +2726,76 @@
       }
       scheduleBattleRematchPoll(1200);
     }
+  }
+
+  async function advanceBattleCompetition() {
+    if (!state.duel.competitionId || state.duel.competitionBusy) return;
+    state.duel.competitionBusy = true;
+    if (els.winnerPlayAgainBtn) {
+      els.winnerPlayAgainBtn.disabled = true;
+      els.winnerPlayAgainBtn.textContent = state.duel.battleVariant === 'cup'
+        ? 'Montando proxima fase...'
+        : 'Atualizando a Liga...';
+    }
+    try {
+      const response = await fetch(
+        buildApiUrl(`/api/speaking/battle/competitions/${encodeURIComponent(state.duel.competitionId)}/advance`),
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: '{}'
+        }
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || 'Nao foi possivel avancar na competicao.');
+      }
+      if (payload?.competition && typeof payload.competition === 'object') {
+        state.duel.competition = payload.competition;
+        renderLeagueStanding();
+      }
+      const nextSessionId = safeText(payload?.sessionId);
+      if (nextSessionId) {
+        if (els.winnerRevealStatus) {
+          els.winnerRevealStatus.textContent = state.duel.battleVariant === 'cup'
+            ? `${safeText(payload?.competition?.currentRoundLabel) || 'Proxima fase'} preparada!`
+            : `Partida ${Math.max(1, Number(payload?.competition?.fixtureIndex) + 1)}/${Math.max(1, Number(payload?.competition?.fixtureTotal) || 1)} preparada!`;
+        }
+        const search = `?session=${encodeURIComponent(nextSessionId)}`;
+        window.setTimeout(() => window.location.replace(resolveRouteHref('/speaking', { search })), 260);
+        return;
+      }
+      const status = safeText(payload?.status);
+      if (els.winnerRevealTitle) {
+        els.winnerRevealTitle.textContent = status === 'completed'
+          ? (state.duel.battleVariant === 'cup' ? 'Voce e o campeao!' : 'Liga finalizada!')
+          : 'Voce foi eliminado';
+      }
+      if (els.winnerRevealStatus) {
+        els.winnerRevealStatus.textContent = status === 'completed'
+          ? (state.duel.battleVariant === 'cup'
+            ? 'O trofeu da Copa e seu.'
+            : 'Confira sua posicao final na tabela.')
+          : `Eliminado na ${safeText(payload?.competition?.eliminatedIn) || 'Copa'}.`;
+      }
+      if (els.winnerPlayAgainBtn) els.winnerPlayAgainBtn.hidden = true;
+    } catch (error) {
+      if (els.winnerRevealStatus) {
+        els.winnerRevealStatus.textContent = safeText(error?.message) || 'Nao foi possivel avancar na competicao.';
+      }
+      if (els.winnerPlayAgainBtn) els.winnerPlayAgainBtn.disabled = false;
+    } finally {
+      state.duel.competitionBusy = false;
+    }
+  }
+
+  function handleWinnerPrimaryAction() {
+    if (state.duel.competitionId && ['cup', 'league'].includes(state.duel.battleVariant)) {
+      void advanceBattleCompetition();
+      return;
+    }
+    startBattleRematch();
   }
 
   function startBattleRematch() {
@@ -3143,6 +3258,7 @@
     if (els.game) els.game.classList.add('is-active');
     if (els.finalResultBox) els.finalResultBox.classList.remove('is-visible');
     if (els.winnerCard) els.winnerCard.classList.remove('is-visible');
+    renderLeagueStanding();
     if (els.winnerReveal) {
       els.winnerReveal.hidden = true;
       els.winnerReveal.classList.remove('is-visible');
@@ -3238,7 +3354,7 @@
       if (!isBattleCardsMode()) return;
       void handleSendSpeaking();
     });
-    els.winnerPlayAgainBtn?.addEventListener('click', startBattleRematch);
+    els.winnerPlayAgainBtn?.addEventListener('click', handleWinnerPrimaryAction);
     els.winnerBackToCardsBtn?.addEventListener('click', () => { void leaveBattleResult(); });
     window.addEventListener('resize', () => {
       applySelectedMiniBookBackground();
