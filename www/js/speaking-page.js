@@ -7,6 +7,7 @@
   const WORD_SWAP_MS = 1000;
   const DUEL_INTRO_COUNTDOWN_SECONDS = 10;
   const DUEL_BATTLE_DURATION_MS = 3 * 60 * 1000;
+  const BATTLE_USER_PRONUNCIATION_BONUS = 10;
   const DUEL_INTRO_SWITCH_TO_PLAYERS_SECONDS = 6;
   const SPEAKING_CONSUMPTION_FLUSH_SECONDS = 5;
   const DUEL_INTRO_FALLBACK_GRADIENTS = [
@@ -22,6 +23,10 @@
     home: document.getElementById('speakingHome'),
     game: document.getElementById('speakingGame'),
     duelIntro: document.getElementById('duelIntro'),
+    duelCompetitionPreview: document.getElementById('duelCompetitionPreview'),
+    duelCompetitionPreviewKicker: document.getElementById('duelCompetitionPreviewKicker'),
+    duelCompetitionPreviewTitle: document.getElementById('duelCompetitionPreviewTitle'),
+    duelCompetitionPreviewMatches: document.getElementById('duelCompetitionPreviewMatches'),
     duelCardsPreview: document.getElementById('duelCardsPreview'),
     duelCardsPreviewImage: document.getElementById('duelCardsPreviewImage'),
     duelCardsPreviewNative: document.getElementById('duelCardsPreviewNative'),
@@ -107,6 +112,15 @@
     winnerRevealRivalAvatar: document.getElementById('winnerRevealRivalAvatar'),
     winnerRevealRivalName: document.getElementById('winnerRevealRivalName'),
     winnerRevealRivalPercent: document.getElementById('winnerRevealRivalPercent'),
+    competitionReview: document.getElementById('competitionReview'),
+    competitionReviewTitle: document.getElementById('competitionReviewTitle'),
+    competitionReviewResultsSection: document.getElementById('competitionReviewResultsSection'),
+    competitionReviewResults: document.getElementById('competitionReviewResults'),
+    competitionReviewNextSection: document.getElementById('competitionReviewNextSection'),
+    competitionReviewNextLabel: document.getElementById('competitionReviewNextLabel'),
+    competitionReviewNextMatches: document.getElementById('competitionReviewNextMatches'),
+    competitionReviewStandingsSection: document.getElementById('competitionReviewStandingsSection'),
+    competitionReviewStandings: document.getElementById('competitionReviewStandings'),
     winnerRevealStatus: document.getElementById('winnerRevealStatus'),
     winnerPlayAgainBtn: document.getElementById('winnerPlayAgainBtn'),
     winnerBackToCardsBtn: document.getElementById('winnerBackToCardsBtn'),
@@ -480,6 +494,101 @@
           <span class="league-standing__points">${Math.max(0, Number(entry?.points) || 0)} pts</span>
         </div>`).join('')
       : '';
+  }
+
+  function competitionPlayerName(participant) {
+    return safeText(participant?.name) || (participant?.isUser ? 'Voce' : 'Usuario');
+  }
+
+  function renderCompetitionMatchRows(matches, includeResults = false) {
+    return (Array.isArray(matches) ? matches : []).map((match) => {
+      const left = match?.left || null;
+      const right = match?.right || null;
+      const winnerId = Math.max(0, Number(match?.winner?.userId) || 0);
+      const leftId = Math.max(0, Number(left?.userId) || 0);
+      const rightId = Math.max(0, Number(right?.userId) || 0);
+      const leftPercent = match?.leftPercent == null ? null : Math.max(0, Math.min(100, Number(match.leftPercent) || 0));
+      const rightPercent = match?.rightPercent == null ? null : Math.max(0, Math.min(100, Number(match.rightPercent) || 0));
+      const score = includeResults && leftPercent != null && rightPercent != null
+        ? `${leftPercent}% · ${rightPercent}%`
+        : 'VS';
+      return `
+        <div class="competition-match">
+          <div class="competition-match__player${winnerId && winnerId === leftId ? ' is-winner' : ''}">
+            <img src="${escapeHtml(safeText(left?.avatarImage) || DEFAULT_PROFILE_AVATAR)}" alt="">
+            <span>${escapeHtml(competitionPlayerName(left))}</span>
+          </div>
+          <span class="competition-match__score">${right ? score : 'LIVRE'}</span>
+          <div class="competition-match__player is-right${winnerId && winnerId === rightId ? ' is-winner' : ''}">
+            ${right
+              ? `<img src="${escapeHtml(safeText(right?.avatarImage) || DEFAULT_PROFILE_AVATAR)}" alt=""><span>${escapeHtml(competitionPlayerName(right))}</span>`
+              : '<span>Classificado</span>'}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderDuelCompetitionPreview() {
+    const competition = state.duel.competition;
+    const matches = Array.isArray(competition?.currentRoundMatches) ? competition.currentRoundMatches : [];
+    const visible = safeText(state.duel.battleVariant) === 'cup' && matches.length > 0;
+    if (els.duelCompetitionPreview) els.duelCompetitionPreview.hidden = !visible;
+    if (!visible) return false;
+    if (els.duelCompetitionPreviewKicker) els.duelCompetitionPreviewKicker.textContent = 'Copa · proximos confrontos';
+    if (els.duelCompetitionPreviewTitle) {
+      els.duelCompetitionPreviewTitle.textContent = safeText(competition?.currentRoundLabel) || 'Mata-mata';
+    }
+    if (els.duelCompetitionPreviewMatches) {
+      els.duelCompetitionPreviewMatches.innerHTML = renderCompetitionMatchRows(matches, false);
+    }
+    return true;
+  }
+
+  function renderCompetitionReview() {
+    const competition = state.duel.competition;
+    const variant = safeText(state.duel.battleVariant);
+    const results = Array.isArray(competition?.lastRoundResults) ? competition.lastRoundResults : [];
+    const nextMatches = Array.isArray(competition?.nextRoundMatches) ? competition.nextRoundMatches : [];
+    const standings = Array.isArray(competition?.fullStandings) ? competition.fullStandings : [];
+    const reviewReady = Boolean(competition?.reviewPending)
+      || ['completed', 'eliminated'].includes(safeText(competition?.status));
+    const visible = reviewReady
+      && ['cup', 'league'].includes(variant)
+      && (results.length > 0 || standings.some((entry) => Number(entry?.played) > 0));
+    if (els.competitionReview) els.competitionReview.hidden = !visible;
+    if (!visible) return;
+
+    if (els.competitionReviewTitle) {
+      els.competitionReviewTitle.textContent = `${safeText(competition?.lastCompletedRoundLabel) || 'Rodada'} · resultados`;
+    }
+    if (els.competitionReviewResultsSection) els.competitionReviewResultsSection.hidden = results.length === 0;
+    if (els.competitionReviewResults) {
+      els.competitionReviewResults.innerHTML = renderCompetitionMatchRows(results, true);
+    }
+    if (els.competitionReviewNextSection) els.competitionReviewNextSection.hidden = nextMatches.length === 0;
+    if (els.competitionReviewNextLabel) {
+      els.competitionReviewNextLabel.textContent = safeText(competition?.nextRoundLabel)
+        ? `${competition.nextRoundLabel} · proximos confrontos`
+        : 'Proximos confrontos';
+    }
+    if (els.competitionReviewNextMatches) {
+      els.competitionReviewNextMatches.innerHTML = renderCompetitionMatchRows(nextMatches, false);
+    }
+
+    const showStandings = variant === 'league' && standings.length > 0;
+    if (els.competitionReviewStandingsSection) els.competitionReviewStandingsSection.hidden = !showStandings;
+    if (els.competitionReviewStandings) {
+      els.competitionReviewStandings.innerHTML = showStandings
+        ? standings.map((entry) => `
+          <div class="competition-standing${entry?.isUser ? ' is-me' : ''}">
+            <strong>#${Math.max(1, Number(entry?.position) || 1)}</strong>
+            <img src="${escapeHtml(safeText(entry?.avatarImage) || DEFAULT_PROFILE_AVATAR)}" alt="">
+            <span class="competition-standing__name">${escapeHtml(competitionPlayerName(entry))}</span>
+            <span class="competition-standing__record">${Math.max(0, Number(entry?.wins) || 0)}V ${Math.max(0, Number(entry?.draws) || 0)}E ${Math.max(0, Number(entry?.losses) || 0)}D · ${Math.max(0, Number(entry?.averagePercent) || 0)}%</span>
+            <span class="competition-standing__points">${Math.max(0, Number(entry?.points) || 0)} pts</span>
+          </div>`).join('')
+        : '';
+    }
   }
 
   function normalizeBookTitle(value) {
@@ -1230,6 +1339,11 @@
     return calculateSpeechMatchStats(expected, spoken).percent;
   }
 
+  function applyBattleUserPronunciationBonus(percent) {
+    const normalized = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+    return Math.min(100, normalized + BATTLE_USER_PRONUNCIATION_BONUS);
+  }
+
   function updateDuelAvatarRings() {
     const battleCardsMode = isBattleCardsMode();
     const showPoints = Boolean(state.duel.enabled) && !battleCardsMode;
@@ -1367,7 +1481,10 @@
   }
 
   function resetDuelIntroVisuals() {
-    if (els.duelIntro) els.duelIntro.classList.remove('is-book-stage', 'is-player-stage', 'is-cards-preview');
+    if (els.duelIntro) els.duelIntro.classList.remove('is-book-stage', 'is-player-stage', 'is-cards-preview', 'is-competition-preview');
+    if (els.duelCompetitionPreview) {
+      els.duelCompetitionPreview.hidden = true;
+    }
     if (els.duelCardsPreview) {
       els.duelCardsPreview.classList.remove('is-switching');
     }
@@ -1738,16 +1855,57 @@
       ? state.duel.battleStartsAtMs
       : Date.now() + totalDurationMs;
     const presentationStartedAtMs = battleStartsAtMs - totalDurationMs;
-    const cardDurationMs = totalDurationMs / state.activeCards.length;
-    let previousIndex = -1;
 
     setDuelIntroVisible(true);
     resetDuelIntroVisuals();
-    els.duelIntro?.classList.add('is-cards-preview');
+    clearDuelIntroAnimationTimers();
+    primeDuelIntroAssets();
+    void playBattleIntroAudio();
+
+    const hasCupPreview = renderDuelCompetitionPreview();
+    const competitionDurationMs = hasCupPreview ? Math.min(6000, totalDurationMs * 0.18) : 0;
+    const versusDurationMs = Math.min(3000, totalDurationMs * 0.14);
+    const competitionEndsAtMs = presentationStartedAtMs + competitionDurationMs;
+    const versusEndsAtMs = competitionEndsAtMs + versusDurationMs;
+
+    if (hasCupPreview && Date.now() < competitionEndsAtMs) {
+      els.duelIntro?.classList.add('is-competition-preview');
+      while (state.duel.enabled && !state.duel.completed && Date.now() < competitionEndsAtMs) {
+        if (els.duelIntroCountdown) {
+          els.duelIntroCountdown.textContent = 'Confira o chaveamento';
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 80));
+      }
+    }
+
+    if (state.duel.enabled && !state.duel.completed && Date.now() < versusEndsAtMs) {
+      els.duelIntro?.classList.remove('is-competition-preview');
+      if (els.duelCompetitionPreview) els.duelCompetitionPreview.hidden = true;
+      revealDuelIntroPlayers(true);
+      while (state.duel.enabled && !state.duel.completed && Date.now() < versusEndsAtMs) {
+        const remainingMs = versusEndsAtMs - Date.now();
+        if (remainingMs <= 520) dissolveDuelIntroPlayers();
+        if (els.duelIntroCountdown) {
+          els.duelIntroCountdown.textContent = `${state.duel.meName || 'Voce'} vs ${state.duel.rivalName || 'Adversario'}`;
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 80));
+      }
+    }
+
     stopBattleIntroAudio();
-    stopBattleCardsPromptAudio();
+    if (els.duelIntroAvatars) {
+      els.duelIntroAvatars.classList.add('is-hidden');
+      els.duelIntroAvatars.classList.remove('is-visible', 'is-leaving');
+    }
+    els.duelIntro?.classList.remove('is-player-stage', 'is-competition-preview');
+    els.duelIntro?.classList.add('is-cards-preview');
+
+    const cardsStartAtMs = Math.max(presentationStartedAtMs, versusEndsAtMs);
+    const cardsDurationMs = Math.max(1, battleStartsAtMs - cardsStartAtMs);
+    const cardDurationMs = cardsDurationMs / state.activeCards.length;
+    let previousIndex = -1;
     while (state.duel.enabled && !state.duel.completed && Date.now() < battleStartsAtMs) {
-      const elapsedMs = Math.max(0, Date.now() - presentationStartedAtMs);
+      const elapsedMs = Math.max(0, Date.now() - cardsStartAtMs);
       const cardIndex = Math.min(state.activeCards.length - 1, Math.floor(elapsedMs / cardDurationMs));
       if (cardIndex !== previousIndex) {
         previousIndex = cardIndex;
@@ -1767,7 +1925,6 @@
     }
     setDuelIntroVisible(false);
   }
-
   async function runDuelIntroCountdown() {
     if (!state.duel.enabled) return;
     if (isBattleCardsMode()) {
@@ -2537,11 +2694,12 @@
     if (els.winnerRevealRivalName) els.winnerRevealRivalName.textContent = state.duel.rivalName || 'Adversario';
     if (els.winnerRevealMePercent) els.winnerRevealMePercent.textContent = `${Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0))}%`;
     if (els.winnerRevealRivalPercent) els.winnerRevealRivalPercent.textContent = `${Math.max(0, Math.min(100, Number(state.duel.rivalPercent) || 0))}%`;
+    renderCompetitionReview();
     if (els.winnerRevealStatus) {
       els.winnerRevealStatus.textContent = state.duel.battleVariant === 'cup'
-        ? `${safeText(state.duel.competition?.currentRoundLabel) || 'Copa'} finalizada. Avance para atualizar o chaveamento.`
+        ? `${safeText(state.duel.competition?.currentRoundLabel) || 'Copa'} finalizada. Veja agora todos os resultados da fase.`
         : state.duel.battleVariant === 'league'
-          ? `Partida ${Math.max(1, Number(state.duel.competition?.fixtureIndex) + 1)}/${Math.max(1, Number(state.duel.competition?.fixtureTotal) || 1)} finalizada. A tabela sera atualizada ao avancar.`
+          ? `Rodada ${Math.max(1, Number(state.duel.competition?.fixtureIndex) + 1)}/${Math.max(1, Number(state.duel.competition?.fixtureTotal) || 1)} finalizada. Veja os placares e a classificacao.`
           : isBattleCardsMode()
             ? `12 cartas dos niveis ${state.duel.minLevel} a ${state.duel.maxLevel}. A maior media de pronuncia vence.`
             : 'Batalha finalizada.';
@@ -2552,9 +2710,9 @@
       els.winnerPlayAgainBtn.hidden = !isBattleCardsMode();
       els.winnerPlayAgainBtn.disabled = false;
       els.winnerPlayAgainBtn.textContent = state.duel.battleVariant === 'cup'
-        ? 'Avancar na Copa'
+        ? 'Ver resultados da fase'
         : state.duel.battleVariant === 'league'
-          ? 'Proxima partida da Liga'
+          ? 'Ver resultados da rodada'
           : 'Jogar de novo';
     }
     if (els.winnerBackToCardsBtn) {
@@ -2733,9 +2891,9 @@
     state.duel.competitionBusy = true;
     if (els.winnerPlayAgainBtn) {
       els.winnerPlayAgainBtn.disabled = true;
-      els.winnerPlayAgainBtn.textContent = state.duel.battleVariant === 'cup'
-        ? 'Montando proxima fase...'
-        : 'Atualizando a Liga...';
+      els.winnerPlayAgainBtn.textContent = state.duel.competition?.reviewPending
+        ? 'Preparando a proxima rodada...'
+        : 'Calculando todos os resultados...';
     }
     try {
       const response = await fetch(
@@ -2754,19 +2912,42 @@
       if (payload?.competition && typeof payload.competition === 'object') {
         state.duel.competition = payload.competition;
         renderLeagueStanding();
+        renderCompetitionReview();
       }
+
       const nextSessionId = safeText(payload?.sessionId);
       if (nextSessionId) {
         if (els.winnerRevealStatus) {
           els.winnerRevealStatus.textContent = state.duel.battleVariant === 'cup'
             ? `${safeText(payload?.competition?.currentRoundLabel) || 'Proxima fase'} preparada!`
-            : `Partida ${Math.max(1, Number(payload?.competition?.fixtureIndex) + 1)}/${Math.max(1, Number(payload?.competition?.fixtureTotal) || 1)} preparada!`;
+            : `Rodada ${Math.max(1, Number(payload?.competition?.fixtureIndex) + 1)}/${Math.max(1, Number(payload?.competition?.fixtureTotal) || 1)} preparada!`;
         }
         const search = `?session=${encodeURIComponent(nextSessionId)}`;
         window.setTimeout(() => window.location.replace(resolveRouteHref('/speaking', { search })), 260);
         return;
       }
+
       const status = safeText(payload?.status);
+      const reviewPending = Boolean(payload?.competition?.reviewPending) || status === 'review';
+      if (reviewPending) {
+        if (els.winnerRevealTitle) {
+          els.winnerRevealTitle.textContent = `${safeText(payload?.competition?.lastCompletedRoundLabel) || 'Rodada'} concluida`;
+        }
+        if (els.winnerRevealStatus) {
+          els.winnerRevealStatus.textContent = state.duel.battleVariant === 'cup'
+            ? `Confira os resultados e os confrontos da ${safeText(payload?.competition?.nextRoundLabel) || 'proxima fase'}.`
+            : 'Todos os jogos desta rodada terminaram. A classificacao completa foi atualizada.';
+        }
+        if (els.winnerPlayAgainBtn) {
+          els.winnerPlayAgainBtn.hidden = false;
+          els.winnerPlayAgainBtn.disabled = false;
+          els.winnerPlayAgainBtn.textContent = state.duel.battleVariant === 'cup'
+            ? `Comecar ${safeText(payload?.competition?.nextRoundLabel) || 'proxima fase'}`
+            : `Comecar rodada ${Math.max(1, Number(payload?.competition?.fixtureIndex) + 1)}`;
+        }
+        return;
+      }
+
       if (els.winnerRevealTitle) {
         els.winnerRevealTitle.textContent = status === 'completed'
           ? (state.duel.battleVariant === 'cup' ? 'Voce e o campeao!' : 'Liga finalizada!')
@@ -2775,9 +2956,9 @@
       if (els.winnerRevealStatus) {
         els.winnerRevealStatus.textContent = status === 'completed'
           ? (state.duel.battleVariant === 'cup'
-            ? 'O trofeu da Copa e seu.'
-            : 'Confira sua posicao final na tabela.')
-          : `Eliminado na ${safeText(payload?.competition?.eliminatedIn) || 'Copa'}.`;
+            ? 'O trofeu da Copa e seu. Confira todos os placares da final.'
+            : 'Confira a classificacao completa e os resultados da ultima rodada.')
+          : `Eliminado na ${safeText(payload?.competition?.eliminatedIn) || 'Copa'}. Confira os resultados da fase.`;
       }
       if (els.winnerPlayAgainBtn) els.winnerPlayAgainBtn.hidden = true;
     } catch (error) {
@@ -2789,7 +2970,6 @@
       state.duel.competitionBusy = false;
     }
   }
-
   function handleWinnerPrimaryAction() {
     if (state.duel.competitionId && ['cup', 'league'].includes(state.duel.battleVariant)) {
       void advanceBattleCompetition();
@@ -3092,7 +3272,9 @@
       const isBattleBooksMode = Boolean(state.duel.enabled) && !battleCardsMode;
       const score = isBattleBooksMode
         ? matchStats.matched
-        : matchStats.percent;
+        : battleCardsMode && state.duel.enabled
+          ? applyBattleUserPronunciationBonus(matchStats.percent)
+          : matchStats.percent;
       state.scores.push(score);
       state.currentIndex += 1;
       const nextCount = previousCount + 1;

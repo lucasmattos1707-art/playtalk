@@ -533,6 +533,124 @@
       to { opacity: 1; transform: translateX(0) scale(1); }
     }
 
+    .duel-competition-preview {
+      display: none;
+      width: min(680px, 94vw);
+      max-height: 78dvh;
+      align-content: start;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .duel-intro.is-competition-preview .duel-competition-preview {
+      display: grid;
+      animation: competitionStageIn 520ms ease both;
+    }
+
+    .duel-intro.is-competition-preview .duel-cards-preview,
+    .duel-intro.is-competition-preview .duel-intro__avatars,
+    .duel-intro.is-competition-preview .duel-intro__book-stage {
+      display: none !important;
+    }
+
+    .duel-competition-preview__kicker,
+    .duel-competition-preview__title {
+      margin: 0;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
+    .duel-competition-preview__kicker {
+      color: #78e6ff;
+      font-size: 13px;
+      font-weight: 850;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .duel-competition-preview__title {
+      color: #fff;
+      font-size: clamp(27px, 7vw, 44px);
+      font-weight: 900;
+    }
+
+    .duel-competition-preview__matches {
+      min-height: 0;
+      display: grid;
+      gap: 7px;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+
+    .duel-competition-preview__matches::-webkit-scrollbar { display: none; }
+
+    .duel-competition-preview .competition-match {
+      min-height: 44px;
+      padding: 4px 8px;
+    }
+
+    .duel-competition-preview .competition-match__player img {
+      width: 30px;
+      height: 30px;
+      flex-basis: 30px;
+    }
+
+    .competition-match {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      gap: 9px;
+      min-height: 52px;
+      padding: 7px 10px;
+      border: 1px solid rgba(126, 218, 255, 0.18);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .competition-match__player {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(239, 249, 255, 0.86);
+      font: 750 13px/1.1 "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
+    .competition-match__player.is-right {
+      flex-direction: row-reverse;
+      text-align: right;
+    }
+
+    .competition-match__player.is-winner {
+      color: #8dffd0;
+      font-weight: 900;
+    }
+
+    .competition-match__player img {
+      width: 36px;
+      height: 36px;
+      flex: 0 0 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+    }
+
+    .competition-match__player span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .competition-match__score {
+      color: #7fe2ff;
+      font: 900 14px "Exo 2", "Open Sans", Arial, sans-serif;
+      white-space: nowrap;
+    }
+
+    @keyframes competitionStageIn {
+      from { opacity: 0; transform: scale(0.94); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
     .duel-intro__avatars.is-hidden {
       opacity: 0;
       pointer-events: none;
@@ -1483,6 +1601,89 @@
     .league-standing__row img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
     .league-standing__points { color: #79edc6; font-weight: 900; }
 
+    .competition-review {
+      width: min(680px, 100%);
+      max-height: min(48dvh, 520px);
+      padding: 13px;
+      border: 1px solid rgba(116, 219, 255, 0.2);
+      border-radius: 20px;
+      background: rgba(3, 18, 37, 0.78);
+      display: grid;
+      gap: 10px;
+      overflow-y: auto;
+      text-align: left;
+      scrollbar-width: thin;
+    }
+
+    .competition-review[hidden] { display: none; }
+
+    .competition-review__title {
+      margin: 0;
+      color: #8de9ff;
+      font: 900 15px/1.2 "Exo 2", "Open Sans", Arial, sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .competition-review__section {
+      display: grid;
+      gap: 7px;
+    }
+
+    .competition-review__section[hidden] { display: none; }
+
+    .competition-review__label {
+      margin: 3px 0 0;
+      color: rgba(226, 244, 255, 0.68);
+      font: 800 12px/1.2 "Exo 2", "Open Sans", Arial, sans-serif;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .competition-review__matches,
+    .competition-review__standings {
+      display: grid;
+      gap: 6px;
+    }
+
+    .competition-review .competition-match {
+      min-height: 46px;
+      padding: 5px 8px;
+    }
+
+    .competition-standing {
+      display: grid;
+      grid-template-columns: 30px 32px minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 7px;
+      min-height: 40px;
+      padding: 4px 7px;
+      border-radius: 12px;
+      color: rgba(232, 247, 255, 0.8);
+      font: 750 12px/1.1 "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
+    .competition-standing.is-me {
+      background: linear-gradient(145deg, rgba(42, 142, 192, 0.48), rgba(30, 163, 128, 0.34));
+      color: #fff;
+    }
+
+    .competition-standing img {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .competition-standing__name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .competition-standing__record { color: rgba(205, 232, 245, 0.66); }
+    .competition-standing__points { color: #79edc6; font-weight: 900; white-space: nowrap; }
+
     .winner-reveal__actions {
       width: min(420px, 100%);
       display: grid;
@@ -1797,6 +1998,11 @@
 
     <section class="speaking-card speaking-game" id="speakingGame">
       <section class="duel-intro" id="duelIntro" hidden>
+        <section class="duel-competition-preview" id="duelCompetitionPreview" hidden>
+          <p class="duel-competition-preview__kicker" id="duelCompetitionPreviewKicker">Copa</p>
+          <h2 class="duel-competition-preview__title" id="duelCompetitionPreviewTitle">Oitavas de final</h2>
+          <div class="duel-competition-preview__matches" id="duelCompetitionPreviewMatches"></div>
+        </section>
         <div class="duel-cards-preview" id="duelCardsPreview">
           <p class="duel-cards-preview__kicker">As 12 cartas do battle</p>
           <div class="duel-cards-preview__visual"><img id="duelCardsPreviewImage" alt="Carta da apresentacao"></div>
@@ -1915,6 +2121,21 @@
             <p class="winner-reveal__percent" id="winnerRevealRivalPercent">0%</p>
           </article>
         </div>
+        <section class="competition-review" id="competitionReview" hidden>
+          <h3 class="competition-review__title" id="competitionReviewTitle">Resultados da rodada</h3>
+          <div class="competition-review__section" id="competitionReviewResultsSection">
+            <p class="competition-review__label">Resultados</p>
+            <div class="competition-review__matches" id="competitionReviewResults"></div>
+          </div>
+          <div class="competition-review__section" id="competitionReviewNextSection" hidden>
+            <p class="competition-review__label" id="competitionReviewNextLabel">Proximos confrontos</p>
+            <div class="competition-review__matches" id="competitionReviewNextMatches"></div>
+          </div>
+          <div class="competition-review__section" id="competitionReviewStandingsSection" hidden>
+            <p class="competition-review__label">Classificacao completa</p>
+            <div class="competition-review__standings" id="competitionReviewStandings"></div>
+          </div>
+        </section>
         <p class="winner-reveal__status" id="winnerRevealStatus">A maior media de pronuncia vence.</p>
         <div class="winner-reveal__actions">
           <button class="winner-reveal__button" id="winnerPlayAgainBtn" type="button">Jogar de novo</button>

@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
@@ -468,7 +468,7 @@ const SPEAKING_DUEL_SMARTBOOKS_MODE = 'smartbooks';
 const SPEAKING_DUEL_CARDS_MODE = 'battle-cards';
 const SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS = 35;
 const SPEAKING_DUEL_INTRO_SECONDS = 10;
-const SPEAKING_DUEL_CARDS_INTRO_SECONDS = 30;
+const SPEAKING_DUEL_CARDS_INTRO_SECONDS = 38;
 const SPEAKING_DUEL_BATTLE_SECONDS = 180;
 const SPEAKING_MATCHMAKING_ACTIVE_SECONDS = 30;
 const SPEAKING_MATCHMAKING_WAIT_MS = 20000;
@@ -11986,9 +11986,13 @@ function sortedLeagueStandings(state) {
   return [...(Array.isArray(state?.standings) ? state.standings : [])].sort((left, right) => {
     const pointsDelta = (Number(right.points) || 0) - (Number(left.points) || 0);
     if (pointsDelta) return pointsDelta;
-    const leftAvg = Number(left.played) > 0 ? Number(left.percentSum) / Number(left.played) : Number(left.expectedPercent) || 0;
-    const rightAvg = Number(right.played) > 0 ? Number(right.percentSum) / Number(right.played) : Number(right.expectedPercent) || 0;
-    return rightAvg - leftAvg;
+    const leftAvg = Number(left.played) > 0 ? Number(left.percentSum) / Number(left.played) : -1;
+    const rightAvg = Number(right.played) > 0 ? Number(right.percentSum) / Number(right.played) : -1;
+    const averageDelta = rightAvg - leftAvg;
+    if (averageDelta) return averageDelta;
+    const winsDelta = (Number(right.wins) || 0) - (Number(left.wins) || 0);
+    if (winsDelta) return winsDelta;
+    return String(left.name || '').localeCompare(String(right.name || ''), 'pt-BR');
   });
 }
 
@@ -12001,7 +12005,7 @@ function buildLeagueWindow(state) {
     position: start + index + 1,
     averagePercent: Number(entry.played) > 0
       ? clampPercent(Number(entry.percentSum) / Number(entry.played))
-      : clampPercent(entry.expectedPercent)
+      : 0
   }));
 }
 
@@ -12037,6 +12041,98 @@ function speakingBattleCupOrder(participants) {
   return order.map((seed) => sorted[seed - 1]).filter(Boolean);
 }
 
+function buildSpeakingBattleMatchPreview(participants) {
+  const entries = Array.isArray(participants) ? participants : [];
+  const matches = [];
+  for (let index = 0; index < entries.length; index += 2) {
+    matches.push({
+      left: entries[index] || null,
+      right: entries[index + 1] || null,
+      winner: null,
+      leftPercent: null,
+      rightPercent: null,
+      sessionId: ''
+    });
+  }
+  return matches;
+}
+
+function buildSpeakingLeagueRounds(participants) {
+  const entries = (Array.isArray(participants) ? participants : []).filter(Boolean);
+  if (entries.length < 2) return [];
+  const rotation = [...entries];
+  if (rotation.length % 2 === 1) rotation.push(null);
+  const rounds = [];
+  for (let roundIndex = 0; roundIndex < rotation.length - 1; roundIndex += 1) {
+    const matches = [];
+    for (let pairIndex = 0; pairIndex < rotation.length / 2; pairIndex += 1) {
+      const first = rotation[pairIndex] || null;
+      const second = rotation[rotation.length - 1 - pairIndex] || null;
+      if (!first || !second) continue;
+      const swapSides = (roundIndex + pairIndex) % 2 === 1;
+      matches.push({
+        left: swapSides ? second : first,
+        right: swapSides ? first : second,
+        winner: null,
+        leftPercent: null,
+        rightPercent: null,
+        sessionId: ''
+      });
+    }
+    rounds.push({
+      number: roundIndex + 1,
+      label: `Rodada ${roundIndex + 1}`,
+      matches
+    });
+    const fixed = rotation[0];
+    const rotating = rotation.slice(1);
+    rotating.unshift(rotating.pop());
+    rotation.splice(0, rotation.length, fixed, ...rotating);
+  }
+  return rounds;
+}
+
+function mapSpeakingBattleParticipant(participant) {
+  if (!participant) return null;
+  return {
+    userId: Number(participant.userId) || 0,
+    name: String(participant.name || (participant.isUser ? 'Voce' : 'Usuario')).trim(),
+    avatarImage: String(participant.avatarImage || '').trim(),
+    isUser: Boolean(participant.isUser),
+    isBot: Boolean(participant.isBot),
+    seed: Math.max(0, Number(participant.seed) || 0)
+  };
+}
+
+function mapSpeakingBattleMatch(match, includeResult = false) {
+  const mapped = {
+    left: mapSpeakingBattleParticipant(match?.left),
+    right: mapSpeakingBattleParticipant(match?.right),
+    winner: includeResult ? mapSpeakingBattleParticipant(match?.winner) : null
+  };
+  if (includeResult) {
+    mapped.leftPercent = match?.leftPercent == null ? null : clampPercent(match.leftPercent);
+    mapped.rightPercent = match?.rightPercent == null ? null : clampPercent(match.rightPercent);
+  }
+  return mapped;
+}
+
+function mapSpeakingLeagueStanding(entry, position) {
+  const played = Math.max(0, Number(entry?.played) || 0);
+  return {
+    ...mapSpeakingBattleParticipant(entry),
+    position: Math.max(1, Number(position) || 1),
+    played,
+    wins: Math.max(0, Number(entry?.wins) || 0),
+    draws: Math.max(0, Number(entry?.draws) || 0),
+    losses: Math.max(0, Number(entry?.losses) || 0),
+    points: Math.max(0, Number(entry?.points) || 0),
+    averagePercent: played > 0
+      ? clampPercent(Number(entry?.percentSum) / played)
+      : 0
+  };
+}
+
 async function saveSpeakingBattleCompetition(client, competitionId, status, state) {
   await client.query(
     `UPDATE public.speaking_battle_competitions
@@ -12049,11 +12145,23 @@ async function saveSpeakingBattleCompetition(client, competitionId, status, stat
   );
 }
 
+function resolveSpeakingBattleMatchWinner(left, right, leftPercent, rightPercent) {
+  if (!right) return left || null;
+  if (leftPercent > rightPercent) return left;
+  if (rightPercent > leftPercent) return right;
+  const leftSeed = Math.max(0, Number(left?.seed) || 0);
+  const rightSeed = Math.max(0, Number(right?.seed) || 0);
+  if (leftSeed && rightSeed && leftSeed !== rightSeed) return leftSeed < rightSeed ? left : right;
+  return Number(left?.userId) <= Number(right?.userId) ? left : right;
+}
+
 async function prepareSpeakingCupRound(client, competition, state) {
   const participants = Array.isArray(state.participants) ? state.participants : [];
   if (participants.length <= 1) {
-    state.champion = participants[0] || null;
+    state.champion = participants[0] || state.champion || null;
     state.currentSessionId = '';
+    state.currentOpponent = null;
+    state.reviewPending = false;
     await saveSpeakingBattleCompetition(client, competition.id, 'completed', state);
     return { status: 'completed', sessionId: '', state };
   }
@@ -12062,60 +12170,42 @@ async function prepareSpeakingCupRound(client, competition, state) {
   const round = {
     number: roundNumber,
     label: speakingBattleRoundLabel(participants.length),
-    matches: []
+    matches: buildSpeakingBattleMatchPreview(participants)
   };
-  let userMatch = null;
-  const winners = [];
-  for (let index = 0; index < participants.length; index += 2) {
-    const left = participants[index];
-    const right = participants[index + 1];
-    if (!right) {
-      winners.push(left);
-      round.matches.push({ left, right: null, winner: left, leftPercent: 0, rightPercent: 0 });
-      continue;
-    }
-    if (left.isUser || right.isUser) {
-      const user = left.isUser ? left : right;
-      const rival = left.isUser ? right : left;
-      userMatch = { index: round.matches.length, user, rival };
-      round.matches.push({ left, right, winner: null, sessionId: '', leftPercent: 0, rightPercent: 0 });
-      winners.push(null);
-      continue;
-    }
-    const leftPercent = simulateSpeakingBattlePercent(left, `${competition.id}:cup:${roundNumber}:${index}:left`);
-    const rightPercent = simulateSpeakingBattlePercent(right, `${competition.id}:cup:${roundNumber}:${index}:right`);
-    const winner = leftPercent === rightPercent
-      ? (Number(left.seed) <= Number(right.seed) ? left : right)
-      : (leftPercent > rightPercent ? left : right);
-    winners.push(winner);
-    round.matches.push({ left, right, winner, leftPercent, rightPercent });
-  }
-
+  const userMatchIndex = round.matches.findIndex((match) => Boolean(match.left?.isUser || match.right?.isUser));
+  const userMatch = round.matches[userMatchIndex] || null;
   if (!userMatch) {
-    state.participants = winners.filter(Boolean);
-    state.roundNumber = roundNumber + 1;
-    state.rounds = [...(state.rounds || []), round];
-    return prepareSpeakingCupRound(client, competition, state);
+    const error = new Error('O jogador nao foi encontrado no chaveamento atual.');
+    error.statusCode = 409;
+    throw error;
+  }
+  const rival = userMatch.left?.isUser ? userMatch.right : userMatch.left;
+  if (!rival?.userId) {
+    const error = new Error('Adversario da Copa nao encontrado.');
+    error.statusCode = 409;
+    throw error;
   }
 
   const sessionId = await createSpeakingBattleBotSession(client, {
     userId: competition.owner_user_id,
-    botUserId: userMatch.rival.userId,
+    botUserId: rival.userId,
     userLevel: competition.chosen_level,
-    botLevel: userMatch.rival.chosenLevel,
+    botLevel: rival.chosenLevel,
     targetLanguage: competition.target_language,
     nativeLanguage: competition.native_language,
     format: 'cup',
     competitionId: competition.id,
     round: roundNumber
   });
-  round.matches[userMatch.index].sessionId = sessionId;
-  state.pendingWinners = winners;
-  state.userMatchIndex = userMatch.index;
+  round.matches[userMatchIndex].sessionId = sessionId;
+  state.userMatchIndex = userMatchIndex;
   state.currentSessionId = sessionId;
-  state.currentOpponent = userMatch.rival;
+  state.currentOpponent = rival;
   state.currentRoundLabel = round.label;
-  state.rounds = [...(state.rounds || []), round];
+  state.nextRoundLabel = '';
+  state.nextRoundMatches = [];
+  state.reviewPending = false;
+  state.rounds = [...(Array.isArray(state.rounds) ? state.rounds : []), round];
   await saveSpeakingBattleCompetition(client, competition.id, 'active', state);
   return { status: 'active', sessionId, state };
 }
@@ -12124,51 +12214,97 @@ async function advanceSpeakingCup(client, competition, state, session) {
   const rounds = Array.isArray(state.rounds) ? state.rounds : [];
   const round = rounds[rounds.length - 1];
   const matchIndex = Math.max(0, Number(state.userMatchIndex) || 0);
-  const match = round?.matches?.[matchIndex];
-  if (!match || String(match.sessionId || '') !== String(session.id || '')) {
+  const userMatch = round?.matches?.[matchIndex];
+  if (!userMatch || String(userMatch.sessionId || '') !== String(session.id || '')) {
     const error = new Error('Confronto atual da Copa nao encontrado.');
     error.statusCode = 409;
     throw error;
   }
+
   const userId = Number(competition.owner_user_id) || 0;
-  const leftIsUser = Number(match.left?.userId) === userId;
   const userPercent = clampPercent(session.challenger_percent);
   const rivalPercent = clampPercent(session.opponent_percent);
-  let winner = Number(session.winner_user_id) === userId
-    ? (leftIsUser ? match.left : match.right)
-    : (leftIsUser ? match.right : match.left);
-  if (!Number(session.winner_user_id)) {
-    winner = Number(match.left?.seed) <= Number(match.right?.seed) ? match.left : match.right;
+  const winners = [];
+  for (let index = 0; index < round.matches.length; index += 1) {
+    const match = round.matches[index];
+    const left = match.left;
+    const right = match.right;
+    if (!right) {
+      match.leftPercent = null;
+      match.rightPercent = null;
+      match.winner = left;
+      winners.push(left);
+      continue;
+    }
+
+    let leftPercent;
+    let rightPercent;
+    if (index === matchIndex) {
+      const leftIsUser = Number(left?.userId) === userId;
+      leftPercent = leftIsUser ? userPercent : rivalPercent;
+      rightPercent = leftIsUser ? rivalPercent : userPercent;
+    } else {
+      leftPercent = simulateSpeakingBattlePercent(left, `${competition.id}:cup:${round.number}:${index}:left`);
+      rightPercent = simulateSpeakingBattlePercent(right, `${competition.id}:cup:${round.number}:${index}:right`);
+    }
+    match.leftPercent = leftPercent;
+    match.rightPercent = rightPercent;
+    match.winner = resolveSpeakingBattleMatchWinner(left, right, leftPercent, rightPercent);
+    winners.push(match.winner);
   }
-  match.winner = winner;
-  match.leftPercent = leftIsUser ? userPercent : rivalPercent;
-  match.rightPercent = leftIsUser ? rivalPercent : userPercent;
-  const winners = Array.isArray(state.pendingWinners) ? [...state.pendingWinners] : [];
-  winners[matchIndex] = winner;
+
+  const userWinner = winners.find((participant) => Boolean(participant?.isUser)) || null;
+  state.lastCompletedRoundNumber = Math.max(1, Number(round.number) || 1);
   state.currentSessionId = '';
   state.currentOpponent = null;
-  state.pendingWinners = [];
-  if (!winner?.isUser) {
+  state.userMatchIndex = -1;
+  state.participants = winners.filter(Boolean);
+  state.nextRoundMatches = [];
+  state.nextRoundLabel = '';
+
+  if (!userWinner) {
     state.eliminatedIn = round.label;
+    state.reviewPending = false;
     await saveSpeakingBattleCompetition(client, competition.id, 'eliminated', state);
     return { status: 'eliminated', sessionId: '', state };
   }
-  state.participants = winners.filter(Boolean);
-  state.roundNumber = Math.max(1, Number(state.roundNumber) || 1) + 1;
-  return prepareSpeakingCupRound(client, competition, state);
-}
-
-async function prepareSpeakingLeagueFixture(client, competition, state) {
-  const fixtures = Array.isArray(state.fixtures) ? state.fixtures : [];
-  const index = Math.max(0, Number(state.fixtureIndex) || 0);
-  if (index >= fixtures.length) {
-    state.currentSessionId = '';
-    state.leagueWindow = buildLeagueWindow(state);
-    state.finalStandings = sortedLeagueStandings(state);
+  if (state.participants.length <= 1) {
+    state.champion = state.participants[0] || userWinner;
+    state.reviewPending = false;
     await saveSpeakingBattleCompetition(client, competition.id, 'completed', state);
     return { status: 'completed', sessionId: '', state };
   }
-  const rival = fixtures[index];
+
+  state.roundNumber = Math.max(1, Number(state.roundNumber) || 1) + 1;
+  state.nextRoundLabel = speakingBattleRoundLabel(state.participants.length);
+  state.nextRoundMatches = buildSpeakingBattleMatchPreview(state.participants);
+  state.reviewPending = true;
+  await saveSpeakingBattleCompetition(client, competition.id, 'active', state);
+  return { status: 'review', sessionId: '', state };
+}
+
+async function prepareSpeakingLeagueFixture(client, competition, state) {
+  const rounds = Array.isArray(state.leagueRounds) ? state.leagueRounds : [];
+  const index = Math.max(0, Number(state.fixtureIndex) || 0);
+  if (index >= rounds.length) {
+    state.currentSessionId = '';
+    state.currentOpponent = null;
+    state.reviewPending = false;
+    state.leagueWindow = buildLeagueWindow(state);
+    await saveSpeakingBattleCompetition(client, competition.id, 'completed', state);
+    return { status: 'completed', sessionId: '', state };
+  }
+
+  const round = rounds[index];
+  const userMatchIndex = round.matches.findIndex((match) => Boolean(match.left?.isUser || match.right?.isUser));
+  const userMatch = round.matches[userMatchIndex] || null;
+  const rival = userMatch?.left?.isUser ? userMatch.right : userMatch?.left;
+  if (!userMatch || !rival?.userId) {
+    const error = new Error('Confronto da rodada da Liga nao encontrado.');
+    error.statusCode = 409;
+    throw error;
+  }
+
   const sessionId = await createSpeakingBattleBotSession(client, {
     userId: competition.owner_user_id,
     botUserId: rival.userId,
@@ -12180,8 +12316,14 @@ async function prepareSpeakingLeagueFixture(client, competition, state) {
     competitionId: competition.id,
     round: index + 1
   });
+  userMatch.sessionId = sessionId;
+  state.userMatchIndex = userMatchIndex;
   state.currentSessionId = sessionId;
   state.currentOpponent = rival;
+  state.currentRoundLabel = round.label;
+  state.nextRoundLabel = '';
+  state.nextRoundMatches = [];
+  state.reviewPending = false;
   state.leagueWindow = buildLeagueWindow(state);
   await saveSpeakingBattleCompetition(client, competition.id, 'active', state);
   return { status: 'active', sessionId, state };
@@ -12189,40 +12331,115 @@ async function prepareSpeakingLeagueFixture(client, competition, state) {
 
 async function advanceSpeakingLeague(client, competition, state, session) {
   const userId = Number(competition.owner_user_id) || 0;
-  const rival = state.currentOpponent || null;
-  const userIsChallenger = Number(session.challenger_user_id) === userId;
-  const userPercent = clampPercent(userIsChallenger ? session.challenger_percent : session.opponent_percent);
-  const rivalPercent = clampPercent(userIsChallenger ? session.opponent_percent : session.challenger_percent);
+  const rounds = Array.isArray(state.leagueRounds) ? state.leagueRounds : [];
+  const roundIndex = Math.max(0, Number(state.fixtureIndex) || 0);
+  const round = rounds[roundIndex];
+  const userMatchIndex = Math.max(0, Number(state.userMatchIndex) || 0);
+  const userMatch = round?.matches?.[userMatchIndex];
+  if (!round || !userMatch || String(userMatch.sessionId || '') !== String(session.id || '')) {
+    const error = new Error('Rodada atual da Liga nao encontrada.');
+    error.statusCode = 409;
+    throw error;
+  }
+
   const standings = Array.isArray(state.standings) ? state.standings : [];
-  const userStanding = standings.find((entry) => Boolean(entry.isUser));
-  const rivalStanding = standings.find((entry) => Number(entry.userId) === Number(rival?.userId));
-  updateLeagueStanding(userStanding, userPercent, rivalPercent);
-  updateLeagueStanding(rivalStanding, rivalPercent, userPercent);
-  state.fixtureIndex = Math.max(0, Number(state.fixtureIndex) || 0) + 1;
+  const userPercent = clampPercent(session.challenger_percent);
+  const rivalPercent = clampPercent(session.opponent_percent);
+  for (let index = 0; index < round.matches.length; index += 1) {
+    const match = round.matches[index];
+    const left = match.left;
+    const right = match.right;
+    let leftPercent;
+    let rightPercent;
+    if (index === userMatchIndex) {
+      const leftIsUser = Number(left?.userId) === userId;
+      leftPercent = leftIsUser ? userPercent : rivalPercent;
+      rightPercent = leftIsUser ? rivalPercent : userPercent;
+    } else {
+      leftPercent = simulateSpeakingBattlePercent(left, `${competition.id}:league:${round.number}:${index}:left`);
+      rightPercent = simulateSpeakingBattlePercent(right, `${competition.id}:league:${round.number}:${index}:right`);
+    }
+    match.leftPercent = leftPercent;
+    match.rightPercent = rightPercent;
+    match.winner = resolveSpeakingBattleMatchWinner(left, right, leftPercent, rightPercent);
+    const leftStanding = standings.find((entry) => Number(entry.userId) === Number(left?.userId));
+    const rightStanding = standings.find((entry) => Number(entry.userId) === Number(right?.userId));
+    updateLeagueStanding(leftStanding, leftPercent, rightPercent);
+    updateLeagueStanding(rightStanding, rightPercent, leftPercent);
+  }
+
+  state.lastCompletedRoundNumber = Math.max(1, Number(round.number) || roundIndex + 1);
+  state.fixtureIndex = roundIndex + 1;
   state.currentSessionId = '';
   state.currentOpponent = null;
+  state.userMatchIndex = -1;
   state.leagueWindow = buildLeagueWindow(state);
-  return prepareSpeakingLeagueFixture(client, competition, state);
+
+  if (state.fixtureIndex >= rounds.length) {
+    state.reviewPending = false;
+    state.nextRoundLabel = '';
+    state.nextRoundMatches = [];
+    await saveSpeakingBattleCompetition(client, competition.id, 'completed', state);
+    return { status: 'completed', sessionId: '', state };
+  }
+
+  const nextRound = rounds[state.fixtureIndex];
+  state.nextRoundLabel = String(nextRound?.label || `Rodada ${state.fixtureIndex + 1}`);
+  state.nextRoundMatches = Array.isArray(nextRound?.matches) ? nextRound.matches : [];
+  state.reviewPending = true;
+  await saveSpeakingBattleCompetition(client, competition.id, 'active', state);
+  return { status: 'review', sessionId: '', state };
 }
 
 function mapSpeakingCompetitionState(format, status, state) {
   const normalizedFormat = normalizeSpeakingBattleVariant(format);
+  const cupRounds = Array.isArray(state?.rounds) ? state.rounds : [];
+  const leagueRounds = Array.isArray(state?.leagueRounds) ? state.leagueRounds : [];
+  const allRounds = normalizedFormat === 'cup' ? cupRounds : leagueRounds;
+  const lastCompletedRound = allRounds.find(
+    (round) => Number(round?.number) === Number(state?.lastCompletedRoundNumber)
+  ) || null;
+  let currentRound = null;
+  if (String(state?.currentSessionId || '').trim()) {
+    currentRound = normalizedFormat === 'cup'
+      ? cupRounds[cupRounds.length - 1] || null
+      : leagueRounds[Math.max(0, Number(state?.fixtureIndex) || 0)] || null;
+  }
+  const leagueRows = normalizedFormat === 'league' ? sortedLeagueStandings(state) : [];
+  const leagueWindow = normalizedFormat === 'league'
+    ? buildLeagueWindow(state).map((entry) => mapSpeakingLeagueStanding(entry, entry.position))
+    : [];
+
   return {
     id: String(state?.competitionId || '').trim(),
     format: normalizedFormat,
     status: String(status || 'active').trim(),
+    reviewPending: Boolean(state?.reviewPending),
     currentSessionId: String(state?.currentSessionId || '').trim(),
     currentRoundLabel: String(state?.currentRoundLabel || '').trim(),
-    currentOpponent: state?.currentOpponent || null,
+    currentOpponent: mapSpeakingBattleParticipant(state?.currentOpponent),
+    currentRoundMatches: Array.isArray(currentRound?.matches)
+      ? currentRound.matches.map((match) => mapSpeakingBattleMatch(match, false))
+      : [],
+    lastCompletedRoundLabel: String(lastCompletedRound?.label || '').trim(),
+    lastRoundResults: Array.isArray(lastCompletedRound?.matches)
+      ? lastCompletedRound.matches.map((match) => mapSpeakingBattleMatch(match, true))
+      : [],
+    nextRoundLabel: String(state?.nextRoundLabel || '').trim(),
+    nextRoundMatches: Array.isArray(state?.nextRoundMatches)
+      ? state.nextRoundMatches.map((match) => mapSpeakingBattleMatch(match, false))
+      : [],
     roundNumber: Math.max(0, Number(state?.roundNumber) || 0),
     fixtureIndex: Math.max(0, Number(state?.fixtureIndex) || 0),
-    fixtureTotal: Array.isArray(state?.fixtures) ? state.fixtures.length : 0,
-    leagueWindow: normalizedFormat === 'league' ? buildLeagueWindow(state) : [],
-    champion: state?.champion || null,
+    fixtureTotal: normalizedFormat === 'league'
+      ? leagueRounds.length
+      : 0,
+    leagueWindow,
+    fullStandings: leagueRows.map((entry, index) => mapSpeakingLeagueStanding(entry, index + 1)),
+    champion: mapSpeakingBattleParticipant(state?.champion),
     eliminatedIn: String(state?.eliminatedIn || '').trim()
   };
 }
-
 async function awardSpeakingBattleWin(client, sessionId, winnerUserId) {
   const normalizedWinnerUserId = Number(winnerUserId) || 0;
   if (!sessionId) return false;
@@ -12318,14 +12535,11 @@ function computeBotPronunciationPercent(botConfig, sessionId, cardIndex) {
 
 function buildBotPronunciationSamples(botConfig, sessionId, totalCards) {
   const count = Math.max(0, Number(totalCards) || 0);
-  const base = clampPercent(Number(botConfig?.pronunciationBase) || 0);
   if (!count) return [];
-  const roundPercent = clampPercent(computeBotVariance(
-    base,
-    BOT_SPEAKING_DUEL_VARIANCE_PERCENT,
-    `${sessionId}:round-pronunciation`
-  ));
-  return Array.from({ length: count }, () => roundPercent);
+  return Array.from(
+    { length: count },
+    (_entry, index) => computeBotPronunciationPercent(botConfig, sessionId, index)
+  );
 }
 
 function buildBotResponseTimeline(botConfig, sessionId, totalCards) {
@@ -21963,26 +22177,16 @@ app.post('/api/speaking/battle/start', async (req, res) => {
           percentSum: 0
         }))
       ];
-      for (let leftIndex = 1; leftIndex < standings.length; leftIndex += 1) {
-        for (let rightIndex = leftIndex + 1; rightIndex < standings.length; rightIndex += 1) {
-          const left = standings[leftIndex];
-          const right = standings[rightIndex];
-          const leftPercent = simulateSpeakingBattlePercent(left, `${competitionId}:league:${left.userId}:${right.userId}:left`);
-          const rightPercent = simulateSpeakingBattlePercent(right, `${competitionId}:league:${left.userId}:${right.userId}:right`);
-          updateLeagueStanding(left, leftPercent, rightPercent);
-          updateLeagueStanding(right, rightPercent, leftPercent);
-        }
-      }
-      const fixtures = leagueBots
-        .map(speakingBattleParticipantFromBot)
-        .sort((left, right) => Math.abs(left.expectedPercent - expectedPercent) - Math.abs(right.expectedPercent - expectedPercent));
+      const leagueRounds = buildSpeakingLeagueRounds(standings);
       const state = {
         competitionId,
         format: 'league',
         standings,
-        fixtures,
+        leagueRounds,
         fixtureIndex: 0,
-        expectedPercent
+        expectedPercent,
+        reviewPending: false,
+        lastCompletedRoundNumber: 0
       };
       state.leagueWindow = buildLeagueWindow(state);
       await client.query(
@@ -22056,6 +22260,22 @@ app.post('/api/speaking/battle/competitions/:competitionId/advance', async (req,
           status: competition.status,
           sessionId: '',
           competition: mapSpeakingCompetitionState(competition.format, competition.status, state)
+        });
+        return;
+      }
+      if (state.reviewPending) {
+        state.reviewPending = false;
+        state.nextRoundMatches = [];
+        state.nextRoundLabel = '';
+        const prepared = normalizeSpeakingBattleVariant(competition.format) === 'cup'
+          ? await prepareSpeakingCupRound(client, competition, state)
+          : await prepareSpeakingLeagueFixture(client, competition, state);
+        await client.query('COMMIT');
+        res.json({
+          success: true,
+          status: prepared.status,
+          sessionId: prepared.sessionId,
+          competition: mapSpeakingCompetitionState(competition.format, prepared.status, prepared.state)
         });
         return;
       }
@@ -22843,6 +23063,7 @@ app.get('/api/speaking/sessions/:sessionId/updates', async (req, res) => {
     const userId = Number(authUser.id) || 0;
     const afterMs = Date.parse(String(req.query?.after || '').trim());
     const waitStartedAt = Date.now();
+    let lastBotSyncAt = 0;
     if (!sessionId) {
       res.status(400).json({ success: false, message: 'Sessao invalida.' });
       return;
@@ -22861,21 +23082,30 @@ app.get('/api/speaking/sessions/:sessionId/updates', async (req, res) => {
       const result = await pool.query(
         `SELECT
            s.*,
+           cu.is_bot AS challenger_is_bot,
+           ou.is_bot AS opponent_is_bot,
            wu.id AS winner_id,
            COALESCE(NULLIF(wu.username, ''), wu.email) AS winner_name,
            COALESCE(wu.avatar_image, '') AS winner_avatar,
            wu.is_bot AS winner_is_bot,
            wu.bot_config AS winner_bot_config
          FROM public.speaking_duel_sessions s
+         INNER JOIN public.users cu ON cu.id = s.challenger_user_id
+         INNER JOIN public.users ou ON ou.id = s.opponent_user_id
          LEFT JOIN public.users wu ON wu.id = s.winner_user_id
          WHERE s.id = $1
          LIMIT 1`,
         [sessionId]
       );
-      const session = result.rows[0] || null;
+      let session = result.rows[0] || null;
       if (!session) {
         res.status(404).json({ success: false, message: 'Sessao nao encontrada.' });
         return;
+      }
+      const hasBotParticipant = Boolean(session.challenger_is_bot || session.opponent_is_bot);
+      if (hasBotParticipant && (Date.now() - lastBotSyncAt) >= 320) {
+        session = await syncBotStateIntoSpeakingSession(pool, session);
+        lastBotSyncAt = Date.now();
       }
       const challengerUserId = Number(session.challenger_user_id) || 0;
       const opponentUserId = Number(session.opponent_user_id) || 0;
