@@ -2027,6 +2027,360 @@
         margin-top: 0;
       }
     }
+
+    /* Battle Cards: HUD de 15% + área de jogo de 85% */
+    .battle-cards-hud {
+      display: contents;
+    }
+
+    .speaking-game:not(.is-battle-cards) .battle-cards-match-head {
+      display: none;
+    }
+
+    .speaking-game.is-battle-cards.is-active {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      width: 100vw;
+      max-width: none;
+      height: 100vh;
+      height: 100svh;
+      height: 100dvh;
+      min-height: 100dvh;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 15dvh 85dvh;
+      background-color: #06142d;
+      box-sizing: border-box;
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-hud {
+      position: relative;
+      grid-row: 1;
+      width: 100vw;
+      height: 15dvh;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(92px, 0.72fr) minmax(0, 1fr);
+      align-items: center;
+      padding:
+        max(4px, env(safe-area-inset-top, 0px))
+        clamp(8px, 2.8vw, 28px)
+        4px;
+      border-bottom: 1px solid rgba(126, 231, 255, 0.16);
+      background: linear-gradient(180deg, rgba(4, 14, 38, 0.98), rgba(5, 20, 48, 0.9));
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      box-sizing: border-box;
+      overflow: hidden;
+      z-index: 4;
+    }
+
+    .speaking-game.is-battle-cards .duel-head,
+    .speaking-game.is-battle-cards .league-standing {
+      display: none !important;
+    }
+
+    .speaking-game.is-battle-cards .duel-avatars {
+      display: contents;
+    }
+
+    .speaking-game.is-battle-cards .duel-avatar {
+      min-width: 0;
+      width: min(100%, 190px);
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      align-items: center;
+      column-gap: clamp(6px, 1.4vw, 12px);
+      row-gap: 0;
+    }
+
+    .speaking-game.is-battle-cards .duel-avatar--me {
+      grid-column: 1;
+      justify-self: start;
+      justify-items: start;
+      text-align: left;
+    }
+
+    .speaking-game.is-battle-cards .duel-avatar--enemy {
+      grid-column: 3;
+      justify-self: end;
+      justify-items: end;
+      grid-template-columns: minmax(0, 1fr) auto;
+      text-align: right;
+    }
+
+    .speaking-game.is-battle-cards .duel-avatar__ring,
+    .speaking-game.is-battle-cards .duel-avatar__ring.enemy {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      width: clamp(34px, 7.6dvh, 58px);
+      height: clamp(34px, 7.6dvh, 58px);
+      padding: 2px !important;
+      background: rgba(255, 255, 255, 0.12) !important;
+    }
+
+    .speaking-game.is-battle-cards .duel-avatar--enemy .duel-avatar__ring {
+      grid-column: 2;
+    }
+
+    .speaking-game.is-battle-cards .duel-avatar__ring img {
+      outline: 2px solid rgba(6, 17, 38, 0.92);
+      outline-offset: -1px;
+    }
+
+    .speaking-game.is-battle-cards .duel-avatar__name {
+      grid-column: 2;
+      display: block !important;
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      color: #e9f8ff;
+      font-size: clamp(10px, 1.75dvh, 14px);
+      line-height: 1.05;
+      text-align: inherit;
+    }
+
+    .speaking-game.is-battle-cards .duel-avatar--enemy .duel-avatar__name,
+    .speaking-game.is-battle-cards .duel-avatar--enemy .duel-avatar__percent {
+      grid-column: 1;
+    }
+
+    .speaking-game.is-battle-cards .duel-avatar__percent {
+      grid-column: 2;
+      margin: 1px 0 0;
+      font-size: clamp(12px, 2.15dvh, 18px);
+      line-height: 1;
+      text-align: inherit;
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-match-head {
+      grid-column: 2;
+      grid-row: 1;
+      align-self: center;
+      justify-self: center;
+      width: 100%;
+      min-width: 0;
+      display: grid;
+      place-items: center;
+      gap: 1px;
+      padding: 0 0 17px;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      text-align: center;
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-match-head strong {
+      color: #8eeaff;
+      font-size: clamp(10px, 1.8dvh, 15px);
+      line-height: 1.05;
+      white-space: nowrap;
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-match-head span {
+      min-width: 0;
+      color: #ffd85e;
+      font-size: clamp(12px, 2dvh, 17px);
+      line-height: 1;
+    }
+
+    .speaking-game.is-battle-cards .duel-timer {
+      grid-column: 2;
+      grid-row: 1;
+      align-self: end;
+      justify-self: center;
+      margin: 0 0 2px;
+      gap: 4px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: clamp(9px, 1.55dvh, 12px);
+      line-height: 1;
+      text-shadow: none;
+    }
+
+    .speaking-game.is-battle-cards .duel-timer__icon {
+      width: clamp(10px, 1.55dvh, 13px);
+      height: clamp(10px, 1.55dvh, 13px);
+      color: rgba(255, 255, 255, 0.72);
+      filter: none;
+    }
+
+    .speaking-game.is-battle-cards .duel-timer__value {
+      min-width: 0;
+      color: rgba(255, 255, 255, 0.8);
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-stage {
+      grid-row: 2;
+      width: 100vw;
+      height: 85dvh;
+      min-height: 0;
+      margin: 0;
+      padding:
+        clamp(7px, 1.5dvh, 14px)
+        clamp(12px, 3vw, 28px)
+        max(clamp(8px, 1.8dvh, 16px), env(safe-area-inset-bottom, 0px));
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: clamp(7px, 1.45dvh, 14px);
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      box-sizing: border-box;
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-visual {
+      width: clamp(138px, 27dvh, 240px);
+      height: clamp(138px, 27dvh, 240px);
+      max-width: calc(100vw - 36px);
+      max-height: calc(100vw - 36px);
+      flex: 0 0 auto;
+    }
+
+    .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-visual {
+      width: clamp(96px, 16dvh, 148px);
+      height: clamp(96px, 16dvh, 148px);
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-translation {
+      min-height: 0;
+      margin: 0;
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-phase-word {
+      max-width: min(680px, calc(100vw - 28px));
+      min-height: 0;
+      padding: clamp(8px, 1.3dvh, 12px) clamp(12px, 3vw, 20px);
+      border-radius: 14px;
+      font-size: clamp(20px, 3.25dvh, 34px);
+      line-height: 1.05;
+    }
+
+    .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-phase-word {
+      font-size: clamp(18px, 2.8dvh, 28px);
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-typing {
+      width: min(470px, calc(100vw - 24px));
+      gap: clamp(7px, 1.25dvh, 13px);
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-typing__slots {
+      min-height: clamp(34px, 5.5dvh, 48px);
+      padding: 2px;
+      gap: 4px;
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-typing__slot {
+      min-width: 16px;
+      height: clamp(24px, 4dvh, 32px);
+      font-size: clamp(16px, 2.8dvh, 21px);
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-typing__keys {
+      width: min(316px, calc(100vw - 32px), 39dvh);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(7px, 1.15dvh, 10px);
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-typing__key {
+      width: 100%;
+      min-width: 0;
+      min-height: 0;
+      aspect-ratio: 1 / 1;
+      padding: 0;
+      border-radius: clamp(11px, 2dvh, 16px);
+      font-size: 25.2px;
+      line-height: 1;
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-typing__key.is-replaced {
+      animation: battleKeyReplace 180ms ease-out;
+    }
+
+    .speaking-game.is-battle-cards.is-prestart .battle-cards-hud {
+      visibility: hidden;
+    }
+
+    .speaking-game.is-battle-cards.is-winner .battle-cards-hud,
+    .speaking-game.is-battle-cards.is-winner .battle-cards-stage {
+      visibility: hidden;
+    }
+
+    @keyframes battleKeyReplace {
+      0% { opacity: 0.35; transform: scale(0.88); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    @media (orientation: landscape) and (max-height: 680px) {
+      .speaking-game.is-battle-cards .battle-cards-hud {
+        grid-template-columns: minmax(0, 1fr) minmax(108px, 0.62fr) minmax(0, 1fr);
+        padding-top: max(2px, env(safe-area-inset-top, 0px));
+        padding-bottom: 2px;
+      }
+
+      .speaking-game.is-battle-cards .duel-avatar__ring,
+      .speaking-game.is-battle-cards .duel-avatar__ring.enemy {
+        width: clamp(30px, 8dvh, 48px);
+        height: clamp(30px, 8dvh, 48px);
+      }
+
+      .speaking-game.is-battle-cards .battle-cards-match-head {
+        padding-bottom: 13px;
+      }
+
+      .speaking-game.is-battle-cards .battle-cards-stage {
+        grid-template-columns: minmax(118px, 35vw) minmax(250px, 1fr);
+        grid-template-rows: auto 1fr;
+        column-gap: clamp(12px, 3vw, 30px);
+        row-gap: 5px;
+        padding-top: 5px;
+        padding-bottom: max(5px, env(safe-area-inset-bottom, 0px));
+      }
+
+      .speaking-game.is-battle-cards .battle-cards-visual {
+        grid-column: 1;
+        grid-row: 1 / 3;
+        align-self: center;
+        width: min(56dvh, 30vw);
+        height: min(56dvh, 30vw);
+      }
+
+      .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-visual {
+        width: min(39dvh, 24vw);
+        height: min(39dvh, 24vw);
+      }
+
+      .speaking-game.is-battle-cards .battle-cards-translation {
+        grid-column: 2;
+        grid-row: 1;
+        align-self: end;
+      }
+
+      .speaking-game.is-battle-cards .battle-cards-typing {
+        grid-column: 2;
+        grid-row: 2;
+        align-self: start;
+        width: min(470px, 57vw);
+      }
+
+      .speaking-game.is-battle-cards .battle-cards-typing__keys {
+        width: min(50dvh, 300px, 47vw);
+      }
+
+      .speaking-game.is-battle-cards:not([data-battle-phase="1"]) .battle-cards-translation {
+        align-self: center;
+        grid-row: 1 / 3;
+      }
+    }
   </style>
   <link rel="stylesheet" href="css/video-background.css">
 </head>
@@ -2148,7 +2502,8 @@
         <p class="duel-intro__countdown" id="duelIntroCountdown">O desafio vai começar em 10...</p>
       </section>
 
-      <div class="duel-head">
+      <header class="battle-cards-hud" id="battleCardsHud">
+        <div class="duel-head">
         <div class="speaking-percent" id="speakingPercent">Pontos 0</div>
         <div class="enemy-speaking" id="enemySpeakingPercent">Rival 0</div>
       </div>
@@ -2160,7 +2515,7 @@
         <svg class="duel-timer__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path fill="currentColor" d="M12 6.4a.9.9 0 0 1 .9.9v4.22l2.69 1.56a.9.9 0 0 1-.9 1.55l-3.14-1.82a.9.9 0 0 1-.45-.78V7.3a.9.9 0 0 1 .9-.9M12 2.8a9.2 9.2 0 1 1 0 18.4 9.2 9.2 0 0 1 0-18.4m0 1.8a7.4 7.4 0 1 0 0 14.8 7.4 7.4 0 0 0 0-14.8"/>
         </svg>
-        <span class="duel-timer__value" id="duelTimerValue">03:00</span>
+        <span class="duel-timer__value" id="duelTimerValue">00:00</span>
       </p>
 
       <div class="duel-avatars" id="duelAvatarsWrap">
@@ -2179,11 +2534,12 @@
           <p class="duel-avatar__percent enemy" id="enemyAvatarPercent">0</p>
         </article>
       </div>
-      <section class="battle-cards-stage" id="battleCardsStage" hidden>
         <div class="battle-cards-match-head" aria-live="polite">
-          <strong id="battleCardsPhaseLabel">Fase 1 · Digitação</strong>
+          <strong id="battleCardsPhaseLabel">Fase 1</strong>
           <span id="battleCardsPhaseWins">0 × 0</span>
         </div>
+      </header>
+      <section class="battle-cards-stage" id="battleCardsStage" hidden>
         <button class="battle-cards-visual" id="battleCardsVisualBtn" type="button" aria-label="Reproduzir áudio na língua destino">
           <img id="battleCardsImage" src="" alt="Flashcard atual" hidden>
           <div class="battle-cards-visual__fallback" id="battleCardsFallback" hidden></div>
