@@ -23969,11 +23969,11 @@ app.post('/api/speaking/sessions/:sessionId/intro-ready', async (req, res) => {
       || (challengerReadyAt && opponentReadyAt ? nowIso : null);
     const update = await client.query(
       `UPDATE public.speaking_duel_sessions
-       SET challenger_intro_ready_at = $2,
-           opponent_intro_ready_at = $3,
-           battle_started_at = $4,
-           challenger_last_seen_at = CASE WHEN $4 IS NOT NULL THEN now() ELSE challenger_last_seen_at END,
-           opponent_last_seen_at = CASE WHEN $4 IS NOT NULL THEN now() ELSE opponent_last_seen_at END,
+       SET challenger_intro_ready_at = $2::timestamptz,
+           opponent_intro_ready_at = $3::timestamptz,
+           battle_started_at = $4::timestamptz,
+           challenger_last_seen_at = CASE WHEN $4::timestamptz IS NOT NULL THEN now() ELSE challenger_last_seen_at END,
+           opponent_last_seen_at = CASE WHEN $4::timestamptz IS NOT NULL THEN now() ELSE opponent_last_seen_at END,
            updated_at = now()
        WHERE id = $1
        RETURNING challenger_intro_ready_at, opponent_intro_ready_at, battle_started_at`,
