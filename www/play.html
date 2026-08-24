@@ -13593,7 +13593,7 @@
                 <button class="cards-battle-search__mode" type="button" data-battle-format="cup">Copa</button>
                 <button class="cards-battle-search__mode" type="button" data-battle-format="league">Liga</button>
               </div>
-              <p class="cards-battle-search__status" id="cardsBattleFallbackStatus">Escolha um dos 20 adversarios.</p>
+              <p class="cards-battle-search__status" id="cardsBattleFallbackStatus">Escolha um adversario.</p>
               <div class="cards-battle-search__bots" id="cardsBattleBotsList"></div>
               <button class="cards-battle-search__start-mode" id="cardsBattleStartModeBtn" type="button" hidden>Comecar</button>
             </div>
@@ -24302,7 +24302,7 @@
           : cardsBattleBots;
         if (els.cardsBattleFallbackStatus) {
           els.cardsBattleFallbackStatus.textContent = format === 'simple'
-            ? 'Escolha um dos 20 adversarios para jogar agora.'
+            ? `Escolha um dos ${cardsBattleBots.length} adversarios para jogar agora.`
             : format === 'cup'
               ? 'Voce + os 15 melhores. Veja o chaveamento antes de cada fase e todos os resultados ao final dela.'
               : 'Voce + 19 bots em 19 rodadas. Ao fim de cada rodada, veja todos os placares e a classificacao completa.';
@@ -24336,7 +24336,7 @@
         cardsBattleFallbackBusy = true;
         cardsBattleSelectedFormat = 'simple';
         setCardsBattleFallbackView(true);
-        if (els.cardsBattleFallbackStatus) els.cardsBattleFallbackStatus.textContent = 'Carregando os 20 adversarios...';
+        if (els.cardsBattleFallbackStatus) els.cardsBattleFallbackStatus.textContent = 'Carregando adversarios...';
         try {
           await fetch(buildApiUrl('/api/speaking/matchmaking/cancel'), {
             method: 'POST',

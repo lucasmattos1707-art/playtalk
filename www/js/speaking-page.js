@@ -1808,9 +1808,9 @@
   }
 
   function playDuelCardsPreviewAudio(card) {
-    if (!card) return;
+    if (!card) return Promise.resolve();
     stopBattleCardsPromptAudio();
-    void playBattleCardsTargetReveal(card);
+    return playBattleCardsTargetReveal(card);
   }
 
   function renderDuelCardsPreview(cardIndex) {
@@ -1848,13 +1848,36 @@
     }
   }
 
+  async function markDuelIntroReadyAndWait() {
+    const response = await fetch(buildApiUrl(`/api/speaking/sessions/${encodeURIComponent(state.duel.sessionId)}/intro-ready`), {
+      method: 'POST',
+      credentials: 'include',
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: '{}'
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success) {
+      throw new Error(payload?.message || 'Nao consegui concluir o pre-jogo.');
+    }
+    let readySession = payload.session || {};
+    while (state.duel.enabled && !state.duel.completed && !safeText(readySession?.battleStartsAt)) {
+      if (els.duelIntroCountdown) {
+        els.duelIntroCountdown.textContent = readySession?.rivalIntroReady
+          ? 'Preparando o Battle...'
+          : 'Aguardando o outro jogador terminar a apresentacao...';
+      }
+      await waitMs(500);
+      readySession = await fetchDuelSession();
+      syncDuelView(readySession);
+    }
+    const startsAtMs = Date.parse(String(readySession?.battleStartsAt || '').trim());
+    const endsAtMs = Date.parse(String(readySession?.battleEndsAt || '').trim());
+    if (Number.isFinite(startsAtMs) && startsAtMs > 0) state.duel.battleStartsAtMs = startsAtMs;
+    if (Number.isFinite(endsAtMs) && endsAtMs > 0) state.duel.battleDeadlineMs = endsAtMs;
+  }
+
   async function runBattleCardsPresentation() {
     if (!state.duel.enabled || !state.activeCards.length) return;
-    const totalDurationMs = Math.max(1000, state.duel.introCountdownSeconds * 1000);
-    const battleStartsAtMs = state.duel.battleStartsAtMs > 0
-      ? state.duel.battleStartsAtMs
-      : Date.now() + totalDurationMs;
-    const presentationStartedAtMs = battleStartsAtMs - totalDurationMs;
 
     setDuelIntroVisible(true);
     resetDuelIntroVisuals();
@@ -1863,33 +1886,22 @@
     void playBattleIntroAudio();
 
     const hasCupPreview = renderDuelCompetitionPreview();
-    const competitionDurationMs = hasCupPreview ? Math.min(6000, totalDurationMs * 0.18) : 0;
-    const versusDurationMs = Math.min(3000, totalDurationMs * 0.14);
-    const competitionEndsAtMs = presentationStartedAtMs + competitionDurationMs;
-    const versusEndsAtMs = competitionEndsAtMs + versusDurationMs;
-
-    if (hasCupPreview && Date.now() < competitionEndsAtMs) {
+    if (hasCupPreview && state.duel.enabled && !state.duel.completed) {
       els.duelIntro?.classList.add('is-competition-preview');
-      while (state.duel.enabled && !state.duel.completed && Date.now() < competitionEndsAtMs) {
-        if (els.duelIntroCountdown) {
-          els.duelIntroCountdown.textContent = 'Confira o chaveamento';
-        }
-        await new Promise((resolve) => window.setTimeout(resolve, 80));
-      }
+      if (els.duelIntroCountdown) els.duelIntroCountdown.textContent = 'Confira o chaveamento';
+      await waitMs(4200);
     }
 
-    if (state.duel.enabled && !state.duel.completed && Date.now() < versusEndsAtMs) {
+    if (state.duel.enabled && !state.duel.completed) {
       els.duelIntro?.classList.remove('is-competition-preview');
       if (els.duelCompetitionPreview) els.duelCompetitionPreview.hidden = true;
       revealDuelIntroPlayers(true);
-      while (state.duel.enabled && !state.duel.completed && Date.now() < versusEndsAtMs) {
-        const remainingMs = versusEndsAtMs - Date.now();
-        if (remainingMs <= 520) dissolveDuelIntroPlayers();
-        if (els.duelIntroCountdown) {
-          els.duelIntroCountdown.textContent = `${state.duel.meName || 'Voce'} vs ${state.duel.rivalName || 'Adversario'}`;
-        }
-        await new Promise((resolve) => window.setTimeout(resolve, 80));
+      if (els.duelIntroCountdown) {
+        els.duelIntroCountdown.textContent = `${state.duel.meName || 'Voce'} vs ${state.duel.rivalName || 'Adversario'}`;
       }
+      await waitMs(2400);
+      dissolveDuelIntroPlayers();
+      await waitMs(520);
     }
 
     stopBattleIntroAudio();
@@ -1900,31 +1912,32 @@
     els.duelIntro?.classList.remove('is-player-stage', 'is-competition-preview');
     els.duelIntro?.classList.add('is-cards-preview');
 
-    const cardsStartAtMs = Math.max(presentationStartedAtMs, versusEndsAtMs);
-    const cardsDurationMs = Math.max(1, battleStartsAtMs - cardsStartAtMs);
-    const cardDurationMs = cardsDurationMs / state.activeCards.length;
-    let previousIndex = -1;
-    while (state.duel.enabled && !state.duel.completed && Date.now() < battleStartsAtMs) {
-      const elapsedMs = Math.max(0, Date.now() - cardsStartAtMs);
-      const cardIndex = Math.min(state.activeCards.length - 1, Math.floor(elapsedMs / cardDurationMs));
-      if (cardIndex !== previousIndex) {
-        previousIndex = cardIndex;
-        renderDuelCardsPreview(cardIndex);
-        playDuelCardsPreviewAudio(state.activeCards[cardIndex]);
-      }
+    for (let cardIndex = 0; cardIndex < state.activeCards.length; cardIndex += 1) {
+      if (!state.duel.enabled || state.duel.completed) break;
+      const card = state.activeCards[cardIndex];
+      renderDuelCardsPreview(cardIndex);
       if (els.duelIntroCountdown) {
-        const seconds = Math.max(1, Math.ceil((battleStartsAtMs - Date.now()) / 1000));
-        els.duelIntroCountdown.textContent = `Battle comeca em ${seconds}...`;
+        els.duelIntroCountdown.textContent = `Carta ${cardIndex + 1} de ${state.activeCards.length}`;
       }
-      await new Promise((resolve) => window.setTimeout(resolve, 80));
+      await playDuelCardsPreviewAudio(card);
+      if (!state.duel.enabled || state.duel.completed) break;
+      await waitMs(420);
     }
+
     stopBattleCardsPromptAudio();
+    if (!state.duel.enabled || state.duel.completed) {
+      setDuelIntroVisible(false);
+      return;
+    }
+
+    await markDuelIntroReadyAndWait();
     if (state.duel.enabled && !state.duel.completed && els.duelIntroCountdown) {
       els.duelIntroCountdown.textContent = 'Valendo!';
-      await new Promise((resolve) => window.setTimeout(resolve, 180));
+      await waitMs(180);
     }
     setDuelIntroVisible(false);
   }
+
   async function runDuelIntroCountdown() {
     if (!state.duel.enabled) return;
     if (isBattleCardsMode()) {
@@ -2654,7 +2667,7 @@
     const battleEndsAtMs = Date.parse(String(session?.battleEndsAt || '').trim());
     if (Number.isFinite(battleEndsAtMs) && battleEndsAtMs > 0) {
       state.duel.battleDeadlineMs = battleEndsAtMs;
-    } else {
+    } else if (!isBattleCardsMode()) {
       const createdAtMs = Date.parse(String(session?.createdAt || '').trim());
       if (Number.isFinite(createdAtMs) && createdAtMs > 0) {
         state.duel.battleDeadlineMs = createdAtMs + (state.duel.introCountdownSeconds * 1000) + state.duel.battleDurationMs;
@@ -3462,7 +3475,7 @@
       Number.parseInt(session?.introCountdownSeconds, 10) || DUEL_INTRO_COUNTDOWN_SECONDS
     );
     state.duel.battleDurationMs = resolveDuelBattleDurationMs(session);
-    if (!state.duel.battleDeadlineMs) {
+    if (!isBattleCardsMode() && !state.duel.battleDeadlineMs) {
       const createdAtMs = Date.parse(String(session?.createdAt || '').trim());
       if (Number.isFinite(createdAtMs) && createdAtMs > 0) {
         state.duel.battleDeadlineMs = createdAtMs + (state.duel.introCountdownSeconds * 1000) + state.duel.battleDurationMs;

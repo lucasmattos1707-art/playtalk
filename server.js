@@ -3059,6 +3059,12 @@ const ensureSpeakingRealtimeTables = async () => {
         ADD COLUMN IF NOT EXISTS competition_round integer NOT NULL DEFAULT 0
       `);
       await pool.query(`
+        ALTER TABLE public.speaking_duel_sessions
+        ADD COLUMN IF NOT EXISTS challenger_intro_ready_at timestamptz,
+        ADD COLUMN IF NOT EXISTS opponent_intro_ready_at timestamptz,
+        ADD COLUMN IF NOT EXISTS battle_started_at timestamptz
+      `);
+      await pool.query(`
         CREATE TABLE IF NOT EXISTS public.speaking_battle_results (
           id bigserial PRIMARY KEY,
           session_id text NOT NULL REFERENCES public.speaking_duel_sessions(id) ON DELETE CASCADE,
@@ -6156,11 +6162,33 @@ const normalizeBotConfig = (value, options = {}) => {
   const requirePhoto = options.requirePhoto !== false;
   const username = normalizeUsername(source.username || source.name || '');
   const flashcardsCount = normalizeFlashcardsCount(source.flashcardsCount);
-  const pronunciationBase = clampPercent(source.pronunciationBase);
+  const requestedMin = Number(source.pronunciationMin);
+  const requestedMax = Number(source.pronunciationMax);
+  const fallbackBase = clampPercent(source.pronunciationBase);
+  const pronunciationMin = Number.isFinite(requestedMin)
+    ? clampPercent(requestedMin)
+    : Math.max(0, fallbackBase - BOT_SPEAKING_DUEL_VARIANCE_PERCENT);
+  const pronunciationMax = Number.isFinite(requestedMax)
+    ? clampPercent(requestedMax)
+    : Math.min(100, fallbackBase + BOT_SPEAKING_DUEL_VARIANCE_PERCENT);
+  const pronunciationBase = clampPercent(
+    Number.isFinite(Number(source.pronunciationBase))
+      ? source.pronunciationBase
+      : ((pronunciationMin + pronunciationMax) / 2)
+  );
   const flashcardsPerHour = Math.max(0, Math.round(Number(source.flashcardsPerHour) || 0));
   const responseSeconds = Math.max(1, Math.min(30, Number(source.responseSeconds) || 3));
   const updateHour = clampBotUpdateHour(source.updateHour);
   const sourceImageDataUrl = source.sourceImageDataUrl ? normalizeAvatarImage(source.sourceImageDataUrl) : '';
+  const displayName = String(source.displayName || username).trim().slice(0, 64) || username;
+  const battleBotKey = String(source.battleBotKey || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+  const chosenLevel = normalizeUserFlashcardLevel(source.chosenLevel || pronunciationBase || 1);
+  const battleEnabled = source.battleEnabled === true;
 
   if (!isValidUsername(username)) {
     const error = new Error('Nome do bot invalido. Use de 3 a 32 caracteres.');
@@ -6172,8 +6200,13 @@ const normalizeBotConfig = (value, options = {}) => {
     error.statusCode = 400;
     throw error;
   }
-  if (pronunciationBase <= 0) {
+  if (pronunciationBase <= 0 && !battleEnabled) {
     const error = new Error('Pronuncia invalida.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (pronunciationMin > pronunciationMax) {
+    const error = new Error('A porcentagem minima nao pode ser maior que a maxima.');
     error.statusCode = 400;
     throw error;
   }
@@ -6190,8 +6223,14 @@ const normalizeBotConfig = (value, options = {}) => {
 
   return {
     username,
+    displayName,
+    battleBotKey,
+    battleEnabled,
+    chosenLevel,
     flashcardsCount,
     pronunciationBase,
+    pronunciationMin,
+    pronunciationMax,
     flashcardsPerHour,
     responseSeconds,
     updateHour,
@@ -11764,9 +11803,12 @@ async function ensureSpeakingBattleBots(client = pool) {
       username: bot.username,
       displayName: bot.name,
       battleBotKey: bot.key,
+      battleEnabled: true,
       chosenLevel: bot.chosenLevel,
       flashcardsCount: 1200 + (index * 180),
       pronunciationBase: bot.pronunciationBase,
+      pronunciationMin: Math.max(0, bot.pronunciationBase - BOT_SPEAKING_DUEL_VARIANCE_PERCENT),
+      pronunciationMax: Math.min(100, bot.pronunciationBase + BOT_SPEAKING_DUEL_VARIANCE_PERCENT),
       flashcardsPerHour: 420 + (index * 18),
       responseSeconds: bot.responseSeconds,
       updateHour: 6
@@ -11779,34 +11821,51 @@ async function ensureSpeakingBattleBots(client = pool) {
        )
        VALUES ($1, $2, $3, $4, true, true, true, true, $5::jsonb, 'ready')
        ON CONFLICT (email)
-       DO UPDATE SET
-         avatar_image = EXCLUDED.avatar_image,
-         is_bot = true,
-         bot_config = EXCLUDED.bot_config,
-         bot_avatar_status = 'ready'
+       DO NOTHING
        RETURNING id, email, username, avatar_image, is_bot, bot_config`,
       [bot.email, bot.username, passwordHash || crypto.randomBytes(32).toString('hex'), bot.avatar, JSON.stringify(config)]
     );
-    byEmail.set(bot.email.toLowerCase(), saved.rows[0]);
+    if (saved.rows[0]) byEmail.set(bot.email.toLowerCase(), saved.rows[0]);
   }
 
-  return SPEAKING_BATTLE_BOTS.map((definition) => {
-    const row = byEmail.get(definition.email.toLowerCase()) || {};
+  const result = await client.query(
+    `SELECT id, email, username, avatar_image, is_bot, bot_config
+     FROM public.users
+     WHERE is_bot = true
+       AND (
+         email = ANY($1::text[])
+         OR LOWER(COALESCE(bot_config->>'battleEnabled', 'false')) = 'true'
+       )
+     ORDER BY id ASC`,
+    [emails]
+  );
+  const definitionsByEmail = new Map(SPEAKING_BATTLE_BOTS.map((bot) => [bot.email.toLowerCase(), bot]));
+  return result.rows.map((row) => {
+    const definition = definitionsByEmail.get(String(row.email || '').toLowerCase()) || null;
+    const config = parseBotConfig(row.bot_config, { fallbackUsername: row.username || row.email || '' });
+    const expectedFallback = Number(definition?.pronunciationBase) || 50;
+    const minPercent = Number.isFinite(Number(config?.pronunciationMin))
+      ? clampPercent(config.pronunciationMin)
+      : Math.max(0, expectedFallback - BOT_SPEAKING_DUEL_VARIANCE_PERCENT);
+    const maxPercent = Number.isFinite(Number(config?.pronunciationMax))
+      ? clampPercent(config.pronunciationMax)
+      : Math.min(100, expectedFallback + BOT_SPEAKING_DUEL_VARIANCE_PERCENT);
+    const expectedPercent = clampPercent((minPercent + maxPercent) / 2);
     return {
       userId: Number(row.id) || 0,
-      key: definition.key,
-      username: definition.name,
-      avatarImage: String(row.avatar_image || definition.avatar).trim(),
-      expectedPercent: definition.pronunciationBase,
-      minPercent: Math.max(0, definition.pronunciationBase - BOT_SPEAKING_DUEL_VARIANCE_PERCENT),
-      maxPercent: Math.min(100, definition.pronunciationBase + BOT_SPEAKING_DUEL_VARIANCE_PERCENT),
-      chosenLevel: definition.chosenLevel,
-      responseSeconds: definition.responseSeconds,
+      key: String(config?.battleBotKey || definition?.key || `battle-bot-${row.id}`).trim().toLowerCase(),
+      username: String(config?.displayName || definition?.name || row.username || 'Bot').trim(),
+
+      avatarImage: String(row.avatar_image || definition?.avatar || '/Avatar/profile-neon-blue.svg').trim(),
+      expectedPercent,
+      minPercent: Math.min(minPercent, maxPercent),
+      maxPercent: Math.max(minPercent, maxPercent),
+      chosenLevel: normalizeUserFlashcardLevel(config?.chosenLevel || definition?.chosenLevel || expectedPercent),
+      responseSeconds: Math.max(1, Math.min(30, Number(config?.responseSeconds || definition?.responseSeconds) || 3)),
       isBot: true
     };
   }).filter((bot) => bot.userId > 0);
 }
-
 async function readSpeakingBattleHistory(client, userId) {
   const result = await client.query(
     `SELECT r.session_id, r.battle_variant, r.pronunciation_percent,
@@ -11960,11 +12019,16 @@ async function createSpeakingBattleBotSession(client, options = {}) {
 }
 
 function simulateSpeakingBattlePercent(participant, seed) {
-  return clampPercent(computeBotVariance(
-    Number(participant?.expectedPercent) || 0,
-    BOT_SPEAKING_DUEL_VARIANCE_PERCENT,
-    seed
-  ));
+  const fallback = clampPercent(participant?.expectedPercent);
+  const minPercent = Number.isFinite(Number(participant?.minPercent))
+    ? clampPercent(participant.minPercent)
+    : Math.max(0, fallback - BOT_SPEAKING_DUEL_VARIANCE_PERCENT);
+  const maxPercent = Number.isFinite(Number(participant?.maxPercent))
+    ? clampPercent(participant.maxPercent)
+    : Math.min(100, fallback + BOT_SPEAKING_DUEL_VARIANCE_PERCENT);
+  const lower = Math.min(minPercent, maxPercent);
+  const upper = Math.max(minPercent, maxPercent);
+  return clampPercent(lower + ((upper - lower) * seededUnitInterval(seed)));
 }
 
 function updateLeagueStanding(standing, ownPercent, rivalPercent) {
@@ -12015,6 +12079,8 @@ function speakingBattleParticipantFromBot(bot) {
     name: String(bot?.username || 'Bot').trim(),
     avatarImage: String(bot?.avatarImage || '').trim(),
     expectedPercent: clampPercent(bot?.expectedPercent),
+    minPercent: clampPercent(bot?.minPercent),
+    maxPercent: clampPercent(bot?.maxPercent),
     chosenLevel: normalizeUserFlashcardLevel(bot?.chosenLevel),
     isUser: false,
     isBot: true,
@@ -12508,13 +12574,20 @@ function resolveSpeakingDuelIntroSeconds(session) {
     : SPEAKING_DUEL_INTRO_SECONDS;
 }
 
-function isSpeakingDuelBattleExpired(session) {
+function resolveSpeakingDuelBattleStartedAtMs(session) {
+  const explicitStartedAtMs = Date.parse(String(session?.battle_started_at || '').trim());
+  if (Number.isFinite(explicitStartedAtMs) && explicitStartedAtMs > 0) return explicitStartedAtMs;
+  if (normalizeSpeakingChallengeMode(session?.mode) === SPEAKING_DUEL_CARDS_MODE) return 0;
   const createdAtMs = Date.parse(String(session?.created_at || '').trim());
-  if (!Number.isFinite(createdAtMs) || createdAtMs <= 0) return false;
-  const introSeconds = resolveSpeakingDuelIntroSeconds(session);
+  if (!Number.isFinite(createdAtMs) || createdAtMs <= 0) return 0;
+  return createdAtMs + (resolveSpeakingDuelIntroSeconds(session) * 1000);
+}
+
+function isSpeakingDuelBattleExpired(session) {
+  const battleStartedAtMs = resolveSpeakingDuelBattleStartedAtMs(session);
+  if (!battleStartedAtMs) return false;
   const battleSeconds = Math.max(1, Number(session?.battle_duration_seconds) || SPEAKING_DUEL_BATTLE_SECONDS);
-  const deadlineMs = createdAtMs + ((introSeconds + battleSeconds) * 1000);
-  return Date.now() >= deadlineMs;
+  return Date.now() >= (battleStartedAtMs + (battleSeconds * 1000));
 }
 
 function computeBotResponseSeconds(botConfig, sessionId, cardIndex) {
@@ -12524,13 +12597,16 @@ function computeBotResponseSeconds(botConfig, sessionId, cardIndex) {
 }
 
 function computeBotPronunciationPercent(botConfig, sessionId, cardIndex) {
-  return clampPercent(
-    computeBotVariance(
-      Number(botConfig?.pronunciationBase) || 0,
-      BOT_SPEAKING_DUEL_VARIANCE_PERCENT,
-      `${sessionId}:pron:${cardIndex}`
-    )
-  );
+  const fallback = clampPercent(botConfig?.pronunciationBase);
+  const minPercent = Number.isFinite(Number(botConfig?.pronunciationMin))
+    ? clampPercent(botConfig.pronunciationMin)
+    : Math.max(0, fallback - BOT_SPEAKING_DUEL_VARIANCE_PERCENT);
+  const maxPercent = Number.isFinite(Number(botConfig?.pronunciationMax))
+    ? clampPercent(botConfig.pronunciationMax)
+    : Math.min(100, fallback + BOT_SPEAKING_DUEL_VARIANCE_PERCENT);
+  const lower = Math.min(minPercent, maxPercent);
+  const upper = Math.max(minPercent, maxPercent);
+  return clampPercent(lower + ((upper - lower) * seededUnitInterval(`${sessionId}:pron:${cardIndex}`)));
 }
 
 function buildBotPronunciationSamples(botConfig, sessionId, totalCards) {
@@ -12567,13 +12643,11 @@ function buildBotProgressSnapshot(session, botUserId, botConfig) {
     1,
     cards.length || (mode === SPEAKING_DUEL_CARDS_MODE ? SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS : SPEAKING_DUEL_DEFAULT_CARDS)
   );
-  const createdAtMs = Date.parse(String(session?.created_at || '').trim());
-  if (!Number.isFinite(createdAtMs) || createdAtMs <= 0) {
+  const battleStartedAtMs = resolveSpeakingDuelBattleStartedAtMs(session);
+  if (!battleStartedAtMs) {
     return { progress: 0, percent: 0, finished: false, score: 0 };
   }
 
-  const introSeconds = resolveSpeakingDuelIntroSeconds(session);
-  const battleStartedAtMs = createdAtMs + (introSeconds * 1000);
   const elapsedMs = Math.max(0, Date.now() - battleStartedAtMs);
   if (elapsedMs <= 0) {
     return { progress: 0, percent: 0, finished: false, score: 0 };
@@ -12841,9 +12915,10 @@ async function touchSpeakingSessionAndResolveTimeout(client, sessionId, requeste
       finishedAt = nowIso;
     }
 
-    const requesterWinsByTimeout = requesterIsChallenger
+    const battleHasStarted = resolveSpeakingDuelBattleStartedAtMs(next) > 0;
+    const requesterWinsByTimeout = battleHasStarted && (requesterIsChallenger
       ? (!opponentIsBot && (Date.now() - Date.parse(next.opponent_last_seen_at || 0)) > (SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS * 1000))
-      : (!challengerIsBot && (Date.now() - Date.parse(next.challenger_last_seen_at || 0)) > (SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS * 1000));
+      : (!challengerIsBot && (Date.now() - Date.parse(next.challenger_last_seen_at || 0)) > (SPEAKING_DUEL_INACTIVE_TIMEOUT_SECONDS * 1000)));
 
     if (!battleExpired && requesterWinsByTimeout) {
       status = 'completed';
@@ -21975,6 +22050,210 @@ app.post('/api/speaking/presence/ping', async (req, res) => {
   }
 });
 
+function readRawBotConfig(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return { ...value };
+  try {
+    const parsed = JSON.parse(String(value || ''));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (_error) {
+    return {};
+  }
+}
+
+function buildBattleBotKey(displayName) {
+  const base = String(displayName || 'bot')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32) || 'bot';
+  return `${base}-${crypto.randomBytes(3).toString('hex')}`;
+}
+
+function normalizeBattleBotPercentRange(body = {}, fallback = {}) {
+  const rawMin = body.minPercent ?? body.pronunciationMin ?? fallback.pronunciationMin;
+  const rawMax = body.maxPercent ?? body.pronunciationMax ?? fallback.pronunciationMax;
+  const minPercent = Number(rawMin);
+  const maxPercent = Number(rawMax);
+  if (!Number.isFinite(minPercent) || !Number.isFinite(maxPercent) || minPercent < 0 || maxPercent > 100) {
+    const error = new Error('Informe uma faixa de porcentagem entre 0 e 100.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (minPercent > maxPercent) {
+    const error = new Error('A porcentagem minima nao pode ser maior que a maxima.');
+    error.statusCode = 400;
+    throw error;
+  }
+  return {
+    minPercent: clampPercent(minPercent),
+    maxPercent: clampPercent(maxPercent),
+    expectedPercent: clampPercent((minPercent + maxPercent) / 2)
+  };
+}
+
+async function saveBattleBotPhoto(user, imageDataUrl) {
+  if (!imageDataUrl) return '';
+  const parsed = parseBase64DataUrl(imageDataUrl);
+  const mimeType = String(parsed?.mimeType || '').toLowerCase();
+  const extensionByMime = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp'
+  };
+  const extension = extensionByMime[mimeType];
+  if (!parsed?.buffer?.length || !extension) {
+    const error = new Error('Envie uma foto JPEG, PNG ou WebP.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (parsed.buffer.length > (8 * 1024 * 1024)) {
+    const error = new Error('A foto deve ter no maximo 8 MB.');
+    error.statusCode = 413;
+    throw error;
+  }
+  if (!isR2FluencyConfigured()) {
+    const error = new Error('R2 nao configurado para upload das fotos dos bots.');
+    error.statusCode = 503;
+    throw error;
+  }
+  const usernameFolder = safeGeneratedBase(user?.username || `battle-bot-${user?.id || 'new'}`, 'battle-bot');
+  const objectKey = `${usernameFolder}/battle-avatar-${Date.now()}.${extension}`;
+  await putR2Object(objectKey, parsed.buffer, mimeType);
+  return buildFlashcardsR2PublicUrl(objectKey);
+}
+
+function buildBattleBotConfig(input = {}, existing = {}) {
+  const displayName = String(input.displayName ?? existing.displayName ?? existing.username ?? '').trim().slice(0, 64);
+  if (displayName.length < 3) {
+    const error = new Error('O nome do bot deve ter pelo menos 3 caracteres.');
+    error.statusCode = 400;
+    throw error;
+  }
+  const range = normalizeBattleBotPercentRange(input, existing);
+  const chosenLevel = normalizeUserFlashcardLevel(input.chosenLevel ?? existing.chosenLevel ?? range.expectedPercent);
+  const responseSeconds = Math.max(1, Math.min(30, Number(input.responseSeconds ?? existing.responseSeconds) || 3));
+  return {
+    ...existing,
+    username: String(existing.username || input.internalUsername || '').trim(),
+    displayName,
+    battleBotKey: String(existing.battleBotKey || input.battleBotKey || buildBattleBotKey(displayName)).trim().toLowerCase(),
+    battleEnabled: true,
+    chosenLevel,
+    flashcardsCount: Math.max(1, Number(existing.flashcardsCount) || 1200),
+    pronunciationBase: range.expectedPercent,
+    pronunciationMin: range.minPercent,
+    pronunciationMax: range.maxPercent,
+    flashcardsPerHour: Math.max(1, Number(existing.flashcardsPerHour) || 480),
+    responseSeconds,
+    updateHour: clampBotUpdateHour(existing.updateHour ?? 6)
+  };
+}
+
+app.get('/api/admin/bots', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    await ensureSpeakingRealtimeTables();
+    const bots = await ensureSpeakingBattleBots(pool);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, bots, total: bots.length });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel carregar os bots.' });
+  }
+});
+
+app.post('/api/admin/bots', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    await ensureSpeakingRealtimeTables();
+    const internalUsername = await generateAvailableUsername('BOT');
+    const config = buildBattleBotConfig({ ...req.body, internalUsername }, {});
+    config.username = internalUsername;
+    const duplicateKey = await pool.query(
+      `SELECT 1 FROM public.users WHERE bot_config->>'battleBotKey' = $1 LIMIT 1`,
+      [config.battleBotKey]
+    );
+    if (duplicateKey.rows.length) config.battleBotKey = buildBattleBotKey(config.displayName);
+    const email = `battlebot-${Date.now()}-${crypto.randomBytes(3).toString('hex')}@playtalk.bot`;
+    const passwordHash = await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 10);
+    const avatarImage = req.body?.imageDataUrl
+      ? await saveBattleBotPhoto({ username: internalUsername }, req.body.imageDataUrl)
+      : '/Avatar/profile-neon-blue.svg';
+    const inserted = await pool.query(
+      `INSERT INTO public.users (
+         email, username, password_hash, avatar_image,
+         onboarding_name_completed, onboarding_photo_completed, audio_check_completed,
+         is_bot, bot_config, bot_avatar_status
+       )
+       VALUES ($1, $2, $3, $4, true, true, true, true, $5::jsonb, 'ready')
+       RETURNING id`,
+      [email, internalUsername, passwordHash, avatarImage, JSON.stringify(config)]
+    );
+    const userId = Number(inserted.rows[0]?.id) || 0;
+    const bots = await ensureSpeakingBattleBots(pool);
+    res.status(201).json({ success: true, bot: bots.find((bot) => bot.userId === userId) || null, total: bots.length });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    if (statusCode >= 500) console.error('Erro ao criar battle bot:', error);
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel criar o bot.' });
+  }
+});
+
+app.patch('/api/admin/bots/:userId', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    await ensureSpeakingRealtimeTables();
+    const userId = Number(req.params.userId) || 0;
+    const result = await pool.query(
+      `SELECT id, email, username, avatar_image, is_bot, bot_config
+       FROM public.users
+       WHERE id = $1 AND is_bot = true
+       LIMIT 1`,
+      [userId]
+    );
+    const row = result.rows[0] || null;
+    const fixedBot = SPEAKING_BATTLE_BOTS.some((bot) => bot.email.toLowerCase() === String(row?.email || '').toLowerCase());
+    const existing = readRawBotConfig(row?.bot_config);
+    if (!row || (!fixedBot && existing.battleEnabled !== true)) {
+      res.status(404).json({ success: false, message: 'Battle bot nao encontrado.' });
+      return;
+    }
+    existing.username = String(existing.username || row.username || '').trim();
+    const config = buildBattleBotConfig(req.body || {}, existing);
+    let avatarImage = String(row.avatar_image || '').trim() || '/Avatar/profile-neon-blue.svg';
+    if (req.body?.imageDataUrl) {
+      avatarImage = await saveBattleBotPhoto(row, req.body.imageDataUrl);
+    }
+    await pool.query(
+      `UPDATE public.users
+       SET avatar_image = $2,
+           bot_config = $3::jsonb,
+           bot_avatar_status = 'ready'
+       WHERE id = $1`,
+      [userId, avatarImage, JSON.stringify(config)]
+    );
+    const bots = await ensureSpeakingBattleBots(pool);
+    res.json({ success: true, bot: bots.find((bot) => bot.userId === userId) || null, total: bots.length });
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    if (statusCode >= 500) console.error('Erro ao atualizar battle bot:', error);
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel atualizar o bot.' });
+  }
+});
 app.get('/api/speaking/battle/bots', async (req, res) => {
   try {
     if (!pool) {
@@ -22005,7 +22284,7 @@ app.get('/api/speaking/battle/bots', async (req, res) => {
     res.json({
       success: true,
       fallbackSeconds: SPEAKING_BATTLE_BOT_FALLBACK_SECONDS,
-      variancePercent: BOT_SPEAKING_DUEL_VARIANCE_PERCENT,
+      customPercentRanges: true,
       expectedPercent,
       history,
       onlineUsers: Math.max(0, Number(onlineResult.rows[0]?.total) || 0),
@@ -22071,15 +22350,19 @@ app.post('/api/speaking/battle/start', async (req, res) => {
         [userId]
       );
       const bots = await ensureSpeakingBattleBots(client);
-      if (bots.length !== SPEAKING_BATTLE_BOTS.length) {
-        const error = new Error('Os 20 adversarios ainda nao estao disponiveis.');
+      if (!bots.length) {
+        const error = new Error('Nenhum adversario bot esta disponivel.');
         error.statusCode = 503;
         throw error;
       }
 
       if (format === 'simple') {
-        const definition = battleBotDefinitionByKey(req.body?.botKey) || SPEAKING_BATTLE_BOTS[0];
-        const bot = bots.find((entry) => entry.key === definition.key) || bots[0];
+        const requestedKey = String(req.body?.botKey || '').trim().toLowerCase();
+        const requestedUserId = Number(req.body?.botUserId) || 0;
+        const bot = bots.find((entry) => (
+          (requestedKey && entry.key === requestedKey)
+          || (requestedUserId > 0 && Number(entry.userId) === requestedUserId)
+        )) || bots[0];
         const sessionId = await createSpeakingBattleBotSession(client, {
           userId,
           botUserId: bot.userId,
@@ -22153,10 +22436,12 @@ app.post('/api/speaking/battle/start', async (req, res) => {
         return;
       }
 
-      const bottomFive = [...bots].sort((a, b) => a.expectedPercent - b.expectedPercent).slice(0, 5);
-      const dropIndex = Math.min(4, Math.floor(seededUnitInterval(`${userId}:${new Date().toISOString().slice(0, 10)}:league-drop`) * 5));
-      const droppedBotId = Number(bottomFive[dropIndex]?.userId) || 0;
-      const leagueBots = bots.filter((bot) => Number(bot.userId) !== droppedBotId);
+      const leagueBots = [...bots]
+        .sort((a, b) => {
+          const distance = Math.abs(a.expectedPercent - expectedPercent) - Math.abs(b.expectedPercent - expectedPercent);
+          return distance || (b.expectedPercent - a.expectedPercent);
+        })
+        .slice(0, 19);
       const standings = [
         {
           ...userParticipant,
@@ -23245,6 +23530,7 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
     const rivalUserId = meRole === 'challenger' ? opponentUserId : challengerUserId;
     const cardList = Array.isArray(session.cards) ? session.cards : [];
     const battleIntroSeconds = resolveSpeakingDuelIntroSeconds(session);
+    const battleStartedAtMs = resolveSpeakingDuelBattleStartedAtMs(session);
 
     const statsResult = await pool.query(
       `SELECT user_id, pronunciation_samples, pronunciation_sum, pronunciation_samples_count
@@ -23295,12 +23581,16 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
         status: String(session.status || '').trim() || 'active',
         createdAt: session.created_at,
         updatedAt: session.updated_at,
-        battleStartsAt: new Date(
-          Date.parse(String(session.created_at || '').trim()) + (battleIntroSeconds * 1000)
-        ).toISOString(),
-        battleEndsAt: new Date(
-          Date.parse(String(session.created_at || '').trim()) + ((battleIntroSeconds + SPEAKING_DUEL_BATTLE_SECONDS) * 1000)
-        ).toISOString(),
+        battleStartsAt: battleStartedAtMs ? new Date(battleStartedAtMs).toISOString() : null,
+        battleEndsAt: battleStartedAtMs
+          ? new Date(battleStartedAtMs + (SPEAKING_DUEL_BATTLE_SECONDS * 1000)).toISOString()
+          : null,
+        introReady: meRole === 'challenger'
+          ? Boolean(session.challenger_intro_ready_at)
+          : Boolean(session.opponent_intro_ready_at),
+        rivalIntroReady: meRole === 'challenger'
+          ? Boolean(session.opponent_intro_ready_at)
+          : Boolean(session.challenger_intro_ready_at),
         introCountdownSeconds: battleIntroSeconds,
         battleDurationSeconds: SPEAKING_DUEL_BATTLE_SECONDS,
         targetScore: normalizeDuelTargetScore(session.target_score, session.mode),
@@ -23351,6 +23641,90 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
   }
 });
 
+app.post('/api/speaking/sessions/:sessionId/intro-ready', async (req, res) => {
+  if (!pool) {
+    res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+    return;
+  }
+  const client = await pool.connect();
+  try {
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    await ensureSpeakingRealtimeTables();
+    const sessionId = String(req.params.sessionId || '').trim();
+    const userId = Number(authUser.id) || 0;
+    await client.query('BEGIN');
+    const result = await client.query(
+      `SELECT s.*, cu.is_bot AS challenger_is_bot, ou.is_bot AS opponent_is_bot
+       FROM public.speaking_duel_sessions s
+       INNER JOIN public.users cu ON cu.id = s.challenger_user_id
+       INNER JOIN public.users ou ON ou.id = s.opponent_user_id
+       WHERE s.id = $1
+       FOR UPDATE OF s`,
+      [sessionId]
+    );
+    const session = result.rows[0] || null;
+    if (!session) {
+      const error = new Error('Sessao nao encontrada.');
+      error.statusCode = 404;
+      throw error;
+    }
+    const challengerUserId = Number(session.challenger_user_id) || 0;
+    const opponentUserId = Number(session.opponent_user_id) || 0;
+    if (userId !== challengerUserId && userId !== opponentUserId) {
+      const error = new Error('Voce nao participa desta sessao.');
+      error.statusCode = 403;
+      throw error;
+    }
+    const nowIso = new Date().toISOString();
+    const challengerReadyAt = session.challenger_intro_ready_at
+      || ((userId === challengerUserId || session.challenger_is_bot) ? nowIso : null);
+    const opponentReadyAt = session.opponent_intro_ready_at
+      || ((userId === opponentUserId || session.opponent_is_bot) ? nowIso : null);
+    const battleStartedAt = session.battle_started_at
+      || (challengerReadyAt && opponentReadyAt ? nowIso : null);
+    const update = await client.query(
+      `UPDATE public.speaking_duel_sessions
+       SET challenger_intro_ready_at = $2,
+           opponent_intro_ready_at = $3,
+           battle_started_at = $4,
+           challenger_last_seen_at = CASE WHEN $4 IS NOT NULL THEN now() ELSE challenger_last_seen_at END,
+           opponent_last_seen_at = CASE WHEN $4 IS NOT NULL THEN now() ELSE opponent_last_seen_at END,
+           updated_at = now()
+       WHERE id = $1
+       RETURNING challenger_intro_ready_at, opponent_intro_ready_at, battle_started_at`,
+      [sessionId, challengerReadyAt, opponentReadyAt, battleStartedAt]
+    );
+    await client.query('COMMIT');
+    const saved = update.rows[0] || {};
+    res.json({
+      success: true,
+      session: {
+        introReady: userId === challengerUserId
+          ? Boolean(saved.challenger_intro_ready_at)
+          : Boolean(saved.opponent_intro_ready_at),
+        rivalIntroReady: userId === challengerUserId
+          ? Boolean(saved.opponent_intro_ready_at)
+          : Boolean(saved.challenger_intro_ready_at),
+        battleStartsAt: saved.battle_started_at || null,
+        battleEndsAt: saved.battle_started_at
+          ? new Date(Date.parse(String(saved.battle_started_at)) + (SPEAKING_DUEL_BATTLE_SECONDS * 1000)).toISOString()
+          : null
+      }
+    });
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    if (statusCode >= 500) console.error('Erro ao concluir pre-jogo speaking:', error);
+    res.status(statusCode).json({ success: false, message: error?.message || 'Nao foi possivel concluir o pre-jogo.' });
+  } finally {
+    client.release();
+  }
+});
 app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
   try {
     if (!pool) {
@@ -25374,6 +25748,20 @@ app.get(['/generallevels', '/generallevels/', '/generallevels.html'], (req, res)
   res.sendFile(path.join(__dirname, 'www', 'generallevels.html'));
 });
 
+app.get(['/bots', '/bots/', '/bots.html'], async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(staticDir, 'bots.html'));
+  } catch (error) {
+    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 403;
+    if (statusCode === 401) {
+      res.redirect(302, '/account');
+      return;
+    }
+    res.status(403).send('Acesso restrito ao administrador.');
+  }
+});
 app.use(express.static(staticDir));
 app.use('/newfonts', express.static(path.join(__dirname, 'newfonts')));
 app.get(['/landing', '/landing/'], (req, res) => {
