@@ -1331,6 +1331,113 @@
       opacity: 0.28;
     }
 
+    .battle-cards-match-head {
+      width: min(430px, calc(100% - 24px));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 14px;
+      border: 1px solid rgba(111, 222, 255, 0.28);
+      border-radius: 16px;
+      color: #fff;
+      background: rgba(7, 20, 50, 0.76);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+    }
+
+    .battle-cards-match-head strong {
+      color: #7ee7ff;
+      font-size: 15px;
+      letter-spacing: 0.02em;
+    }
+
+    .battle-cards-match-head span {
+      min-width: 58px;
+      text-align: center;
+      color: #ffd85e;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .battle-cards-typing {
+      width: min(470px, calc(100% - 18px));
+      display: grid;
+      gap: 18px;
+      justify-items: center;
+    }
+
+    .battle-cards-typing[hidden] {
+      display: none !important;
+    }
+
+    .battle-cards-typing__slots {
+      width: 100%;
+      min-height: 48px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 8px 4px;
+    }
+
+    .battle-cards-typing__slot {
+      min-width: 18px;
+      height: 30px;
+      display: inline-grid;
+      place-items: center;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 19px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .battle-cards-typing__slot.is-space {
+      min-width: 13px;
+      border: 0;
+    }
+
+    .battle-cards-typing__slot.is-correct {
+      color: #79f3aa;
+      border-color: #79f3aa;
+    }
+
+    .battle-cards-typing__slot.is-wrong {
+      color: #ff7a8d;
+      border-color: #ff7a8d;
+    }
+
+    .battle-cards-typing__keys {
+      width: min(330px, 100%);
+      display: grid;
+      grid-template-columns: repeat(3, minmax(62px, 1fr));
+      gap: 10px;
+    }
+
+    .battle-cards-typing__key {
+      min-height: 54px;
+      border: 1px solid rgba(114, 225, 255, 0.5);
+      border-radius: 16px;
+      color: #fff;
+      background: linear-gradient(155deg, rgba(25, 82, 150, 0.96), rgba(12, 35, 83, 0.98));
+      box-shadow: 0 7px 0 rgba(4, 19, 50, 0.92), 0 12px 24px rgba(0, 0, 0, 0.25);
+      font-size: 21px;
+      font-weight: 900;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .battle-cards-typing__key:active {
+      transform: translateY(5px);
+      box-shadow: 0 2px 0 rgba(4, 19, 50, 0.92);
+    }
+
+    .battle-cards-typing__key:disabled {
+      opacity: 0.42;
+      cursor: default;
+    }
+
     .speaking-game.is-battle-cards .card-word,
     .speaking-game.is-battle-cards .card-subword,
     .speaking-game.is-battle-cards .mic-trigger-wrap,
@@ -2073,12 +2180,20 @@
         </article>
       </div>
       <section class="battle-cards-stage" id="battleCardsStage" hidden>
-        <button class="battle-cards-visual" id="battleCardsVisualBtn" type="button" aria-label="Tocar na imagem para falar">
+        <div class="battle-cards-match-head" aria-live="polite">
+          <strong id="battleCardsPhaseLabel">Fase 1 · Digitação</strong>
+          <span id="battleCardsPhaseWins">0 × 0</span>
+        </div>
+        <button class="battle-cards-visual" id="battleCardsVisualBtn" type="button" aria-label="Reproduzir áudio na língua destino">
           <img id="battleCardsImage" src="" alt="Flashcard atual" hidden>
           <div class="battle-cards-visual__fallback" id="battleCardsFallback" hidden></div>
         </button>
         <div class="battle-cards-translation" id="battleCardsTranslationSlot" aria-live="polite">
           <h2 class="battle-cards-phase-word is-english" id="battleCardsPhaseWord">FluentCards</h2>
+        </div>
+        <div class="battle-cards-typing" id="battleCardsTyping" hidden>
+          <div class="battle-cards-typing__slots" id="battleCardsTypingSlots" aria-label="Texto digitado"></div>
+          <div class="battle-cards-typing__keys" id="battleCardsTypingKeys" aria-label="Teclado dinâmico de nove letras"></div>
         </div>
       </section>
       <h2 class="card-word" id="cardEnglishWord">-</h2>

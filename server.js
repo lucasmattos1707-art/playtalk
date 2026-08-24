@@ -2975,6 +2975,7 @@ const ensureSpeakingRealtimeTables = async () => {
           opponent_user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
           mode text NOT NULL DEFAULT '${SPEAKING_DUEL_SMARTBOOKS_MODE}',
           cards jsonb NOT NULL DEFAULT '[]'::jsonb,
+          battle_state jsonb NOT NULL DEFAULT '{}'::jsonb,
           status text NOT NULL DEFAULT 'active',
           target_score integer NOT NULL DEFAULT 0,
           challenger_progress integer NOT NULL DEFAULT 0,
@@ -3029,6 +3030,10 @@ const ensureSpeakingRealtimeTables = async () => {
         ADD COLUMN IF NOT EXISTS max_level integer NOT NULL DEFAULT 1,
         ADD COLUMN IF NOT EXISTS target_language text NOT NULL DEFAULT 'english',
         ADD COLUMN IF NOT EXISTS native_language text NOT NULL DEFAULT 'portuguese'
+      `);
+      await pool.query(`
+        ALTER TABLE public.speaking_duel_sessions
+        ADD COLUMN IF NOT EXISTS battle_state jsonb NOT NULL DEFAULT '{}'::jsonb
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.speaking_matchmaking_queue (
@@ -12584,6 +12589,7 @@ function resolveSpeakingDuelBattleStartedAtMs(session) {
 }
 
 function isSpeakingDuelBattleExpired(session) {
+  if (normalizeSpeakingChallengeMode(session?.mode) === SPEAKING_DUEL_CARDS_MODE) return false;
   const battleStartedAtMs = resolveSpeakingDuelBattleStartedAtMs(session);
   if (!battleStartedAtMs) return false;
   const battleSeconds = Math.max(1, Number(session?.battle_duration_seconds) || SPEAKING_DUEL_BATTLE_SECONDS);
@@ -12687,6 +12693,271 @@ function buildBotProgressSnapshot(session, botUserId, botConfig) {
   return { progress, percent, finished, score };
 }
 
+function normalizeSpeakingBattleTypingText(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .replace(/[^\p{L}\p{N}'\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function countSpeakingBattleTypingCharacters(card) {
+  return Array.from(normalizeSpeakingBattleTypingText(card?.targetText || card?.english)).length;
+}
+
+function normalizeSpeakingBattleCardsParticipant(value) {
+  const raw = value && typeof value === 'object' ? value : {};
+  const score = Math.max(0, Number(raw.score) || 0);
+  const maxScore = Math.max(0, Number(raw.maxScore) || 0);
+  const samples = Math.max(0, Number(raw.samples) || 0);
+  return {
+    phaseWins: Math.max(0, Math.min(2, Number(raw.phaseWins) || 0)),
+    progress: Math.max(0, Number(raw.progress) || 0),
+    score,
+    maxScore,
+    samples,
+    percent: Math.max(0, Math.min(100, Number(raw.percent) || 0))
+  };
+}
+
+function normalizeSpeakingBattleCardsState(session) {
+  const raw = session?.battle_state && typeof session.battle_state === 'object' ? session.battle_state : {};
+  const currentPhase = Math.max(1, Math.min(3, Number(raw.currentPhase) || 1));
+  const requiredCards = Math.max(SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS, Number(raw.requiredCards) || SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS);
+  const phaseResults = Array.isArray(raw.phaseResults) ? raw.phaseResults.slice(0, 3) : [];
+  return {
+    version: 2,
+    revision: Math.max(1, Number(raw.revision) || 1),
+    currentPhase,
+    requiredCards,
+    phaseStartedAt: String(raw.phaseStartedAt || session?.battle_started_at || new Date().toISOString()),
+    phaseResults,
+    challenger: normalizeSpeakingBattleCardsParticipant(raw.challenger),
+    opponent: normalizeSpeakingBattleCardsParticipant(raw.opponent),
+    winnerRole: raw.winnerRole === 'challenger' || raw.winnerRole === 'opponent' ? raw.winnerRole : '',
+    completed: Boolean(raw.completed)
+  };
+}
+
+function computeSpeakingBattlePhasePercent(participant, phase) {
+  const entry = normalizeSpeakingBattleCardsParticipant(participant);
+  if (phase === 1) {
+    return entry.maxScore > 0 ? clampPercent(Math.round((entry.score / entry.maxScore) * 100)) : 0;
+  }
+  return entry.samples > 0 ? clampPercent(Math.round(entry.score / entry.samples)) : 0;
+}
+
+function resolveSpeakingBattleCardsPhase(state) {
+  if (!state || state.completed) return state;
+  const requiredCards = Math.max(SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS, Number(state.requiredCards) || SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS);
+  if (state.challenger.progress < requiredCards || state.opponent.progress < requiredCards) return state;
+
+  const challengerMetric = Number(state.challenger.score) || 0;
+  const opponentMetric = Number(state.opponent.score) || 0;
+  if (challengerMetric === opponentMetric) {
+    state.requiredCards = requiredCards + 1;
+    state.revision += 1;
+    return state;
+  }
+
+  const winnerRole = challengerMetric > opponentMetric ? 'challenger' : 'opponent';
+  state[winnerRole].phaseWins += 1;
+  state.phaseResults.push({
+    phase: state.currentPhase,
+    winnerRole,
+    cardsPlayed: requiredCards,
+    challengerScore: challengerMetric,
+    opponentScore: opponentMetric,
+    challengerPercent: computeSpeakingBattlePhasePercent(state.challenger, state.currentPhase),
+    opponentPercent: computeSpeakingBattlePhasePercent(state.opponent, state.currentPhase)
+  });
+  state.revision += 1;
+
+  if (state[winnerRole].phaseWins >= 2) {
+    state.completed = true;
+    state.winnerRole = winnerRole;
+    return state;
+  }
+
+  state.currentPhase += 1;
+  state.requiredCards = SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS;
+  state.phaseStartedAt = new Date().toISOString();
+  const challengerWins = state.challenger.phaseWins;
+  const opponentWins = state.opponent.phaseWins;
+  state.challenger = normalizeSpeakingBattleCardsParticipant({ phaseWins: challengerWins });
+  state.opponent = normalizeSpeakingBattleCardsParticipant({ phaseWins: opponentWins });
+  return state;
+}
+
+function summarizeSpeakingBattlePronunciation(state, role) {
+  const results = Array.isArray(state?.phaseResults) ? state.phaseResults : [];
+  const values = results
+    .filter((entry) => Number(entry?.phase) >= 2)
+    .map((entry) => Number(entry?.[`${role}Percent`]))
+    .filter((value) => Number.isFinite(value));
+  if (values.length) return clampPercent(Math.round(values.reduce((sum, value) => sum + value, 0) / values.length));
+  return computeSpeakingBattlePhasePercent(state?.[role], Number(state?.currentPhase) || 1);
+}
+
+function mapSpeakingBattleCardsStateForRole(session, role) {
+  const state = normalizeSpeakingBattleCardsState(session);
+  const meRole = role === 'opponent' ? 'opponent' : 'challenger';
+  const rivalRole = meRole === 'challenger' ? 'opponent' : 'challenger';
+  return {
+    revision: state.revision,
+    currentPhase: state.currentPhase,
+    requiredCards: state.requiredCards,
+    mePhaseWins: state[meRole].phaseWins,
+    rivalPhaseWins: state[rivalRole].phaseWins,
+    meProgress: state[meRole].progress,
+    rivalProgress: state[rivalRole].progress,
+    meScore: state[meRole].score,
+    rivalScore: state[rivalRole].score,
+    meMaxScore: state[meRole].maxScore,
+    rivalMaxScore: state[rivalRole].maxScore,
+    meSamples: state[meRole].samples,
+    rivalSamples: state[rivalRole].samples,
+    mePercent: computeSpeakingBattlePhasePercent(state[meRole], state.currentPhase),
+    rivalPercent: computeSpeakingBattlePhasePercent(state[rivalRole], state.currentPhase),
+    phaseResults: state.phaseResults,
+    completed: state.completed
+  };
+}
+
+async function persistSpeakingBattleCardsState(client, session, state) {
+  const challengerPercent = state.completed
+    ? summarizeSpeakingBattlePronunciation(state, 'challenger')
+    : computeSpeakingBattlePhasePercent(state.challenger, state.currentPhase);
+  const opponentPercent = state.completed
+    ? summarizeSpeakingBattlePronunciation(state, 'opponent')
+    : computeSpeakingBattlePhasePercent(state.opponent, state.currentPhase);
+  const status = state.completed ? 'completed' : 'active';
+  const winnerUserId = state.winnerRole === 'challenger'
+    ? Number(session.challenger_user_id) || 0
+    : state.winnerRole === 'opponent'
+      ? Number(session.opponent_user_id) || 0
+      : 0;
+  const update = await client.query(
+    `UPDATE public.speaking_duel_sessions
+     SET battle_state = $2::jsonb,
+         challenger_progress = $3,
+         opponent_progress = $4,
+         challenger_score = $5,
+         opponent_score = $6,
+         challenger_percent = $7,
+         opponent_percent = $8,
+         challenger_finished = $9,
+         opponent_finished = $9,
+         status = $10,
+         winner_user_id = CASE WHEN $10 = 'completed' THEN NULLIF($11, 0) ELSE winner_user_id END,
+         finished_at = CASE WHEN $10 = 'completed' THEN COALESCE(finished_at, now()) ELSE finished_at END,
+         updated_at = now()
+     WHERE id = $1
+     RETURNING *`,
+    [
+      session.id,
+      JSON.stringify(state),
+      state.challenger.progress,
+      state.opponent.progress,
+      Math.round(state.challenger.score),
+      Math.round(state.opponent.score),
+      challengerPercent,
+      opponentPercent,
+      state.completed,
+      status,
+      winnerUserId
+    ]
+  );
+  const updated = update.rows[0] || { ...session, battle_state: state };
+  if (state.completed) {
+    await markSpeakingChallengeCompletedBySessionId(client, session.id);
+    await awardSpeakingBattleWin(client, session.id, winnerUserId);
+  }
+  return updated;
+}
+
+function fillSpeakingBattleBotParticipant(session, state, role, botConfig) {
+  if (!botConfig || state.completed) return false;
+  const startedAtMs = Date.parse(String(state.phaseStartedAt || session?.battle_started_at || '').trim());
+  if (!Number.isFinite(startedAtMs) || startedAtMs <= 0) return false;
+  const elapsedMs = Math.max(0, Date.now() - startedAtMs);
+  const requiredCards = Math.max(SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS, Number(state.requiredCards) || SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS);
+  let accumulatedMs = 0;
+  let completed = 0;
+  for (let index = 0; index < requiredCards; index += 1) {
+    accumulatedMs += computeBotResponseSeconds(botConfig, `${session.id}:phase:${state.currentPhase}`, index) * 1500;
+    if (elapsedMs < accumulatedMs) break;
+    completed += 1;
+  }
+  const participant = state[role];
+  if (completed <= participant.progress) return false;
+  const cards = Array.isArray(session.cards) ? session.cards : [];
+  let score = 0;
+  let maxScore = 0;
+  for (let index = 0; index < completed; index += 1) {
+    const card = cards.length ? cards[index % cards.length] : null;
+    const simulatedPercent = computeBotPronunciationPercent(botConfig, `${session.id}:phase:${state.currentPhase}`, index);
+    if (state.currentPhase === 1) {
+      const available = countSpeakingBattleTypingCharacters(card);
+      maxScore += available;
+      score += Math.max(0, Math.min(available, Math.round((available * simulatedPercent) / 100)));
+    } else {
+      score += simulatedPercent;
+    }
+  }
+  participant.progress = completed;
+  participant.score = score;
+  participant.maxScore = maxScore;
+  participant.samples = state.currentPhase === 1 ? 0 : completed;
+  participant.percent = computeSpeakingBattlePhasePercent(participant, state.currentPhase);
+  return true;
+}
+
+async function syncSpeakingBattleCardsBots(client, session, challengerBotConfig, opponentBotConfig) {
+  if (client === pool && typeof pool?.connect === 'function') {
+    const lockedClient = await pool.connect();
+    try {
+      await lockedClient.query('BEGIN');
+      const lockedResult = await lockedClient.query(
+        `SELECT * FROM public.speaking_duel_sessions WHERE id = $1 FOR UPDATE`,
+        [session.id]
+      );
+      const lockedSession = lockedResult.rows[0] || session;
+      const updated = await syncSpeakingBattleCardsBots(
+        lockedClient,
+        lockedSession,
+        challengerBotConfig,
+        opponentBotConfig
+      );
+      await lockedClient.query('COMMIT');
+      return updated;
+    } catch (error) {
+      await lockedClient.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      lockedClient.release();
+    }
+  }
+  const state = normalizeSpeakingBattleCardsState(session);
+  const before = JSON.stringify(state);
+  fillSpeakingBattleBotParticipant(session, state, 'challenger', challengerBotConfig);
+  fillSpeakingBattleBotParticipant(session, state, 'opponent', opponentBotConfig);
+  resolveSpeakingBattleCardsPhase(state);
+  if (JSON.stringify(state) === before) {
+    return {
+      ...session,
+      battle_state: state,
+      challenger_is_bot: Boolean(challengerBotConfig),
+      opponent_is_bot: Boolean(opponentBotConfig)
+    };
+  }
+  const updated = await persistSpeakingBattleCardsState(client, session, state);
+  return {
+    ...updated,
+    challenger_is_bot: Boolean(challengerBotConfig),
+    opponent_is_bot: Boolean(opponentBotConfig)
+  };
+}
 async function syncBotStateIntoSpeakingSession(client, session) {
   if (!session) return session;
   const challengerUserId = Number(session?.challenger_user_id) || 0;
@@ -12706,6 +12977,9 @@ async function syncBotStateIntoSpeakingSession(client, session) {
   const opponentBotConfig = isBotUserRecord(opponentUser)
     ? parseBotConfig(opponentUser?.bot_config, { fallbackUsername: opponentUser?.username || opponentUser?.email || '' })
     : null;
+  if (normalizeSpeakingChallengeMode(session.mode) === SPEAKING_DUEL_CARDS_MODE) {
+    return syncSpeakingBattleCardsBots(client, session, challengerBotConfig, opponentBotConfig);
+  }
   if (!challengerBotConfig && !opponentBotConfig) {
     return {
       ...session,
@@ -23419,6 +23693,9 @@ app.get('/api/speaking/sessions/:sessionId/updates', async (req, res) => {
             rivalProgress: isChallenger ? Number(session.opponent_progress) || 0 : Number(session.challenger_progress) || 0,
             mePercent: isChallenger ? Number(session.challenger_percent) || 0 : Number(session.opponent_percent) || 0,
             rivalPercent: isChallenger ? Number(session.opponent_percent) || 0 : Number(session.challenger_percent) || 0,
+            battleState: normalizeSpeakingChallengeMode(session.mode) === SPEAKING_DUEL_CARDS_MODE
+              ? mapSpeakingBattleCardsStateForRole(session, isChallenger ? 'challenger' : 'opponent')
+              : null,
             meFinished: isChallenger ? Boolean(session.challenger_finished) : Boolean(session.opponent_finished),
             rivalFinished: isChallenger ? Boolean(session.opponent_finished) : Boolean(session.challenger_finished),
             winner: Number(session.winner_id) ? {
@@ -23606,6 +23883,9 @@ app.get('/api/speaking/sessions/:sessionId', async (req, res) => {
         nativeLanguage: normalizeFlashcardNativeLanguage(session.native_language),
         cards: cardList,
         meRole,
+        battleState: normalizeSpeakingChallengeMode(session.mode) === SPEAKING_DUEL_CARDS_MODE
+          ? mapSpeakingBattleCardsStateForRole(session, meRole)
+          : null,
         meProgress: meRole === 'challenger' ? Number(session.challenger_progress) || 0 : Number(session.opponent_progress) || 0,
         rivalProgress: meRole === 'challenger' ? Number(session.opponent_progress) || 0 : Number(session.challenger_progress) || 0,
         meScore: meRole === 'challenger' ? Number(session.challenger_score) || 0 : Number(session.opponent_score) || 0,
@@ -23778,6 +24058,39 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
         cards.length || (mode === SPEAKING_DUEL_CARDS_MODE ? SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS : SPEAKING_DUEL_DEFAULT_CARDS)
       );
       const targetScore = normalizeDuelTargetScore(session.target_score, mode);
+      if (mode === SPEAKING_DUEL_CARDS_MODE) {
+        const state = normalizeSpeakingBattleCardsState(session);
+        const requestedPhase = Math.max(1, Math.min(3, Number.parseInt(req.body?.battlePhase, 10) || state.currentPhase));
+        if (!state.completed && requestedPhase === state.currentPhase) {
+          const participant = isChallenger ? state.challenger : state.opponent;
+          const nextProgress = Math.max(0, Math.min(state.requiredCards, Number.parseInt(req.body?.phaseProgress, 10) || progress));
+          const nextScore = Math.max(0, Number(req.body?.phaseScore) || 0);
+          const nextMaxScore = Math.max(0, Number(req.body?.phaseMaxScore) || 0);
+          const nextSamples = Math.max(0, Number.parseInt(req.body?.phaseSamples, 10) || 0);
+          if (nextProgress >= participant.progress) {
+            participant.progress = nextProgress;
+            participant.maxScore = state.currentPhase === 1 ? nextMaxScore : 0;
+            participant.samples = state.currentPhase === 1 ? 0 : Math.min(nextProgress, nextSamples);
+            participant.score = state.currentPhase === 1
+              ? Math.min(nextMaxScore, nextScore)
+              : Math.min(participant.samples * 100, nextScore);
+            participant.percent = computeSpeakingBattlePhasePercent(participant, state.currentPhase);
+          }
+          resolveSpeakingBattleCardsPhase(state);
+        }
+        const updated = await persistSpeakingBattleCardsState(client, session, state);
+        await client.query('COMMIT');
+        const role = isChallenger ? 'challenger' : 'opponent';
+        res.json({
+          success: true,
+          session: {
+            status: String(updated.status || '').trim() || 'active',
+            winnerUserId: Number(updated.winner_user_id) || 0,
+            battleState: mapSpeakingBattleCardsStateForRole(updated, role)
+          }
+        });
+        return;
+      }
       const normalizedProgress = Math.max(0, Math.min(totalCards, progress));
       const scoreCap = mode === SPEAKING_DUEL_CARDS_MODE
         ? (targetScore > 0 ? targetScore : totalCards)

@@ -93,6 +93,11 @@
     battleCardsImage: document.getElementById('battleCardsImage'),
     battleCardsFallback: document.getElementById('battleCardsFallback'),
     battleCardsPhaseWord: document.getElementById('battleCardsPhaseWord'),
+    battleCardsPhaseLabel: document.getElementById('battleCardsPhaseLabel'),
+    battleCardsPhaseWins: document.getElementById('battleCardsPhaseWins'),
+    battleCardsTyping: document.getElementById('battleCardsTyping'),
+    battleCardsTypingSlots: document.getElementById('battleCardsTypingSlots'),
+    battleCardsTypingKeys: document.getElementById('battleCardsTypingKeys'),
     cardEnglishWord: document.getElementById('cardEnglishWord'),
     cardPortugueseWord: document.getElementById('cardPortugueseWord'),
     sendSpeakingBtn: document.getElementById('sendSpeakingBtn'),
@@ -162,6 +167,13 @@
     battleCardsPromptAudio: null,
     battleCardsPromptToken: 0,
     battleCardsReadyToSpeak: false,
+    battleCardsTypingTarget: [],
+    battleCardsTypingResults: [],
+    battleCardsTypingIndex: 0,
+    battleCardsKeyboardLetters: [],
+    battleCardsKeyboardQueue: [],
+    battleCardsCardScore: 0,
+    battleCardsCardMaxScore: 0,
     speakingStats: readSpeakingStats(),
     duel: {
       sessionId: readSessionId(),
@@ -176,6 +188,16 @@
       competition: null,
       competitionBusy: false,
       targetScore: 0,
+      currentPhase: 1,
+      requiredCards: 12,
+      phaseRevision: 0,
+      mePhaseWins: 0,
+      rivalPhaseWins: 0,
+      phaseScore: 0,
+      phaseMaxScore: 0,
+      phaseSamples: 0,
+      waitingForPhase: false,
+      gameplayReady: false,
       meScore: 0,
       mePercent: 0,
       rivalProgress: 0,
@@ -1002,6 +1024,134 @@
     els.battleCardsPhaseWord.classList.add(language === 'portuguese' ? 'is-portuguese' : 'is-english');
   }
 
+  function getBattlePhaseTitle(phase) {
+    if (Number(phase) === 1) return 'Fase 1 · Digitação';
+    if (Number(phase) === 2) return 'Fase 2 · Ouvir e repetir';
+    return 'Fase 3 · Meaning';
+  }
+
+  function updateBattlePhaseHeader() {
+    const phase = Math.max(1, Math.min(3, Number(state.duel.currentPhase) || 1));
+    if (els.battleCardsPhaseLabel) els.battleCardsPhaseLabel.textContent = getBattlePhaseTitle(phase);
+    if (els.battleCardsPhaseWins) {
+      els.battleCardsPhaseWins.textContent = `${Math.max(0, Number(state.duel.mePhaseWins) || 0)} × ${Math.max(0, Number(state.duel.rivalPhaseWins) || 0)}`;
+    }
+    if (els.game) els.game.dataset.battlePhase = String(phase);
+    if (els.battleCardsTyping) els.battleCardsTyping.hidden = phase !== 1;
+    if (els.battleCardsVisualBtn) {
+      els.battleCardsVisualBtn.setAttribute(
+        'aria-label',
+        phase === 1 ? 'Reproduzir áudio na língua destino' : 'Tocar na imagem para falar'
+      );
+    }
+  }
+
+  function normalizeBattleTypingText(value) {
+    return String(value || '')
+      .normalize('NFKC')
+      .replace(/[^\p{L}\p{N}'\s]/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLocaleUpperCase();
+  }
+
+  function shuffleBattleKeyboard(values) {
+    const next = values.slice();
+    for (let index = next.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+    }
+    return next;
+  }
+
+  function renderBattleTypingSlots() {
+    if (!els.battleCardsTypingSlots) return;
+    els.battleCardsTypingSlots.innerHTML = state.battleCardsTypingTarget.map((character, index) => {
+      const isSpace = /\s/u.test(character);
+      const result = state.battleCardsTypingResults[index];
+      const className = [
+        'battle-cards-typing__slot',
+        isSpace ? 'is-space' : '',
+        result === 'correct' ? 'is-correct' : '',
+        result === 'wrong' ? 'is-wrong' : ''
+      ].filter(Boolean).join(' ');
+      const visible = isSpace ? '&nbsp;' : result ? escapeHtml(character) : '•';
+      return `<span class="${className}">${visible}</span>`;
+    }).join('');
+  }
+
+  function refreshBattleTypingKeyboard() {
+    if (!els.battleCardsTypingKeys) return;
+    const remaining = state.battleCardsTypingTarget
+      .slice(state.battleCardsTypingIndex)
+      .filter((character) => !/\s/u.test(character));
+    const needed = Array.from(new Set(remaining));
+    const retained = state.battleCardsKeyboardLetters.filter((character) => needed.includes(character));
+    const pool = Array.from(new Set([...retained, ...needed, ...Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'")]));
+    const visible = retained.slice(0, 9);
+    for (const character of pool) {
+      if (visible.length >= 9) break;
+      if (!visible.includes(character)) visible.push(character);
+    }
+    state.battleCardsKeyboardLetters = shuffleBattleKeyboard(visible.slice(0, 9));
+    els.battleCardsTypingKeys.innerHTML = state.battleCardsKeyboardLetters.map((character) => (
+      `<button class="battle-cards-typing__key" type="button" data-letter="${escapeHtml(character)}">${escapeHtml(character)}</button>`
+    )).join('');
+  }
+
+  function advanceBattleTypingSpaces() {
+    while (
+      state.battleCardsTypingIndex < state.battleCardsTypingTarget.length
+      && /\s/u.test(state.battleCardsTypingTarget[state.battleCardsTypingIndex])
+    ) {
+      state.battleCardsTypingResults[state.battleCardsTypingIndex] = 'correct';
+      state.battleCardsTypingIndex += 1;
+      state.battleCardsCardScore += 1;
+    }
+  }
+
+  function startBattleTypingCard(card) {
+    const target = normalizeBattleTypingText(card?.targetText || card?.english);
+    state.battleCardsTypingTarget = Array.from(target);
+    state.battleCardsTypingResults = Array(state.battleCardsTypingTarget.length).fill('');
+    state.battleCardsTypingIndex = 0;
+    state.battleCardsKeyboardLetters = [];
+    state.battleCardsCardScore = 0;
+    state.battleCardsCardMaxScore = state.battleCardsTypingTarget.length;
+    advanceBattleTypingSpaces();
+    renderBattleTypingSlots();
+    refreshBattleTypingKeyboard();
+  }
+
+  async function handleBattleTypingKey(character) {
+    if (
+      !isBattleCardsMode()
+      || state.duel.currentPhase !== 1
+      || !state.battleCardsReadyToSpeak
+      || state.duel.waitingForPhase
+      || state.battleCardsTypingIndex >= state.battleCardsTypingTarget.length
+    ) return;
+    const expected = state.battleCardsTypingTarget[state.battleCardsTypingIndex];
+    const correct = character === expected;
+    state.battleCardsTypingResults[state.battleCardsTypingIndex] = correct ? 'correct' : 'wrong';
+    if (correct) state.battleCardsCardScore += 1;
+    state.battleCardsTypingIndex += 1;
+    advanceBattleTypingSpaces();
+    renderBattleTypingSlots();
+    refreshBattleTypingKeyboard();
+    if (!correct) {
+      const card = state.activeCards[state.currentIndex % Math.max(1, state.activeCards.length)];
+      void playBattleCardsTargetReveal(card).finally(() => {
+        if (state.duel.currentPhase === 1 && !state.duel.waitingForPhase) {
+          state.battleCardsReadyToSpeak = true;
+          syncBattleCardsReadyState();
+        }
+      });
+    }
+    if (state.battleCardsTypingIndex >= state.battleCardsTypingTarget.length) {
+      await completeBattleCardsTypingCard();
+    }
+  }
   function renderBattleCardsVisual(card) {
     const imageUrl = safeText(card?.imageUrl);
     if (els.battleCardsImage) {
@@ -1021,8 +1171,10 @@
   }
 
   function updateBattleCardsBuffer() {
-    if (!isBattleCardsMode()) return;
-    const nextCards = state.activeCards.slice(state.currentIndex, state.currentIndex + 3);
+    if (!isBattleCardsMode() || !state.activeCards.length) return;
+    const nextCards = Array.from({ length: Math.min(3, state.activeCards.length) }, (_, offset) => (
+      state.activeCards[(state.currentIndex + offset) % state.activeCards.length]
+    ));
     nextCards.forEach((card) => {
       const imageUrl = safeText(card?.imageUrl);
       if (!imageUrl) return;
@@ -1112,8 +1264,11 @@
   }
 
   function syncBattleCardsReadyState() {
-    if (!els.battleCardsVisualBtn) return;
-    els.battleCardsVisualBtn.disabled = !state.battleCardsReadyToSpeak || state.duel.meFinished || state.duel.completed;
+    const disabled = !state.battleCardsReadyToSpeak || state.duel.meFinished || state.duel.completed || state.duel.waitingForPhase;
+    if (els.battleCardsVisualBtn) els.battleCardsVisualBtn.disabled = disabled;
+    els.battleCardsTypingKeys?.querySelectorAll('button').forEach((button) => {
+      button.disabled = disabled || state.duel.currentPhase !== 1;
+    });
   }
 
   function playBattleCardsTargetReveal(card) {
@@ -1169,14 +1324,32 @@
   async function beginBattleCardsTurn(card) {
     if (!card || !isBattleCardsMode()) return;
     stopBattleCardsPromptAudio();
+    updateBattlePhaseHeader();
     renderBattleCardsVisual(card);
     renderBattleCardsPhaseWord(
       safeText(card?.nativeText || card?.portuguese || card?.targetText || card?.english) || 'FluentCards',
       'portuguese'
     );
     updateBattleCardsBuffer();
-    state.battleCardsReadyToSpeak = true;
+    state.battleCardsReadyToSpeak = false;
+    if (state.duel.currentPhase === 1) {
+      startBattleTypingCard(card);
+    } else {
+      state.battleCardsTypingTarget = [];
+      if (els.battleCardsTypingSlots) els.battleCardsTypingSlots.innerHTML = '';
+      if (els.battleCardsTypingKeys) els.battleCardsTypingKeys.innerHTML = '';
+    }
     syncBattleCardsReadyState();
+    if (state.duel.currentPhase === 1 || state.duel.currentPhase === 2) {
+      await Promise.race([
+        playBattleCardsTargetReveal(card),
+        new Promise((resolve) => window.setTimeout(resolve, 4200))
+      ]);
+    }
+    if (!state.duel.waitingForPhase && !state.duel.completed) {
+      state.battleCardsReadyToSpeak = true;
+      syncBattleCardsReadyState();
+    }
   }
 
   const SPEECH_SEQUENCE_MIN_LENGTH = 2;
@@ -1759,6 +1932,7 @@
 
   function startDuelBattleTimer() {
     stopDuelBattleTimer();
+    if (isBattleCardsMode()) return;
     if (!state.duel.enabled || !state.duel.battleDeadlineMs || state.duel.completed) return;
     updateDuelTimerLabel();
     state.duel.battleTimer = window.setInterval(() => {
@@ -1995,16 +2169,21 @@
     const isBattleMode = state.gameMode === 'battle-mode' || battleCardsMode;
     if (isBattleMode) {
       const showPoints = Boolean(state.duel.enabled) && !battleCardsMode;
+      const typingPhase = battleCardsMode && state.duel.currentPhase === 1;
       if (els.speakingPercent) {
         els.speakingPercent.textContent = battleCardsMode
-          ? `Voce ${Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0))}%`
+          ? typingPhase
+            ? `Voce ${Math.max(0, Number(state.duel.phaseScore) || 0)} pts`
+            : `Voce ${Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0))}%`
           : showPoints
             ? `Pontos ${Math.max(0, Number(state.duel.meScore) || 0)}`
             : '';
       }
       if (els.enemySpeakingPercent) {
         els.enemySpeakingPercent.textContent = battleCardsMode
-          ? `Rival ${Math.max(0, Math.min(100, Number(state.duel.rivalPercent) || 0))}%`
+          ? typingPhase
+            ? `Rival ${Math.max(0, Number(state.duel.rivalScore) || 0)} pts`
+            : `Rival ${Math.max(0, Math.min(100, Number(state.duel.rivalPercent) || 0))}%`
           : showPoints
             ? `Rival ${Math.max(0, Number(state.duel.rivalScore) || 0)}`
             : '';
@@ -2026,45 +2205,49 @@
   }
 
   function updateProgressBars() {
-    const total = Math.max(1, state.activeCards.length);
-    const completed = Math.min(state.currentIndex, total);
     const battleCardsMode = isBattleCardsMode();
-    const myBarValue = battleCardsMode && state.duel.targetScore > 0
-      ? Math.min(state.duel.targetScore, Math.max(0, Number(state.duel.meScore) || 0))
-      : completed;
-    const myBarTotal = battleCardsMode && state.duel.targetScore > 0 ? state.duel.targetScore : total;
+    const total = battleCardsMode
+      ? Math.max(1, Number(state.duel.requiredCards) || state.activeCards.length || 1)
+      : Math.max(1, state.activeCards.length);
+    const completed = Math.min(state.currentIndex, total);
     if (els.gameProgressBar) {
-      els.gameProgressBar.style.width = `${((myBarValue / Math.max(1, myBarTotal)) * 100).toFixed(2)}%`;
+      els.gameProgressBar.style.width = `${((completed / total) * 100).toFixed(2)}%`;
     }
-    if (state.duel.enabled) {
-      const rivalCompleted = battleCardsMode && state.duel.targetScore > 0
-        ? Math.min(state.duel.targetScore, Math.max(0, Number(state.duel.rivalScore) || 0))
-        : Math.min(state.duel.rivalProgress, total);
-      if (els.enemyProgressBar) {
-        const rivalTotal = battleCardsMode && state.duel.targetScore > 0 ? state.duel.targetScore : total;
-        els.enemyProgressBar.style.width = `${((rivalCompleted / Math.max(1, rivalTotal)) * 100).toFixed(2)}%`;
-      }
+    if (state.duel.enabled && els.enemyProgressBar) {
+      const rivalCompleted = Math.min(Math.max(0, Number(state.duel.rivalProgress) || 0), total);
+      els.enemyProgressBar.style.width = `${((rivalCompleted / total) * 100).toFixed(2)}%`;
     }
   }
 
   function renderCard() {
     const total = state.activeCards.length;
-    if (!total || state.currentIndex >= total) {
+    if (!total) {
       finishGame();
       return;
     }
     stopWordTicker();
-    const card = state.activeCards[state.currentIndex];
     if (isBattleCardsMode()) {
-      void beginBattleCardsTurn(card);
-    } else {
-      renderCurrentCardLanguage();
-    }
-    if (!state.duel.enabled) {
+      const requiredCards = Math.max(12, Number(state.duel.requiredCards) || 12);
+      if (state.currentIndex >= requiredCards) {
+        state.duel.waitingForPhase = true;
+        state.battleCardsReadyToSpeak = false;
+        syncBattleCardsReadyState();
+        setGameStatus('Aguardando o resultado desta fase...', '');
+        return;
+      }
+      state.duel.waitingForPhase = false;
       setGameStatus('', '');
+      const card = state.activeCards[state.currentIndex % total];
+      void beginBattleCardsTurn(card);
+      return;
     }
+    if (state.currentIndex >= total) {
+      finishGame();
+      return;
+    }
+    renderCurrentCardLanguage();
+    if (!state.duel.enabled) setGameStatus('', '');
   }
-
   async function loadSinglePlayerCards(storyId) {
     const queryStoryId = String(storyId || '').trim();
     const query = queryStoryId ? `?storyId=${encodeURIComponent(queryStoryId)}` : '';
@@ -2594,13 +2777,17 @@
         state.duel.liveCursor = safeText(payload?.updatedAt) || state.duel.liveCursor;
         const liveSession = payload?.session || {};
         if (payload?.changed) {
-          state.currentIndex = Math.max(state.currentIndex, Math.max(0, Number(liveSession?.meProgress) || 0));
-          state.duel.rivalProgress = Math.max(0, Number(liveSession?.rivalProgress) || 0);
-          state.duel.mePercent = Math.max(0, Math.min(100, Number(liveSession?.mePercent) || 0));
-          state.duel.rivalPercent = Math.max(0, Math.min(100, Number(liveSession?.rivalPercent) || 0));
-          state.duel.meFinished = Boolean(state.duel.meFinished || liveSession?.meFinished);
-          updateTopPercents();
-          updateProgressBars();
+          if (liveSession?.battleState) {
+            applyBattleCardsState(liveSession.battleState);
+          } else {
+            state.currentIndex = Math.max(state.currentIndex, Math.max(0, Number(liveSession?.meProgress) || 0));
+            state.duel.rivalProgress = Math.max(0, Number(liveSession?.rivalProgress) || 0);
+            state.duel.mePercent = Math.max(0, Math.min(100, Number(liveSession?.mePercent) || 0));
+            state.duel.rivalPercent = Math.max(0, Math.min(100, Number(liveSession?.rivalPercent) || 0));
+            state.duel.meFinished = Boolean(state.duel.meFinished || liveSession?.meFinished);
+            updateTopPercents();
+            updateProgressBars();
+          }
         }
         if (safeText(liveSession?.status) === 'completed') {
           await pollDuelSession();
@@ -2618,6 +2805,54 @@
     }
   }
 
+  function applyBattleCardsState(battleState) {
+    if (!battleState || typeof battleState !== 'object') return;
+    const previousPhase = Math.max(1, Number(state.duel.currentPhase) || 1);
+    const previousRequiredCards = Math.max(12, Number(state.duel.requiredCards) || 12);
+    const nextPhase = Math.max(1, Math.min(3, Number(battleState.currentPhase) || 1));
+    const nextRequiredCards = Math.max(12, Number(battleState.requiredCards) || 12);
+    const phaseChanged = nextPhase !== previousPhase;
+    const tiebreakOpened = !phaseChanged && nextRequiredCards > previousRequiredCards;
+
+    state.duel.phaseRevision = Math.max(0, Number(battleState.revision) || state.duel.phaseRevision || 0);
+    state.duel.currentPhase = nextPhase;
+    state.duel.requiredCards = nextRequiredCards;
+    state.duel.mePhaseWins = Math.max(0, Number(battleState.mePhaseWins) || 0);
+    state.duel.rivalPhaseWins = Math.max(0, Number(battleState.rivalPhaseWins) || 0);
+    state.duel.phaseScore = Math.max(0, Number(battleState.meScore) || 0);
+    state.duel.phaseMaxScore = Math.max(0, Number(battleState.meMaxScore) || 0);
+    state.duel.phaseSamples = Math.max(0, Number(battleState.meSamples) || 0);
+    state.duel.meScore = state.duel.phaseScore;
+    state.duel.rivalScore = Math.max(0, Number(battleState.rivalScore) || 0);
+    state.duel.mePercent = Math.max(0, Math.min(100, Number(battleState.mePercent) || 0));
+    state.duel.rivalPercent = Math.max(0, Math.min(100, Number(battleState.rivalPercent) || 0));
+    state.duel.rivalProgress = Math.max(0, Number(battleState.rivalProgress) || 0);
+
+    const serverProgress = Math.max(0, Number(battleState.meProgress) || 0);
+    state.currentIndex = phaseChanged ? serverProgress : Math.max(state.currentIndex, serverProgress);
+    state.duel.waitingForPhase = state.currentIndex >= nextRequiredCards && !battleState.completed;
+    if (phaseChanged) {
+      state.scores = [];
+      stopBattleCardsPromptAudio();
+      setGameStatus(`${getBattlePhaseTitle(nextPhase)} · valendo!`, '');
+    } else if (tiebreakOpened) {
+      state.duel.waitingForPhase = false;
+      setGameStatus(`Empate! Carta extra ${nextRequiredCards}.`, '');
+    }
+    updateBattlePhaseHeader();
+    updateTopPercents();
+    updateProgressBars();
+    syncBattleCardsReadyState();
+
+    if (
+      state.duel.gameplayReady
+      && !battleState.completed
+      && state.currentIndex < nextRequiredCards
+      && (phaseChanged || tiebreakOpened)
+    ) {
+      window.setTimeout(renderCard, phaseChanged ? 900 : 450);
+    }
+  }
   function syncDuelView(session) {
     const meRole = safeText(session?.meRole);
     const isChallenger = meRole === 'challenger';
@@ -2647,6 +2882,9 @@
     state.duel.rivalProgress = Math.max(Math.max(0, Number(state.duel.rivalProgress) || 0), nextRivalProgress);
     state.duel.rivalPercent = Math.max(0, Math.min(100, nextRivalPercent));
     state.duel.meFinished = Boolean(state.duel.meFinished || session?.meFinished);
+    if (isBattleCardsMode() && session?.battleState) {
+      applyBattleCardsState(session.battleState);
+    }
     state.duel.liveCursor = safeText(session?.updatedAt) || state.duel.liveCursor;
     state.duel.selectedLevel = Math.max(1, Number(session?.selectedLevel) || state.duel.selectedLevel || 1);
     state.duel.rivalSelectedLevel = Math.max(1, Number(session?.rivalSelectedLevel) || state.duel.rivalSelectedLevel || 1);
@@ -2696,7 +2934,7 @@
     }
     if (els.winnerRevealTitle) {
       els.winnerRevealTitle.textContent = !winner?.userId
-        ? 'Empate!'
+        ? 'Batalha finalizada'
         : Number(winner.userId) === Number(state.duel.meUserId)
           ? 'Voce venceu!'
           : `${safeText(winner.username) || state.duel.rivalName} venceu`;
@@ -2705,8 +2943,16 @@
     if (els.winnerRevealRivalAvatar) els.winnerRevealRivalAvatar.src = normalizeAvatarSource(state.duel.rivalAvatar);
     if (els.winnerRevealMeName) els.winnerRevealMeName.textContent = state.duel.meName || 'Voce';
     if (els.winnerRevealRivalName) els.winnerRevealRivalName.textContent = state.duel.rivalName || 'Adversario';
-    if (els.winnerRevealMePercent) els.winnerRevealMePercent.textContent = `${Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0))}%`;
-    if (els.winnerRevealRivalPercent) els.winnerRevealRivalPercent.textContent = `${Math.max(0, Math.min(100, Number(state.duel.rivalPercent) || 0))}%`;
+    if (els.winnerRevealMePercent) {
+      els.winnerRevealMePercent.textContent = isBattleCardsMode()
+        ? `${Math.max(0, Number(state.duel.mePhaseWins) || 0)} fases`
+        : `${Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0))}%`;
+    }
+    if (els.winnerRevealRivalPercent) {
+      els.winnerRevealRivalPercent.textContent = isBattleCardsMode()
+        ? `${Math.max(0, Number(state.duel.rivalPhaseWins) || 0)} fases`
+        : `${Math.max(0, Math.min(100, Number(state.duel.rivalPercent) || 0))}%`;
+    }
     renderCompetitionReview();
     if (els.winnerRevealStatus) {
       els.winnerRevealStatus.textContent = state.duel.battleVariant === 'cup'
@@ -2714,7 +2960,7 @@
         : state.duel.battleVariant === 'league'
           ? `Rodada ${Math.max(1, Number(state.duel.competition?.fixtureIndex) + 1)}/${Math.max(1, Number(state.duel.competition?.fixtureTotal) || 1)} finalizada. Veja os placares e a classificacao.`
           : isBattleCardsMode()
-            ? `12 cartas dos niveis ${state.duel.minLevel} a ${state.duel.maxLevel}. A maior media de pronuncia vence.`
+            ? `Melhor de 3 concluido: digitacao, ouvir e repetir, e Meaning.`
             : 'Batalha finalizada.';
     }
     state.duel.rematchSearching = false;
@@ -3022,10 +3268,15 @@
 
   async function syncDuelProgress(forceFinished, timedOut) {
     if (!state.duel.enabled || !state.duel.sessionId) return;
+    const battleCardsMode = isBattleCardsMode();
     const total = Math.max(1, state.activeCards.length);
-    const completed = Math.min(state.currentIndex, total);
+    const completed = battleCardsMode
+      ? Math.max(0, Number(state.currentIndex) || 0)
+      : Math.min(state.currentIndex, total);
     const sessionAvg = Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0));
-    const sessionScore = Math.max(0, Number(state.duel.meScore) || 0);
+    const sessionScore = battleCardsMode
+      ? Math.max(0, Number(state.duel.phaseScore) || 0)
+      : Math.max(0, Number(state.duel.meScore) || 0);
     const isTimedOut = Boolean(timedOut);
     const markFinished = isTimedOut ? Boolean(state.duel.meFinished) : Boolean(forceFinished);
     try {
@@ -3038,19 +3289,26 @@
           score: sessionScore,
           percent: sessionAvg,
           finished: markFinished,
-          timedOut: isTimedOut
+          timedOut: isTimedOut,
+          battlePhase: battleCardsMode ? state.duel.currentPhase : undefined,
+          phaseProgress: battleCardsMode ? completed : undefined,
+          phaseScore: battleCardsMode ? state.duel.phaseScore : undefined,
+          phaseMaxScore: battleCardsMode ? state.duel.phaseMaxScore : undefined,
+          phaseSamples: battleCardsMode ? state.duel.phaseSamples : undefined
         })
       });
       const payload = await response.json().catch(() => ({}));
       if (response.ok && payload?.success && payload?.session) {
+        if (battleCardsMode && payload.session.battleState) {
+          applyBattleCardsState(payload.session.battleState);
+        }
         return payload.session;
       }
     } catch (_error) {
-      // ignore
+      // A sincronizacao ao vivo tenta novamente no proximo progresso.
     }
     return null;
   }
-
   async function pollDuelSession() {
     if (!state.duel.enabled || !state.duel.sessionId) return;
     try {
@@ -3260,14 +3518,66 @@
     });
   }
 
+  async function completeBattleCardsPhaseCard({ score, maxScore = 0, pronunciation = false, card = null } = {}) {
+    const phaseBefore = state.duel.currentPhase;
+    const requiredBefore = state.duel.requiredCards;
+    const normalizedScore = Math.max(0, Number(score) || 0);
+    state.duel.phaseScore += normalizedScore;
+    if (phaseBefore === 1) {
+      state.duel.phaseMaxScore += Math.max(0, Number(maxScore) || 0);
+      state.duel.mePercent = state.duel.phaseMaxScore > 0
+        ? Math.round((state.duel.phaseScore / state.duel.phaseMaxScore) * 100)
+        : 0;
+    } else {
+      state.duel.phaseSamples += 1;
+      state.duel.mePercent = Math.round(state.duel.phaseScore / Math.max(1, state.duel.phaseSamples));
+      state.scores.push(normalizedScore);
+    }
+    state.duel.meScore = state.duel.phaseScore;
+    state.currentIndex += 1;
+    updateTopPercents();
+    updateProgressBars();
+
+    if (pronunciation && card) {
+      renderBattleCardsPhaseWord(
+        safeText(card?.targetText || card?.english || card?.nativeText || card?.portuguese) || 'FluentCards',
+        'english'
+      );
+      await Promise.race([
+        playBattleCardsTargetReveal(card),
+        new Promise((resolve) => window.setTimeout(resolve, 2200))
+      ]);
+    }
+
+    const syncedSession = await syncDuelProgress(false);
+    if (syncedSession?.status === 'completed') {
+      await pollDuelSession();
+      return;
+    }
+    if (state.duel.currentPhase !== phaseBefore || state.duel.requiredCards !== requiredBefore) return;
+    window.setTimeout(renderCard, 140);
+  }
+
+  async function completeBattleCardsTypingCard() {
+    if (state.duel.currentPhase !== 1 || state.duel.waitingForPhase) return;
+    state.battleCardsReadyToSpeak = false;
+    syncBattleCardsReadyState();
+    await completeBattleCardsPhaseCard({
+      score: state.battleCardsCardScore,
+      maxScore: state.battleCardsCardMaxScore,
+      pronunciation: false
+    });
+  }
   async function handleSendSpeaking() {
     if (!state.activeCards.length || state.duel.meFinished) return;
-    const card = state.activeCards[state.currentIndex];
+    const battleCardsMode = isBattleCardsMode();
+    if (battleCardsMode && state.duel.currentPhase === 1) return;
+    const card = battleCardsMode
+      ? state.activeCards[state.currentIndex % state.activeCards.length]
+      : state.activeCards[state.currentIndex];
     if (!card) return;
-    if (isBattleCardsMode() && !state.battleCardsReadyToSpeak) return;
-    if (isBattleCardsMode()) {
-      stopBattleCardsPromptAudio();
-    }
+    if (battleCardsMode && !state.battleCardsReadyToSpeak) return;
+    if (battleCardsMode) stopBattleCardsPromptAudio();
     if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = true;
     if (els.battleCardsVisualBtn) {
       els.battleCardsVisualBtn.disabled = true;
@@ -3280,14 +3590,20 @@
       const transcript = safeText(await captureSpeechFast(safeText(card?.speechCode) || 'en-US'));
       addSpeakingConsumptionChars(transcript);
       const matchStats = calculateSpeechMatchStats(safeText(card?.targetText || card?.english), transcript);
-      const previousCount = Math.max(0, Number(state.currentIndex) || 0);
-      const battleCardsMode = isBattleCardsMode();
       const isBattleBooksMode = Boolean(state.duel.enabled) && !battleCardsMode;
       const score = isBattleBooksMode
         ? matchStats.matched
         : battleCardsMode && state.duel.enabled
           ? applyBattleUserPronunciationBonus(matchStats.percent)
           : matchStats.percent;
+
+      if (battleCardsMode) {
+        state.battleCardsReadyToSpeak = false;
+        await completeBattleCardsPhaseCard({ score, pronunciation: true, card });
+        return;
+      }
+
+      const previousCount = Math.max(0, Number(state.currentIndex) || 0);
       state.scores.push(score);
       state.currentIndex += 1;
       const nextCount = previousCount + 1;
@@ -3299,9 +3615,7 @@
         const weighted = ((Number(state.duel.mePercent) || 0) * previousCount) + score;
         state.duel.mePercent = nextCount > 0 ? Math.round(weighted / nextCount) : score;
       }
-      if (!battleCardsMode && score > 0) {
-        await playSuccessSound();
-      }
+      if (score > 0) await playSuccessSound();
       updateTopPercents();
       updateProgressBars();
       const syncedSession = await syncDuelProgress(false);
@@ -3309,36 +3623,16 @@
         await pollDuelSession();
         return;
       }
-      if (battleCardsMode) {
-        renderBattleCardsPhaseWord(
-          safeText(card?.targetText || card?.english || card?.nativeText || card?.portuguese) || 'FluentCards',
-          'english'
-        );
-        await Promise.race([
-          playBattleCardsTargetReveal(card),
-          new Promise((resolve) => window.setTimeout(resolve, 2200))
-        ]);
-        if (state.currentIndex >= state.activeCards.length) {
-          state.duel.meFinished = true;
-          finishGame();
-          return;
-        }
-        window.setTimeout(renderCard, 120);
-        return;
-      }
       window.setTimeout(renderCard, 220);
     } catch (error) {
       setGameStatus(error?.message || '', 'is-error');
     } finally {
       if (els.sendSpeakingBtn) els.sendSpeakingBtn.disabled = false;
-      if (els.battleCardsVisualBtn) {
-        els.battleCardsVisualBtn.classList.remove('is-mic-live');
-      }
+      if (els.battleCardsVisualBtn) els.battleCardsVisualBtn.classList.remove('is-mic-live');
       setMicLiveVisual(false);
       syncBattleCardsReadyState();
     }
   }
-
   function finishGame() {
     commitSpeakingPracticeSession();
     void flushSpeakingConsumptionIfNeeded(true);
@@ -3447,6 +3741,8 @@
     startSpeakingPracticeSession();
     state.duel.enabled = true;
     state.duel.completed = false;
+    state.duel.gameplayReady = false;
+    state.duel.waitingForPhase = false;
     state.duel.timeoutSyncInFlight = false;
     writeSessionIdToUrl(state.duel.sessionId);
     if (els.home) els.home.hidden = true;
@@ -3493,6 +3789,7 @@
       startDuelLoops();
       return;
     }
+    state.duel.gameplayReady = true;
     startDuelBattleTimer();
     renderCard();
     startDuelLoops();
@@ -3547,7 +3844,22 @@
     });
     els.battleCardsVisualBtn?.addEventListener('click', () => {
       if (!isBattleCardsMode()) return;
+      if (state.duel.currentPhase === 1) {
+        const card = state.activeCards[state.currentIndex % Math.max(1, state.activeCards.length)];
+        void playBattleCardsTargetReveal(card).finally(() => {
+          if (!state.duel.waitingForPhase && !state.duel.completed) {
+            state.battleCardsReadyToSpeak = true;
+            syncBattleCardsReadyState();
+          }
+        });
+        return;
+      }
       void handleSendSpeaking();
+    });
+    els.battleCardsTypingKeys?.addEventListener('click', (event) => {
+      const button = event.target?.closest?.('[data-letter]');
+      if (!button || button.disabled) return;
+      void handleBattleTypingKey(String(button.dataset.letter || ''));
     });
     els.winnerPlayAgainBtn?.addEventListener('click', handleWinnerPrimaryAction);
     els.winnerBackToCardsBtn?.addEventListener('click', () => { void leaveBattleResult(); });
