@@ -2246,8 +2246,40 @@
     }
 
     .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-visual {
-      width: clamp(96px, 16dvh, 148px);
-      height: clamp(96px, 16dvh, 148px);
+      width: clamp(124px, 21dvh, 190px);
+      height: clamp(124px, 21dvh, 190px);
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-translation {
+      grid-column: 1;
+      grid-row: 1;
+      align-self: end;
+      width: clamp(124px, 21dvh, 190px);
+      min-height: 0;
+      margin: 0 0 clamp(10px, 1.8dvh, 16px);
+      z-index: 4;
+    }
+
+    .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-phase-word {
+      max-width: 88%;
+      min-height: 0;
+      padding: 0;
+      border-radius: 0;
+      background: none !important;
+      color: #ffffff;
+      font-size: clamp(20px, 3.1dvh, 30px);
+      line-height: 1.05;
+      text-shadow:
+        0 2px 3px rgba(0, 0, 0, 1),
+        0 0 9px rgba(0, 0, 0, 0.96),
+        0 0 18px rgba(0, 0, 0, 0.78);
+    }
+
+    .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-typing {
+      grid-column: 1;
+      grid-row: 2;
     }
 
     .speaking-game.is-battle-cards .battle-cards-translation {
@@ -2298,8 +2330,32 @@
       aspect-ratio: 1 / 1;
       padding: 0;
       border-radius: clamp(11px, 2dvh, 16px);
-      font-size: 25.2px;
+      font-size: clamp(32px, min(8.2dvh, 17vw), 76px);
       line-height: 1;
+      transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-typing__key.is-correct {
+      border-color: rgba(86, 255, 151, 0.92);
+      color: #ffffff;
+      background: linear-gradient(150deg, #167b3b 0%, #0b5329 55%, #06391d 100%);
+      box-shadow: 0 7px 0 #032a15, 0 0 22px rgba(59, 224, 119, 0.32);
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-typing__key.is-wrong {
+      border-color: rgba(255, 114, 128, 0.94);
+      color: #ffffff;
+      background: linear-gradient(150deg, #b62d3e 0%, #821b2a 58%, #57111d 100%);
+      box-shadow: 0 7px 0 #3d0912, 0 0 20px rgba(255, 73, 94, 0.28);
+    }
+
+    .speaking-game.is-battle-cards .battle-cards-typing__keys.is-error-flash .battle-cards-typing__key,
+    .speaking-game.is-battle-cards .battle-cards-typing__keys.is-error-flash .battle-cards-typing__key:disabled {
+      opacity: 1;
+      border-color: #ff8794;
+      color: #ffffff;
+      background: linear-gradient(150deg, #d53246 0%, #a7192f 55%, #6b0b1c 100%);
+      box-shadow: 0 7px 0 #480712, 0 0 24px rgba(255, 64, 87, 0.48);
     }
 
     .speaking-game.is-battle-cards .battle-cards-typing__key.is-replaced {
@@ -2355,8 +2411,26 @@
       }
 
       .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-visual {
-        width: min(39dvh, 24vw);
-        height: min(39dvh, 24vw);
+        width: min(48dvh, 29vw);
+        height: min(48dvh, 29vw);
+        grid-column: 1;
+        grid-row: 1 / 3;
+        align-self: center;
+      }
+
+      .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-translation {
+        grid-column: 1;
+        grid-row: 1 / 3;
+        align-self: center;
+        width: min(48dvh, 29vw);
+        margin: 0;
+        transform: translateY(min(15dvh, 8.5vw));
+      }
+
+      .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-typing {
+        grid-column: 2;
+        grid-row: 1 / 3;
+        align-self: center;
       }
 
       .speaking-game.is-battle-cards .battle-cards-translation {
@@ -2625,7 +2699,4 @@
   <script src="js/video-background.js"></script>
 </body>
 </html>
-
-
-
 

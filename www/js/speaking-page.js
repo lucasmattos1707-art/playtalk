@@ -172,6 +172,9 @@
     battleCardsTypingIndex: 0,
     battleCardsKeyboardLetters: [],
     battleCardsKeyboardQueue: [],
+    battleCardsKeyboardStates: [],
+    battleCardsTypingLocked: false,
+    battleCardsTypingErrorFlash: false,
     battleCardsFeedbackAudioContext: null,
     battleCardsMistakeReplayAudio: null,
     battleCardsCardScore: 0,
@@ -1087,9 +1090,16 @@
 
   function renderBattleTypingKeyboard() {
     if (!els.battleCardsTypingKeys) return;
-    els.battleCardsTypingKeys.innerHTML = state.battleCardsKeyboardLetters.map((character, index) => (
-      `<button class="battle-cards-typing__key" type="button" data-key-index="${index}" data-letter="${escapeHtml(character)}">${escapeHtml(character)}</button>`
-    )).join('');
+    els.battleCardsTypingKeys.classList.toggle('is-error-flash', Boolean(state.battleCardsTypingErrorFlash));
+    els.battleCardsTypingKeys.innerHTML = state.battleCardsKeyboardLetters.map((character, index) => {
+      const keyState = state.battleCardsKeyboardStates[index];
+      const className = [
+        'battle-cards-typing__key',
+        keyState === 'correct' ? 'is-correct' : '',
+        keyState === 'wrong' ? 'is-wrong' : ''
+      ].filter(Boolean).join(' ');
+      return `<button class="${className}" type="button" data-key-index="${index}" data-letter="${escapeHtml(character)}">${escapeHtml(character)}</button>`;
+    }).join('');
   }
 
   function refreshBattleTypingKeyboard() {
@@ -1106,10 +1116,11 @@
       if (!visible.includes(character)) visible.push(character);
     }
     state.battleCardsKeyboardLetters = shuffleBattleKeyboard(visible.slice(0, 9));
+    state.battleCardsKeyboardStates = Array(state.battleCardsKeyboardLetters.length).fill('');
     renderBattleTypingKeyboard();
   }
 
-  function replaceBattleTypingObsoleteKey(preferredCharacter) {
+  function replaceBattleTypingObsoleteKey(preferredCharacter, preferredIndex = -1) {
     const remaining = state.battleCardsTypingTarget
       .slice(state.battleCardsTypingIndex)
       .filter((character) => !/\s/u.test(character));
@@ -1117,26 +1128,47 @@
     state.battleCardsKeyboardQueue = state.battleCardsKeyboardQueue.filter((character) => remainingSet.has(character));
     const visibleSet = new Set(state.battleCardsKeyboardLetters);
     const nextCharacter = state.battleCardsKeyboardQueue.find((character) => !visibleSet.has(character));
-    if (!nextCharacter) return;
+    if (!nextCharacter) return -1;
 
     let replaceIndex = -1;
     if (preferredCharacter && !remainingSet.has(preferredCharacter)) {
-      replaceIndex = state.battleCardsKeyboardLetters.indexOf(preferredCharacter);
+      const normalizedPreferredIndex = Number.parseInt(preferredIndex, 10);
+      replaceIndex = Number.isInteger(normalizedPreferredIndex)
+        && state.battleCardsKeyboardLetters[normalizedPreferredIndex] === preferredCharacter
+        ? normalizedPreferredIndex
+        : state.battleCardsKeyboardLetters.indexOf(preferredCharacter);
     }
     if (replaceIndex < 0) {
       replaceIndex = state.battleCardsKeyboardLetters.findIndex((character) => !remainingSet.has(character));
     }
-    if (replaceIndex < 0) return;
+    if (replaceIndex < 0) return -1;
 
     state.battleCardsKeyboardLetters[replaceIndex] = nextCharacter;
+    state.battleCardsKeyboardStates[replaceIndex] = '';
     state.battleCardsKeyboardQueue = state.battleCardsKeyboardQueue.filter((character) => character !== nextCharacter);
     const button = els.battleCardsTypingKeys?.querySelector(`[data-key-index="${replaceIndex}"]`);
-    if (!button) return;
+    if (!button) return replaceIndex;
     button.dataset.letter = nextCharacter;
     button.textContent = nextCharacter;
-    button.classList.remove('is-replaced');
+    button.classList.remove('is-correct', 'is-wrong', 'is-replaced');
     void button.offsetWidth;
     button.classList.add('is-replaced');
+    return replaceIndex;
+  }
+
+  function setBattleTypingKeyState(index, keyState = '') {
+    const normalizedIndex = Number.parseInt(index, 10);
+    if (!Number.isInteger(normalizedIndex) || normalizedIndex < 0) return;
+    state.battleCardsKeyboardStates[normalizedIndex] = keyState;
+    const button = els.battleCardsTypingKeys?.querySelector(`[data-key-index="${normalizedIndex}"]`);
+    if (!button) return;
+    button.classList.toggle('is-correct', keyState === 'correct');
+    button.classList.toggle('is-wrong', keyState === 'wrong');
+  }
+
+  function setBattleTypingErrorFlash(active) {
+    state.battleCardsTypingErrorFlash = Boolean(active);
+    els.battleCardsTypingKeys?.classList.toggle('is-error-flash', state.battleCardsTypingErrorFlash);
   }
 
   function playBattleTypingFeedbackSound(correct) {
@@ -1153,7 +1185,7 @@
       oscillator.frequency.setValueAtTime(correct ? 720 : 190, now);
       if (correct) oscillator.frequency.exponentialRampToValueAtTime(930, now + 0.07);
       gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(correct ? 0.055 : 0.07, now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(correct ? 0.088 : 0.07, now + 0.008);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + (correct ? 0.085 : 0.12));
       oscillator.connect(gain);
       gain.connect(context.destination);
@@ -1222,6 +1254,9 @@
     state.battleCardsTypingIndex = 0;
     state.battleCardsKeyboardLetters = [];
     state.battleCardsKeyboardQueue = [];
+    state.battleCardsKeyboardStates = [];
+    state.battleCardsTypingLocked = false;
+    setBattleTypingErrorFlash(false);
     state.battleCardsCardScore = 0;
     state.battleCardsCardMaxScore = state.battleCardsTypingTarget.length;
     advanceBattleTypingSpaces();
@@ -1229,11 +1264,12 @@
     refreshBattleTypingKeyboard();
   }
 
-  async function handleBattleTypingKey(character) {
+  async function handleBattleTypingKey(character, keyIndex = -1) {
     if (
       !isBattleCardsMode()
       || state.duel.currentPhase !== 1
       || !state.battleCardsReadyToSpeak
+      || state.battleCardsTypingLocked
       || state.duel.waitingForPhase
       || state.battleCardsTypingIndex >= state.battleCardsTypingTarget.length
     ) return;
@@ -1244,15 +1280,33 @@
     state.battleCardsTypingIndex += 1;
     advanceBattleTypingSpaces();
     renderBattleTypingSlots();
-    replaceBattleTypingObsoleteKey(character);
+    const replacedKeyIndex = replaceBattleTypingObsoleteKey(character, keyIndex);
+    const normalizedKeyIndex = Number.parseInt(keyIndex, 10);
+    const clickedKeyWasReplaced = Number.isInteger(normalizedKeyIndex) && replacedKeyIndex === normalizedKeyIndex;
+    if (!clickedKeyWasReplaced) {
+      const remainingCharacters = new Set(
+        state.battleCardsTypingTarget
+          .slice(state.battleCardsTypingIndex)
+          .filter((remainingCharacter) => !/\s/u.test(remainingCharacter))
+      );
+      if (correct) setBattleTypingKeyState(keyIndex, 'correct');
+      else if (!remainingCharacters.has(character)) setBattleTypingKeyState(keyIndex, 'wrong');
+    }
     playBattleTypingFeedbackSound(correct);
     if (!correct) {
+      state.battleCardsTypingLocked = true;
+      setBattleTypingErrorFlash(true);
+      syncBattleCardsReadyState();
       const card = state.activeCards[state.currentIndex % Math.max(1, state.activeCards.length)];
       window.setTimeout(() => {
         if (state.duel.currentPhase === 1 && !state.duel.waitingForPhase && !state.duel.completed) {
           playBattleTypingMistakeReplay(card);
         }
       }, 90);
+      await waitMs(500);
+      setBattleTypingErrorFlash(false);
+      state.battleCardsTypingLocked = false;
+      syncBattleCardsReadyState();
     }
     if (state.battleCardsTypingIndex >= state.battleCardsTypingTarget.length) {
       await completeBattleCardsTypingCard();
@@ -1377,7 +1431,11 @@
   }
 
   function syncBattleCardsReadyState() {
-    const disabled = !state.battleCardsReadyToSpeak || state.duel.meFinished || state.duel.completed || state.duel.waitingForPhase;
+    const disabled = !state.battleCardsReadyToSpeak
+      || state.battleCardsTypingLocked
+      || state.duel.meFinished
+      || state.duel.completed
+      || state.duel.waitingForPhase;
     if (els.battleCardsVisualBtn) els.battleCardsVisualBtn.disabled = disabled;
     els.battleCardsTypingKeys?.querySelectorAll('button').forEach((button) => {
       button.disabled = disabled || state.duel.currentPhase !== 1;
@@ -3998,7 +4056,7 @@
     els.battleCardsTypingKeys?.addEventListener('click', (event) => {
       const button = event.target?.closest?.('[data-letter]');
       if (!button || button.disabled) return;
-      void handleBattleTypingKey(String(button.dataset.letter || ''));
+      void handleBattleTypingKey(String(button.dataset.letter || ''), Number.parseInt(button.dataset.keyIndex, 10));
     });
     els.winnerPlayAgainBtn?.addEventListener('click', handleWinnerPrimaryAction);
     els.winnerBackToCardsBtn?.addEventListener('click', () => { void leaveBattleResult(); });
@@ -4111,8 +4169,4 @@
     void init();
   }
 })();
-
-
-
-
 
