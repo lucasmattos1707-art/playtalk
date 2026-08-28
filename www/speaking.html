@@ -2329,9 +2329,15 @@
       min-height: 0;
       aspect-ratio: 1 / 1;
       padding: 0;
+      display: grid;
+      place-items: center;
       border-radius: clamp(11px, 2dvh, 16px);
       font-size: clamp(32px, min(8.2dvh, 17vw), 76px);
       line-height: 1;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
       transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
     }
 
@@ -2699,4 +2705,3 @@
   <script src="js/video-background.js"></script>
 </body>
 </html>
-

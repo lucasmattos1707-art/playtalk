@@ -1115,7 +1115,9 @@
       if (visible.length >= 9) break;
       if (!visible.includes(character)) visible.push(character);
     }
-    state.battleCardsKeyboardLetters = shuffleBattleKeyboard(visible.slice(0, 9));
+    state.battleCardsKeyboardLetters = visible
+      .slice(0, 9)
+      .sort((left, right) => left.localeCompare(right, 'pt-BR', { sensitivity: 'base' }));
     state.battleCardsKeyboardStates = Array(state.battleCardsKeyboardLetters.length).fill('');
     renderBattleTypingKeyboard();
   }
@@ -1268,7 +1270,6 @@
     if (
       !isBattleCardsMode()
       || state.duel.currentPhase !== 1
-      || !state.battleCardsReadyToSpeak
       || state.battleCardsTypingLocked
       || state.duel.waitingForPhase
       || state.battleCardsTypingIndex >= state.battleCardsTypingTarget.length
@@ -1289,7 +1290,7 @@
           .slice(state.battleCardsTypingIndex)
           .filter((remainingCharacter) => !/\s/u.test(remainingCharacter))
       );
-      if (correct) setBattleTypingKeyState(keyIndex, 'correct');
+      if (correct && !remainingCharacters.has(character)) setBattleTypingKeyState(keyIndex, 'correct');
       else if (!remainingCharacters.has(character)) setBattleTypingKeyState(keyIndex, 'wrong');
     }
     playBattleTypingFeedbackSound(correct);
@@ -1431,14 +1432,16 @@
   }
 
   function syncBattleCardsReadyState() {
-    const disabled = !state.battleCardsReadyToSpeak
-      || state.battleCardsTypingLocked
-      || state.duel.meFinished
+    const interactionFinished = state.duel.meFinished
       || state.duel.completed
       || state.duel.waitingForPhase;
-    if (els.battleCardsVisualBtn) els.battleCardsVisualBtn.disabled = disabled;
+    if (els.battleCardsVisualBtn) {
+      els.battleCardsVisualBtn.disabled = !state.battleCardsReadyToSpeak || interactionFinished;
+    }
     els.battleCardsTypingKeys?.querySelectorAll('button').forEach((button) => {
-      button.disabled = disabled || state.duel.currentPhase !== 1;
+      button.disabled = state.battleCardsTypingLocked
+        || interactionFinished
+        || state.duel.currentPhase !== 1;
     });
   }
 
@@ -4053,10 +4056,19 @@
       }
       void handleSendSpeaking();
     });
-    els.battleCardsTypingKeys?.addEventListener('click', (event) => {
+    const triggerBattleTypingKeyFromEvent = (event) => {
       const button = event.target?.closest?.('[data-letter]');
       if (!button || button.disabled) return;
       void handleBattleTypingKey(String(button.dataset.letter || ''), Number.parseInt(button.dataset.keyIndex, 10));
+    };
+    els.battleCardsTypingKeys?.addEventListener('pointerdown', (event) => {
+      if (event.button !== undefined && event.button !== 0) return;
+      event.preventDefault();
+      triggerBattleTypingKeyFromEvent(event);
+    });
+    els.battleCardsTypingKeys?.addEventListener('click', (event) => {
+      if (event.detail !== 0) return;
+      triggerBattleTypingKeyFromEvent(event);
     });
     els.winnerPlayAgainBtn?.addEventListener('click', handleWinnerPrimaryAction);
     els.winnerBackToCardsBtn?.addEventListener('click', () => { void leaveBattleResult(); });
@@ -4169,4 +4181,3 @@
     void init();
   }
 })();
-
