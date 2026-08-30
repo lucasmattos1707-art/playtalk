@@ -9293,33 +9293,164 @@
       line-height: 1.02 !important;
     }
 
-    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing__key.is-stage-six-correct {
-      background: linear-gradient(145deg, #075f36 0%, #0c9253 54%, #2acb75 100%) !important;
-      color: #f2fff7;
-      text-shadow: 0 2px 0 rgba(0, 48, 24, 0.88);
+    /* Stage 6 mirrors the current Battle phase 1 instead of Stage 4's legacy keyboard. */
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] #gameVisual .flashcards-typing__display--visual.is-second-star-translation {
+      width: 88% !important;
+      min-height: 0;
+      padding: 0;
+      border-radius: 0;
+      background: none !important;
+      color: #ffffff;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(20px, 3.1dvh, 30px) !important;
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: 0;
+      text-transform: none;
+      text-shadow: 0 2px 3px #000000, 0 0 9px rgba(0, 0, 0, 0.96), 0 0 18px rgba(0, 0, 0, 0.78);
     }
 
-    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing__key.is-stage-six-wrong,
-    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing__grid.is-error .flashcards-typing__key {
-      background: linear-gradient(145deg, #8f1227 0%, #c9193b 52%, #ff2a4f 100%) !important;
-      color: #fff5f7;
-      text-shadow: 0 2px 0 rgba(102, 10, 30, 0.92);
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .keyboardscreen-host {
+      align-items: center !important;
+      padding-top: 0 !important;
     }
 
-    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing__grid.is-error .flashcards-typing__key {
-      animation: flashcardsTypingErrorShake 500ms ease-in-out;
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing {
+      width: min(470px, calc(100vw - 24px)) !important;
+      max-width: 470px !important;
+      display: grid;
+      gap: clamp(7px, 1.25dvh, 13px);
+      justify-items: center;
+      margin-inline: auto !important;
+      padding-inline: 0 !important;
     }
 
     .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .flashcards-typing__display--stage-six-progress {
       position: static;
       inset: auto;
-      width: min(100%, 760px);
-      min-height: 54px;
-      margin: 0 auto 8px;
+      width: 100%;
+      min-height: clamp(34px, 5.5dvh, 48px);
+      margin: 0;
+      padding: 2px;
       transform: none;
-      color: #eafaff;
-      font-size: clamp(20px, 4.8vw, 34px);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      color: rgba(255, 255, 255, 0.78);
       text-align: center;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .flashcards-typing__stage-six-slot {
+      min-width: 16px;
+      height: clamp(24px, 4dvh, 32px);
+      display: inline-grid;
+      place-items: center;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+      color: rgba(255, 255, 255, 0.78);
+      font-size: clamp(16px, 2.8dvh, 21px);
+      font-weight: 900;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .flashcards-typing__stage-six-slot.is-space {
+      min-width: 13px;
+      border: 0;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .flashcards-typing__stage-six-slot.is-punctuation {
+      min-width: 8px;
+      border: 0;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .flashcards-typing__stage-six-slot.is-correct {
+      color: #79f3aa;
+      border-color: #79f3aa;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .flashcards-typing__stage-six-slot.is-wrong {
+      color: #ff7a8d;
+      border-color: #ff7a8d;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing__grid {
+      width: min(316px, calc(100vw - 32px), 39dvh) !important;
+      max-width: 316px !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(7px, 1.15dvh, 10px);
+      margin-inline: auto !important;
+      padding-inline: 0 !important;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing__key {
+      width: 100%;
+      min-width: 0;
+      min-height: 0;
+      aspect-ratio: 1 / 1;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(114, 225, 255, 0.5) !important;
+      border-radius: clamp(11px, 2dvh, 16px);
+      color: #ffffff;
+      background: linear-gradient(155deg, rgba(25, 82, 150, 0.96), rgba(12, 35, 83, 0.98)) !important;
+      box-shadow: 0 7px 0 rgba(4, 19, 50, 0.92), 0 12px 24px rgba(0, 0, 0, 0.25);
+      font-size: clamp(32px, min(8.2dvh, 17vw), 76px) !important;
+      font-weight: 900;
+      line-height: 1;
+      text-transform: uppercase;
+      text-shadow: none;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing__key:active {
+      transform: translateY(5px);
+      box-shadow: 0 2px 0 rgba(4, 19, 50, 0.92);
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing__key:disabled {
+      opacity: 0.42;
+      cursor: default;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing__key.is-stage-six-correct {
+      border-color: rgba(86, 255, 151, 0.92) !important;
+      color: #ffffff;
+      background: linear-gradient(150deg, #167b3b 0%, #0b5329 55%, #06391d 100%) !important;
+      box-shadow: 0 7px 0 #032a15, 0 0 22px rgba(59, 224, 119, 0.32);
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing__key.is-stage-six-wrong {
+      border-color: rgba(255, 114, 128, 0.94) !important;
+      color: #ffffff;
+      background: linear-gradient(150deg, #b62d3e 0%, #821b2a 58%, #57111d 100%) !important;
+      box-shadow: 0 7px 0 #3d0912, 0 0 20px rgba(255, 73, 94, 0.28);
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing__grid.is-error .flashcards-typing__key,
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing__grid.is-error .flashcards-typing__key:disabled {
+      opacity: 1;
+      border-color: #ff8794 !important;
+      color: #ffffff;
+      background: linear-gradient(150deg, #d53246 0%, #a7192f 55%, #6b0b1c 100%) !important;
+      box-shadow: 0 7px 0 #480712, 0 0 24px rgba(255, 64, 87, 0.48);
+      animation: none;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="6"] .textscreen .flashcards-typing__key.is-stage-six-replaced {
+      animation: stageSixBattleKeyReplace 180ms ease-out;
+    }
+
+    @keyframes stageSixBattleKeyReplace {
+      0% { opacity: 0.35; transform: scale(0.88); }
+      100% { opacity: 1; transform: scale(1); }
     }
 
     .game[data-phase-key="second-star"] .textscreen .flashcards-typing__word-row.is-long-word-row .flashcards-typing__key,
@@ -33341,24 +33472,71 @@
             })
           : -1;
         if (replacementIndex < 0) {
+          key.classList.remove('is-stage-six-correct', 'is-stage-six-wrong');
           key.classList.add(correct ? 'is-stage-six-correct' : 'is-stage-six-wrong');
           return;
         }
 
         const replacement = safeText(queue.splice(replacementIndex, 1)[0]).toUpperCase();
-        key.classList.add('is-dissolving');
-        key.disabled = true;
-        window.setTimeout(() => {
-          if (!key.isConnected) return;
-          setSmartKeyLetter(key, replacement, replacement === "'" ? apostropheLabel : '');
-          key.classList.remove(
-            'is-dissolving',
-            'is-correct-hit',
-            'is-stage-six-correct',
-            'is-stage-six-wrong'
-          );
-          key.disabled = false;
-        }, 500);
+        setSmartKeyLetter(key, replacement, replacement === "'" ? apostropheLabel : '');
+        key.classList.remove(
+          'is-dissolving',
+          'is-correct-hit',
+          'is-stage-six-correct',
+          'is-stage-six-wrong',
+          'is-stage-six-replaced'
+        );
+        void key.offsetWidth;
+        key.classList.add('is-stage-six-replaced');
+        window.setTimeout(() => key.classList.remove('is-stage-six-replaced'), 180);
+      }
+
+      function renderStageSixBattleTypingSlots(display, sourceText, results = []) {
+        if (!display) return;
+        display.innerHTML = '';
+        let resultIndex = 0;
+        Array.from(normalizeTypingSource(sourceText)).forEach((character) => {
+          const slot = document.createElement('span');
+          slot.className = 'flashcards-typing__stage-six-slot';
+          if (/\s/u.test(character)) {
+            slot.classList.add('is-space');
+            slot.textContent = ' ';
+          } else if (!/[A-Z]/u.test(character)) {
+            slot.classList.add('is-punctuation');
+            slot.textContent = character;
+          } else {
+            const result = safeText(results[resultIndex]);
+            if (result === 'correct' || result === 'wrong') slot.classList.add('is-' + result);
+            slot.textContent = result ? character : '•';
+            resultIndex += 1;
+          }
+          display.appendChild(slot);
+        });
+      }
+
+      function playStageSixBattleTypingFeedbackSound(correct) {
+        try {
+          const context = getTypingKeyAudioContext();
+          if (!context) return;
+          if (context.state === 'suspended' && typeof context.resume === 'function') {
+            void context.resume().catch(() => {});
+          }
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          const now = context.currentTime;
+          oscillator.type = correct ? 'sine' : 'triangle';
+          oscillator.frequency.setValueAtTime(correct ? 720 : 190, now);
+          if (correct) oscillator.frequency.exponentialRampToValueAtTime(930, now + 0.07);
+          gain.gain.setValueAtTime(0.0001, now);
+          gain.gain.exponentialRampToValueAtTime(correct ? 0.088 : 0.07, now + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + (correct ? 0.085 : 0.12));
+          oscillator.connect(gain);
+          gain.connect(context.destination);
+          oscillator.start(now);
+          oscillator.stop(now + (correct ? 0.09 : 0.125));
+        } catch (_error) {
+          // Audio feedback is progressive enhancement.
+        }
       }
 
       function showStageTwoPortugueseHint(card) {
@@ -33971,6 +34149,7 @@
         if (stageSixProgressDisplay) {
           stageSixProgressDisplay.className = 'flashcards-typing__display flashcards-typing__display--stage-six-progress';
         }
+        const stageSixTypingResults = [];
         let fourthStarTypingStarted = false;
         const renderTyped = () => {
           if (isStageSixBattleTyping) {
@@ -33979,7 +34158,7 @@
               display,
               capitalizeWords(resolveSourceLanguageText(card, currentNativeLanguage()) || card?.portuguese || card?.english || card?.deckTitle || '')
             );
-            renderTypingDisplay(stageSixProgressDisplay, typingState, typed, {});
+            renderStageSixBattleTypingSlots(stageSixProgressDisplay, targetWithSpaces, stageSixTypingResults);
             return;
           }
           if (useSmartKeyboard && !fourthStarShowingCorrection) {
@@ -34041,7 +34220,8 @@
           key.className = 'flashcards-typing__key';
           setSmartKeyLetter(key, letter, (useSmartKeyboard && letter === "'") ? apostropheKeyLabel : '');
           key.style.setProperty('--typing-key-bg', typingPalette[index % typingPalette.length]);
-          key.addEventListener('click', async () => {
+          key.addEventListener(isStageSixBattleTyping ? 'pointerdown' : 'click', async (event) => {
+            if (isStageSixBattleTyping) event.preventDefault();
             if (
               !state.game.active
               || state.game.paused
@@ -34056,9 +34236,9 @@
               const expectedLetter = target[typed.length];
               const correct = keyLetter === expectedLetter;
               if (!expectedLetter) return;
+              stageSixTypingResults.push(correct ? 'correct' : 'wrong');
               typed += expectedLetter;
               if (!correct) stageSixHadMistake = true;
-              if (correct) triggerTypingKeyFlash(key);
               scheduleStageSixTypingKeyState(
                 key,
                 grid,
@@ -34069,13 +34249,14 @@
                 apostropheKeyLabel,
                 correct
               );
-              playTypingKeyAudio();
+              playStageSixBattleTypingFeedbackSound(correct);
               renderTyped();
               if (!correct) {
                 stageSixErrorLocked = true;
                 triggerTypingMistakeFeedback(grid, 500);
-                playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
-                void playPromptAudio(card, { rate: 0.8, enableMicDuringPlayback: false }).catch(() => false);
+                window.setTimeout(() => {
+                  void playPromptAudio(card, { rate: 0.8, enableMicDuringPlayback: false }).catch(() => false);
+                }, 90);
                 await wait(500);
                 stageSixErrorLocked = false;
               }
