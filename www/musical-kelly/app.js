@@ -37,7 +37,11 @@
     canEdit: false,
     selectedId: '',
     current: null,
+    colorMode: 'idle',
+    colorTimer: null,
+    transitionFromId: '',
     transitionTargetId: '',
+    transitionDurationMs: FADE_TOTAL_SECONDS * 1000,
     transitioning: false,
     transitionTimers: [],
     autoAdvance: null,
@@ -233,14 +237,23 @@
     state.project.cards.forEach((card) => {
       const node = elements.trackTemplate.content.firstElementChild.cloneNode(true);
       node.dataset.cardId = card.id;
+      const isPlaying = state.current?.cardId === card.id && !state.current.paused;
+      const isFadingOut = state.transitioning && state.transitionFromId === card.id;
+      const isFadingIn = state.transitioning && state.transitionTargetId === card.id;
       node.classList.toggle('is-selected', state.selectedId === card.id);
-      node.classList.toggle('is-playing', state.current?.cardId === card.id && !state.current.paused);
+      node.classList.toggle('is-playing', isPlaying);
       node.classList.toggle('is-cued', state.transitionTargetId === card.id);
+      node.classList.toggle('is-color-revealing', isPlaying && state.colorMode === 'revealing');
+      node.classList.toggle('is-color-full', isPlaying && state.colorMode === 'full');
+      node.classList.toggle('is-fading-out', isFadingOut);
+      node.classList.toggle('is-fading-in', isFadingIn);
+      if (isFadingOut || isFadingIn) {
+        node.style.setProperty('--transition-ms', `${Math.max(80, state.transitionDurationMs)}ms`);
+      }
       node.setAttribute('aria-label', `${card.title}. ${card.audio ? 'Toque para reproduzir.' : 'Sem música.'}`);
       setCardBackground(node.querySelector('.track-background'), card);
 
       const durationLabel = node.querySelector('.track-duration');
-      const isPlaying = state.current?.cardId === card.id && !state.current.paused;
       const knownDuration = card.audio ? state.durations.get(card.audio.fileName) : 0;
       durationLabel.textContent = isPlaying
         ? formatDuration(currentPosition(state.current))
@@ -290,7 +303,6 @@
     let startX = 0;
     let startY = 0;
     let longPressed = false;
-    let pointerActive = false;
 
     const cancelTimer = () => {
       window.clearTimeout(timer);
@@ -302,7 +314,6 @@
       startX = event.clientX;
       startY = event.clientY;
       longPressed = false;
-      pointerActive = true;
       if (state.canEdit) {
         timer = window.setTimeout(() => {
           longPressed = true;
@@ -314,28 +325,30 @@
 
     element.addEventListener('pointermove', (event) => {
       if (Math.hypot(event.clientX - startX, event.clientY - startY) > 12) {
-        pointerActive = false;
         cancelTimer();
       }
     });
 
     element.addEventListener('pointerup', () => {
-      const shouldPlay = pointerActive && !longPressed;
-      pointerActive = false;
       cancelTimer();
-      if (shouldPlay) playCard(cardId).catch((error) => showToast(error.message, true));
     });
     element.addEventListener('pointercancel', () => {
-      pointerActive = false;
       cancelTimer();
     });
     element.addEventListener('pointerleave', (event) => {
       if (event.pointerType === 'mouse') {
-        pointerActive = false;
         cancelTimer();
       }
     });
     element.addEventListener('contextmenu', (event) => event.preventDefault());
+    element.addEventListener('click', (event) => {
+      if (event.target.closest('button')) return;
+      if (longPressed) {
+        longPressed = false;
+        return;
+      }
+      playCard(cardId).catch((error) => showToast(error.message, true));
+    });
     element.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
@@ -353,7 +366,11 @@
 
   async function getCache() {
     if (!('caches' in window)) throw new Error('Este navegador não oferece armazenamento grande para mídia.');
-    return caches.open(CACHE_NAME);
+    try {
+      return await caches.open(CACHE_NAME);
+    } catch (_error) {
+      throw new Error('O navegador não liberou espaço para salvar a faixa. Ela ainda pode ser tocada pela internet.');
+    }
   }
 
   async function requestPersistentStorage() {
@@ -417,9 +434,11 @@
       await cacheAsset(card.image);
       state.downloadStates.set(cardId, 'done');
       if (!quiet) setStatus(`“${card.title}” está pronta para tocar sem depender da internet.`);
-      loadAudioBuffer(card).catch(() => {});
     } catch (error) {
       state.downloadStates.set(cardId, 'idle');
+      if (error?.name === 'QuotaExceededError') {
+        throw new Error('O iPhone está sem espaço para esta faixa. Libere armazenamento ou toque pela internet.');
+      }
       throw error;
     } finally {
       render();
@@ -441,14 +460,128 @@
     showToast('Download concluído. As faixas estão prontas para tocar.');
   }
 
-  async function getAudioContext() {
-    if (!state.audioContext) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) throw new Error('Este navegador não suporta a mesa de áudio.');
-      state.audioContext = new AudioContextClass({ latencyHint: 'interactive' });
+  function createAudioContextInstance() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error('Este navegador não suporta a reprodução contínua do musical.');
+    try {
+      return new AudioContextClass({ latencyHint: 'interactive' });
+    } catch (_error) {
+      return new AudioContextClass();
     }
-    if (state.audioContext.state === 'suspended') await state.audioContext.resume();
+  }
+
+  function primeAudioOutput(context) {
+    try {
+      const source = context.createBufferSource();
+      source.buffer = context.createBuffer(1, 1, context.sampleRate || 44100);
+      source.connect(context.destination);
+      source.start(0);
+    } catch (_error) {}
+  }
+
+  async function resumeAudioContext(context) {
+    if (context.state === 'running') return context;
+    primeAudioOutput(context);
+    let timeoutId = null;
+    const timeout = new Promise((_, reject) => {
+      timeoutId = window.setTimeout(() => reject(new Error('Tempo esgotado ao liberar o áudio.')), 2200);
+    });
+    try {
+      await Promise.race([Promise.resolve(context.resume()), timeout]);
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+    if (context.state !== 'running') throw new Error(`Áudio em estado ${context.state || 'indisponível'}.`);
+    return context;
+  }
+
+  async function replaceAudioContext() {
+    const previousContext = state.audioContext;
+    const previousVoice = state.current;
+    cancelAutoAdvance();
+    clearTransitionTimers();
+    if (previousVoice && !previousVoice.paused) {
+      const offset = Math.min(
+        currentPosition(previousVoice),
+        Math.max(0, previousVoice.buffer.duration - 0.01)
+      );
+      stopVoice(previousVoice);
+      state.current = {
+        ...previousVoice,
+        source: null,
+        gain: null,
+        offset,
+        startedAt: 0,
+        paused: true,
+        cancelled: false,
+        replaced: false
+      };
+    }
+    state.transitioning = false;
+    state.transitionFromId = '';
+    state.transitionTargetId = '';
+    state.colorMode = 'idle';
+    await previousContext?.close?.().catch(() => {});
+    state.audioContext = createAudioContextInstance();
+    primeAudioOutput(state.audioContext);
     return state.audioContext;
+  }
+
+  async function getAudioContext({ fromUserGesture = false } = {}) {
+    if (!state.audioContext || state.audioContext.state === 'closed') {
+      state.audioContext = createAudioContextInstance();
+    }
+    primeAudioOutput(state.audioContext);
+    try {
+      return await resumeAudioContext(state.audioContext);
+    } catch (error) {
+      if (!fromUserGesture) throw error;
+      const freshContext = await replaceAudioContext();
+      try {
+        return await resumeAudioContext(freshContext);
+      } catch (_retryError) {
+        throw new Error('O iPhone bloqueou o áudio. Confirme que ele não está no silencioso e toque novamente na faixa.');
+      }
+    }
+  }
+
+  function decodeAudioBytes(context, bytes) {
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (callback) => (value) => {
+        if (settled) return;
+        settled = true;
+        callback(value);
+      };
+      const succeed = finish(resolve);
+      const fail = finish(reject);
+      try {
+        const result = context.decodeAudioData(bytes, succeed, fail);
+        if (result && typeof result.then === 'function') result.then(succeed, fail);
+      } catch (error) {
+        fail(error);
+      }
+    });
+  }
+
+  function isAppleTouchDevice() {
+    return /iPad|iPhone|iPod/i.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  async function recoverAppleAudio() {
+    const context = state.audioContext;
+    if (!isAppleTouchDevice() || document.hidden || !context || context.state === 'closed' || !state.current) return;
+    try {
+      if (context.state === 'running') await context.suspend();
+      await resumeAudioContext(context);
+      setStatus(state.current.paused
+        ? 'Faixa pausada. Toque para continuar.'
+        : `No ar: “${getCard(state.current.cardId)?.title || 'faixa'}”.`);
+    } catch (_error) {
+      setStatus('O iPhone pausou o áudio. Toque novamente na faixa para liberar o som.');
+      showToast('Toque novamente na faixa para retomar o áudio no iPhone.');
+    }
   }
 
   async function fetchAssetResponse(asset) {
@@ -470,7 +603,12 @@
         const context = await getAudioContext();
         const response = await fetchAssetResponse(card.audio);
         const bytes = await response.arrayBuffer();
-        const buffer = await context.decodeAudioData(bytes.slice(0));
+        let buffer;
+        try {
+          buffer = await decodeAudioBytes(context, bytes.slice(0));
+        } catch (_error) {
+          throw new Error('Este áudio não pôde ser aberto neste navegador. Para iPhone, prefira MP3 ou M4A/AAC.');
+        }
         state.durations.set(key, buffer.duration);
         return buffer;
       })().catch((error) => {
@@ -480,6 +618,12 @@
       state.bufferPromises.set(key, promise);
     }
     return state.bufferPromises.get(key);
+  }
+
+  function releaseAudioBuffer(cardId) {
+    if (!cardId || state.current?.cardId === cardId || state.autoAdvance?.nextVoice?.cardId === cardId) return;
+    const card = getCard(cardId);
+    if (card?.audio?.fileName) state.bufferPromises.delete(card.audio.fileName);
   }
 
   function createVoice(cardId, buffer, when, offset, initialGain) {
@@ -503,13 +647,19 @@
     };
     source.addEventListener('ended', () => {
       voice.ended = true;
+      try { source.disconnect(); } catch (_error) {}
+      try { gain.disconnect(); } catch (_error) {}
       if (voice.cancelled || voice.replaced) return;
       if (state.current === voice) {
+        clearColorTimer();
+        state.colorMode = 'idle';
         state.current = null;
+        state.transitionFromId = '';
         state.transitionTargetId = '';
         state.transitioning = false;
         render();
         setStatus('Faixa concluída.');
+        releaseAudioBuffer(voice.cardId);
       }
     });
     source.start(when, Math.max(0, Math.min(offset, Math.max(0, buffer.duration - 0.01))));
@@ -529,24 +679,68 @@
     return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
   }
 
+  function timelineCards() {
+    return state.project.cards.filter((card) => card.audio);
+  }
+
+  function cardDuration(card) {
+    if (!card?.audio) return 0;
+    if (state.current?.cardId === card.id && state.current.buffer) return state.current.buffer.duration;
+    if (state.autoAdvance?.nextVoice?.cardId === card.id) return state.autoAdvance.nextVoice.buffer.duration;
+    return Math.max(0, Number(state.durations.get(card.audio.fileName)) || 0);
+  }
+
+  function timelineMetrics(cardId, localPosition = 0) {
+    let offset = 0;
+    let total = 0;
+    timelineCards().forEach((card) => {
+      const duration = cardDuration(card);
+      if (card.id === cardId) offset = total;
+      total += duration;
+    });
+    return {
+      offset,
+      total,
+      position: Math.max(0, Math.min(total, offset + Math.max(0, Number(localPosition) || 0)))
+    };
+  }
+
+  function resolveTimelinePosition(targetSeconds) {
+    const cards = timelineCards();
+    const total = cards.reduce((sum, card) => sum + cardDuration(card), 0);
+    if (!cards.length || total <= 0) return null;
+    let remaining = Math.max(0, Math.min(Number(targetSeconds) || 0, Math.max(0, total - 0.02)));
+    for (let index = 0; index < cards.length; index += 1) {
+      const card = cards[index];
+      const duration = cardDuration(card);
+      if (duration <= 0) continue;
+      if (remaining < duration || index === cards.length - 1) {
+        return { card, offset: Math.min(remaining, Math.max(0, duration - 0.02)), total };
+      }
+      remaining -= duration;
+    }
+    return null;
+  }
+
   function updatePlayerBar() {
     const voice = state.current;
     elements.playerBar.hidden = !voice;
     if (!voice) return;
     const duration = Math.max(0, Number(voice.buffer?.duration) || 0);
-    const livePosition = state.audioContext
+    const liveLocalPosition = state.audioContext
       ? Math.min(duration, currentPosition(voice))
       : Math.min(duration, voice.offset || 0);
-    const displayedPosition = state.scrubbing
+    const timeline = timelineMetrics(voice.cardId, liveLocalPosition);
+    const displayedTimelinePosition = state.scrubbing
       ? Number(elements.seekSlider.value || 0)
-      : livePosition;
-    elements.seekSlider.max = String(Math.max(0.01, duration));
-    if (!state.scrubbing) elements.seekSlider.value = String(livePosition);
-    elements.currentTimeLabel.textContent = formatTime(displayedPosition);
-    elements.currentTimeLabel.dateTime = `PT${Math.floor(displayedPosition / 60)}M${Math.floor(displayedPosition % 60)}S`;
+      : timeline.position;
+    elements.seekSlider.max = String(Math.max(0.01, timeline.total));
+    if (!state.scrubbing) elements.seekSlider.value = String(timeline.position);
+    elements.currentTimeLabel.textContent = formatTime(displayedTimelinePosition);
+    elements.currentTimeLabel.dateTime = `PT${Math.floor(displayedTimelinePosition / 60)}M${Math.floor(displayedTimelinePosition % 60)}S`;
     const activeCardTime = elements.trackList.querySelector('.track-card.is-playing .track-duration');
-    if (activeCardTime) activeCardTime.textContent = formatDuration(displayedPosition);
-    const disabled = state.transitioning || duration <= 0;
+    if (activeCardTime) activeCardTime.textContent = formatDuration(liveLocalPosition);
+    const disabled = state.transitioning || timeline.total <= 0;
     elements.seekSlider.disabled = disabled;
     elements.rewindButton.disabled = disabled;
     elements.forwardButton.disabled = disabled;
@@ -555,6 +749,26 @@
   function runProgressLoop() {
     updatePlayerBar();
     state.progressFrame = window.requestAnimationFrame(runProgressLoop);
+  }
+
+  function clearColorTimer() {
+    window.clearTimeout(state.colorTimer);
+    state.colorTimer = null;
+  }
+
+  function setColorFull(cardId) {
+    clearColorTimer();
+    if (state.current?.cardId !== cardId) return;
+    state.colorMode = 'full';
+    const cardElement = elements.trackList.querySelector(`[data-card-id="${CSS.escape(cardId)}"]`);
+    cardElement?.classList.remove('is-color-revealing');
+    cardElement?.classList.add('is-color-full');
+  }
+
+  function beginColorReveal(cardId, durationMs = 2000) {
+    clearColorTimer();
+    state.colorMode = 'revealing';
+    state.colorTimer = window.setTimeout(() => setColorFull(cardId), durationMs);
   }
 
   async function seekTo(targetSeconds) {
@@ -581,6 +795,8 @@
     const nextVoice = createVoice(current.cardId, current.buffer, when, target, 0);
     nextVoice.gain.gain.linearRampToValueAtTime(1, when + 0.075);
     state.current = nextVoice;
+    clearColorTimer();
+    state.colorMode = 'full';
     render();
     scheduleAutoAdvance(nextVoice);
   }
@@ -588,6 +804,47 @@
   function seekRelative(deltaSeconds) {
     if (!state.current || !state.audioContext) return;
     seekTo(currentPosition(state.current) + deltaSeconds).catch((error) => showToast(error.message, true));
+  }
+
+  async function seekTimelineTo(targetSeconds) {
+    await getAudioContext({ fromUserGesture: true });
+    const target = resolveTimelinePosition(targetSeconds);
+    if (!target) throw new Error('Aguarde um instante enquanto o navegador mede as faixas.');
+    if (state.current?.cardId === target.card.id) {
+      await seekTo(target.offset);
+      return;
+    }
+
+    setStatus(`Indo para “${target.card.title}”…`, true);
+    const buffer = await loadAudioBuffer(target.card);
+    if (state.current?.cardId === target.card.id) {
+      await seekTo(target.offset);
+      return;
+    }
+
+    const previousCardId = state.current?.cardId;
+    cancelAutoAdvance();
+    clearTransitionTimers();
+    clearColorTimer();
+    if (state.current?.source) stopVoice(state.current);
+    const context = state.audioContext;
+    const when = context.currentTime + 0.005;
+    const voice = createVoice(target.card.id, buffer, when, target.offset, 1);
+    state.current = voice;
+    state.colorMode = 'full';
+    state.transitioning = false;
+    state.transitionFromId = '';
+    state.transitionTargetId = '';
+    releaseAudioBuffer(previousCardId);
+    render();
+    setStatus(`No ar: “${target.card.title}”.`);
+    scheduleAutoAdvance(voice);
+  }
+
+  function seekTimelineRelative(deltaSeconds) {
+    if (!state.current || !state.audioContext) return;
+    const timeline = timelineMetrics(state.current.cardId, currentPosition(state.current));
+    seekTimelineTo(timeline.position + deltaSeconds).catch((error) => showToast(error.message, true));
   }
 
   function seekCardRelative(cardId, deltaSeconds) {
@@ -612,9 +869,11 @@
   function cancelAutoAdvance() {
     state.autoAdvanceGeneration += 1;
     if (!state.autoAdvance) return;
+    const pendingCardId = state.autoAdvance.nextVoice?.cardId;
     window.clearTimeout(state.autoAdvance.timer);
     stopVoice(state.autoAdvance.nextVoice);
     state.autoAdvance = null;
+    releaseAudioBuffer(pendingCardId);
   }
 
   function nextPlayableCard(cardId) {
@@ -633,14 +892,14 @@
       const buffer = await loadAudioBuffer(nextCard);
       if (generation !== state.autoAdvanceGeneration || voice.replaced || voice.cancelled || voice.paused) return;
       if (voice.ended) {
-        if (!state.current) await startImmediately(nextCard, buffer);
+        if (!state.current) await startNaturalImmediately(nextCard, buffer);
         return;
       }
 
       const context = await getAudioContext();
       const startAt = voice.startedAt + Math.max(0, voice.buffer.duration - voice.offset);
       if (startAt <= context.currentTime + 0.025) {
-        if (state.current === voice) await startImmediately(nextCard, buffer);
+        if (state.current === voice) await startNaturalImmediately(nextCard, buffer);
         return;
       }
 
@@ -653,6 +912,8 @@
         }
         state.autoAdvance = null;
         state.current = nextVoice;
+        releaseAudioBuffer(voice.cardId);
+        beginColorReveal(nextCard.id);
         render();
         setStatus(`No ar: “${nextCard.title}”.`);
         scheduleAutoAdvance(nextVoice);
@@ -663,15 +924,36 @@
     }
   }
 
+  async function startNaturalImmediately(card, buffer) {
+    const previousCardId = state.current?.cardId;
+    cancelAutoAdvance();
+    const context = await getAudioContext();
+    const when = context.currentTime + 0.005;
+    const voice = createVoice(card.id, buffer, when, 0, 1);
+    state.current = voice;
+    state.transitionFromId = '';
+    state.transitionTargetId = '';
+    state.transitioning = false;
+    releaseAudioBuffer(previousCardId);
+    beginColorReveal(card.id);
+    render();
+    setStatus(`No ar: “${card.title}”.`);
+    scheduleAutoAdvance(voice);
+  }
+
   async function startImmediately(card, buffer) {
+    const previousCardId = state.current?.cardId;
     cancelAutoAdvance();
     const context = await getAudioContext();
     const when = context.currentTime + 0.025;
     const voice = createVoice(card.id, buffer, when, 0, 0);
     voice.gain.gain.linearRampToValueAtTime(1, when + 0.12);
     state.current = voice;
+    state.transitionFromId = '';
     state.transitionTargetId = '';
     state.transitioning = false;
+    releaseAudioBuffer(previousCardId);
+    beginColorReveal(card.id);
     render();
     setStatus(`No ar: “${card.title}”.`);
     scheduleAutoAdvance(voice);
@@ -699,32 +981,36 @@
     incoming.gain.gain.setValueAtTime(0, incomingStart);
     incoming.gain.gain.linearRampToValueAtTime(1, fadeEnd);
 
+    clearColorTimer();
+    state.colorMode = 'transitioning';
     state.transitioning = true;
+    state.transitionFromId = outgoing.cardId;
     state.transitionTargetId = card.id;
+    state.transitionDurationMs = Math.round(fadeSeconds * 1000);
     render();
     setStatus(`Transição: fade de ${(fadeSeconds * 1000).toFixed(0)} ms; a próxima faixa entra nos últimos ${(overlapSeconds * 1000).toFixed(0)} ms.`, true);
 
-    const activateTimer = window.setTimeout(() => {
-      state.current = incoming;
-      state.transitionTargetId = '';
-      render();
-    }, Math.max(0, incomingDelay * 1000));
     const finishTimer = window.setTimeout(() => {
       stopVoice(outgoing);
       state.current = incoming.ended ? null : incoming;
+      state.colorMode = incoming.ended ? 'idle' : 'full';
+      state.transitionFromId = '';
       state.transitionTargetId = '';
       state.transitioning = false;
+      releaseAudioBuffer(outgoing.cardId);
       render();
       setStatus(incoming.ended ? 'Faixa concluída.' : `No ar: “${card.title}”.`);
       if (!incoming.ended) scheduleAutoAdvance(incoming);
     }, Math.max(0, fadeSeconds * 1000 + 80));
-    state.transitionTimers.push(activateTimer, finishTimer);
+    state.transitionTimers.push(finishTimer);
   }
 
   function pauseCurrent() {
     const voice = state.current;
     if (!voice || voice.paused || !state.audioContext) return;
     const now = state.audioContext.currentTime;
+    clearColorTimer();
+    state.colorMode = 'idle';
     cancelAutoAdvance();
     const offset = Math.min(currentPosition(voice, now), Math.max(0, voice.buffer.duration - 0.01));
     voice.cancelled = true;
@@ -745,6 +1031,7 @@
     const voice = createVoice(paused.cardId, paused.buffer, when, paused.offset, 0);
     voice.gain.gain.linearRampToValueAtTime(1, when + 0.1);
     state.current = voice;
+    beginColorReveal(voice.cardId);
     render();
     setStatus(`No ar: “${getCard(voice.cardId)?.title || 'faixa'}”.`);
     scheduleAutoAdvance(voice);
@@ -757,7 +1044,7 @@
       showToast('Este container ainda não tem música. Pressione A para adicionar.', true);
       return;
     }
-    await getAudioContext();
+    await getAudioContext({ fromUserGesture: true });
     if (state.transitioning) {
       showToast('Aguarde a transição atual terminar.');
       return;
@@ -845,8 +1132,10 @@
     if (!window.confirm(`Remover o container “${card.title}” do musical?`)) return;
     if (state.current?.cardId === card.id) {
       cancelAutoAdvance();
+      clearColorTimer();
       stopVoice(state.current);
       state.current = null;
+      state.colorMode = 'idle';
     }
     state.project.cards = state.project.cards.filter((entry) => entry.id !== card.id);
     state.selectedId = '';
@@ -869,8 +1158,8 @@
       state.selectedId = '';
       render();
     });
-    elements.rewindButton.addEventListener('click', () => seekRelative(-5));
-    elements.forwardButton.addEventListener('click', () => seekRelative(5));
+    elements.rewindButton.addEventListener('click', () => seekTimelineRelative(-5));
+    elements.forwardButton.addEventListener('click', () => seekTimelineRelative(5));
     elements.seekSlider.addEventListener('pointerdown', () => {
       state.scrubbing = true;
     });
@@ -881,7 +1170,7 @@
     elements.seekSlider.addEventListener('change', () => {
       const target = Number(elements.seekSlider.value || 0);
       state.scrubbing = false;
-      seekTo(target).catch((error) => showToast(error.message, true));
+      seekTimelineTo(target).catch((error) => showToast(error.message, true));
     });
     elements.audioInput.addEventListener('change', () => {
       uploadFile('audio', elements.audioInput.files?.[0]).catch((error) => showToast(error.message, true));
@@ -889,6 +1178,10 @@
     elements.imageInput.addEventListener('change', () => {
       uploadFile('image', elements.imageInput.files?.[0]).catch((error) => showToast(error.message, true));
     });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) recoverAppleAudio();
+    });
+    window.addEventListener('pageshow', () => recoverAppleAudio());
     elements.titleInput.addEventListener('input', () => {
       const card = getCard(state.selectedId);
       if (!card) return;
