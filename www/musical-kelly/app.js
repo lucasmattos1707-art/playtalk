@@ -16,17 +16,24 @@
     chooseAudioButton: document.getElementById('chooseAudioButton'),
     chooseImageButton: document.getElementById('chooseImageButton'),
     removeCardButton: document.getElementById('removeCardButton'),
+    closeSelectionButton: document.getElementById('closeSelectionButton'),
     addCardButton: document.getElementById('addCardButton'),
     downloadAllButton: document.getElementById('downloadAllButton'),
     audioInput: document.getElementById('audioInput'),
     imageInput: document.getElementById('imageInput'),
     statusLine: document.getElementById('statusLine'),
     statusText: document.getElementById('statusText'),
+    playerBar: document.getElementById('playerBar'),
+    rewindButton: document.getElementById('rewindButton'),
+    forwardButton: document.getElementById('forwardButton'),
+    seekSlider: document.getElementById('seekSlider'),
+    currentTimeLabel: document.getElementById('currentTimeLabel'),
     toast: document.getElementById('toast')
   };
 
   const state = {
     project: { version: 1, cards: [] },
+    canEdit: false,
     selectedId: '',
     current: null,
     transitionTargetId: '',
@@ -34,11 +41,15 @@
     transitionTimers: [],
     audioContext: null,
     bufferPromises: new Map(),
+    durations: new Map(),
+    durationPromises: new Map(),
     downloadStates: new Map(),
     uploading: false,
     saveTimer: null,
     saveChain: Promise.resolve(),
-    toastTimer: null
+    toastTimer: null,
+    scrubbing: false,
+    progressFrame: 0
   };
 
   function makeId() {
@@ -123,6 +134,7 @@
   }
 
   function saveProject({ quiet = true } = {}) {
+    if (!state.canEdit) return Promise.reject(new Error('Somente o administrador pode editar esta página.'));
     window.clearTimeout(state.saveTimer);
     const payload = projectForSave();
     const operation = state.saveChain.then(async () => {
@@ -148,7 +160,7 @@
 
   function updateSelectionPanel() {
     const selected = getCard(state.selectedId);
-    elements.selectionPanel.hidden = !selected;
+    elements.selectionPanel.hidden = !state.canEdit || !selected;
     if (!selected) return;
     if (document.activeElement !== elements.titleInput) {
       elements.titleInput.value = selected.title;
@@ -163,27 +175,81 @@
     }
   }
 
+  function formatDuration(seconds) {
+    const totalSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+    const minutes = Math.floor(totalSeconds / 60);
+    const remainder = totalSeconds % 60;
+    if (!minutes) return `${remainder} seg`;
+    if (!remainder) return `${minutes} min`;
+    return `${minutes} min ${remainder} seg`;
+  }
+
+  function loadCardDuration(card) {
+    if (!card?.audio?.url) return Promise.resolve(0);
+    const key = card.audio.fileName;
+    if (state.durations.has(key)) return Promise.resolve(state.durations.get(key));
+    if (!state.durationPromises.has(key)) {
+      const promise = new Promise((resolve, reject) => {
+        const media = new Audio();
+        media.preload = 'metadata';
+        media.addEventListener('loadedmetadata', () => {
+          const duration = Number.isFinite(media.duration) ? media.duration : 0;
+          state.durations.set(key, duration);
+          media.removeAttribute('src');
+          media.load();
+          resolve(duration);
+        }, { once: true });
+        media.addEventListener('error', () => reject(new Error('Duração indisponível.')), { once: true });
+        media.src = card.audio.url;
+      }).catch(() => 0).finally(() => state.durationPromises.delete(key));
+      state.durationPromises.set(key, promise);
+    }
+    return state.durationPromises.get(key);
+  }
+
   function applyDownloadState(cardId, button) {
     const value = state.downloadStates.get(cardId);
+    const isPlaying = state.current?.cardId === cardId && !state.current.paused;
     button.classList.toggle('is-downloaded', value === 'done');
     button.classList.toggle('is-busy', value === 'busy');
-    button.querySelector('.download-label').textContent = value === 'done' ? 'baixado' : (value === 'busy' ? 'baixando' : 'baixar');
+    button.classList.toggle('is-playing-control', value === 'done' && isPlaying);
+    button.title = button.disabled
+      ? 'Faixa ainda não configurada'
+      : value === 'done'
+      ? (isPlaying ? 'Pausar faixa' : 'Reproduzir faixa')
+      : (value === 'busy' ? 'Baixando faixa' : 'Baixar faixa para este aparelho');
+    button.setAttribute('aria-label', button.title);
   }
 
   function render() {
     elements.trackList.replaceChildren();
     const fragment = document.createDocumentFragment();
-    state.project.cards.forEach((card, index) => {
+    state.project.cards.forEach((card) => {
       const node = elements.trackTemplate.content.firstElementChild.cloneNode(true);
       node.dataset.cardId = card.id;
       node.classList.toggle('is-selected', state.selectedId === card.id);
       node.classList.toggle('is-playing', state.current?.cardId === card.id && !state.current.paused);
       node.classList.toggle('is-cued', state.transitionTargetId === card.id);
-      node.setAttribute('aria-label', `${card.title}. ${card.audio ? 'Toque para reproduzir.' : 'Sem música. Segure para selecionar.'}`);
-      node.querySelector('.track-number').textContent = String(index + 1).padStart(2, '0');
-      node.querySelector('.track-title').textContent = card.title;
-      node.querySelector('.track-file').textContent = card.audio?.name || 'Segure 500 ms e pressione A para adicionar a música';
+      node.setAttribute('aria-label', `${card.title}. ${card.audio ? 'Toque para reproduzir.' : 'Sem música.'}`);
       setCardBackground(node.querySelector('.track-background'), card);
+
+      const durationLabel = node.querySelector('.track-duration');
+      const knownDuration = card.audio ? state.durations.get(card.audio.fileName) : 0;
+      durationLabel.textContent = knownDuration ? formatDuration(knownDuration) : '--';
+      node.querySelector('.card-seek-back').addEventListener('click', (event) => {
+        event.stopPropagation();
+        seekCardRelative(card.id, -5);
+      });
+      node.querySelector('.card-seek-forward').addEventListener('click', (event) => {
+        event.stopPropagation();
+        seekCardRelative(card.id, 5);
+      });
+      if (card.audio && !knownDuration) {
+        loadCardDuration(card).then((duration) => {
+          const currentLabel = elements.trackList.querySelector(`[data-card-id="${CSS.escape(card.id)}"] .track-duration`);
+          if (currentLabel && duration) currentLabel.textContent = formatDuration(duration);
+        });
+      }
 
       const downloadButton = node.querySelector('.download-button');
       downloadButton.disabled = !card.audio;
@@ -191,7 +257,10 @@
       applyDownloadState(card.id, downloadButton);
       downloadButton.addEventListener('click', (event) => {
         event.stopPropagation();
-        downloadCard(card.id).catch((error) => showToast(error.message, true));
+        const action = state.downloadStates.get(card.id) === 'done'
+          ? playCard(card.id)
+          : downloadCard(card.id);
+        action.catch((error) => showToast(error.message, true));
       });
 
       bindCardGestures(node, card.id);
@@ -199,8 +268,10 @@
     });
     elements.trackList.appendChild(fragment);
     document.body.classList.toggle('has-playing-track', Boolean(state.current && !state.current.paused));
+    elements.addCardButton.hidden = !state.canEdit;
     updateSelectionPanel();
     updateDownloadAllState();
+    updatePlayerBar();
   }
 
   function bindCardGestures(element, cardId) {
@@ -208,6 +279,7 @@
     let startX = 0;
     let startY = 0;
     let longPressed = false;
+    let pointerActive = false;
 
     const cancelTimer = () => {
       window.clearTimeout(timer);
@@ -219,25 +291,38 @@
       startX = event.clientX;
       startY = event.clientY;
       longPressed = false;
-      timer = window.setTimeout(() => {
-        longPressed = true;
-        if (navigator.vibrate) navigator.vibrate(24);
-        selectCard(cardId);
-      }, LONG_PRESS_MS);
+      pointerActive = true;
+      if (state.canEdit) {
+        timer = window.setTimeout(() => {
+          longPressed = true;
+          if (navigator.vibrate) navigator.vibrate(24);
+          selectCard(cardId);
+        }, LONG_PRESS_MS);
+      }
     });
 
     element.addEventListener('pointermove', (event) => {
-      if (Math.hypot(event.clientX - startX, event.clientY - startY) > 12) cancelTimer();
+      if (Math.hypot(event.clientX - startX, event.clientY - startY) > 12) {
+        pointerActive = false;
+        cancelTimer();
+      }
     });
 
     element.addEventListener('pointerup', () => {
-      const shouldPlay = Boolean(timer) && !longPressed;
+      const shouldPlay = pointerActive && !longPressed;
+      pointerActive = false;
       cancelTimer();
       if (shouldPlay) playCard(cardId).catch((error) => showToast(error.message, true));
     });
-    element.addEventListener('pointercancel', cancelTimer);
+    element.addEventListener('pointercancel', () => {
+      pointerActive = false;
+      cancelTimer();
+    });
     element.addEventListener('pointerleave', (event) => {
-      if (event.pointerType === 'mouse') cancelTimer();
+      if (event.pointerType === 'mouse') {
+        pointerActive = false;
+        cancelTimer();
+      }
     });
     element.addEventListener('contextmenu', (event) => event.preventDefault());
     element.addEventListener('keydown', (event) => {
@@ -249,6 +334,7 @@
   }
 
   function selectCard(cardId) {
+    if (!state.canEdit) return;
     state.selectedId = cardId;
     render();
     setStatus('Container selecionado. Use A para música ou P para imagem.');
@@ -373,7 +459,9 @@
         const context = await getAudioContext();
         const response = await fetchAssetResponse(card.audio);
         const bytes = await response.arrayBuffer();
-        return context.decodeAudioData(bytes.slice(0));
+        const buffer = await context.decodeAudioData(bytes.slice(0));
+        state.durations.set(key, buffer.duration);
+        return buffer;
       })().catch((error) => {
         state.bufferPromises.delete(key);
         throw error;
@@ -421,6 +509,78 @@
     if (!voice) return 0;
     if (voice.paused) return voice.offset;
     return Math.max(0, voice.offset + Math.max(0, atTime - voice.startedAt));
+  }
+
+  function formatTime(seconds) {
+    const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+    const minutes = Math.floor(safeSeconds / 60);
+    const remainder = safeSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+  }
+
+  function updatePlayerBar() {
+    const voice = state.current;
+    elements.playerBar.hidden = !voice;
+    if (!voice) return;
+    const duration = Math.max(0, Number(voice.buffer?.duration) || 0);
+    const livePosition = state.audioContext
+      ? Math.min(duration, currentPosition(voice))
+      : Math.min(duration, voice.offset || 0);
+    const displayedPosition = state.scrubbing
+      ? Number(elements.seekSlider.value || 0)
+      : livePosition;
+    elements.seekSlider.max = String(Math.max(0.01, duration));
+    if (!state.scrubbing) elements.seekSlider.value = String(livePosition);
+    elements.currentTimeLabel.textContent = formatTime(displayedPosition);
+    elements.currentTimeLabel.dateTime = `PT${Math.floor(displayedPosition / 60)}M${Math.floor(displayedPosition % 60)}S`;
+    const disabled = state.transitioning || duration <= 0;
+    elements.seekSlider.disabled = disabled;
+    elements.rewindButton.disabled = disabled;
+    elements.forwardButton.disabled = disabled;
+  }
+
+  function runProgressLoop() {
+    updatePlayerBar();
+    state.progressFrame = window.requestAnimationFrame(runProgressLoop);
+  }
+
+  async function seekTo(targetSeconds) {
+    const current = state.current;
+    if (!current?.buffer || state.transitioning) return;
+    const duration = current.buffer.duration;
+    const target = Math.max(0, Math.min(Number(targetSeconds) || 0, Math.max(0, duration - 0.02)));
+    if (current.paused) {
+      state.current = { ...current, offset: target };
+      updatePlayerBar();
+      return;
+    }
+
+    const context = await getAudioContext();
+    const now = context.currentTime;
+    current.replaced = true;
+    current.gain.gain.cancelScheduledValues(now);
+    current.gain.gain.setValueAtTime(Math.max(0.0001, current.gain.gain.value), now);
+    current.gain.gain.linearRampToValueAtTime(0, now + 0.055);
+    try { current.source.stop(now + 0.06); } catch (_error) {}
+
+    const when = now + 0.018;
+    const nextVoice = createVoice(current.cardId, current.buffer, when, target, 0);
+    nextVoice.gain.gain.linearRampToValueAtTime(1, when + 0.075);
+    state.current = nextVoice;
+    render();
+  }
+
+  function seekRelative(deltaSeconds) {
+    if (!state.current || !state.audioContext) return;
+    seekTo(currentPosition(state.current) + deltaSeconds).catch((error) => showToast(error.message, true));
+  }
+
+  function seekCardRelative(cardId, deltaSeconds) {
+    if (state.current?.cardId !== cardId) {
+      showToast('Toque no play desta faixa antes de avançar ou voltar.');
+      return;
+    }
+    seekRelative(deltaSeconds);
   }
 
   function clearTransitionTimers() {
@@ -545,6 +705,7 @@
   }
 
   async function uploadFile(kind, file) {
+    if (!state.canEdit) throw new Error('Somente o administrador pode enviar arquivos.');
     const card = getCard(state.selectedId);
     if (!card) throw new Error('Segure um container por 500 ms para selecioná-lo.');
     if (!file) return;
@@ -577,6 +738,7 @@
   }
 
   function openPicker(kind) {
+    if (!state.canEdit) return;
     if (!getCard(state.selectedId)) {
       showToast('Segure um container por 500 ms para selecioná-lo.', true);
       return;
@@ -585,6 +747,7 @@
   }
 
   function addCard() {
+    if (!state.canEdit) return;
     const card = {
       id: makeId(),
       title: `Faixa ${String(state.project.cards.length + 1).padStart(2, '0')}`,
@@ -601,6 +764,7 @@
   }
 
   function removeSelectedCard() {
+    if (!state.canEdit) return;
     const card = getCard(state.selectedId);
     if (!card) return;
     if (!window.confirm(`Remover o container “${card.title}” do musical?`)) return;
@@ -625,6 +789,24 @@
     elements.chooseAudioButton.addEventListener('click', () => openPicker('audio'));
     elements.chooseImageButton.addEventListener('click', () => openPicker('image'));
     elements.removeCardButton.addEventListener('click', removeSelectedCard);
+    elements.closeSelectionButton.addEventListener('click', () => {
+      state.selectedId = '';
+      render();
+    });
+    elements.rewindButton.addEventListener('click', () => seekRelative(-5));
+    elements.forwardButton.addEventListener('click', () => seekRelative(5));
+    elements.seekSlider.addEventListener('pointerdown', () => {
+      state.scrubbing = true;
+    });
+    elements.seekSlider.addEventListener('input', () => {
+      state.scrubbing = true;
+      elements.currentTimeLabel.textContent = formatTime(elements.seekSlider.value);
+    });
+    elements.seekSlider.addEventListener('change', () => {
+      const target = Number(elements.seekSlider.value || 0);
+      state.scrubbing = false;
+      seekTo(target).catch((error) => showToast(error.message, true));
+    });
     elements.audioInput.addEventListener('change', () => {
       uploadFile('audio', elements.audioInput.files?.[0]).catch((error) => showToast(error.message, true));
     });
@@ -635,13 +817,11 @@
       const card = getCard(state.selectedId);
       if (!card) return;
       card.title = elements.titleInput.value.slice(0, 120) || 'Faixa';
-      const title = elements.trackList.querySelector(`[data-card-id="${CSS.escape(card.id)}"] .track-title`);
-      if (title) title.textContent = card.title;
       queueProjectSave();
     });
     elements.titleInput.addEventListener('blur', () => saveProject().catch(() => {}));
     document.addEventListener('keydown', (event) => {
-      if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
+      if (!state.canEdit || event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
       const tagName = document.activeElement?.tagName;
       if (tagName === 'INPUT' || tagName === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
       if (event.key.toLowerCase() === 'a') {
@@ -656,10 +836,12 @@
 
   async function init() {
     bindControls();
+    runProgressLoop();
     try {
       const payload = await apiJson(`${API_ROOT}/project`);
+      state.canEdit = payload.canEdit === true;
       state.project = payload.project || { version: 1, cards: [] };
-      if (!Array.isArray(state.project.cards) || !state.project.cards.length) {
+      if (state.canEdit && (!Array.isArray(state.project.cards) || !state.project.cards.length)) {
         state.project.cards = makeDefaultCards();
         await saveProject().catch(() => {});
       }

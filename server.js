@@ -15952,7 +15952,7 @@ async function fetchR2ObjectBuffer(objectKey) {
   }
 }
 
-function musicalKellyUserRoot(user) {
+function musicalKellyLegacyUserRoot(user) {
   const userId = Number.parseInt(user?.id, 10);
   if (!Number.isInteger(userId) || userId <= 0) {
     const error = new Error('Usuario invalido.');
@@ -15960,6 +15960,10 @@ function musicalKellyUserRoot(user) {
     throw error;
   }
   return `${MUSICAL_KELLY_R2_PREFIX}/users/${userId}`;
+}
+
+function musicalKellyGlobalRoot() {
+  return `${MUSICAL_KELLY_R2_PREFIX}/global`;
 }
 
 function normalizeMusicalKellyCardId(value) {
@@ -16042,6 +16046,42 @@ function sanitizeMusicalKellyUploadName(value, kind, contentType) {
     .replace(/^-+|-+$/g, '')
     .slice(0, 80) || kind;
   return { displayName: rawName.slice(0, 180) || `${base}${extension}`, extension, base };
+}
+
+async function migrateMusicalKellyAdminProjectToGlobal(authUser) {
+  if (!authUser?.id || !isAdminUserRecord(authUser)) return null;
+  const legacyRoot = musicalKellyLegacyUserRoot(authUser);
+  let project;
+  try {
+    project = normalizeMusicalKellyProject(await fetchR2JsonObject(`${legacyRoot}/project.json`));
+  } catch (error) {
+    if (Number(error?.status || error?.statusCode || 0) === 404) return null;
+    throw error;
+  }
+
+  const globalRoot = musicalKellyGlobalRoot();
+  for (const card of project.cards) {
+    for (const kind of ['audio', 'image']) {
+      const asset = card[kind];
+      if (!asset?.fileName) continue;
+      try {
+        const buffer = await fetchR2ObjectBuffer(`${legacyRoot}/${kind}/${asset.fileName}`);
+        await putR2ObjectIfChanged(
+          `${globalRoot}/${kind}/${asset.fileName}`,
+          buffer,
+          asset.contentType || contentTypeFromObjectKey(asset.fileName)
+        );
+      } catch (error) {
+        console.warn(`Falha ao migrar ${kind} do musical Kelly:`, error?.message || error);
+      }
+    }
+  }
+  await putR2Object(
+    `${globalRoot}/project.json`,
+    Buffer.from(`${JSON.stringify(project, null, 2)}\n`, 'utf8'),
+    'application/json; charset=utf-8'
+  );
+  return project;
 }
 
 function buildStorageTreeFromObjectKeys(objectKeys, rootLabel = 'Niveis') {
@@ -25968,27 +26008,28 @@ app.get('/voices/:filePath(*)', async (req, res, next) => {
 
 app.get('/api/musical-kelly/project', async (req, res) => {
   try {
-    const authUser = await readAuthenticatedUserFromRequest(req);
-    if (!authUser?.id) {
-      res.status(401).json({ success: false, message: 'Entre na sua conta para abrir o musical.' });
-      return;
-    }
+    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     if (!isR2FluencyConfigured()) {
       res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
       return;
     }
 
-    const objectKey = `${musicalKellyUserRoot(authUser)}/project.json`;
+    const objectKey = `${musicalKellyGlobalRoot()}/project.json`;
     let project;
     try {
       project = normalizeMusicalKellyProject(await fetchR2JsonObject(objectKey));
     } catch (error) {
       if (Number(error?.status || error?.statusCode || 0) !== 404) throw error;
-      project = normalizeMusicalKellyProject({ cards: [] });
+      project = await migrateMusicalKellyAdminProjectToGlobal(authUser)
+        || normalizeMusicalKellyProject({ cards: [] });
     }
 
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+    res.json({
+      success: true,
+      canEdit: isAdminUserRecord(authUser),
+      project: hydrateMusicalKellyProject(project)
+    });
   } catch (error) {
     console.error('Erro ao carregar musical Kelly:', error);
     res.status(Number(error?.statusCode) || 500).json({
@@ -26000,20 +26041,16 @@ app.get('/api/musical-kelly/project', async (req, res) => {
 
 app.put('/api/musical-kelly/project', async (req, res) => {
   try {
-    const authUser = await readAuthenticatedUserFromRequest(req);
-    if (!authUser?.id) {
-      res.status(401).json({ success: false, message: 'Entre na sua conta para salvar o musical.' });
-      return;
-    }
+    await requireAdminUserFromRequest(req);
     if (!isR2FluencyConfigured()) {
       res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
       return;
     }
 
     const project = normalizeMusicalKellyProject(req.body || {});
-    const objectKey = `${musicalKellyUserRoot(authUser)}/project.json`;
+    const objectKey = `${musicalKellyGlobalRoot()}/project.json`;
     await putR2Object(objectKey, Buffer.from(`${JSON.stringify(project, null, 2)}\n`, 'utf8'), 'application/json; charset=utf-8');
-    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+    res.json({ success: true, canEdit: true, project: hydrateMusicalKellyProject(project) });
   } catch (error) {
     console.error('Erro ao salvar musical Kelly:', error);
     res.status(Number(error?.statusCode) || 500).json({
@@ -26028,11 +26065,7 @@ app.post(
   express.raw({ type: () => true, limit: `${Math.ceil(MUSICAL_KELLY_MAX_AUDIO_BYTES / (1024 * 1024))}mb` }),
   async (req, res) => {
     try {
-      const authUser = await readAuthenticatedUserFromRequest(req);
-      if (!authUser?.id) {
-        res.status(401).json({ success: false, message: 'Entre na sua conta para enviar arquivos.' });
-        return;
-      }
+      await requireAdminUserFromRequest(req);
       if (!isR2FluencyConfigured()) {
         res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
         return;
@@ -26080,7 +26113,7 @@ app.post(
 
       const uniqueSuffix = `${Date.now().toString(36)}-${crypto.randomBytes(5).toString('hex')}`;
       const fileName = `${cardId}-${uploadName.base}-${uniqueSuffix}${uploadName.extension}`.slice(-180);
-      const objectKey = `${musicalKellyUserRoot(authUser)}/${kind}/${fileName}`;
+      const objectKey = `${musicalKellyGlobalRoot()}/${kind}/${fileName}`;
       const storedContentType = contentType === 'application/octet-stream'
         ? contentTypeFromObjectKey(fileName)
         : contentType;
@@ -26107,11 +26140,6 @@ app.post(
 
 app.get('/api/musical-kelly/assets/:kind/:fileName', async (req, res) => {
   try {
-    const authUser = await readAuthenticatedUserFromRequest(req);
-    if (!authUser?.id) {
-      res.status(401).json({ success: false, message: 'Sessao expirada.' });
-      return;
-    }
     const kind = String(req.params.kind || '').trim().toLowerCase();
     const fileName = normalizeMusicalKellyAssetFileName(req.params.fileName);
     const allowedExtensions = kind === 'audio' ? SUPPORTED_AUDIO_EXTENSIONS : SUPPORTED_IMAGE_EXTENSIONS;
@@ -26123,7 +26151,7 @@ app.get('/api/musical-kelly/assets/:kind/:fileName', async (req, res) => {
     const rangeHeader = typeof req.headers.range === 'string' && /^bytes=\d*-\d*$/i.test(req.headers.range.trim())
       ? req.headers.range.trim()
       : undefined;
-    const objectKey = `${musicalKellyUserRoot(authUser)}/${kind}/${fileName}`;
+    const objectKey = `${musicalKellyGlobalRoot()}/${kind}/${fileName}`;
     const response = await getR2Client().send(new GetObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: objectKey,
@@ -26184,6 +26212,9 @@ app.use(async (req, res, next) => {
     '/auth/google-quick',
     '/auth/session',
     '/config.js',
+    '/musical-kelly',
+    '/musical-kelly/',
+    '/musical-kelly/index.html',
     '/insonic',
     '/insonic/',
     '/insonic/index.html'

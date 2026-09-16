@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=1">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=2">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -15,10 +15,6 @@
   <header class="topbar">
     <a class="brand" href="/play" aria-label="Voltar ao Fluent LevelUp">
       <img src="/SVG/logo.svg" alt="">
-      <span>
-        <strong>Musical Kelly</strong>
-        <small>mesa de trilhas ao vivo</small>
-      </span>
     </a>
 
     <div class="top-actions">
@@ -26,30 +22,14 @@
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18v2h14v-2"/>
         </svg>
-        <span>Baixar tudo</span>
       </button>
-      <button class="primary-action" id="addCardButton" type="button">
-        <span aria-hidden="true">+</span> Nova cena
+      <button class="primary-action" id="addCardButton" type="button" aria-label="Adicionar novo container" title="Adicionar novo container" hidden>
+        <span aria-hidden="true">+</span>
       </button>
     </div>
   </header>
 
   <main>
-    <section class="hero" aria-labelledby="pageTitle">
-      <div>
-        <p class="eyebrow">PLAYBACK CONTÍNUO</p>
-        <h1 id="pageTitle">A trilha acompanha o palco.</h1>
-        <p>Toque uma faixa para reproduzir. Segure por 500 ms para selecionar e editar.</p>
-      </div>
-      <div class="fade-contract" aria-label="Transição configurada">
-        <span class="fade-number">3s</span>
-        <span>fade total</span>
-        <i aria-hidden="true"></i>
-        <span class="fade-number">1s</span>
-        <span>de sobreposição</span>
-      </div>
-    </section>
-
     <section class="selection-panel" id="selectionPanel" hidden aria-label="Editar container selecionado">
       <div class="selection-copy">
         <span class="selection-dot" aria-hidden="true"></span>
@@ -61,6 +41,9 @@
         <button type="button" id="chooseImageButton"><kbd>P</kbd> Imagem</button>
         <button type="button" class="danger-action" id="removeCardButton" title="Remover container">Remover</button>
       </div>
+      <button class="close-selection" id="closeSelectionButton" type="button" aria-label="Fechar edição" title="Fechar edição">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
     </section>
 
     <div class="status-line" id="statusLine" role="status" aria-live="polite">
@@ -75,20 +58,22 @@
     <article class="track-card" tabindex="0">
       <div class="track-background" aria-hidden="true"></div>
       <div class="track-shade" aria-hidden="true"></div>
-      <div class="track-number" aria-hidden="true"></div>
-      <div class="track-copy">
-        <h2 class="track-title"></h2>
-        <p class="track-file"></p>
-      </div>
-      <div class="track-state" aria-hidden="true">
-        <span class="state-bars"><i></i><i></i><i></i></span>
-        <span class="state-label">NO AR</span>
+      <div class="track-center-controls">
+        <button class="card-seek card-seek-back" type="button" aria-label="Voltar 5 segundos" title="Voltar 5 segundos">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+        </button>
+        <span class="track-duration" aria-label="Duração da faixa">--</span>
+        <button class="card-seek card-seek-forward" type="button" aria-label="Avançar 5 segundos" title="Avançar 5 segundos">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        </button>
       </div>
       <button class="download-button" type="button" title="Baixar para este aparelho" aria-label="Baixar faixa para este aparelho">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
+        <svg class="icon-download" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18v2h14v-2"/>
         </svg>
-        <span class="download-label">baixar</span>
+        <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M8 5.5 18 12 8 18.5Z"/>
+        </svg>
       </button>
     </article>
   </template>
@@ -96,7 +81,20 @@
   <input id="audioInput" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.opus,.webm,.flac" hidden>
   <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" hidden>
 
+  <section class="player-bar" id="playerBar" aria-label="Controle da faixa atual" hidden>
+    <button id="rewindButton" type="button" aria-label="Voltar 5 segundos" title="Voltar 5 segundos">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8H3V4M3.5 8.5A9 9 0 1 1 4 16M9.2 10.2h3.2l-2.5 2.3h1a2.6 2.6 0 1 1-2.3 3.8"/></svg>
+      <span>5</span>
+    </button>
+    <input id="seekSlider" type="range" min="0" max="1" step="0.01" value="0" aria-label="Posição da faixa">
+    <time id="currentTimeLabel" datetime="PT0M0S">00:00</time>
+    <button id="forwardButton" type="button" aria-label="Avançar 5 segundos" title="Avançar 5 segundos">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8h4V4m-.5 4.5A9 9 0 1 0 20 16M14.8 10.2h-3.2l2.5 2.3h-1a2.6 2.6 0 1 0 2.3 3.8"/></svg>
+      <span>5</span>
+    </button>
+  </section>
+
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="/musical-kelly/app.js?v=1" defer></script>
+  <script src="/musical-kelly/app.js?v=2" defer></script>
 </body>
 </html>

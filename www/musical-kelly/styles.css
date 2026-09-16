@@ -742,3 +742,366 @@ body.has-playing-track .track-card:not(.is-playing):not(.is-cued) {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Minimal live-stage layout */
+.topbar {
+  min-height: 62px;
+  padding-block: 9px;
+}
+
+.brand img {
+  width: 42px;
+  height: 42px;
+}
+
+.top-actions .icon-action,
+.top-actions .primary-action {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  justify-content: center;
+  padding: 0;
+  border-radius: 14px;
+}
+
+.top-actions .primary-action span {
+  margin: 0;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.top-actions .icon-action.is-downloaded {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+main {
+  padding-top: 22px;
+  padding-bottom: 132px;
+}
+
+.status-line {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.selection-panel {
+  position: relative;
+  padding-right: 58px;
+}
+
+.close-selection {
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 11px;
+  color: #d9e8f8;
+  background: rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.close-selection svg {
+  width: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+}
+
+.track-list {
+  gap: 12px;
+}
+
+.track-card,
+body.has-playing-track .track-card,
+body.has-playing-track .track-card:not(.is-playing):not(.is-cued) {
+  opacity: 1;
+}
+
+.track-card.is-playing::after {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.track-shade {
+  background: linear-gradient(90deg, rgba(3, 8, 5, 0.18), rgba(3, 8, 5, 0.05) 62%, rgba(3, 8, 5, 0.42));
+}
+
+.track-center-controls {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 2.4vw, 28px);
+  color: #fff;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 3px 7px rgba(0, 0, 0, 0.5));
+}
+
+.card-seek {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}
+
+.card-seek svg {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.track-duration {
+  min-width: 98px;
+  color: #fff;
+  font-size: clamp(0.88rem, 1.8vw, 1.2rem);
+  font-weight: 850;
+  text-align: center;
+  text-shadow: 0 2px 7px rgba(0, 0, 0, 0.72);
+  white-space: nowrap;
+}
+
+.download-button {
+  top: 50%;
+  right: clamp(14px, 2vw, 24px);
+  bottom: auto;
+  width: 52px;
+  height: 52px;
+  min-height: 52px;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(2, 7, 4, 0.58);
+  transform: translateY(-50%);
+}
+
+.download-button:hover {
+  transform: translateY(calc(-50% - 1px));
+}
+
+.download-button svg {
+  width: 27px;
+  height: 27px;
+}
+
+.download-button .icon-play {
+  display: none;
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.download-button.is-downloaded {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.48);
+  background: rgba(2, 7, 4, 0.64);
+}
+
+.download-button.is-downloaded .icon-download {
+  display: none;
+}
+
+.download-button.is-downloaded .icon-play {
+  display: block;
+}
+
+.download-button.is-playing-control {
+  color: var(--green);
+  border-color: rgba(85, 230, 138, 0.75);
+  box-shadow: 0 0 24px rgba(85, 230, 138, 0.25);
+}
+
+.download-button:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.player-bar {
+  position: fixed;
+  right: 50%;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 40;
+  display: grid;
+  grid-template-columns: 46px minmax(120px, 1fr) 58px 46px;
+  gap: 12px;
+  align-items: center;
+  width: min(760px, calc(100% - 28px));
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 20px;
+  background: rgba(5, 13, 9, 0.9);
+  box-shadow: 0 22px 65px rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(22px);
+  transform: translateX(50%);
+}
+
+.player-bar[hidden] {
+  display: none;
+}
+
+.player-bar button {
+  position: relative;
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.player-bar button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.player-bar button svg {
+  width: 25px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.player-bar button span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 0.58rem;
+  font-weight: 900;
+  transform: translate(-50%, -50%);
+}
+
+#seekSlider {
+  width: 100%;
+  height: 4px;
+  margin: 0;
+  border-radius: 99px;
+  outline: none;
+  accent-color: #fff;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45));
+  cursor: pointer;
+}
+
+#seekSlider:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+#currentTimeLabel {
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+  font-weight: 850;
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    min-height: 58px;
+  }
+
+  .brand img {
+    width: 38px;
+    height: 38px;
+  }
+
+  main {
+    padding-top: 12px;
+    padding-bottom: 116px;
+  }
+
+  .selection-panel {
+    padding-right: 54px;
+  }
+
+  .download-button {
+    top: 50%;
+    right: 10px;
+    bottom: auto;
+    width: 42px;
+    height: 42px;
+    min-height: 42px;
+    transform: translateY(-50%);
+  }
+
+  .download-button:hover {
+    transform: translateY(-50%);
+  }
+
+  .download-button svg {
+    width: 23px;
+    height: 23px;
+  }
+
+  .track-center-controls {
+    gap: 8px;
+  }
+
+  .card-seek {
+    width: 34px;
+    height: 34px;
+  }
+
+  .card-seek svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .track-duration {
+    min-width: 78px;
+    font-size: 0.78rem;
+  }
+
+  .player-bar {
+    grid-template-columns: 42px minmax(80px, 1fr) 50px 42px;
+    gap: 8px;
+    width: calc(100% - 18px);
+    padding: 9px 10px;
+    border-radius: 17px;
+  }
+
+  .player-bar button {
+    width: 42px;
+    height: 42px;
+  }
+
+  #currentTimeLabel {
+    font-size: 0.84rem;
+  }
+}
