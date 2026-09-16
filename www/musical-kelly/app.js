@@ -9,6 +9,7 @@
   const DEFAULT_CARD_COUNT = 6;
 
   const elements = {
+    adminHeader: document.getElementById('adminHeader'),
     trackList: document.getElementById('trackList'),
     trackTemplate: document.getElementById('trackTemplate'),
     selectionPanel: document.getElementById('selectionPanel'),
@@ -39,6 +40,8 @@
     transitionTargetId: '',
     transitioning: false,
     transitionTimers: [],
+    autoAdvance: null,
+    autoAdvanceGeneration: 0,
     audioContext: null,
     bufferPromises: new Map(),
     durations: new Map(),
@@ -169,9 +172,12 @@
 
   function setCardBackground(element, card) {
     if (card.image?.url) {
-      element.style.backgroundImage = `url("${String(card.image.url).replace(/["\\]/g, '')}")`;
+      const imageValue = `url("${String(card.image.url).replace(/["\\]/g, '')}")`;
+      element.style.backgroundImage = imageValue;
+      element.style.setProperty('--track-image', imageValue);
     } else {
       element.style.backgroundImage = '';
+      element.style.removeProperty('--track-image');
     }
   }
 
@@ -234,8 +240,11 @@
       setCardBackground(node.querySelector('.track-background'), card);
 
       const durationLabel = node.querySelector('.track-duration');
+      const isPlaying = state.current?.cardId === card.id && !state.current.paused;
       const knownDuration = card.audio ? state.durations.get(card.audio.fileName) : 0;
-      durationLabel.textContent = knownDuration ? formatDuration(knownDuration) : '--';
+      durationLabel.textContent = isPlaying
+        ? formatDuration(currentPosition(state.current))
+        : (knownDuration ? formatDuration(knownDuration) : '--');
       node.querySelector('.card-seek-back').addEventListener('click', (event) => {
         event.stopPropagation();
         seekCardRelative(card.id, -5);
@@ -247,7 +256,8 @@
       if (card.audio && !knownDuration) {
         loadCardDuration(card).then((duration) => {
           const currentLabel = elements.trackList.querySelector(`[data-card-id="${CSS.escape(card.id)}"] .track-duration`);
-          if (currentLabel && duration) currentLabel.textContent = formatDuration(duration);
+          const isCurrent = state.current?.cardId === card.id && !state.current.paused;
+          if (currentLabel && duration && !isCurrent) currentLabel.textContent = formatDuration(duration);
         });
       }
 
@@ -268,6 +278,7 @@
     });
     elements.trackList.appendChild(fragment);
     document.body.classList.toggle('has-playing-track', Boolean(state.current && !state.current.paused));
+    elements.adminHeader.hidden = !state.canEdit;
     elements.addCardButton.hidden = !state.canEdit;
     updateSelectionPanel();
     updateDownloadAllState();
@@ -427,7 +438,7 @@
       await downloadCard(cards[index].id, { quiet: true });
     }
     setStatus('Todas as faixas estão baixadas e prontas para a apresentação.');
-    showToast('Download concluído. Os botões ficaram verdes.');
+    showToast('Download concluído. As faixas estão prontas para tocar.');
   }
 
   async function getAudioContext() {
@@ -533,6 +544,8 @@
     if (!state.scrubbing) elements.seekSlider.value = String(livePosition);
     elements.currentTimeLabel.textContent = formatTime(displayedPosition);
     elements.currentTimeLabel.dateTime = `PT${Math.floor(displayedPosition / 60)}M${Math.floor(displayedPosition % 60)}S`;
+    const activeCardTime = elements.trackList.querySelector('.track-card.is-playing .track-duration');
+    if (activeCardTime) activeCardTime.textContent = formatDuration(displayedPosition);
     const disabled = state.transitioning || duration <= 0;
     elements.seekSlider.disabled = disabled;
     elements.rewindButton.disabled = disabled;
@@ -555,6 +568,7 @@
       return;
     }
 
+    cancelAutoAdvance();
     const context = await getAudioContext();
     const now = context.currentTime;
     current.replaced = true;
@@ -568,6 +582,7 @@
     nextVoice.gain.gain.linearRampToValueAtTime(1, when + 0.075);
     state.current = nextVoice;
     render();
+    scheduleAutoAdvance(nextVoice);
   }
 
   function seekRelative(deltaSeconds) {
@@ -594,7 +609,62 @@
     try { voice.source.stop(when); } catch (_error) {}
   }
 
+  function cancelAutoAdvance() {
+    state.autoAdvanceGeneration += 1;
+    if (!state.autoAdvance) return;
+    window.clearTimeout(state.autoAdvance.timer);
+    stopVoice(state.autoAdvance.nextVoice);
+    state.autoAdvance = null;
+  }
+
+  function nextPlayableCard(cardId) {
+    const currentIndex = state.project.cards.findIndex((card) => card.id === cardId);
+    if (currentIndex < 0) return null;
+    return state.project.cards.slice(currentIndex + 1).find((card) => card.audio) || null;
+  }
+
+  async function scheduleAutoAdvance(voice) {
+    cancelAutoAdvance();
+    const generation = state.autoAdvanceGeneration;
+    const nextCard = nextPlayableCard(voice?.cardId);
+    if (!voice || !nextCard || voice.paused || voice.cancelled) return;
+
+    try {
+      const buffer = await loadAudioBuffer(nextCard);
+      if (generation !== state.autoAdvanceGeneration || voice.replaced || voice.cancelled || voice.paused) return;
+      if (voice.ended) {
+        if (!state.current) await startImmediately(nextCard, buffer);
+        return;
+      }
+
+      const context = await getAudioContext();
+      const startAt = voice.startedAt + Math.max(0, voice.buffer.duration - voice.offset);
+      if (startAt <= context.currentTime + 0.025) {
+        if (state.current === voice) await startImmediately(nextCard, buffer);
+        return;
+      }
+
+      voice.replaced = true;
+      const nextVoice = createVoice(nextCard.id, buffer, startAt, 0, 1);
+      const timer = window.setTimeout(() => {
+        if (generation !== state.autoAdvanceGeneration) {
+          stopVoice(nextVoice);
+          return;
+        }
+        state.autoAdvance = null;
+        state.current = nextVoice;
+        render();
+        setStatus(`No ar: “${nextCard.title}”.`);
+        scheduleAutoAdvance(nextVoice);
+      }, Math.max(0, (startAt - context.currentTime) * 1000));
+      state.autoAdvance = { fromVoice: voice, nextVoice, timer };
+    } catch (error) {
+      console.warn('Não foi possível preparar a próxima faixa:', error);
+    }
+  }
+
   async function startImmediately(card, buffer) {
+    cancelAutoAdvance();
     const context = await getAudioContext();
     const when = context.currentTime + 0.025;
     const voice = createVoice(card.id, buffer, when, 0, 0);
@@ -604,9 +674,11 @@
     state.transitioning = false;
     render();
     setStatus(`No ar: “${card.title}”.`);
+    scheduleAutoAdvance(voice);
   }
 
   async function transitionTo(card, buffer) {
+    cancelAutoAdvance();
     const context = await getAudioContext();
     const outgoing = state.current;
     const now = context.currentTime + 0.035;
@@ -644,6 +716,7 @@
       state.transitioning = false;
       render();
       setStatus(incoming.ended ? 'Faixa concluída.' : `No ar: “${card.title}”.`);
+      if (!incoming.ended) scheduleAutoAdvance(incoming);
     }, Math.max(0, fadeSeconds * 1000 + 80));
     state.transitionTimers.push(activateTimer, finishTimer);
   }
@@ -652,6 +725,7 @@
     const voice = state.current;
     if (!voice || voice.paused || !state.audioContext) return;
     const now = state.audioContext.currentTime;
+    cancelAutoAdvance();
     const offset = Math.min(currentPosition(voice, now), Math.max(0, voice.buffer.duration - 0.01));
     voice.cancelled = true;
     voice.gain.gain.cancelScheduledValues(now);
@@ -673,6 +747,7 @@
     state.current = voice;
     render();
     setStatus(`No ar: “${getCard(voice.cardId)?.title || 'faixa'}”.`);
+    scheduleAutoAdvance(voice);
   }
 
   async function playCard(cardId) {
@@ -769,6 +844,7 @@
     if (!card) return;
     if (!window.confirm(`Remover o container “${card.title}” do musical?`)) return;
     if (state.current?.cardId === card.id) {
+      cancelAutoAdvance();
       stopVoice(state.current);
       state.current = null;
     }

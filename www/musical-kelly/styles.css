@@ -1105,3 +1105,116 @@ body.has-playing-track .track-card:not(.is-playing):not(.is-cued) {
     font-size: 0.84rem;
   }
 }
+
+.topbar[hidden] {
+  display: none;
+}
+
+.track-background {
+  overflow: hidden;
+  transform: none;
+}
+
+.track-background::after {
+  position: absolute;
+  inset: 0;
+  background-image: var(--track-image);
+  background-position: center;
+  background-size: cover;
+  content: "";
+  filter: grayscale(1);
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 240ms ease;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.2) 24%, #000 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.2) 24%, #000 100%);
+}
+
+.track-card.is-playing .track-background,
+.track-card.is-playing:hover .track-background {
+  transform: none;
+}
+
+.track-card.is-playing .track-background::after {
+  opacity: 0;
+  transition-duration: 2000ms;
+}
+
+.track-center-controls {
+  gap: 24px;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.track-card.is-playing .track-center-controls {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.card-seek {
+  width: 72px;
+  height: 72px;
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.62);
+}
+
+.card-seek svg {
+  width: 54px;
+  height: 54px;
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.58));
+}
+
+.track-duration {
+  min-width: 180px;
+  font-size: clamp(1.7rem, 3.4vw, 2.4rem);
+  text-shadow: 0 3px 9px rgba(0, 0, 0, 0.68);
+}
+
+.download-button .icon-loading {
+  display: none;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.download-button.is-busy svg {
+  animation: none;
+}
+
+.download-button.is-busy .icon-download,
+.download-button.is-busy .icon-play {
+  display: none;
+}
+
+.download-button.is-busy .icon-loading {
+  display: block;
+  animation: downloadLoop 720ms linear infinite;
+}
+
+@keyframes downloadLoop {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 560px) {
+  .track-center-controls {
+    gap: 9px;
+  }
+
+  .card-seek {
+    width: 54px;
+    height: 54px;
+  }
+
+  .card-seek svg {
+    width: 44px;
+    height: 44px;
+  }
+
+  .track-duration {
+    min-width: 108px;
+    font-size: 1.45rem;
+  }
+}
