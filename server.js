@@ -8349,7 +8349,7 @@ const BONUS_ACCESS_KEYS = new Map([
 const ACCESS_KEY_ALPHABET = 'ABCDEFGHIJKLMNOP';
 const FLASHCARD_FREE_LIMIT = 30;
 const SUPPORTED_IMAGE_EXTENSIONS = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp']);
-const SUPPORTED_AUDIO_EXTENSIONS = new Set(['.mp3', '.wav', '.opus', '.ogg', '.oga', '.webm']);
+const SUPPORTED_AUDIO_EXTENSIONS = new Set(['.mp3', '.m4a', '.aac', '.wav', '.opus', '.ogg', '.oga', '.webm', '.flac']);
 const SUPPORTED_VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.ogv', '.mov', '.m4v']);
 const SUPPORTED_MEDIA_EXTENSIONS = new Set([
   ...SUPPORTED_IMAGE_EXTENSIONS,
@@ -8372,6 +8372,10 @@ const FLASHCARDS_R2_PUBLIC_ROOT = (() => {
   return DEFAULT_FLASHCARDS_R2_PUBLIC_ROOT;
 })();
 const FLASHCARDS_R2_PREFIX = 'Star';
+const MUSICAL_KELLY_R2_PREFIX = 'musical-kelly';
+const MUSICAL_KELLY_MAX_CARDS = 80;
+const MUSICAL_KELLY_MAX_AUDIO_BYTES = 220 * 1024 * 1024;
+const MUSICAL_KELLY_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const FLASHCARD_CAMERA_OBJECT_KEY = 'FlashCards/camera.webp';
 const GLOBAL_BACKGROUND_OBJECT_KEYS = {
   desktop: 'backgrounds/playtalk-global-desktop.webp',
@@ -9036,6 +9040,9 @@ function contentTypeFromObjectKey(objectKey) {
 
   if (SUPPORTED_AUDIO_EXTENSIONS.has(extension)) {
     if (extension === '.mp3') return 'audio/mpeg';
+    if (extension === '.m4a') return 'audio/mp4';
+    if (extension === '.aac') return 'audio/aac';
+    if (extension === '.flac') return 'audio/flac';
     if (extension === '.oga') return 'audio/ogg';
     return `audio/${extension.slice(1)}`;
   }
@@ -15943,6 +15950,98 @@ async function fetchR2ObjectBuffer(objectKey) {
     const details = error?.message || error?.Code || String(error);
     throw new Error(`R2 GET ${objectKey} falhou: ${details}`.trim());
   }
+}
+
+function musicalKellyUserRoot(user) {
+  const userId = Number.parseInt(user?.id, 10);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    const error = new Error('Usuario invalido.');
+    error.statusCode = 401;
+    throw error;
+  }
+  return `${MUSICAL_KELLY_R2_PREFIX}/users/${userId}`;
+}
+
+function normalizeMusicalKellyCardId(value) {
+  const normalized = String(value || '').trim();
+  return /^[a-zA-Z0-9_-]{1,80}$/.test(normalized) ? normalized : '';
+}
+
+function normalizeMusicalKellyAssetFileName(value) {
+  const normalized = path.posix.basename(String(value || '').trim());
+  return /^[a-zA-Z0-9._-]{1,180}$/.test(normalized) ? normalized : '';
+}
+
+function normalizeMusicalKellyAsset(asset, kind) {
+  if (!asset || typeof asset !== 'object') return null;
+  const fileName = normalizeMusicalKellyAssetFileName(asset.fileName);
+  const allowedExtensions = kind === 'audio' ? SUPPORTED_AUDIO_EXTENSIONS : SUPPORTED_IMAGE_EXTENSIONS;
+  if (!fileName || !allowedExtensions.has(path.extname(fileName).toLowerCase())) return null;
+  return {
+    fileName,
+    name: String(asset.name || fileName).trim().slice(0, 180) || fileName,
+    contentType: String(asset.contentType || contentTypeFromObjectKey(fileName)).trim().slice(0, 120),
+    size: Math.max(0, Number.parseInt(asset.size, 10) || 0),
+    updatedAt: String(asset.updatedAt || '').trim().slice(0, 40)
+  };
+}
+
+function normalizeMusicalKellyProject(payload) {
+  const sourceCards = Array.isArray(payload?.cards) ? payload.cards.slice(0, MUSICAL_KELLY_MAX_CARDS) : [];
+  const usedIds = new Set();
+  const cards = [];
+  for (const source of sourceCards) {
+    const id = normalizeMusicalKellyCardId(source?.id);
+    if (!id || usedIds.has(id)) continue;
+    usedIds.add(id);
+    cards.push({
+      id,
+      title: String(source?.title || 'Faixa').trim().slice(0, 120) || 'Faixa',
+      audio: normalizeMusicalKellyAsset(source?.audio, 'audio'),
+      image: normalizeMusicalKellyAsset(source?.image, 'image')
+    });
+  }
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    cards
+  };
+}
+
+function musicalKellyAssetUrl(kind, fileName) {
+  return `/api/musical-kelly/assets/${encodeURIComponent(kind)}/${encodeURIComponent(fileName)}`;
+}
+
+function hydrateMusicalKellyProject(project) {
+  return {
+    ...project,
+    cards: (Array.isArray(project?.cards) ? project.cards : []).map((card) => ({
+      ...card,
+      audio: card.audio ? { ...card.audio, url: musicalKellyAssetUrl('audio', card.audio.fileName) } : null,
+      image: card.image ? { ...card.image, url: musicalKellyAssetUrl('image', card.image.fileName) } : null
+    }))
+  };
+}
+
+function sanitizeMusicalKellyUploadName(value, kind, contentType) {
+  const rawName = path.posix.basename(String(value || '').trim().replace(/\\/g, '/'));
+  const sourceExtension = path.extname(rawName).toLowerCase();
+  const allowedExtensions = kind === 'audio' ? SUPPORTED_AUDIO_EXTENSIONS : SUPPORTED_IMAGE_EXTENSIONS;
+  const mimeFallbacks = kind === 'audio'
+    ? { 'audio/mpeg': '.mp3', 'audio/mp4': '.m4a', 'audio/wav': '.wav', 'audio/x-wav': '.wav', 'audio/ogg': '.ogg', 'audio/webm': '.webm', 'audio/opus': '.opus' }
+    : { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif', 'image/avif': '.avif', 'image/svg+xml': '.svg' };
+  const extension = allowedExtensions.has(sourceExtension)
+    ? sourceExtension
+    : (mimeFallbacks[String(contentType || '').split(';')[0].trim().toLowerCase()] || '');
+  if (!extension || !allowedExtensions.has(extension)) return null;
+  const base = path.basename(rawName, sourceExtension)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || kind;
+  return { displayName: rawName.slice(0, 180) || `${base}${extension}`, extension, base };
 }
 
 function buildStorageTreeFromObjectKeys(objectKeys, rootLabel = 'Niveis') {
@@ -25867,6 +25966,199 @@ app.get('/voices/:filePath(*)', async (req, res, next) => {
   }
 });
 
+app.get('/api/musical-kelly/project', async (req, res) => {
+  try {
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      res.status(401).json({ success: false, message: 'Entre na sua conta para abrir o musical.' });
+      return;
+    }
+    if (!isR2FluencyConfigured()) {
+      res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
+      return;
+    }
+
+    const objectKey = `${musicalKellyUserRoot(authUser)}/project.json`;
+    let project;
+    try {
+      project = normalizeMusicalKellyProject(await fetchR2JsonObject(objectKey));
+    } catch (error) {
+      if (Number(error?.status || error?.statusCode || 0) !== 404) throw error;
+      project = normalizeMusicalKellyProject({ cards: [] });
+    }
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+  } catch (error) {
+    console.error('Erro ao carregar musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: 'Nao foi possivel carregar o musical agora.'
+    });
+  }
+});
+
+app.put('/api/musical-kelly/project', async (req, res) => {
+  try {
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      res.status(401).json({ success: false, message: 'Entre na sua conta para salvar o musical.' });
+      return;
+    }
+    if (!isR2FluencyConfigured()) {
+      res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
+      return;
+    }
+
+    const project = normalizeMusicalKellyProject(req.body || {});
+    const objectKey = `${musicalKellyUserRoot(authUser)}/project.json`;
+    await putR2Object(objectKey, Buffer.from(`${JSON.stringify(project, null, 2)}\n`, 'utf8'), 'application/json; charset=utf-8');
+    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+  } catch (error) {
+    console.error('Erro ao salvar musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: 'Nao foi possivel salvar as alteracoes do musical.'
+    });
+  }
+});
+
+app.post(
+  '/api/musical-kelly/assets/:kind',
+  express.raw({ type: () => true, limit: `${Math.ceil(MUSICAL_KELLY_MAX_AUDIO_BYTES / (1024 * 1024))}mb` }),
+  async (req, res) => {
+    try {
+      const authUser = await readAuthenticatedUserFromRequest(req);
+      if (!authUser?.id) {
+        res.status(401).json({ success: false, message: 'Entre na sua conta para enviar arquivos.' });
+        return;
+      }
+      if (!isR2FluencyConfigured()) {
+        res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
+        return;
+      }
+
+      const kind = String(req.params.kind || '').trim().toLowerCase();
+      if (kind !== 'audio' && kind !== 'image') {
+        res.status(400).json({ success: false, message: 'Tipo de arquivo invalido.' });
+        return;
+      }
+      const cardId = normalizeMusicalKellyCardId(req.query?.cardId);
+      if (!cardId) {
+        res.status(400).json({ success: false, message: 'Container invalido.' });
+        return;
+      }
+      if (!Buffer.isBuffer(req.body) || !req.body.length) {
+        res.status(400).json({ success: false, message: 'Escolha um arquivo para enviar.' });
+        return;
+      }
+
+      const maxBytes = kind === 'audio' ? MUSICAL_KELLY_MAX_AUDIO_BYTES : MUSICAL_KELLY_MAX_IMAGE_BYTES;
+      if (req.body.length > maxBytes) {
+        res.status(413).json({
+          success: false,
+          message: kind === 'audio' ? 'A faixa pode ter no maximo 220 MB.' : 'A imagem pode ter no maximo 20 MB.'
+        });
+        return;
+      }
+
+      const contentType = String(req.headers['content-type'] || 'application/octet-stream').split(';')[0].trim().toLowerCase();
+      const validContentType = contentType === 'application/octet-stream'
+        || (kind === 'audio' ? contentType.startsWith('audio/') : contentType.startsWith('image/'));
+      if (!validContentType) {
+        res.status(415).json({ success: false, message: 'O tipo real deste arquivo nao corresponde ao container.' });
+        return;
+      }
+      const uploadName = sanitizeMusicalKellyUploadName(req.query?.name, kind, contentType);
+      if (!uploadName || (kind === 'image' && uploadName.extension === '.svg')) {
+        res.status(415).json({
+          success: false,
+          message: kind === 'audio' ? 'Formato de audio nao suportado.' : 'Formato de imagem nao suportado.'
+        });
+        return;
+      }
+
+      const uniqueSuffix = `${Date.now().toString(36)}-${crypto.randomBytes(5).toString('hex')}`;
+      const fileName = `${cardId}-${uploadName.base}-${uniqueSuffix}${uploadName.extension}`.slice(-180);
+      const objectKey = `${musicalKellyUserRoot(authUser)}/${kind}/${fileName}`;
+      const storedContentType = contentType === 'application/octet-stream'
+        ? contentTypeFromObjectKey(fileName)
+        : contentType;
+      await putR2Object(objectKey, req.body, storedContentType);
+
+      const asset = {
+        fileName,
+        name: uploadName.displayName,
+        contentType: storedContentType,
+        size: req.body.length,
+        updatedAt: new Date().toISOString(),
+        url: musicalKellyAssetUrl(kind, fileName)
+      };
+      res.status(201).json({ success: true, asset });
+    } catch (error) {
+      console.error('Erro ao enviar arquivo do musical Kelly:', error);
+      res.status(Number(error?.statusCode) || 500).json({
+        success: false,
+        message: 'Nao foi possivel enviar este arquivo para o musical.'
+      });
+    }
+  }
+);
+
+app.get('/api/musical-kelly/assets/:kind/:fileName', async (req, res) => {
+  try {
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      res.status(401).json({ success: false, message: 'Sessao expirada.' });
+      return;
+    }
+    const kind = String(req.params.kind || '').trim().toLowerCase();
+    const fileName = normalizeMusicalKellyAssetFileName(req.params.fileName);
+    const allowedExtensions = kind === 'audio' ? SUPPORTED_AUDIO_EXTENSIONS : SUPPORTED_IMAGE_EXTENSIONS;
+    if ((kind !== 'audio' && kind !== 'image') || !fileName || !allowedExtensions.has(path.extname(fileName).toLowerCase())) {
+      res.status(404).end();
+      return;
+    }
+
+    const rangeHeader = typeof req.headers.range === 'string' && /^bytes=\d*-\d*$/i.test(req.headers.range.trim())
+      ? req.headers.range.trim()
+      : undefined;
+    const objectKey = `${musicalKellyUserRoot(authUser)}/${kind}/${fileName}`;
+    const response = await getR2Client().send(new GetObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: objectKey,
+      Range: rangeHeader
+    }));
+
+    res.status(response?.ContentRange ? 206 : 200);
+    res.setHeader('Content-Type', response?.ContentType || contentTypeFromObjectKey(fileName));
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    if (Number.isFinite(Number(response?.ContentLength))) res.setHeader('Content-Length', String(response.ContentLength));
+    if (response?.ContentRange) res.setHeader('Content-Range', response.ContentRange);
+    if (response?.ETag) res.setHeader('ETag', response.ETag);
+
+    if (typeof response?.Body?.pipe === 'function') {
+      response.Body.on('error', (error) => {
+        console.error('Erro durante streaming do musical Kelly:', error);
+        if (!res.headersSent) res.status(500).end();
+        else res.destroy(error);
+      });
+      response.Body.pipe(res);
+      return;
+    }
+    res.send(await readR2BodyAsBuffer(response?.Body));
+  } catch (error) {
+    const status = Number(error?.$metadata?.httpStatusCode || error?.statusCode || 0);
+    if (status === 404 || error?.Code === 'NoSuchKey') {
+      res.status(404).end();
+      return;
+    }
+    console.error('Erro ao servir arquivo do musical Kelly:', error);
+    if (!res.headersSent) res.status(500).end();
+  }
+});
+
 app.use(async (req, res, next) => {
   if (req.method !== 'GET') {
     next();
@@ -25990,6 +26282,11 @@ app.use('/insonic', express.static(insonicDir, {
 
 app.get('/', (req, res) => {
   res.redirect(302, '/entrar');
+});
+
+app.get(['/musical-kelly', '/musical-kelly/'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(staticDir, 'musical-kelly', 'index.html'));
 });
 
 app.get(['/play', '/play/'], (req, res) => {
