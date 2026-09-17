@@ -26246,7 +26246,7 @@ app.post('/api/musical-kelly/cards', async (req, res) => {
     }
     const title = String(req.body?.title || '').trim().slice(0, 120);
     if (!title) {
-      res.status(400).json({ success: false, message: 'Digite o nome do container.' });
+      res.status(400).json({ success: false, message: 'Digite o nome da faixa.' });
       return;
     }
 
@@ -26418,6 +26418,43 @@ app.post('/api/musical-kelly/cards/:cardId/approve', async (req, res) => {
     res.status(Number(error?.statusCode) || 500).json({
       success: false,
       message: error?.message || 'Nao foi possivel aprovar esta faixa.'
+    });
+  }
+});
+
+app.delete('/api/musical-kelly/cards/:cardId', async (req, res) => {
+  try {
+    if (!isR2FluencyConfigured()) {
+      res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
+      return;
+    }
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    if (!cardId) {
+      res.status(400).json({ success: false, message: 'Container invalido.' });
+      return;
+    }
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      const index = currentProject.cards.findIndex((entry) => entry.id === cardId);
+      if (index < 0) {
+        const error = new Error('Este container nao existe mais.');
+        error.statusCode = 404;
+        throw error;
+      }
+      if (currentProject.cards[index].audio?.fileName) {
+        const error = new Error('Este container ja tem musica e nao pode ser excluido por este botao.');
+        error.statusCode = 409;
+        throw error;
+      }
+      currentProject.cards.splice(index, 1);
+      return writeMusicalKellyGlobalProject(currentProject);
+    });
+    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+  } catch (error) {
+    console.error('Erro ao excluir container vazio do musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel excluir o container.'
     });
   }
 });

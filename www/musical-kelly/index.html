@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=13">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=14">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -103,6 +103,9 @@
         <svg class="icon-loading" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3a9 9 0 1 1-8.3 5.5"/>
         </svg>
+        <svg class="icon-delete" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>
+        </svg>
       </button>
     </article>
   </template>
@@ -115,14 +118,14 @@
       <div class="dialog-heading">
         <div>
           <span class="dialog-kicker">Novo container</span>
-          <h2 id="addCardDialogTitle">Qual é o nome do container?</h2>
+          <h2 id="addCardDialogTitle">Nome da faixa</h2>
         </div>
         <button class="dialog-close" id="closeAddCardDialog" type="button" aria-label="Fechar">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
         </button>
       </div>
       <label class="dialog-field" for="newCardTitle">
-        <span>Título</span>
+        <span>Nome da faixa</span>
         <input id="newCardTitle" maxlength="120" autocomplete="off" required placeholder="Ex.: Entrada do personagem">
       </label>
       <button class="dialog-primary" id="confirmAddCardButton" type="submit">Adicionar container</button>
@@ -172,6 +175,6 @@
   </section>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="/musical-kelly/app.js?v=15" defer></script>
+  <script src="/musical-kelly/app.js?v=16" defer></script>
 </body>
 </html>

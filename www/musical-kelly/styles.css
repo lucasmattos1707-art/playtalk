@@ -1212,12 +1212,33 @@ body.has-playing-track .track-card:not(.is-playing):not(.is-cued) {
   stroke-linecap: round;
 }
 
+.download-button .icon-delete {
+  display: none;
+}
+
+.download-button.is-delete {
+  color: #fff;
+  border-color: rgba(255, 112, 122, 0.62);
+  background: linear-gradient(135deg, rgba(139, 31, 44, 0.92), rgba(73, 14, 25, 0.94));
+}
+
+.download-button.is-delete .icon-download,
+.download-button.is-delete .icon-play,
+.download-button.is-delete .icon-pause {
+  display: none;
+}
+
+.download-button.is-delete .icon-delete {
+  display: block;
+}
+
 .download-button.is-busy svg {
   animation: none;
 }
 
 .download-button.is-busy .icon-download,
-.download-button.is-busy .icon-play {
+.download-button.is-busy .icon-play,
+.download-button.is-busy .icon-delete {
   display: none;
 }
 

@@ -347,11 +347,20 @@
       const downloadButton = node.querySelector('.download-button');
       const newAudioBadge = downloadButton.querySelector('.new-audio-badge');
       newAudioBadge.hidden = !isUnread;
-      downloadButton.disabled = !card.audio;
-      downloadButton.title = card.audio ? 'Baixar faixa para este aparelho' : 'Adicione uma música primeiro';
-      applyDownloadState(card.id, downloadButton);
+      downloadButton.disabled = false;
+      downloadButton.classList.toggle('is-delete', !card.audio);
+      if (card.audio) {
+        applyDownloadState(card.id, downloadButton);
+      } else {
+        downloadButton.title = 'Excluir container vazio';
+        downloadButton.setAttribute('aria-label', `Excluir container vazio: ${card.title}`);
+      }
       downloadButton.addEventListener('click', (event) => {
         event.stopPropagation();
+        if (!card.audio) {
+          deleteEmptyCard(card.id, downloadButton).catch((error) => showToast(error.message, true));
+          return;
+        }
         const action = state.downloadStates.get(card.id) === 'done'
           ? playCard(card.id)
           : downloadCard(card.id);
@@ -536,7 +545,7 @@
     const title = elements.newCardTitle.value.trim().slice(0, 120);
     if (!title) {
       elements.newCardTitle.focus();
-      showToast('Digite o nome do container.', true);
+      showToast('Digite o nome da faixa.', true);
       return;
     }
     state.collaborationBusy = true;
@@ -558,6 +567,29 @@
     } finally {
       state.collaborationBusy = false;
       elements.confirmAddCardButton.disabled = false;
+    }
+  }
+
+  async function deleteEmptyCard(cardId, button) {
+    if (state.collaborationBusy) return;
+    const card = getCard(cardId);
+    if (!card || card.audio) return;
+    if (!window.confirm(`Excluir o container “${card.title}”?`)) return;
+    state.collaborationBusy = true;
+    button.disabled = true;
+    button.classList.add('is-busy');
+    try {
+      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}`, {
+        method: 'DELETE'
+      });
+      applyCollaborationProject(payload.project);
+      showToast(`Container “${card.title}” excluído.`);
+    } finally {
+      state.collaborationBusy = false;
+      if (button.isConnected) {
+        button.disabled = false;
+        button.classList.remove('is-busy');
+      }
     }
   }
 
