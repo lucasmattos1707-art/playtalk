@@ -49,3 +49,17 @@ body { margin: 0; color: #f4f8ff; font: 16px/1.5 Arial,sans-serif; background: #
 button:disabled { opacity: .45; cursor: default !important; }
 button:focus-visible,a:focus-visible { outline: 3px solid #81e2ee; outline-offset: 3px; }
 @media(max-width:800px) { .journeyplan-topbar { align-items: flex-start; flex-direction: column; } .journeyplan-shell { padding: 24px 16px 50px; } .journeyplan-panel { padding: 20px; } .journeyplan-editor-modal { padding: 10px; } .journeyplan-editor-card { max-height: calc(100vh - 20px); } .journeyplan-modes { grid-template-columns: 1fr; } }
+.journeyplan-entry-status {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #fff;
+  font: 700 18px/1.4 system-ui, sans-serif;
+  text-align: center;
+}
+
+.journeyplan-entry-status[hidden] {
+  display: none;
+}

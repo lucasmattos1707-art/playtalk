@@ -16,6 +16,8 @@
   let plan, selected = null, dirty = false, working = 0;
   let editorPreviousFocus = null;
   const pending = new Set();
+  const entryStatus = $('journeyplanEntryStatus');
+  const adminShell = $('journeyplanAdmin');
   const status = (text, error = false) => { $('planStatus').textContent = text; $('planStatus').classList.toggle('is-error', error); };
   const markDirty = () => { dirty = true; $('savePlan').textContent = 'Salvar jornada · alterações pendentes'; };
   const current = () => plan?.steps.find(s => s.id === selected);
@@ -185,8 +187,25 @@
   });
   window.addEventListener('beforeunload', event => { if (dirty || working) { event.preventDefault(); event.returnValue = ''; } });
   try {
+    const session = await window.PlaytalkJourney.request('/auth/session');
+    if (!session.user?.is_admin) {
+      window.PlaytalkJourney.setPhaseLauncher(async () => {
+        window.location.assign('/play?journeyAuto=1');
+        return new Promise(() => {});
+      });
+      const started = await window.PlaytalkJourney.tryStart({
+        onClose: () => window.location.assign('/play')
+      });
+      if (!started) window.location.replace('/play');
+      return;
+    }
+    entryStatus.hidden = true;
+    adminShell.hidden = false;
     const payload = await window.PlaytalkJourney.request('/api/admin/journey'); plan = payload.plan;
     $('planEditor').hidden = false; drawList(); status('Jornada carregada.');
     if (plan.steps.length) { selected = plan.steps[0].id; drawList(); }
-  } catch (error) { status(error.message, true); }
+  } catch (error) {
+    entryStatus.textContent = error.message || 'Não foi possível abrir a jornada.';
+    if (!adminShell.hidden) status(entryStatus.textContent, true);
+  }
 })();

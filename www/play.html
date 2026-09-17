@@ -40770,7 +40770,12 @@
       }
 
       init().then(async () => {
-        const previewId = new URLSearchParams(window.location.search).get('journeyPreview');
+        const journeyParams = new URLSearchParams(window.location.search);
+        if (journeyParams.get('journeyAuto') === '1' && !isAdminUser()) {
+          await startConfiguredJourney();
+          return;
+        }
+        const previewId = journeyParams.get('journeyPreview');
         if (!previewId || !isAdminUser()) return;
         try {
           const { plan } = await window.PlaytalkJourney.request('/api/admin/journey');

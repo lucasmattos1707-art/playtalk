@@ -42,12 +42,17 @@ test('reordering and title edits preserve progress; changing learning content re
   assert.equal(progressFor({ steps: [renamed] }, [{ step_id: a.id, version: a.version, stage: 3, completed: true, points: 100 }]).currentIndex, 1);
   assert.equal(progressFor({ steps: [b] }, [{ step_id: a.id, version: a.version, stage: 3, completed: true, points: 100 }]).currentIndex, 0);
 });
-test('every authoring endpoint and page rejects anonymous and normal users', async () => {
+test('authoring APIs stay admin-only while authenticated students can open the journey page', async () => {
   const fixture = await createFixture();
   try {
-    for (const [route, method] of [['/api/admin/journey', 'GET'], ['/api/admin/journey', 'PUT'], ['/api/admin/journey/assets', 'POST'], ['/api/admin/journey/generate', 'POST'], ['/api/admin/journey/preview/evaluate', 'POST'], ['/journeyplan', 'GET'], ['/journeyplan.html', 'GET']]) {
+    for (const [route, method] of [['/api/admin/journey', 'GET'], ['/api/admin/journey', 'PUT'], ['/api/admin/journey/assets', 'POST'], ['/api/admin/journey/generate', 'POST'], ['/api/admin/journey/preview/evaluate', 'POST']]) {
       assert.equal((await fixture.call(route, method, {}, '')).response.status, 401, route);
       assert.equal((await fixture.call(route, method, {}, 'user')).response.status, 403, route);
+    }
+    for (const route of ['/journeyplan', '/journeyplan.html']) {
+      assert.equal((await fixture.call(route, 'GET', null, '')).response.status, 401, route);
+      assert.equal((await fixture.call(route, 'GET', null, 'user')).response.status, 200, route);
+      assert.equal((await fixture.call(route, 'GET', null, 'admin')).response.status, 200, route);
     }
     assert.equal((await fixture.call('/api/journey', 'GET', null, '')).response.status, 401);
     assert.equal(fixture.counters.generated, 0);
@@ -194,7 +199,9 @@ test('course rows expose the edit pen modal and all six isolated game modes', as
   const dom = new JSDOM(html, { url: 'http://localhost/journeyplan', runScripts: 'outside-only' });
   const { window } = dom;
   window.PlaytalkJourney = {
-    request: async () => ({ plan: { revision: 1, steps: [{ id: 'cards', type: 'phase1', title: 'Prática', level: 2, cards: 1, explorerMode: 1, points: 100 }] } }),
+    request: async route => route === '/auth/session'
+      ? { user: { is_admin: true } }
+      : { plan: { revision: 1, steps: [{ id: 'cards', type: 'phase1', title: 'Prática', level: 2, cards: 1, explorerMode: 1, points: 100 }] } },
     post: async () => ({}), preview: async () => {}
   };
   window.eval(fs.readFileSync(path.join(__dirname, '../www/js/journeyplan-page.js'), 'utf8'));
@@ -209,6 +216,30 @@ test('course rows expose the edit pen modal and all six isolated game modes', as
   assert.match(window.document.querySelector('.journeyplan-step-select span').textContent, /Teclado de 9 letras/);
   window.document.getElementById('closeEditor').click();
   assert.equal(window.document.getElementById('stepEditorModal').hidden, true);
+  dom.window.close();
+});
+test('regular users entering journeyplan automatically open their current journey modal', async () => {
+  const html = fs.readFileSync(path.join(__dirname, '../www/journeyplan.html'), 'utf8');
+  const dom = new JSDOM(html, { url: 'http://localhost/journeyplan', runScripts: 'outside-only' });
+  const { window } = dom;
+  const requested = [];
+  let started = 0, launcher = null;
+  window.PlaytalkJourney = {
+    request: async route => {
+      requested.push(route);
+      if (route === '/auth/session') return { user: { is_admin: false } };
+      throw new Error(`Unexpected request: ${route}`);
+    },
+    post: async () => ({}), preview: async () => {},
+    setPhaseLauncher: callback => { launcher = callback; },
+    tryStart: async options => { started++; assert.equal(typeof options.onClose, 'function'); return true; }
+  };
+  window.eval(fs.readFileSync(path.join(__dirname, '../www/js/journeyplan-page.js'), 'utf8'));
+  for (let i = 0; i < 5; i++) await turn();
+  assert.equal(started, 1);
+  assert.equal(typeof launcher, 'function');
+  assert.deepEqual(requested, ['/auth/session']);
+  assert.equal(window.document.getElementById('journeyplanAdmin').hidden, true);
   dom.window.close();
 });
 test('existing-phase journey runtime requires five stars and suppresses cards, coins and XP', () => {
@@ -227,6 +258,7 @@ test('existing-phase journey runtime requires five stars and suppresses cards, c
   assert.match(source, /if \(state\.entry\.journeyAvailable\) return false;/);
   assert.match(source, /if \(handled\) \{[\s\S]{0,260}hideWelcomeGate\(\)/);
   assert.match(source, /state\.entry\.welcomeDismissed = false;[\s\S]{0,180}if \(!state\.game\.active\) syncWelcomeGate\(\)/);
+  assert.match(source, /journeyParams\.get\('journeyAuto'\) === '1'[\s\S]{0,120}startConfiguredJourney\(\)/);
 });
 test('student phase launches the existing game, records completion and returns to the journey', async () => {
   const dom = new JSDOM('<!DOCTYPE html><body><main><button>Jogar</button></main></body>', { url: 'http://localhost/play', runScripts: 'outside-only' });
