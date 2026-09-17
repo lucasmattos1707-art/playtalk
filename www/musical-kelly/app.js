@@ -7,6 +7,7 @@
   const FADE_TOTAL_SECONDS = 3;
   const OVERLAP_SECONDS = 1;
   const DEFAULT_CARD_COUNT = 6;
+  const USE_NATIVE_AUDIO_ON_APPLE = isAppleTouchDevice();
 
   const elements = {
     adminHeader: document.getElementById('adminHeader'),
@@ -47,6 +48,8 @@
     autoAdvance: null,
     autoAdvanceGeneration: 0,
     audioContext: null,
+    nativeAudio: null,
+    nativeGeneration: 0,
     bufferPromises: new Map(),
     durations: new Map(),
     durationPromises: new Map(),
@@ -570,6 +573,13 @@
   }
 
   async function recoverAppleAudio() {
+    if (USE_NATIVE_AUDIO_ON_APPLE && state.current?.native) {
+      if (!state.current.paused && state.current.media?.paused) {
+        setStatus('O iPhone pausou o áudio. Toque novamente na faixa para continuar.');
+        showToast('Toque novamente na faixa para retomar o áudio no iPhone.');
+      }
+      return;
+    }
     const context = state.audioContext;
     if (!isAppleTouchDevice() || document.hidden || !context || context.state === 'closed' || !state.current) return;
     try {
@@ -582,6 +592,117 @@
       setStatus('O iPhone pausou o áudio. Toque novamente na faixa para liberar o som.');
       showToast('Toque novamente na faixa para retomar o áudio no iPhone.');
     }
+  }
+
+  function syncNativeDuration(voice) {
+    if (!voice?.native || !voice.media) return;
+    const duration = Number(voice.media.duration);
+    if (!Number.isFinite(duration) || duration <= 0) return;
+    voice.buffer.duration = duration;
+    const card = getCard(voice.cardId);
+    if (card?.audio?.fileName) state.durations.set(card.audio.fileName, duration);
+    updatePlayerBar();
+  }
+
+  function ensureNativeAudio() {
+    if (state.nativeAudio) return state.nativeAudio;
+    const media = new Audio();
+    media.preload = 'auto';
+    media.playsInline = true;
+    media.setAttribute('playsinline', '');
+    media.addEventListener('loadedmetadata', () => syncNativeDuration(state.current));
+    media.addEventListener('durationchange', () => syncNativeDuration(state.current));
+    media.addEventListener('ended', () => {
+      const voice = state.current;
+      if (!voice?.native || voice.media !== media || voice.cancelled || voice.replaced) return;
+      voice.ended = true;
+      const nextCard = nextPlayableCard(voice.cardId);
+      if (nextCard) {
+        startNativeCard(nextCard, 0, { natural: true }).catch((error) => {
+          setStatus('A próxima faixa não pôde ser iniciada.');
+          showToast(error.message, true);
+        });
+        return;
+      }
+      clearColorTimer();
+      state.colorMode = 'idle';
+      state.current = null;
+      render();
+      setStatus('Faixa concluída.');
+    });
+    state.nativeAudio = media;
+    return media;
+  }
+
+  function applyNativeOffset(voice, offset) {
+    if (!voice?.native || state.current !== voice) return;
+    const duration = Number(voice.media.duration);
+    const maximum = Number.isFinite(duration) && duration > 0 ? Math.max(0, duration - 0.02) : offset;
+    const target = Math.max(0, Math.min(Number(offset) || 0, maximum));
+    try {
+      voice.media.currentTime = target;
+      voice.offset = target;
+    } catch (_error) {}
+  }
+
+  async function startNativeCard(card, offset = 0, { natural = false } = {}) {
+    if (!card?.audio?.url) throw new Error('Este container ainda não tem música.');
+    const media = ensureNativeAudio();
+    const previous = state.current;
+    const generation = ++state.nativeGeneration;
+    cancelAutoAdvance();
+    clearTransitionTimers();
+    clearColorTimer();
+    if (previous) previous.replaced = true;
+    media.pause();
+    media.src = absoluteUrl(card.audio.url);
+    media.load();
+
+    const knownDuration = Math.max(0, Number(state.durations.get(card.audio.fileName)) || 0);
+    const voice = {
+      cardId: card.id,
+      native: true,
+      media,
+      buffer: { duration: knownDuration },
+      source: null,
+      gain: null,
+      offset: Math.max(0, Number(offset) || 0),
+      startedAt: 0,
+      paused: false,
+      cancelled: false,
+      replaced: false,
+      ended: false
+    };
+    state.current = voice;
+    state.transitionFromId = '';
+    state.transitionTargetId = '';
+    state.transitioning = false;
+    state.colorMode = 'revealing';
+    media.addEventListener('loadedmetadata', () => applyNativeOffset(voice, offset), { once: true });
+    applyNativeOffset(voice, offset);
+    render();
+    setStatus(`${natural ? 'Abrindo' : 'Preparando'} “${card.title}” no áudio do iPhone…`, true);
+
+    let playback;
+    try {
+      playback = media.play();
+    } catch (_error) {
+      throw new Error('O iPhone bloqueou o áudio. Toque novamente na faixa.');
+    }
+    try {
+      await playback;
+    } catch (_error) {
+      if (generation === state.nativeGeneration && state.current === voice) {
+        voice.paused = true;
+        render();
+      }
+      throw new Error('O iPhone não conseguiu abrir esta música. Use uma faixa MP3 ou M4A/AAC e toque novamente.');
+    }
+    if (generation !== state.nativeGeneration || state.current !== voice) return;
+    syncNativeDuration(voice);
+    beginColorReveal(card.id);
+    render();
+    setStatus(`No ar: “${card.title}”.`);
   }
 
   async function fetchAssetResponse(asset) {
@@ -666,10 +787,15 @@
     return voice;
   }
 
-  function currentPosition(voice, atTime = state.audioContext.currentTime) {
+  function currentPosition(voice, atTime = null) {
     if (!voice) return 0;
+    if (voice.native) {
+      const mediaPosition = Number(voice.media?.currentTime);
+      return Number.isFinite(mediaPosition) ? Math.max(0, mediaPosition) : Math.max(0, voice.offset || 0);
+    }
     if (voice.paused) return voice.offset;
-    return Math.max(0, voice.offset + Math.max(0, atTime - voice.startedAt));
+    const contextTime = Number.isFinite(atTime) ? atTime : (state.audioContext?.currentTime || voice.startedAt);
+    return Math.max(0, voice.offset + Math.max(0, contextTime - voice.startedAt));
   }
 
   function formatTime(seconds) {
@@ -727,9 +853,7 @@
     elements.playerBar.hidden = !voice;
     if (!voice) return;
     const duration = Math.max(0, Number(voice.buffer?.duration) || 0);
-    const liveLocalPosition = state.audioContext
-      ? Math.min(duration, currentPosition(voice))
-      : Math.min(duration, voice.offset || 0);
+    const liveLocalPosition = Math.min(duration, currentPosition(voice));
     const timeline = timelineMetrics(voice.cardId, liveLocalPosition);
     const displayedTimelinePosition = state.scrubbing
       ? Number(elements.seekSlider.value || 0)
@@ -776,6 +900,11 @@
     if (!current?.buffer || state.transitioning) return;
     const duration = current.buffer.duration;
     const target = Math.max(0, Math.min(Number(targetSeconds) || 0, Math.max(0, duration - 0.02)));
+    if (current.native) {
+      applyNativeOffset(current, target);
+      updatePlayerBar();
+      return;
+    }
     if (current.paused) {
       state.current = { ...current, offset: target };
       updatePlayerBar();
@@ -802,16 +931,21 @@
   }
 
   function seekRelative(deltaSeconds) {
-    if (!state.current || !state.audioContext) return;
+    if (!state.current || (!state.current.native && !state.audioContext)) return;
     seekTo(currentPosition(state.current) + deltaSeconds).catch((error) => showToast(error.message, true));
   }
 
   async function seekTimelineTo(targetSeconds) {
-    await getAudioContext({ fromUserGesture: true });
+    if (!USE_NATIVE_AUDIO_ON_APPLE) await getAudioContext({ fromUserGesture: true });
     const target = resolveTimelinePosition(targetSeconds);
     if (!target) throw new Error('Aguarde um instante enquanto o navegador mede as faixas.');
     if (state.current?.cardId === target.card.id) {
       await seekTo(target.offset);
+      return;
+    }
+
+    if (USE_NATIVE_AUDIO_ON_APPLE) {
+      await startNativeCard(target.card, target.offset);
       return;
     }
 
@@ -842,7 +976,7 @@
   }
 
   function seekTimelineRelative(deltaSeconds) {
-    if (!state.current || !state.audioContext) return;
+    if (!state.current || (!state.current.native && !state.audioContext)) return;
     const timeline = timelineMetrics(state.current.cardId, currentPosition(state.current));
     seekTimelineTo(timeline.position + deltaSeconds).catch((error) => showToast(error.message, true));
   }
@@ -861,6 +995,11 @@
   }
 
   function stopVoice(voice, when = state.audioContext?.currentTime || 0) {
+    if (voice?.native) {
+      voice.cancelled = true;
+      try { voice.media.pause(); } catch (_error) {}
+      return;
+    }
     if (!voice?.source) return;
     voice.cancelled = true;
     try { voice.source.stop(when); } catch (_error) {}
@@ -1007,7 +1146,17 @@
 
   function pauseCurrent() {
     const voice = state.current;
-    if (!voice || voice.paused || !state.audioContext) return;
+    if (!voice || voice.paused || (!voice.native && !state.audioContext)) return;
+    if (voice.native) {
+      clearColorTimer();
+      state.colorMode = 'idle';
+      voice.offset = currentPosition(voice);
+      voice.media.pause();
+      voice.paused = true;
+      render();
+      setStatus(`Pausada: “${getCard(voice.cardId)?.title || 'faixa'}”. Toque novamente para continuar.`);
+      return;
+    }
     const now = state.audioContext.currentTime;
     clearColorTimer();
     state.colorMode = 'idle';
@@ -1026,6 +1175,25 @@
   async function resumeCurrent() {
     const paused = state.current;
     if (!paused?.paused) return;
+    if (paused.native) {
+      applyNativeOffset(paused, paused.offset);
+      let playback;
+      try {
+        playback = paused.media.play();
+      } catch (_error) {
+        throw new Error('O iPhone bloqueou o áudio. Toque novamente na faixa.');
+      }
+      try {
+        await playback;
+      } catch (_error) {
+        throw new Error('O iPhone não conseguiu retomar esta música.');
+      }
+      paused.paused = false;
+      beginColorReveal(paused.cardId);
+      render();
+      setStatus(`No ar: “${getCard(paused.cardId)?.title || 'faixa'}”.`);
+      return;
+    }
     const context = await getAudioContext();
     const when = context.currentTime + 0.02;
     const voice = createVoice(paused.cardId, paused.buffer, when, paused.offset, 0);
@@ -1042,6 +1210,15 @@
     if (!card?.audio) {
       selectCard(cardId);
       showToast('Este container ainda não tem música. Pressione A para adicionar.', true);
+      return;
+    }
+    if (USE_NATIVE_AUDIO_ON_APPLE) {
+      if (state.current?.cardId === cardId) {
+        if (state.current.paused) await resumeCurrent();
+        else pauseCurrent();
+        return;
+      }
+      await startNativeCard(card);
       return;
     }
     await getAudioContext({ fromUserGesture: true });
