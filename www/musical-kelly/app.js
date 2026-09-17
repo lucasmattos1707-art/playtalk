@@ -4,8 +4,6 @@
   const API_ROOT = '/api/musical-kelly';
   const CACHE_NAME = 'playtalk-musical-kelly-media-v1';
   const LONG_PRESS_MS = 500;
-  const FADE_TOTAL_SECONDS = 3;
-  const OVERLAP_SECONDS = 1;
   const DEFAULT_CARD_COUNT = 6;
   const USE_NATIVE_AUDIO_ON_APPLE = isAppleTouchDevice();
 
@@ -42,7 +40,7 @@
     colorTimer: null,
     transitionFromId: '',
     transitionTargetId: '',
-    transitionDurationMs: FADE_TOTAL_SECONDS * 1000,
+    transitionDurationMs: 0,
     transitioning: false,
     transitionTimers: [],
     autoAdvance: null,
@@ -1098,52 +1096,6 @@
     scheduleAutoAdvance(voice);
   }
 
-  async function transitionTo(card, buffer) {
-    cancelAutoAdvance();
-    const context = await getAudioContext();
-    const outgoing = state.current;
-    const now = context.currentTime + 0.035;
-    const outgoingPosition = currentPosition(outgoing, now);
-    const remaining = Math.max(0.08, outgoing.buffer.duration - outgoingPosition);
-    const fadeSeconds = Math.min(FADE_TOTAL_SECONDS, remaining);
-    const overlapSeconds = Math.min(OVERLAP_SECONDS, fadeSeconds);
-    const incomingDelay = Math.max(0, fadeSeconds - overlapSeconds);
-    const incomingStart = now + incomingDelay;
-    const fadeEnd = now + fadeSeconds;
-
-    outgoing.replaced = true;
-    outgoing.gain.gain.cancelScheduledValues(now);
-    outgoing.gain.gain.setValueAtTime(Math.max(0.0001, outgoing.gain.gain.value), now);
-    outgoing.gain.gain.linearRampToValueAtTime(0, fadeEnd);
-
-    const incoming = createVoice(card.id, buffer, incomingStart, 0, 0);
-    incoming.gain.gain.setValueAtTime(0, incomingStart);
-    incoming.gain.gain.linearRampToValueAtTime(1, fadeEnd);
-
-    clearColorTimer();
-    state.colorMode = 'transitioning';
-    state.transitioning = true;
-    state.transitionFromId = outgoing.cardId;
-    state.transitionTargetId = card.id;
-    state.transitionDurationMs = Math.round(fadeSeconds * 1000);
-    render();
-    setStatus(`Transição: fade de ${(fadeSeconds * 1000).toFixed(0)} ms; a próxima faixa entra nos últimos ${(overlapSeconds * 1000).toFixed(0)} ms.`, true);
-
-    const finishTimer = window.setTimeout(() => {
-      stopVoice(outgoing);
-      state.current = incoming.ended ? null : incoming;
-      state.colorMode = incoming.ended ? 'idle' : 'full';
-      state.transitionFromId = '';
-      state.transitionTargetId = '';
-      state.transitioning = false;
-      releaseAudioBuffer(outgoing.cardId);
-      render();
-      setStatus(incoming.ended ? 'Faixa concluída.' : `No ar: “${card.title}”.`);
-      if (!incoming.ended) scheduleAutoAdvance(incoming);
-    }, Math.max(0, fadeSeconds * 1000 + 80));
-    state.transitionTimers.push(finishTimer);
-  }
-
   function pauseCurrent() {
     const voice = state.current;
     if (!voice || voice.paused || (!voice.native && !state.audioContext)) return;
@@ -1240,7 +1192,8 @@
       return;
     }
     clearTransitionTimers();
-    await transitionTo(card, buffer);
+    stopVoice(state.current);
+    await startNaturalImmediately(card, buffer);
   }
 
   async function uploadFile(kind, file) {
