@@ -8,6 +8,8 @@
 
   const elements = {
     topbar: document.getElementById('topbar'),
+    newAudioNotice: document.getElementById('newAudioNotice'),
+    newAudioNoticeText: document.getElementById('newAudioNoticeText'),
     trackList: document.getElementById('trackList'),
     trackTemplate: document.getElementById('trackTemplate'),
     selectionPanel: document.getElementById('selectionPanel'),
@@ -51,6 +53,8 @@
     canComment: false,
     canDeleteComments: false,
     canReorder: false,
+    unreadCardIds: new Set(),
+    notificationRequests: new Set(),
     sortMode: false,
     sortingCardId: '',
     activeCommentsCardId: '',
@@ -148,6 +152,7 @@
         createdByUserId: card.createdByUserId,
         createdByName: card.createdByName,
         createdAt: card.createdAt,
+        publishedAt: card.publishedAt,
         comments: Array.isArray(card.comments) ? card.comments.map((comment) => ({
           id: comment.id,
           userId: comment.userId,
@@ -251,6 +256,40 @@
     button.setAttribute('aria-label', button.title);
   }
 
+  function syncNewAudioNotice() {
+    const count = state.canEdit ? 0 : state.unreadCardIds.size;
+    elements.newAudioNotice.hidden = count === 0;
+    elements.newAudioNoticeText.textContent = count === 1
+      ? 'Você tem 1 novo áudio'
+      : `Você tem ${count} novos áudios`;
+  }
+
+  function markCardNotificationSeen(cardId) {
+    if (state.canEdit || !state.unreadCardIds.has(cardId) || state.notificationRequests.has(cardId)) return;
+    state.unreadCardIds.delete(cardId);
+    state.notificationRequests.add(cardId);
+    const cardElement = elements.trackList.querySelector(`[data-card-id="${CSS.escape(cardId)}"]`);
+    cardElement?.classList.remove('has-new-audio');
+    const badge = cardElement?.querySelector('.new-audio-badge');
+    if (badge) badge.hidden = true;
+    syncNewAudioNotice();
+    apiJson(`${API_ROOT}/notifications/seen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cardId })
+    }).then((payload) => {
+      if (Array.isArray(payload.unreadCardIds)) {
+        state.unreadCardIds = new Set(payload.unreadCardIds);
+        render();
+      }
+    }).catch(() => {
+      state.unreadCardIds.add(cardId);
+      render();
+    }).finally(() => {
+      state.notificationRequests.delete(cardId);
+    });
+  }
+
   function render() {
     elements.trackList.replaceChildren();
     const fragment = document.createDocumentFragment();
@@ -269,6 +308,8 @@
       node.classList.toggle('is-fading-out', isFadingOut);
       node.classList.toggle('is-fading-in', isFadingIn);
       node.classList.toggle('has-image', Boolean(card.image?.url));
+      const isUnread = !state.canEdit && state.unreadCardIds.has(card.id);
+      node.classList.toggle('has-new-audio', isUnread);
       if (isFadingOut || isFadingIn) {
         node.style.setProperty('--transition-ms', `${Math.max(80, state.transitionDurationMs)}ms`);
       }
@@ -298,6 +339,8 @@
       }
 
       const downloadButton = node.querySelector('.download-button');
+      const newAudioBadge = downloadButton.querySelector('.new-audio-badge');
+      newAudioBadge.hidden = !isUnread;
       downloadButton.disabled = !card.audio;
       downloadButton.title = card.audio ? 'Baixar faixa para este aparelho' : 'Adicione uma música primeiro';
       applyDownloadState(card.id, downloadButton);
@@ -339,6 +382,7 @@
     updateSelectionPanel();
     updateDownloadAllState();
     updatePlayerBar();
+    syncNewAudioNotice();
   }
 
   function bindCardGestures(element, cardId) {
@@ -759,6 +803,7 @@
 
   async function downloadCard(cardId, { quiet = false } = {}) {
     const card = getCard(cardId);
+    markCardNotificationSeen(cardId);
     if (!card?.audio) throw new Error('Adicione uma música neste container primeiro.');
     state.downloadStates.set(cardId, 'busy');
     render();
@@ -1493,6 +1538,7 @@
 
   async function playCard(cardId) {
     const card = getCard(cardId);
+    markCardNotificationSeen(cardId);
     if (!card?.audio) {
       selectCard(cardId);
       showToast('Este container ainda não tem música. Pressione A para adicionar.', true);
@@ -1674,6 +1720,7 @@
       state.canComment = payload.canComment === true;
       state.canDeleteComments = payload.canDeleteComments === true;
       state.canReorder = payload.canReorder === true;
+      state.unreadCardIds = new Set(Array.isArray(payload.unreadCardIds) ? payload.unreadCardIds : []);
       state.project = payload.project || { version: 1, cards: [] };
       render();
       setStatus(state.canEdit

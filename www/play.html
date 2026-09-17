@@ -13601,7 +13601,7 @@
     }
   </style>
   <link rel="stylesheet" href="css/video-background.css">
-  <link rel="stylesheet" href="css/journey.css?v=20260917c">
+  <link rel="stylesheet" href="css/journey.css?v=20260917d">
 </head>
 <body class="flashcards-home-collapsed">
   <div class="container" aria-hidden="true"></div>
@@ -14623,7 +14623,7 @@
   <script src="js/android-speech.js"></script>
   <script src="js/gamesounds.js"></script>
   <script src="js/vendor/opus-recorder/recorder.min.js"></script>
-  <script src="js/journey-player.js?v=20260917c"></script>
+  <script src="js/journey-player.js?v=20260917d"></script>
   <script>
     (() => {
       const FLASHCARDS_R2_PUBLIC_ROOT = window.PlaytalkApi?.publicAssetsRoot || 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
@@ -15700,6 +15700,8 @@
           welcomeTimer: 0,
           welcomeModesResolved: false,
           welcomeModesUsersEnabled: false,
+          journeyPlanResolved: false,
+          journeyAvailable: false,
           fourthStarUsesSecondStarBlocks: false,
           levelDynamics: buildDefaultLevelDynamicsSettings(),
           levelWindowSettings: buildDefaultLevelWindowSettings(),
@@ -18371,6 +18373,9 @@
 
       function shouldOpenWelcomeLanguageSetupModal() {
         if (!shouldShowWelcomeGate()) return false;
+        if (!state.entry.sessionResolved) return false;
+        if (state.user?.id && !state.entry.journeyPlanResolved) return false;
+        if (state.entry.journeyAvailable) return false;
         if (state.ui.welcomeLanguageSetupOpen) return false;
         if (state.ui.welcomeLanguageSetupCompleted) return false;
         return Math.max(0, Number(state.stats?.heardWordsTotal) || 0) === 0;
@@ -18387,6 +18392,10 @@
 
       function syncWelcomeLanguageSetupModal() {
         state.ui.welcomeLanguageSetupCompleted = hasCompletedWelcomeLanguageSetup();
+        if (state.entry.journeyAvailable) {
+          closeWelcomeLanguageSetupModal();
+          return;
+        }
         if (shouldOpenWelcomeLanguageSetupModal()) {
           openWelcomeLanguageSetupModal();
           return;
@@ -39431,6 +39440,9 @@
         try {
           const handled = await window.PlaytalkJourney.tryStart({ onClose: restoreWelcomeAfterJourneyClose });
           if (handled) {
+            state.entry.journeyPlanResolved = true;
+            state.entry.journeyAvailable = true;
+            closeWelcomeLanguageSetupModal();
             closeWelcomeModeModal();
             stopActiveAudio();
             hideWelcomeGate();
@@ -40645,6 +40657,16 @@
           if (sessionUser) {
             state.user = normalizeUser(sessionUser);
           }
+          if (state.user?.id && window.PlaytalkJourney) {
+            try {
+              const journeyPayload = await window.PlaytalkJourney.request('/api/journey');
+              state.entry.journeyAvailable = Boolean(journeyPayload?.plan?.steps?.length);
+            } catch (journeyError) {
+              console.warn('Falha ao verificar jornada publicada:', journeyError);
+              state.entry.journeyAvailable = false;
+            }
+          }
+          state.entry.journeyPlanResolved = true;
           state.entry.welcomeModesUsersEnabled = Boolean(welcomeModeSettings?.usersEnabled);
           state.entry.welcomeModesResolved = true;
           state.entry.sessionResolved = true;

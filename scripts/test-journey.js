@@ -222,6 +222,9 @@ test('existing-phase journey runtime requires five stars and suppresses cards, c
   assert.doesNotMatch(source, /journeyPhaseRuntime \|\| !window\.PlaytalkJourney \|\| !state\.user\?\.id/);
   assert.match(source, /event\?\.preventDefault\?\.\(\);[\s\S]{0,100}event\?\.stopPropagation\?\.\(\);[\s\S]{0,500}PlaytalkJourney\.tryStart/);
   assert.match(source, /playButton\.setAttribute\('aria-busy', 'true'\)[\s\S]{0,900}playButton\.removeAttribute\('aria-busy'\)/);
+  assert.match(source, /if \(state\.entry\.journeyAvailable\) \{[\s\S]{0,120}closeWelcomeLanguageSetupModal\(\)/);
+  assert.match(source, /PlaytalkJourney\.request\('\/api\/journey'\)[\s\S]{0,220}journeyAvailable = Boolean\(journeyPayload\?\.plan\?\.steps\?\.length\)/);
+  assert.match(source, /if \(state\.entry\.journeyAvailable\) return false;/);
   assert.match(source, /if \(handled\) \{[\s\S]{0,260}hideWelcomeGate\(\)/);
   assert.match(source, /state\.entry\.welcomeDismissed = false;[\s\S]{0,180}if \(!state\.game\.active\) syncWelcomeGate\(\)/);
 });

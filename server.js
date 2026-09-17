@@ -15970,6 +15970,10 @@ function musicalKellyGlobalRoot() {
   return `${MUSICAL_KELLY_R2_PREFIX}/global`;
 }
 
+function musicalKellyUserNotificationsObjectKey(user) {
+  return `${musicalKellyLegacyUserRoot(user)}/notifications.json`;
+}
+
 function normalizeMusicalKellyCardId(value) {
   const normalized = String(value || '').trim();
   return /^[a-zA-Z0-9_-]{1,80}$/.test(normalized) ? normalized : '';
@@ -16027,6 +16031,7 @@ function normalizeMusicalKellyProject(payload) {
       createdByUserId: Math.max(0, Number.parseInt(source?.createdByUserId, 10) || 0),
       createdByName: String(source?.createdByName || '').trim().slice(0, 64),
       createdAt: String(source?.createdAt || '').trim().slice(0, 40),
+      publishedAt: String(source?.publishedAt || '').trim().slice(0, 40),
       comments
     });
   }
@@ -16038,11 +16043,66 @@ function normalizeMusicalKellyProject(payload) {
 }
 
 let musicalKellyProjectMutationQueue = Promise.resolve();
+const musicalKellyNotificationMutationQueues = new Map();
 
 function queueMusicalKellyProjectMutation(callback) {
   const operation = musicalKellyProjectMutationQueue.then(callback, callback);
   musicalKellyProjectMutationQueue = operation.catch(() => {});
   return operation;
+}
+
+function queueMusicalKellyNotificationMutation(userId, callback) {
+  const key = String(Number.parseInt(userId, 10) || 0);
+  const previous = musicalKellyNotificationMutationQueues.get(key) || Promise.resolve();
+  const operation = previous.then(callback, callback);
+  const settled = operation.catch(() => {});
+  musicalKellyNotificationMutationQueues.set(key, settled);
+  return operation.finally(() => {
+    if (musicalKellyNotificationMutationQueues.get(key) === settled) {
+      musicalKellyNotificationMutationQueues.delete(key);
+    }
+  });
+}
+
+function normalizeMusicalKellyNotificationState(payload) {
+  const source = payload?.seen && typeof payload.seen === 'object' ? payload.seen : {};
+  const seen = {};
+  Object.entries(source).slice(0, MUSICAL_KELLY_MAX_CARDS).forEach(([rawCardId, rawPublishedAt]) => {
+    const cardId = normalizeMusicalKellyCardId(rawCardId);
+    const publishedAt = String(rawPublishedAt || '').trim().slice(0, 40);
+    if (cardId && publishedAt) seen[cardId] = publishedAt;
+  });
+  return { version: 1, seen };
+}
+
+async function readMusicalKellyNotificationState(user) {
+  try {
+    return normalizeMusicalKellyNotificationState(
+      await fetchR2JsonObject(musicalKellyUserNotificationsObjectKey(user))
+    );
+  } catch (error) {
+    if (Number(error?.status || error?.statusCode || 0) === 404) {
+      return normalizeMusicalKellyNotificationState({});
+    }
+    throw error;
+  }
+}
+
+async function writeMusicalKellyNotificationState(user, state) {
+  const normalized = normalizeMusicalKellyNotificationState(state);
+  await putR2Object(
+    musicalKellyUserNotificationsObjectKey(user),
+    Buffer.from(`${JSON.stringify({ ...normalized, updatedAt: new Date().toISOString() }, null, 2)}\n`, 'utf8'),
+    'application/json; charset=utf-8'
+  );
+  return normalized;
+}
+
+function musicalKellyUnreadCardIds(project, notificationState) {
+  const seen = notificationState?.seen || {};
+  return (Array.isArray(project?.cards) ? project.cards : [])
+    .filter((card) => card.publishedAt && seen[card.id] !== card.publishedAt)
+    .map((card) => card.id);
 }
 
 async function readMusicalKellyGlobalProject() {
@@ -26091,6 +26151,16 @@ app.get('/api/musical-kelly/project', async (req, res) => {
         || normalizeMusicalKellyProject({ cards: [] });
     }
 
+    let unreadCardIds = [];
+    if (authUser?.id && !isAdminUserRecord(authUser)) {
+      try {
+        const notificationState = await readMusicalKellyNotificationState(authUser);
+        unreadCardIds = musicalKellyUnreadCardIds(project, notificationState);
+      } catch (notificationError) {
+        console.warn('Falha ao carregar notificacoes do musical Kelly:', notificationError?.message || notificationError);
+      }
+    }
+
     res.setHeader('Cache-Control', 'no-store');
     res.json({
       success: true,
@@ -26099,6 +26169,8 @@ app.get('/api/musical-kelly/project', async (req, res) => {
       canComment: Boolean(authUser?.id) && !isAdminUserRecord(authUser),
       canDeleteComments: isAdminUserRecord(authUser),
       canReorder: Boolean(authUser?.id),
+      unreadCardIds,
+      unreadCount: unreadCardIds.length,
       project: hydrateMusicalKellyProject(project)
     });
   } catch (error) {
@@ -26128,16 +26200,20 @@ app.put('/api/musical-kelly/project', async (req, res) => {
         throw error;
       }
       const currentCards = new Map(currentProject.cards.map((card) => [card.id, card]));
+      const publishedAt = new Date().toISOString();
       const mergedProject = {
         ...requestedProject,
         cards: requestedProject.cards.map((card) => {
           const currentCard = currentCards.get(card.id);
-          if (!currentCard) return card;
+          if (!currentCard) return { ...card, publishedAt };
+          const audioPublished = Boolean(card.audio?.fileName)
+            && String(currentCard.audio?.fileName || '') !== String(card.audio.fileName);
           return {
             ...card,
             createdByUserId: currentCard.createdByUserId,
             createdByName: currentCard.createdByName,
             createdAt: currentCard.createdAt,
+            publishedAt: audioPublished ? publishedAt : currentCard.publishedAt,
             comments: currentCard.comments
           };
         })
@@ -26176,6 +26252,7 @@ app.post('/api/musical-kelly/cards', async (req, res) => {
       createdByUserId: Number(authUser.id) || 0,
       createdByName: String(authUser.username || authUser.email || 'Usuario').trim().slice(0, 64),
       createdAt,
+      publishedAt: isAdminUserRecord(authUser) ? createdAt : '',
       comments: []
     };
     const project = await queueMusicalKellyProjectMutation(async () => {
@@ -26194,6 +26271,52 @@ app.post('/api/musical-kelly/cards', async (req, res) => {
     res.status(Number(error?.statusCode) || 500).json({
       success: false,
       message: error?.message || 'Nao foi possivel adicionar o container.'
+    });
+  }
+});
+
+app.post('/api/musical-kelly/notifications/seen', async (req, res) => {
+  try {
+    const authUser = await requireMusicalKellyUserFromRequest(req);
+    const cardId = normalizeMusicalKellyCardId(req.body?.cardId);
+    if (!cardId) {
+      res.status(400).json({ success: false, message: 'Container invalido.' });
+      return;
+    }
+    if (isAdminUserRecord(authUser)) {
+      res.json({ success: true, unreadCardIds: [], unreadCount: 0 });
+      return;
+    }
+
+    const result = await queueMusicalKellyNotificationMutation(authUser.id, async () => {
+      const [project, notificationState] = await Promise.all([
+        readMusicalKellyGlobalProject(),
+        readMusicalKellyNotificationState(authUser)
+      ]);
+      const card = project.cards.find((entry) => entry.id === cardId);
+      if (!card) {
+        const error = new Error('Este container nao existe mais.');
+        error.statusCode = 404;
+        throw error;
+      }
+      if (card.publishedAt) {
+        notificationState.seen[card.id] = card.publishedAt;
+        await writeMusicalKellyNotificationState(authUser, notificationState);
+      }
+      return {
+        unreadCardIds: musicalKellyUnreadCardIds(project, notificationState)
+      };
+    });
+    res.json({
+      success: true,
+      unreadCardIds: result.unreadCardIds,
+      unreadCount: result.unreadCardIds.length
+    });
+  } catch (error) {
+    console.error('Erro ao registrar notificacao do musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel atualizar esta notificacao.'
     });
   }
 });

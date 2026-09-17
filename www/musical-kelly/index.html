@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=8">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=9">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -29,6 +29,11 @@
       </button>
     </div>
   </header>
+
+  <aside class="new-audio-notice" id="newAudioNotice" role="status" aria-live="polite" hidden>
+    <span class="new-audio-notice__dot" aria-hidden="true"></span>
+    <span id="newAudioNoticeText"></span>
+  </aside>
 
   <main>
     <section class="selection-panel" id="selectionPanel" hidden aria-label="Editar container selecionado">
@@ -77,11 +82,15 @@
         <span class="comment-count" hidden></span>
       </button>
       <button class="download-button" type="button" title="Baixar para este aparelho" aria-label="Baixar faixa para este aparelho">
+        <span class="new-audio-badge" aria-label="Novo áudio" hidden></span>
         <svg class="icon-download" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18v2h14v-2"/>
         </svg>
         <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M8 5.5 18 12 8 18.5Z"/>
+        </svg>
+        <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M8.5 6v12M15.5 6v12"/>
         </svg>
         <svg class="icon-loading" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3a9 9 0 1 1-8.3 5.5"/>
@@ -149,6 +158,6 @@
   </section>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="/musical-kelly/app.js?v=10" defer></script>
+  <script src="/musical-kelly/app.js?v=11" defer></script>
 </body>
 </html>

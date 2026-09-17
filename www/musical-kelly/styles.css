@@ -1602,3 +1602,86 @@ body.is-sorting .track-card button {
     padding: 20px 16px;
   }
 }
+
+.new-audio-notice {
+  position: sticky;
+  top: 76px;
+  z-index: 19;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 10px 22px;
+  border-bottom: 1px solid rgba(85, 230, 138, 0.24);
+  color: #effff4;
+  background: rgba(8, 31, 19, 0.94);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(18px);
+  font-size: clamp(0.9rem, 2.5vw, 1rem);
+  font-weight: 850;
+  text-align: center;
+}
+
+.new-audio-notice[hidden] {
+  display: none;
+}
+
+.new-audio-notice__dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 6px rgba(85, 230, 138, 0.13), 0 0 18px rgba(85, 230, 138, 0.5);
+}
+
+.new-audio-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 2;
+  width: 17px;
+  height: 17px;
+  border: 3px solid #07110d;
+  border-radius: 50%;
+  background: #ffcf4c;
+  box-shadow: 0 0 0 2px rgba(255, 207, 76, 0.24), 0 0 15px rgba(255, 207, 76, 0.58);
+}
+
+.new-audio-badge[hidden] {
+  display: none;
+}
+
+.track-card.has-new-audio .download-button {
+  border-color: rgba(255, 207, 76, 0.82);
+  box-shadow: 0 0 0 3px rgba(255, 207, 76, 0.12), 0 0 22px rgba(255, 207, 76, 0.2);
+}
+
+.track-card.has-new-audio .download-button:disabled {
+  opacity: 1;
+}
+
+.download-button .icon-pause {
+  display: none;
+}
+
+.download-button.is-playing-control .icon-play {
+  display: none;
+}
+
+.download-button.is-playing-control .icon-pause {
+  display: block;
+}
+
+.download-button.is-busy .icon-pause {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .new-audio-notice {
+    top: 68px;
+    min-height: 42px;
+    padding-inline: 14px;
+  }
+}
