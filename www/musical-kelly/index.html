@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=9">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=10">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -75,9 +75,13 @@
         </button>
       </div>
       <button class="comment-button" type="button" title="Informações e comentários" aria-label="Abrir informações e comentários">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
+        <svg class="icon-info" viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="12" r="9"/>
           <path d="M12 10.5v6M12 7.5h.01"/>
+        </svg>
+        <svg class="icon-approved" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="m7.8 12.2 2.7 2.7 5.9-6"/>
         </svg>
         <span class="comment-count" hidden></span>
       </button>
@@ -140,6 +144,7 @@
         </label>
         <button class="dialog-primary" id="sendCommentButton" type="submit">Enviar comentário</button>
       </form>
+      <button class="approve-track-button" id="approveTrackButton" type="button" hidden>Aprovar faixa</button>
       <p class="admin-comment-note" id="adminCommentNote" hidden>O administrador pode visualizar e apagar comentários, mas não escrever.</p>
     </section>
   </dialog>
@@ -158,6 +163,6 @@
   </section>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="/musical-kelly/app.js?v=11" defer></script>
+  <script src="/musical-kelly/app.js?v=12" defer></script>
 </body>
 </html>

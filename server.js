@@ -16032,6 +16032,9 @@ function normalizeMusicalKellyProject(payload) {
       createdByName: String(source?.createdByName || '').trim().slice(0, 64),
       createdAt: String(source?.createdAt || '').trim().slice(0, 40),
       publishedAt: String(source?.publishedAt || '').trim().slice(0, 40),
+      approvedAt: String(source?.approvedAt || '').trim().slice(0, 40),
+      approvedByUserId: Math.max(0, Number.parseInt(source?.approvedByUserId, 10) || 0),
+      approvedByName: String(source?.approvedByName || '').trim().slice(0, 64),
       comments
     });
   }
@@ -26214,6 +26217,9 @@ app.put('/api/musical-kelly/project', async (req, res) => {
             createdByName: currentCard.createdByName,
             createdAt: currentCard.createdAt,
             publishedAt: audioPublished ? publishedAt : currentCard.publishedAt,
+            approvedAt: audioPublished ? '' : currentCard.approvedAt,
+            approvedByUserId: audioPublished ? 0 : currentCard.approvedByUserId,
+            approvedByName: audioPublished ? '' : currentCard.approvedByName,
             comments: currentCard.comments
           };
         })
@@ -26253,6 +26259,9 @@ app.post('/api/musical-kelly/cards', async (req, res) => {
       createdByName: String(authUser.username || authUser.email || 'Usuario').trim().slice(0, 64),
       createdAt,
       publishedAt: isAdminUserRecord(authUser) ? createdAt : '',
+      approvedAt: '',
+      approvedByUserId: 0,
+      approvedByName: '',
       comments: []
     };
     const project = await queueMusicalKellyProjectMutation(async () => {
@@ -26361,6 +26370,9 @@ app.post('/api/musical-kelly/cards/:cardId/comments', async (req, res) => {
         throw error;
       }
       card.comments.push(comment);
+      card.approvedAt = '';
+      card.approvedByUserId = 0;
+      card.approvedByName = '';
       return writeMusicalKellyGlobalProject(currentProject);
     });
     res.status(201).json({ success: true, comment, project: hydrateMusicalKellyProject(project) });
@@ -26369,6 +26381,46 @@ app.post('/api/musical-kelly/cards/:cardId/comments', async (req, res) => {
     res.status(Number(error?.statusCode) || 500).json({
       success: false,
       message: error?.message || 'Nao foi possivel salvar o comentario.'
+    });
+  }
+});
+
+app.post('/api/musical-kelly/cards/:cardId/approve', async (req, res) => {
+  try {
+    const adminUser = await requireAdminUserFromRequest(req);
+    if (!isR2FluencyConfigured()) {
+      res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
+      return;
+    }
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    if (!cardId) {
+      res.status(400).json({ success: false, message: 'Container invalido.' });
+      return;
+    }
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      const card = currentProject.cards.find((entry) => entry.id === cardId);
+      if (!card) {
+        const error = new Error('Este container nao existe mais.');
+        error.statusCode = 404;
+        throw error;
+      }
+      if (!card.audio?.fileName) {
+        const error = new Error('Adicione um audio antes de aprovar a faixa.');
+        error.statusCode = 409;
+        throw error;
+      }
+      card.approvedAt = new Date().toISOString();
+      card.approvedByUserId = Number(adminUser.id) || 0;
+      card.approvedByName = String(adminUser.username || adminUser.email || 'Admin').trim().slice(0, 64);
+      return writeMusicalKellyGlobalProject(currentProject);
+    });
+    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+  } catch (error) {
+    console.error('Erro ao aprovar faixa do musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel aprovar esta faixa.'
     });
   }
 });

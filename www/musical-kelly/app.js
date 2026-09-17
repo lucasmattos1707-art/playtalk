@@ -32,6 +32,7 @@
     commentForm: document.getElementById('commentForm'),
     commentText: document.getElementById('commentText'),
     sendCommentButton: document.getElementById('sendCommentButton'),
+    approveTrackButton: document.getElementById('approveTrackButton'),
     closeCommentsDialog: document.getElementById('closeCommentsDialog'),
     adminCommentNote: document.getElementById('adminCommentNote'),
     audioInput: document.getElementById('audioInput'),
@@ -153,6 +154,9 @@
         createdByName: card.createdByName,
         createdAt: card.createdAt,
         publishedAt: card.publishedAt,
+        approvedAt: card.approvedAt,
+        approvedByUserId: card.approvedByUserId,
+        approvedByName: card.approvedByName,
         comments: Array.isArray(card.comments) ? card.comments.map((comment) => ({
           id: comment.id,
           userId: comment.userId,
@@ -353,13 +357,17 @@
       });
 
       const commentButton = node.querySelector('.comment-button');
+      const isApproved = Boolean(card.approvedAt);
+      commentButton.classList.toggle('is-approved', isApproved);
       const commentCount = Array.isArray(card.comments) ? card.comments.length : 0;
       const commentCountLabel = commentButton.querySelector('.comment-count');
       commentCountLabel.hidden = commentCount === 0;
       commentCountLabel.textContent = commentCount > 99 ? '99+' : String(commentCount);
-      commentButton.title = commentCount
-        ? `${commentCount} comentário${commentCount === 1 ? '' : 's'}`
-        : 'Informações e comentários';
+      commentButton.title = isApproved
+        ? 'Faixa aprovada. Abrir comentários'
+        : (commentCount
+          ? `${commentCount} comentário${commentCount === 1 ? '' : 's'}`
+          : 'Informações e comentários');
       commentButton.setAttribute('aria-label', `${commentButton.title} de ${card.title}`);
       commentButton.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -574,6 +582,11 @@
       });
     }
     elements.commentForm.hidden = !state.canComment;
+    elements.approveTrackButton.hidden = !state.canEdit;
+    elements.approveTrackButton.disabled = state.collaborationBusy || !card.audio || Boolean(card.approvedAt);
+    elements.approveTrackButton.textContent = card.approvedAt
+      ? 'Faixa aprovada'
+      : (card.audio ? 'Aprovar faixa' : 'Adicione um áudio para aprovar');
     elements.adminCommentNote.hidden = !state.canDeleteComments;
   }
 
@@ -611,6 +624,28 @@
     } finally {
       state.collaborationBusy = false;
       elements.sendCommentButton.disabled = false;
+    }
+  }
+
+  async function approveTrack() {
+    if (!state.canEdit || state.collaborationBusy) return;
+    const card = getCard(state.activeCommentsCardId);
+    if (!card?.audio) {
+      showToast('Adicione um áudio antes de aprovar a faixa.', true);
+      return;
+    }
+    state.collaborationBusy = true;
+    elements.approveTrackButton.disabled = true;
+    try {
+      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}/approve`, {
+        method: 'POST'
+      });
+      applyCollaborationProject(payload.project);
+      renderComments();
+      showToast('Faixa aprovada.');
+    } finally {
+      state.collaborationBusy = false;
+      renderComments();
     }
   }
 
@@ -1595,6 +1630,11 @@
         body: file
       });
       card[kind] = payload.asset;
+      if (isAudio) {
+        card.approvedAt = '';
+        card.approvedByUserId = 0;
+        card.approvedByName = '';
+      }
       if (isAudio && /^Faixa\s+\d+$/i.test(card.title)) {
         card.title = file.name.replace(/\.[^.]+$/, '').trim().slice(0, 120) || card.title;
       }
@@ -1645,6 +1685,9 @@
     elements.closeAddCardDialog.addEventListener('click', () => closeDialog(elements.addCardDialog));
     elements.commentForm.addEventListener('submit', (event) => {
       submitComment(event).catch((error) => showToast(error.message, true));
+    });
+    elements.approveTrackButton.addEventListener('click', () => {
+      approveTrack().catch((error) => showToast(error.message, true));
     });
     elements.closeCommentsDialog.addEventListener('click', () => closeDialog(elements.commentsDialog));
     [elements.addCardDialog, elements.commentsDialog].forEach((dialog) => {
