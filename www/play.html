@@ -14673,6 +14673,26 @@
       function hasSpeechRecognitionSupport() {
         return Boolean(recognitionCtor || getNativeSpeechRecognition() || getOpenAiSpeechRecognition());
       }
+
+      function speechCaptureErrorMessage(error) {
+        const code = safeText(error?.error || (typeof error?.code === 'string' ? error.code : '') || error?.name || '').toLowerCase();
+        if (['not-allowed', 'permission_denied', 'notallowederror'].includes(code)) {
+          return 'Permita o microfone nas configuracoes deste site e do sistema para falar.';
+        }
+        if (['audio-capture', 'notfounderror', 'devicesnotfounderror'].includes(code)) {
+          return 'Microfone nao encontrado. Confira o dispositivo de entrada do computador.';
+        }
+        if (['notreadableerror', 'trackstarterror'].includes(code)) {
+          return 'Nao consegui acessar o microfone. Confira se outro aplicativo esta usando ele.';
+        }
+        if (code === 'no-speech') return 'Nao ouvi nada. Tente de novo.';
+        return 'Nao consegui captar sua voz. Toque para tentar de novo.';
+      }
+
+      function canFallbackSpeechCapture(error) {
+        const code = safeText(error?.error || (typeof error?.code === 'string' ? error.code : '') || error?.name || '').toLowerCase();
+        return !['not-allowed', 'permission_denied', 'notallowederror', 'aborted', 'cancelled', 'app_paused', 'aborterror'].includes(code);
+      }
       const STAR_ICON_PATH = 'SVG/codex-icons/star.svg';
       const ENGLISH_ICON_PATH = '/SVG/codex-icons/ingles-modo-3.svg';
       const GAME_TOUCH_ICON_STORAGE_KEY = 'playtalk-game-touch-icon-v1';
@@ -21402,6 +21422,8 @@
       function stopMicCheckRecognition() {
         const recognition = state.ui.micCheckRecognition;
         state.ui.micCheckRecognition = null;
+        els.micTestPlayBtn?.classList.remove('is-listening');
+        if (els.micTestPlayBtn) els.micTestPlayBtn.disabled = false;
         if (!recognition) return;
         try {
           if (typeof recognition.abort === 'function') {
@@ -21445,6 +21467,7 @@
           return;
         }
 
+        stopMicCheckRecognition();
         state.ui.micCheckBusy = true;
         setMicCheckStepComplete('touch', true);
         els.micTestPlayBtn?.classList.add('is-listening');
@@ -21452,7 +21475,45 @@
           els.micTestPlayBtn.disabled = true;
         }
         setMicCheckStatus('Ouvindo...');
-        stopMicCheckRecognition();
+
+        const captureRecordedSpeech = async () => {
+          if (!openAiSpeech || !state.ui.micCheckOpen) return;
+          const controller = new AbortController();
+          const capture = { abort: () => controller.abort() };
+          state.ui.micCheckRecognition = capture;
+          const isCurrentCapture = () => !controller.signal.aborted
+            && state.ui.micCheckOpen && state.ui.micCheckRecognition === capture;
+          try {
+            const transcript = await openAiSpeech.captureAndTranscribe({
+              language: 'pt-BR',
+              maxDurationMs: 6500,
+              signal: controller.signal,
+              onRecordingStart: () => {
+                if (!isCurrentCapture()) return;
+                setMicCheckStepComplete('permit', true);
+                setMicCheckStatus('Ouvindo...');
+              },
+              onRecordingStop: () => {
+                if (isCurrentCapture()) setMicCheckStatus('Analisando...');
+              }
+            });
+            if (!isCurrentCapture()) return;
+            if (safeText(transcript)) {
+              await completeMicCheck();
+            } else {
+              setMicCheckStatus('Nao ouvi nada. Tente de novo.');
+            }
+          } catch (error) {
+            if (isCurrentCapture()) setMicCheckStatus(speechCaptureErrorMessage(error));
+          } finally {
+            if (state.ui.micCheckRecognition === capture) {
+              state.ui.micCheckRecognition = null;
+              state.ui.micCheckBusy = false;
+              els.micTestPlayBtn?.classList.remove('is-listening');
+              if (els.micTestPlayBtn) els.micTestPlayBtn.disabled = false;
+            }
+          }
+        };
 
         if (nativeSpeech) {
           const nativeCapture = {
@@ -21477,41 +21538,27 @@
             }
             setMicCheckStatus('Nao ouvi nada. Tente de novo.');
           } catch (error) {
-            const errorCode = safeText(error?.code || error?.message || '').toLowerCase();
-            if (
-              openAiSpeech
-              && errorCode !== 'permission_denied'
-              && errorCode !== 'cancelled'
-              && errorCode !== 'app_paused'
-            ) {
-              try {
-                const transcript = await openAiSpeech.captureAndTranscribe({
-                  language: 'pt-BR',
-                  maxDurationMs: 6500,
-                  onRecordingStart: () => setMicCheckStatus('Ouvindo...'),
-                  onRecordingStop: () => {}
-                });
-                if (safeText(transcript) && state.ui.micCheckOpen) {
-                  await completeMicCheck();
-                  return;
-                }
-              } catch (_fallbackError) {
-                // keep default status below
-              }
+            if (nativeCapture.aborted || !state.ui.micCheckOpen) return;
+            if (openAiSpeech && canFallbackSpeechCapture(error)) {
+              await captureRecordedSpeech();
+              return;
             }
             if (state.ui.micCheckOpen) {
-              setMicCheckStatus('Nao consegui abrir o microfone. Tente de novo.');
+              setMicCheckStatus(speechCaptureErrorMessage(error));
             }
           } finally {
             if (state.ui.micCheckRecognition === nativeCapture) {
               state.ui.micCheckRecognition = null;
-            }
-            state.ui.micCheckBusy = false;
-            els.micTestPlayBtn?.classList.remove('is-listening');
-            if (els.micTestPlayBtn) {
-              els.micTestPlayBtn.disabled = false;
+              state.ui.micCheckBusy = false;
+              els.micTestPlayBtn?.classList.remove('is-listening');
+              if (els.micTestPlayBtn) els.micTestPlayBtn.disabled = false;
             }
           }
+          return;
+        }
+
+        if (!recognitionCtor) {
+          await captureRecordedSpeech();
           return;
         }
 
@@ -21519,7 +21566,19 @@
         state.ui.micCheckRecognition = recognition;
         let completed = false;
         let partialTranscript = '';
+        let captureTimer = 0;
+        const isCurrentCapture = () => state.ui.micCheckOpen && state.ui.micCheckRecognition === recognition;
+        const detachRecognition = () => {
+          if (captureTimer) window.clearTimeout(captureTimer);
+          recognition.onstart = null;
+          recognition.onresult = null;
+          recognition.onerror = null;
+          recognition.onend = null;
+          try { recognition.abort(); } catch (_error) { /* ignore */ }
+        };
         const finish = () => {
+          if (captureTimer) window.clearTimeout(captureTimer);
+          if (state.ui.micCheckRecognition !== recognition) return;
           state.ui.micCheckBusy = false;
           if (state.ui.micCheckRecognition === recognition) {
             state.ui.micCheckRecognition = null;
@@ -21535,10 +21594,12 @@
         recognition.interimResults = true;
         recognition.maxAlternatives = 5;
         recognition.onstart = () => {
+          if (!isCurrentCapture()) return;
           setMicCheckStepComplete('permit', true);
           setMicCheckStatus('Ouvindo...');
         };
         recognition.onresult = async (event) => {
+          if (!isCurrentCapture() || completed) return;
           const transcript = resolveMicCheckTranscript(event.results);
           if (transcript) {
             partialTranscript = transcript;
@@ -21554,13 +21615,29 @@
           finish();
           await completeMicCheck();
         };
-        recognition.onerror = () => {
+        recognition.onerror = async (event) => {
+          if (!isCurrentCapture() || completed) return;
+          console.warn('[miccheck][speech]', safeText(event?.error || event?.name || 'unknown'));
+          detachRecognition();
+          if (!partialTranscript && openAiSpeech && canFallbackSpeechCapture(event)) {
+            await captureRecordedSpeech();
+            return;
+          }
           finish();
-          if (!completed && state.ui.micCheckOpen) {
-            setMicCheckStatus(partialTranscript ? '' : 'Nao ouvi nada. Tente de novo.');
+          if (partialTranscript) {
+            completed = true;
+            await completeMicCheck();
+          } else if (state.ui.micCheckOpen) {
+            setMicCheckStatus(speechCaptureErrorMessage(event));
           }
         };
         recognition.onend = async () => {
+          if (!isCurrentCapture() || completed) return;
+          detachRecognition();
+          if (!partialTranscript && openAiSpeech) {
+            await captureRecordedSpeech();
+            return;
+          }
           finish();
           if (!completed && partialTranscript && state.ui.micCheckOpen) {
             completed = true;
@@ -21574,9 +21651,14 @@
 
         try {
           recognition.start();
-        } catch (_error) {
-          finish();
-          setMicCheckStatus('Toque para tentar de novo.');
+          if (isCurrentCapture()) {
+            captureTimer = window.setTimeout(() => {
+              if (!isCurrentCapture() || completed) return;
+              void recognition.onerror({ error: 'speech-timeout' });
+            }, 10000);
+          }
+        } catch (error) {
+          await recognition.onerror(error);
         }
       }
 
@@ -39030,9 +39112,8 @@
             window.clearTimeout(retryTimer);
             retryTimer = 0;
           }
-          if (state.game.recognition === activeRecognition) {
-            state.game.recognition = null;
-          }
+          if (state.game.recognition !== activeRecognition) return;
+          state.game.recognition = null;
           state.game.listening = false;
           if (entry.stage === 3 || entry.stage === 5) {
             state.game.rememberHiddenCardId = safeText(entry.id);
@@ -39048,44 +39129,41 @@
           updateGuestFirstStarResultsBanner(entry, false);
         };
         const tryOpenAiFallback = async (reason = '') => {
-          if (!openAiSpeech) return false;
+          if (!openAiSpeech || finished || !state.game.active || state.game.currentId !== entry.id) return false;
 
+          if (retryTimer) {
+            window.clearTimeout(retryTimer);
+            retryTimer = 0;
+          }
+          const controller = new AbortController();
           const fallbackCapture = {
             aborted: false,
             abort() {
               this.aborted = true;
+              controller.abort();
             }
           };
           activeRecognition = fallbackCapture;
           state.game.recognition = fallbackCapture;
+          const isCurrentCapture = () => !fallbackCapture.aborted && state.game.active
+            && state.game.currentId === entry.id && state.game.recognition === fallbackCapture;
 
           try {
-            const hasFallbackMicAccess = typeof openAiSpeech.requestMicrophoneAccess === 'function'
-              ? await openAiSpeech.requestMicrophoneAccess()
-              : true;
-            if (!hasFallbackMicAccess) {
-              finish();
-              restoreIdleState('Ative o microfone para falar.');
-              return true;
-            }
-
             const transcript = await openAiSpeech.captureAndTranscribe({
               language: recognitionLanguage,
               maxDurationMs: 5000,
+              signal: controller.signal,
               onRecordingStart: () => {
-                if (fallbackCapture.aborted || !state.game.active || state.game.currentId !== entry.id) return;
+                if (!isCurrentCapture()) return;
                 setGameStatus('Ouvindo...', 'live');
               },
               onRecordingStop: () => {
-                if (fallbackCapture.aborted || !state.game.active || state.game.currentId !== entry.id) return;
+                if (!isCurrentCapture()) return;
                 setGameStatus('Analisando...', 'live');
               }
             });
 
-            if (fallbackCapture.aborted) {
-              finish();
-              return true;
-            }
+            if (!isCurrentCapture()) return true;
 
             finish();
             if (transcript) {
@@ -39097,10 +39175,11 @@
             restoreIdleState();
             return true;
           } catch (error) {
+            if (!isCurrentCapture()) return true;
             console.warn('[flashcards][speech-fallback]', reason || 'openai-stt', error);
             finish();
-            restoreIdleState('Toque para tentar de novo');
-            return false;
+            restoreIdleState(speechCaptureErrorMessage(error));
+            return true;
           }
         };
 
@@ -39156,17 +39235,15 @@
 
             const errorCode = safeText(error?.code || error?.message || '').toLowerCase();
             hadError = true;
-            finish();
 
             if (
               openAiSpeech
-              && errorCode !== 'permission_denied'
-              && errorCode !== 'cancelled'
-              && errorCode !== 'app_paused'
+              && canFallbackSpeechCapture(error)
               && await tryOpenAiFallback(`native:${errorCode || 'unknown'}`)
             ) {
               return;
             }
+            finish();
 
             if (
               errorCode === 'no_match'
@@ -39175,7 +39252,7 @@
               || errorCode === 'app_paused'
               || errorCode === 'permission_denied'
             ) {
-              restoreIdleState(errorCode === 'permission_denied' ? 'Ative o microfone para falar.' : 'Toque para falar');
+              restoreIdleState(errorCode === 'permission_denied' ? speechCaptureErrorMessage(error) : 'Toque para falar');
               return;
             }
 
@@ -39192,6 +39269,14 @@
         const recognition = new recognitionCtor();
         activeRecognition = recognition;
         state.game.recognition = recognition;
+        const isCurrentWebCapture = () => !finished && state.game.active
+          && state.game.currentId === entry.id && state.game.recognition === recognition;
+        const detachWebCapture = () => {
+          recognition.onresult = null;
+          recognition.onerror = null;
+          recognition.onend = null;
+          try { recognition.abort(); } catch (_error) { /* ignore */ }
+        };
 
         recognition.lang = recognitionLanguage;
         recognition.continuous = false;
@@ -39199,6 +39284,7 @@
         recognition.maxAlternatives = 5;
 
         recognition.onresult = async (event) => {
+          if (!isCurrentWebCapture()) return;
           const transcript = resolveRecognitionTranscript(event.results);
           if (transcript) {
             partialTranscript = transcript;
@@ -39206,35 +39292,40 @@
           const hasFinalResult = Array.from(event.results || []).some(result => result?.isFinal);
           if (!hasFinalResult) return;
           gotResult = true;
+          detachWebCapture();
           finish();
           await handleRecognitionResult(partialTranscript || transcript);
         };
 
         recognition.onerror = async (event) => {
+          if (!isCurrentWebCapture()) return;
           const errorCode = safeText(event?.error || '').toLowerCase();
+          console.warn('[flashcards][speech]', errorCode || event?.name || 'unknown');
           hadError = true;
-          finish();
+          detachWebCapture();
           if (partialTranscript) {
             gotResult = true;
+            finish();
             await handleRecognitionResult(partialTranscript);
             return;
           }
-          if (errorCode === 'no-speech' || errorCode === 'audio-capture') {
-            restoreIdleState();
-            return;
-          }
-          if (await tryOpenAiFallback(`web:${errorCode || 'unknown'}`)) return;
-          restoreIdleState('Toque para tentar de novo');
+          if (canFallbackSpeechCapture(event) && await tryOpenAiFallback(`web:${errorCode || 'unknown'}`)) return;
+          finish();
+          restoreIdleState(speechCaptureErrorMessage(event));
         };
 
         recognition.onend = async () => {
-          finish();
+          if (!isCurrentWebCapture()) return;
+          detachWebCapture();
           if (!gotResult && partialTranscript && state.game.active && state.game.currentId === entry.id) {
             gotResult = true;
+            finish();
             await handleRecognitionResult(partialTranscript);
             return;
           }
           if (!gotResult && !hadError && state.game.active && state.game.currentId === entry.id) {
+            if (await tryOpenAiFallback('web:empty-result')) return;
+            finish();
             restoreIdleState();
           }
         };
@@ -39242,14 +39333,11 @@
         try {
           recognition.start();
           retryTimer = window.setTimeout(() => {
-            if (finished) return;
-            finish();
-            restoreIdleState();
+            if (!isCurrentWebCapture()) return;
+            void recognition.onerror({ error: 'speech-timeout' });
           }, 10000);
-        } catch (_error) {
-          finish();
-          if (await tryOpenAiFallback('web:start-failed')) return;
-          restoreIdleState('Toque para tentar de novo');
+        } catch (error) {
+          if (recognition.onerror) await recognition.onerror(error);
         }
       }
 

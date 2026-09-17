@@ -75,6 +75,9 @@
   }
 
   async function recordAudio(options = {}) {
+    const signal = options.signal;
+    const abortError = () => new DOMException('Captura cancelada.', 'AbortError');
+    if (signal?.aborted) throw abortError();
     if (!canUseMediaRecorder()) {
       throw new Error('Gravacao por microfone nao e suportada neste dispositivo.');
     }
@@ -91,6 +94,10 @@
         autoGainControl: true
       }
     });
+    if (signal?.aborted) {
+      stream.getTracks().forEach((track) => track.stop());
+      throw abortError();
+    }
 
     return new Promise((resolve, reject) => {
       const recordedChunks = [];
@@ -98,9 +105,23 @@
       let stopTimer = 0;
       let recorder = null;
 
+      const cancelRecording = () => {
+        if (settled) return;
+        if (recorder) {
+          recorder.onstop = null;
+          try {
+            if (recorder.state !== 'inactive') recorder.stop();
+          } catch (_error) {
+            // track cleanup below also releases the microphone
+          }
+        }
+        finish(() => reject(abortError()));
+      };
+
       const finish = (callback) => {
         if (settled) return;
         settled = true;
+        signal?.removeEventListener('abort', cancelRecording);
         if (stopTimer) {
           window.clearTimeout(stopTimer);
           stopTimer = 0;
@@ -115,6 +136,7 @@
         }
         callback();
       };
+      signal?.addEventListener('abort', cancelRecording, { once: true });
 
       try {
         recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
@@ -158,6 +180,7 @@
           // ignore
         }
       }
+      if (settled) return;
 
       stopTimer = window.setTimeout(() => {
         try {
@@ -174,6 +197,7 @@
   async function transcribeBlob(blob, options = {}) {
     const response = await fetch(buildApiUrl('/api/stt/openai'), {
       method: 'POST',
+      signal: options.signal,
       headers: {
         'Content-Type': 'application/json'
       },
