@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=10">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=11">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -142,9 +142,15 @@
           <span>Adicionar comentário</span>
           <textarea id="commentText" maxlength="800" rows="4" required placeholder="Escreva seu comentário sobre este bloco..."></textarea>
         </label>
-        <button class="dialog-primary" id="sendCommentButton" type="submit">Enviar comentário</button>
+        <button class="dialog-primary" id="sendCommentButton" type="submit">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 16 8-16 8 3-8-3-8Zm3 8h13"/></svg>
+          <span>Enviar comentário</span>
+        </button>
       </form>
-      <button class="approve-track-button" id="approveTrackButton" type="button" hidden>Aprovar faixa</button>
+      <button class="approve-track-button" id="approveTrackButton" type="button" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m7.8 12.2 2.7 2.7 5.9-6"/></svg>
+        <span>Aprovar faixa</span>
+      </button>
     </section>
   </dialog>
 
@@ -162,6 +168,6 @@
   </section>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="/musical-kelly/app.js?v=13" defer></script>
+  <script src="/musical-kelly/app.js?v=14" defer></script>
 </body>
 </html>

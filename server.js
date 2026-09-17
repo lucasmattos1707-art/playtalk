@@ -26168,7 +26168,7 @@ app.get('/api/musical-kelly/project', async (req, res) => {
     res.json({
       success: true,
       canEdit: isAdminUserRecord(authUser),
-      canContribute: Boolean(authUser?.id),
+      canContribute: true,
       canComment: true,
       canApprove: true,
       canDeleteComments: isAdminUserRecord(authUser),
@@ -26239,7 +26239,7 @@ app.put('/api/musical-kelly/project', async (req, res) => {
 
 app.post('/api/musical-kelly/cards', async (req, res) => {
   try {
-    const authUser = await requireMusicalKellyUserFromRequest(req);
+    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     if (!isR2FluencyConfigured()) {
       res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
       return;
@@ -26256,8 +26256,8 @@ app.post('/api/musical-kelly/cards', async (req, res) => {
       title,
       audio: null,
       image: null,
-      createdByUserId: Number(authUser.id) || 0,
-      createdByName: String(authUser.username || authUser.email || 'Usuario').trim().slice(0, 64),
+      createdByUserId: Number(authUser?.id) || 0,
+      createdByName: String(authUser?.username || authUser?.email || 'Visitante').trim().slice(0, 64),
       createdAt,
       publishedAt: isAdminUserRecord(authUser) ? createdAt : '',
       approvedAt: '',

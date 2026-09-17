@@ -584,7 +584,7 @@
     elements.commentForm.hidden = !state.canComment;
     elements.approveTrackButton.hidden = !state.canApprove;
     elements.approveTrackButton.disabled = state.collaborationBusy || !card.audio || Boolean(card.approvedAt);
-    elements.approveTrackButton.textContent = card.approvedAt
+    elements.approveTrackButton.querySelector('span').textContent = card.approvedAt
       ? 'Faixa aprovada'
       : (card.audio ? 'Aprovar faixa' : 'Adicione um áudio para aprovar');
   }
