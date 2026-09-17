@@ -19732,7 +19732,6 @@
       }
 
       function resolveLevelModeInitialStage() {
-        if (journeyPhaseRuntime) return 1;
         if (isFiveStarCardsModeActive()) {
           return selectedCardsModePracticeStage() || 1;
         }
@@ -38635,6 +38634,8 @@
           journeyPhaseRuntime = null;
           state.options.mode = exitingJourneyPhase.previousMode;
           state.game.cardsModePracticeStage = exitingJourneyPhase.previousStage;
+          setSelectedGameLevel(exitingJourneyPhase.previousLevel);
+          state.stats.winsSequence = exitingJourneyPhase.previousWinsSequence;
           clearGameSessionLocally();
           syncGameLevelNavigator();
           exitingJourneyPhase.resolve(Boolean(exitingJourneyPhase.completed));
@@ -38683,24 +38684,6 @@
           return;
         }
         const { score, isHit } = evaluateAcceptedAnswers(expectedAnswers, transcript);
-        if (journeyPhaseRuntime) {
-          const runtime = journeyPhaseRuntime;
-          cleanupGameRecognition();
-          clearFirstStageMicHint({ clearStatus: true });
-          clearStageHintLoop({ clearStatus: true });
-          setGameStatus(isHit ? 'Muito bem!' : 'Tente falar novamente.', isHit ? 'hit' : 'miss');
-          if (!isHit) { playCueAudio(ACCESSKEY_ERROR_SOUND_PATH); return; }
-          playSuccessAudio();
-          runtime.hits++;
-          if (runtime.hits >= runtime.cards) {
-            runtime.completed = true;
-            await exitGame();
-          } else {
-            removeGameEntry(entry.id);
-            await advanceToNextCard();
-          }
-          return;
-        }
         if (inputMode === 'speech') {
           clearStageTutorialReminder();
           hideGameStageTutorial({ resume: false });
@@ -38843,7 +38826,7 @@
           }
           const starTarget = currentGameStarTarget();
           entry.stars += 1;
-          incrementWinsSequenceForStarGain();
+          if (!journeyPhaseRuntime) incrementWinsSequenceForStarGain();
           if (isLevelModeAcquisitionFlowActive() && !isFiveStarCardsModeActive()) {
             entry.stage = resolveLevelModeAcquisitionStage(entry.stars);
           } else {
@@ -38875,7 +38858,7 @@
             animateStarsCascade(starTarget);
             schedulePendingRewardSeal(entry.id, rewardSealPhase);
             promoteCardFromWin(entry);
-            if (isLevelModeAcquisitionFlowActive()) {
+            if (!journeyPhaseRuntime && isLevelModeAcquisitionFlowActive()) {
               const nextRecord = normalizeProgressRecord({
                 ...(state.userCards.get(entry.id) || createProgressRecord(entry.id)),
                 cardId: entry.id,
@@ -38920,8 +38903,8 @@
             if (shouldGatePremiumAccess()) {
               setPremiumStatus('Monte uma chave premium tocando nas imagens.');
             }
-            const earnedCoins = Math.max(0, flashcardCoinValue(card));
-            const earnedXp = Math.max(0, flashcardXpValue(card));
+            const earnedCoins = journeyPhaseRuntime ? 0 : Math.max(0, flashcardCoinValue(card));
+            const earnedXp = journeyPhaseRuntime ? 0 : Math.max(0, flashcardXpValue(card));
             state.stats.coinsDelta = Math.max(0, Number(state.stats.coinsDelta) || 0) + earnedCoins;
             state.stats.coinsTotal = Math.max(0, Number(state.stats.coinsTotal) || 0) + earnedCoins;
             state.stats.xpDelta = Math.max(0, Number(state.stats.xpDelta) || 0) + earnedXp;
@@ -38929,9 +38912,11 @@
               playStatusCueAudio(COINS_REWARD_SOUND_PATH);
             }
             renderWelcomeEnergyMiniTicker();
-            showRewardGameStatus();
-            triggerLibrarySummaryRankSwap();
-            if (isJourneyLevelingLanguage()) {
+            if (!journeyPhaseRuntime) {
+              showRewardGameStatus();
+              triggerLibrarySummaryRankSwap();
+            }
+            if (!journeyPhaseRuntime && isJourneyLevelingLanguage()) {
               state.game.journeyCardsWonLevel = Math.max(0, Number(state.game.journeyCardsWonLevel) || 0) + 1;
               if (state.game.journeyCardsWonLevel >= JOURNEY_LEVEL_WIN_TARGET) {
                 entry._journeyLevelUpTo = normalizeUserLevel(currentUserLevel() + 1);
@@ -39007,6 +38992,19 @@
           : entry._removeAfterReward || entry._requeueAfterReward
             ? rewardAdvanceDelayMs
             : (evaluatedStage === 3 ? 120 : 1200));
+        if (journeyPhaseRuntime && entry._removeAfterReward) {
+          const runtime = journeyPhaseRuntime;
+          const completedCards = Array.isArray(state.game.cardsModeCompletedCardIds)
+            ? state.game.cardsModeCompletedCardIds.length
+            : 0;
+          runtime.completedCards = completedCards;
+          if (completedCards >= runtime.cards) {
+            entry._removeAfterReward = false;
+            runtime.completed = true;
+            await exitGame();
+            return;
+          }
+        }
         if (state.game.currentLevelPriorityClearQueued) {
           clearCurrentLevelPriorityCards();
         }
@@ -39428,15 +39426,38 @@
 
       window.PlaytalkJourney?.setPhaseLauncher(async (step) => {
         if (journeyPhaseRuntime) throw new Error('Já existe uma fase em andamento.');
-        await prepareCardsModeLevelFromGeneralLevels(step.level);
+        const previousLevel = selectedGameLevel();
+        const previousMode = state.options.mode;
+        const previousStage = state.game.cardsModePracticeStage;
+        const previousWinsSequence = state.stats.winsSequence;
+        setSelectedGameLevel(step.level);
+        try {
+          await prepareCardsModeLevelFromGeneralLevels(step.level);
+        } catch (error) {
+          setSelectedGameLevel(previousLevel);
+          throw error;
+        }
+        state.options.mode = 'journey';
+        state.game.cardsModePracticeStage = Math.max(1, Math.min(6, Number(step.explorerMode) || 1));
         const available = buildLevelModeSourceCards(step.level);
-        if (available.length < step.cards) throw new Error('Este nível não tem cartas suficientes. Gere os níveis em /generallevels.');
+        if (available.length < step.cards) {
+          state.options.mode = previousMode;
+          state.game.cardsModePracticeStage = previousStage;
+          setSelectedGameLevel(previousLevel);
+          throw new Error('Este nível não tem cartas suficientes. Gere os níveis em /generallevels.');
+        }
         let resolve;
         const result = new Promise(done => { resolve = done; });
-        journeyPhaseRuntime = { resolve, hits: 0, cards: step.cards, completed: false, previousMode: state.options.mode, previousStage: state.game.cardsModePracticeStage };
-        state.options.mode = 'journey';
-        state.game.cardsModePracticeStage = 1;
-        setSelectedGameLevel(step.level);
+        journeyPhaseRuntime = {
+          resolve,
+          cards: step.cards,
+          completedCards: 0,
+          completed: false,
+          previousMode,
+          previousStage,
+          previousLevel,
+          previousWinsSequence
+        };
         state.game.selectedCount = step.cards;
         try {
           await beginGame();
@@ -39446,7 +39467,12 @@
         } catch (error) {
           const runtime = journeyPhaseRuntime;
           journeyPhaseRuntime = null;
-          if (runtime) { state.options.mode = runtime.previousMode; state.game.cardsModePracticeStage = runtime.previousStage; }
+          if (runtime) {
+            state.options.mode = runtime.previousMode;
+            state.game.cardsModePracticeStage = runtime.previousStage;
+            setSelectedGameLevel(runtime.previousLevel);
+            state.stats.winsSequence = runtime.previousWinsSequence;
+          }
           throw error;
         }
         return result;

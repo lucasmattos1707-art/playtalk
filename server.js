@@ -14280,7 +14280,8 @@ async function requestOpenAiJsonPayload(prompt, options = {}) {
       model: options.model || OPENAI_CHAT_FAST_MODEL,
       input: prompt,
       ...(options.reasoningEffort ? { reasoning: { effort: options.reasoningEffort } } : {}),
-      ...(options.maxOutputTokens ? { max_output_tokens: options.maxOutputTokens } : {})
+      ...(options.maxOutputTokens ? { max_output_tokens: options.maxOutputTokens } : {}),
+      ...(options.textFormat ? { text: { format: options.textFormat } } : {})
     })
   });
 
@@ -26387,15 +26388,45 @@ require('./lib/journey-plan').installJourneyPlan(app, {
       throw Object.assign(new Error('A imagem deve ser PNG, JPG ou WebP.'), { statusCode: 400 });
     }
   },
-  generateText: async (topic) => {
+  generateText: async (topic, range) => {
     const model = env(process.env.JOURNEY_TEXT_MODEL) || 'gpt-5.6-luna';
+    const min = Math.max(80, Number(range?.min) || 151);
+    const max = Math.min(400, Number(range?.max) || 200);
+    const target = Math.floor((min + max) / 2);
     let feedback = '';
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const { parsed } = await requestOpenAiJsonPayload(`Crie um pequeno texto educativo para praticar inglês sobre: ${topic}. Retorne SOMENTE JSON com as chaves portuguese e english. As duas versões devem ter EXATAMENTE de 150 a 180 caracteres cada, contando espaços e pontuação. Conte os caracteres antes de responder. Use frases naturais, fáceis de falar e traduções equivalentes. Não crie outros idiomas. ${feedback}`, { model, maxOutputTokens: 1200, reasoningEffort: 'none' });
-      if ([parsed.portuguese, parsed.english].every(t => typeof t === 'string' && Array.from(t.trim()).length >= 150 && Array.from(t.trim()).length <= 180)) return parsed;
-      feedback = 'A tentativa anterior estava fora do tamanho permitido. Ajuste para 165 caracteres em cada versão.';
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { parsed } = await requestOpenAiJsonPayload(
+        `Crie uma atividade educativa para praticar inglês sobre: ${topic}.
+Gere um título curto em português e duas versões equivalentes do mesmo texto: portuguese em português do Brasil e english em inglês.
+Cada texto deve ter entre ${min} e ${max} caracteres, contando letras, espaços e pontuação. Mire em ${target} caracteres em cada idioma e conte antes de responder.
+Use frases naturais, fáceis de falar e com o mesmo sentido. Não use outros idiomas.${feedback}`,
+        {
+          model,
+          maxOutputTokens: 2400,
+          reasoningEffort: 'none',
+          textFormat: {
+            type: 'json_schema',
+            name: 'journey_lesson',
+            strict: true,
+            schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                title: { type: 'string', minLength: 1, maxLength: 160 },
+                portuguese: { type: 'string', minLength: min, maxLength: max },
+                english: { type: 'string', minLength: min, maxLength: max }
+              },
+              required: ['title', 'portuguese', 'english']
+            }
+          }
+        }
+      );
+      const ptLength = Array.from(String(parsed.portuguese || '').trim()).length;
+      const enLength = Array.from(String(parsed.english || '').trim()).length;
+      if (String(parsed.title || '').trim() && ptLength >= min && ptLength <= max && enLength >= min && enLength <= max) return parsed;
+      feedback = ` A tentativa anterior teve ${ptLength} caracteres em português e ${enLength} em inglês. Reescreva ambos para perto de ${target}, obrigatoriamente dentro de ${min} a ${max}.`;
     }
-    throw Object.assign(new Error('O gerador não retornou textos com 150 a 180 caracteres. Tente novamente.'), { statusCode: 502 });
+    throw Object.assign(new Error(`O gerador não retornou textos com ${min} a ${max} caracteres. Tente novamente.`), { statusCode: 502 });
   },
   generateHarryAudio: async (text) => {
     if (!ELEVENLABS_API_KEY || !ELEVENLABS_VOICE_ID_HARRY) throw Object.assign(new Error('Configure a chave ElevenLabs e a voz Harry.'), { statusCode: 503 });

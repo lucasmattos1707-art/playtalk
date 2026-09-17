@@ -20,6 +20,10 @@
     });
   }
   const localAsset = path => new URL(path, document.baseURI).href;
+  const explorerModeNames = {
+    1: 'Ouvir e falar', 2: 'Ouvir e falar no idioma nativo', 3: 'Falar',
+    4: 'Escrever', 5: 'Falar sem ajuda', 6: 'Teclado de 9 letras'
+  };
 
   class OggCapture {
     constructor(onPause) { this.onPause = onPause; this.cancelled = false; this.running = false; }
@@ -172,8 +176,10 @@
         this.button('Voltar', () => this.close(), this.footer); return;
       }
       if (this.step.type === 'phase1') {
-        this.create('p', 'journey-body-text', `Vamos praticar ${this.step.cards} ${this.step.cards === 1 ? 'carta' : 'cartas'} na fase 1 do nível ${this.step.level}.`, this.content);
-        this.button('Iniciar fase 1', () => this.launchPhase(), this.footer); return;
+        const mode = explorerModeNames[Number(this.step.explorerMode) || 1];
+        this.create('p', 'journey-body-text', `Vamos praticar ${this.step.cards} ${this.step.cards === 1 ? 'carta' : 'cartas'} do nível ${this.step.level} no modo “${mode}”. Cada carta precisa das cinco estrelas.`, this.content);
+        this.create('p', 'journey-status', 'Esta etapa não concede cartas, moedas ou XP.', this.content);
+        this.button('Iniciar jogo', () => this.launchPhase(), this.footer); return;
       }
       this.message('Carregando…');
       try {
@@ -228,7 +234,7 @@
     }
     async action(action, extra = {}) {
       if (this.preview) {
-        if (action === 'speak') return post('/api/admin/journey/preview/evaluate', { english: this.step.english, ...extra }, this.abort.signal);
+        if (action === 'speak') return post('/api/admin/journey/preview/evaluate', { english: this.step.english, textSize: this.step.textSize, ...extra }, this.abort.signal);
         if (action === 'listenPt') this.previewStage = 1;
         if (action === 'listenEn') this.previewStage = 2;
         return { stage: this.previewStage, earnedPoints: 0 };

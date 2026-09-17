@@ -23,9 +23,9 @@
 .journey-icon-button.is-recording { background: #ec648a25; border-color: #f084ad; }
 .journey-icon-label { font-size: 12px; }
 .journey-modal button:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
-.journey-ring { --journey-progress: 0%; position: relative; display: grid; place-items: center; width: min(52vh,360px,80vw); aspect-ratio: 1; border-radius: 50%; padding: 7px; background: conic-gradient(var(--journey-accent) var(--journey-progress),#ffffff1a 0); box-shadow: 0 0 50px #61dbf512; }
+.journey-ring { --journey-progress: 0%; position: relative; display: grid; place-items: center; width: min(52vh,360px,80vw); aspect-ratio: 1; border-radius: 50%; padding: 7px; background: conic-gradient(var(--journey-accent) var(--journey-progress),#ffffff1a 0); box-shadow: 0 0 50px #61dbf512; overflow: hidden; }
 .journey-ring::before { content: ''; position: absolute; inset: 7px; border-radius: 50%; background: #0a1528; }
-.journey-tutorial-image { position: relative; width: 80%; height: 80%; object-fit: contain; }
+.journey-tutorial-image { position: absolute; z-index: 1; inset: 7px; width: calc(100% - 14px); height: calc(100% - 14px); border-radius: 50%; object-fit: cover; object-position: center; }
 .journey-audio-progress { width: min(420px,80%); height: 5px; appearance: none; border: none; accent-color: var(--journey-accent); border-radius: 8px; overflow: hidden; }
 .journey-audio-progress::-webkit-progress-bar { background: #ffffff20; }
 .journey-audio-progress::-webkit-progress-value { background: var(--journey-accent); }

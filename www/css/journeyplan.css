@@ -13,7 +13,7 @@ body { margin: 0; color: #f4f8ff; font: 16px/1.5 Arial,sans-serif; background: #
 .journeyplan-add { display: flex; flex-wrap: wrap; gap: 10px; }
 .journeyplan-add button,.journeyplan-row-actions button { border: 1px solid #ffffff30; border-radius: 18px; padding: 10px 14px; background: #ffffff0c; color: inherit; font: inherit; cursor: pointer; }
 .journeyplan-note { color: #a5b7c9; font-size: 13px; line-height: 1.6; }
-.journeyplan-grid { display: grid; grid-template-columns: minmax(300px,.9fr) minmax(320px,1.1fr); gap: 22px; margin-top: 22px; }
+.journeyplan-grid { margin-top: 22px; }
 .journeyplan-panel { background: #081627c9; border: 1px solid #afdcff22; border-radius: 26px; padding: 24px; }
 .journeyplan-panel h2 { margin: 0 0 20px; font-size: 20px; }
 .journeyplan-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
@@ -24,14 +24,28 @@ body { margin: 0; color: #f4f8ff; font: 16px/1.5 Arial,sans-serif; background: #
 .journeyplan-step-select span { font-size: 12px; color: #a8bed1; }
 .journeyplan-row-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
 .journeyplan-row-actions button { padding: 5px 10px; font-size: 13px; }
+.journeyplan-row-actions .journeyplan-edit-button { margin-right: auto; border-color: #73deed70; color: #bdf5ff; }
 .journeyplan-row-actions .is-danger { color: #ffa4a4; }
 .journeyplan-panel form { display: flex; flex-direction: column; gap: 16px; }
 .journeyplan-panel label { display: block; color: #ccdbea; font-size: 14px; margin-bottom: 14px; }
-.journeyplan-panel input,.journeyplan-panel textarea { width: 100%; display: block; margin-top: 7px; border: 1px solid #c2dfff30; border-radius: 12px; background: #030b18; padding: 12px; font: inherit; color: #fff; }
+.journeyplan-panel input,.journeyplan-panel textarea,.journeyplan-panel select { width: 100%; display: block; margin-top: 7px; border: 1px solid #c2dfff30; border-radius: 12px; background: #030b18; padding: 12px; font: inherit; color: #fff; }
 .journeyplan-panel textarea { resize: vertical; }
 .journeyplan-counter { font-size: 12px; color: #a2b7c8; }
 .journeyplan-counter.is-invalid { color: #ffb9a0; }
 .journeyplan-file-status { color: #7de0be; font-size: 13px; margin: -8px 0 14px; }
+.journeyplan-editor-modal { position: fixed; inset: 0; z-index: 2147482500; display: grid; place-items: center; padding: 24px; }
+.journeyplan-editor-backdrop { position: absolute; inset: 0; border: 0; background: #01040bd9; backdrop-filter: blur(8px); cursor: pointer; }
+.journeyplan-editor-card { position: relative; width: min(760px,100%); max-height: calc(100vh - 48px); overflow-y: auto; box-shadow: 0 28px 90px #000b; }
+.journeyplan-editor-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.journeyplan-editor-header h2 { margin: 0; }
+.journeyplan-editor-close { width: 42px; height: 42px; flex: 0 0 42px; border: 1px solid #ffffff32; border-radius: 50%; background: #ffffff0d; color: #fff; font: 28px/1 Arial,sans-serif; cursor: pointer; }
+.journeyplan-modes { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin: 0; padding: 16px; border: 1px solid #c2dfff30; border-radius: 16px; }
+.journeyplan-modes legend { padding: 0 8px; color: #cde9f1; font-size: 14px; }
+.journeyplan-modes label { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px; border: 1px solid #ffffff18; border-radius: 13px; background: #ffffff06; cursor: pointer; }
+.journeyplan-modes label:has(input:checked) { border-color: #73deed; background: #73deed16; }
+.journeyplan-modes input { width: auto; margin: 3px 0 0; padding: 0; accent-color: #73deed; }
+.journeyplan-modes span,.journeyplan-modes strong,.journeyplan-modes small { display: block; }
+.journeyplan-modes small { margin-top: 3px; color: #9fb4c8; line-height: 1.35; }
 button:disabled { opacity: .45; cursor: default !important; }
 button:focus-visible,a:focus-visible { outline: 3px solid #81e2ee; outline-offset: 3px; }
-@media(max-width:800px) { .journeyplan-grid { grid-template-columns: 1fr; } .journeyplan-topbar { align-items: flex-start; flex-direction: column; } .journeyplan-shell { padding: 24px 16px 50px; } .journeyplan-panel { padding: 20px; } }
+@media(max-width:800px) { .journeyplan-topbar { align-items: flex-start; flex-direction: column; } .journeyplan-shell { padding: 24px 16px 50px; } .journeyplan-panel { padding: 20px; } .journeyplan-editor-modal { padding: 10px; } .journeyplan-editor-card { max-height: calc(100vh - 20px); } .journeyplan-modes { grid-template-columns: 1fr; } }

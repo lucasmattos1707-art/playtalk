@@ -4,10 +4,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { JSDOM } = require('jsdom');
-const { accuracy, normalizeSteps, progressFor } = require('../lib/journey-plan');
+const { accuracy, normalizeSteps, progressFor, textSizeRange } = require('../lib/journey-plan');
 const { createFixture, english, portuguese } = require('./journey-test-fixture');
 const asset = 'a'.repeat(64);
-const step = { id: 'speak', type: 'interactive', title: 'Test', english, portuguese, audioAsset: asset, points: 100 };
+const step = { id: 'speak', type: 'interactive', title: 'Test', textSize: 'small', english, portuguese, audioAsset: asset, points: 100 };
 const ogg = 'data:audio/ogg;base64,' + Buffer.from('OggS' + '\0'.repeat(30) + 'OpusHead').toString('base64');
 const turn = () => new Promise(resolve => setImmediate(resolve));
 
@@ -19,12 +19,19 @@ test('accuracy preserves order, penalizes omissions and extra words, and accepts
   assert.equal(accuracy('one two three', 'three two one'), 33);
   assert.equal(accuracy(english, ''), 0);
 });
-test('step validation enforces text length, unique IDs, asset types and phase limits', () => {
+test('step validation enforces all text ranges, unique IDs, assets, modes and phase limits', () => {
   assert.equal(normalizeSteps([step])[0].english, english);
-  for (const input of [[null], [step, step], [{ ...step, english: 'short' }], [{ ...step, english: 'a'.repeat(181) }], [{ ...step, points: -1 }], [{ ...step, audioAsset: 'https://evil.example' }]]) {
+  for (const [key, min, max] of [['micro', 80, 150], ['small', 151, 200], ['medium', 201, 300], ['large', 301, 400]]) {
+    assert.deepEqual(textSizeRange(key), { key, label: textSizeRange(key).label, min, max });
+    assert.equal(normalizeSteps([{ ...step, textSize: key, portuguese: 'p'.repeat(min), english: 'e'.repeat(max) }])[0].textSize, key);
+    assert.throws(() => normalizeSteps([{ ...step, textSize: key, portuguese: 'p'.repeat(min - 1), english: 'e'.repeat(max) }]));
+    assert.throws(() => normalizeSteps([{ ...step, textSize: key, portuguese: 'p'.repeat(min), english: 'e'.repeat(max + 1) }]));
+  }
+  for (const input of [[null], [step, step], [{ ...step, english: 'short' }], [{ ...step, english: 'a'.repeat(201) }], [{ ...step, points: -1 }], [{ ...step, audioAsset: 'https://evil.example' }]]) {
     assert.throws(() => normalizeSteps(input));
   }
   assert.throws(() => normalizeSteps([{ id: 'x', title: 'x', type: 'phase1', cards: 26 }]));
+  assert.throws(() => normalizeSteps([{ id: 'x', title: 'x', type: 'phase1', cards: 1, explorerMode: 7 }]));
 });
 test('reordering and title edits preserve progress; changing learning content resets only the changed step', () => {
   const a = normalizeSteps([step])[0];
@@ -44,6 +51,18 @@ test('every authoring endpoint and page rejects anonymous and normal users', asy
     }
     assert.equal((await fixture.call('/api/journey', 'GET', null, '')).response.status, 401);
     assert.equal(fixture.counters.generated, 0);
+  } finally { await fixture.close(); }
+});
+test('Luna generation returns a generated title and respects the selected size', async () => {
+  const fixture = await createFixture();
+  try {
+    const generated = await fixture.call('/api/admin/journey/generate', 'POST', { topic: 'rotina', textSize: 'micro' });
+    assert.equal(generated.response.status, 200, JSON.stringify(generated.payload));
+    assert.equal(generated.payload.title, 'Rotina da manhã');
+    assert.equal(generated.payload.textSize, 'micro');
+    assert.equal(Array.from(generated.payload.portuguese).length, 80);
+    assert.equal(Array.from(generated.payload.english).length, 80);
+    assert.equal(fixture.counters.generated, 1);
   } finally { await fixture.close(); }
 });
 test('course persistence, strict step/action order, 70% pass threshold and one-time points', async () => {
@@ -165,4 +184,44 @@ test('failed speech offers retry only; retry and close revoke voice URLs and rel
     assert.equal(h.window.document.querySelector('.journey-modal'), null);
     assert.equal(h.window.document.querySelector('main').inert, undefined);
   } finally { h.window.PlaytalkJourney.close(); h.dom.window.close(); }
+});
+test('course rows expose the edit pen modal and all six isolated game modes', async () => {
+  const html = fs.readFileSync(path.join(__dirname, '../www/journeyplan.html'), 'utf8');
+  const dom = new JSDOM(html, { url: 'http://localhost/journeyplan', runScripts: 'outside-only' });
+  const { window } = dom;
+  window.PlaytalkJourney = {
+    request: async () => ({ plan: { revision: 1, steps: [{ id: 'cards', type: 'phase1', title: 'Prática', level: 2, cards: 1, explorerMode: 1, points: 100 }] } }),
+    post: async () => ({}), preview: async () => {}
+  };
+  window.eval(fs.readFileSync(path.join(__dirname, '../www/js/journeyplan-page.js'), 'utf8'));
+  for (let i = 0; i < 5; i++) await turn();
+  const edit = window.document.querySelector('[aria-label="Editar: Prática"]');
+  assert.ok(edit);
+  edit.click(); await turn();
+  assert.equal(window.document.getElementById('stepEditorModal').hidden, false);
+  const modes = [...window.document.querySelectorAll('input[name="explorerMode"]')];
+  assert.deepEqual(modes.map(input => Number(input.value)), [1, 2, 3, 4, 5, 6]);
+  modes[5].click();
+  assert.match(window.document.querySelector('.journeyplan-step-select span').textContent, /Teclado de 9 letras/);
+  window.document.getElementById('closeEditor').click();
+  assert.equal(window.document.getElementById('stepEditorModal').hidden, true);
+  dom.window.close();
+});
+test('existing-phase journey runtime requires five stars and suppresses cards, coins and XP', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../www/play.html'), 'utf8');
+  assert.match(source, /state\.game\.cardsModePracticeStage = Math\.max\(1, Math\.min\(6, Number\(step\.explorerMode\) \|\| 1\)\)/);
+  assert.match(source, /completedCards >= runtime\.cards/);
+  assert.match(source, /!journeyPhaseRuntime && isLevelModeAcquisitionFlowActive\(\)/);
+  assert.match(source, /const earnedCoins = journeyPhaseRuntime \? 0/);
+  assert.match(source, /const earnedXp = journeyPhaseRuntime \? 0/);
+});
+test('shared site background creates a lightweight blue gradient without loading MP4 video', () => {
+  const dom = new JSDOM('<!doctype html><body><main>PlayTalk</main></body>', { runScripts: 'outside-only' });
+  dom.window.eval(fs.readFileSync(path.join(__dirname, '../www/js/video-background.js'), 'utf8'));
+  dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
+  assert.ok(dom.window.document.getElementById('playtalkVideoBackground'));
+  assert.equal(dom.window.document.querySelector('video'), null);
+  assert.equal(fs.existsSync(path.join(__dirname, '../www/background.mp4')), false);
+  assert.match(fs.readFileSync(path.join(__dirname, '../www/css/video-background.css'), 'utf8'), /--playtalk-blue-gradient/);
+  dom.window.close();
 });

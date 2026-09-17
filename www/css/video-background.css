@@ -1,6 +1,10 @@
 :root {
-  --playtalk-video-fallback: #020610;
-  --playtalk-video-shade: linear-gradient(180deg, rgba(1, 5, 13, 0.3), rgba(1, 5, 13, 0.66));
+  --playtalk-video-fallback: #06172e;
+  --playtalk-blue-gradient:
+    radial-gradient(circle at 18% 12%, rgba(71, 169, 226, 0.28), transparent 38%),
+    radial-gradient(circle at 84% 88%, rgba(115, 222, 237, 0.16), transparent 42%),
+    linear-gradient(145deg, #041126 0%, #08284d 42%, #0b4f7d 72%, #167cab 100%);
+  --playtalk-video-shade: linear-gradient(180deg, rgba(1, 8, 24, 0.04), rgba(1, 8, 24, 0.22));
 }
 
 html {
@@ -23,18 +27,7 @@ body.playtalk-video-bg-active {
   height: 100dvh !important;
   overflow: hidden !important;
   pointer-events: none !important;
-  background: var(--playtalk-video-fallback) !important;
-}
-
-.playtalk-video-background__media {
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  max-width: none !important;
-  object-fit: cover !important;
-  object-position: center !important;
-  pointer-events: none !important;
+  background: var(--playtalk-blue-gradient) !important;
 }
 
 .playtalk-video-background__shade {
@@ -107,10 +100,4 @@ body.playtalk-video-bg-active .albums-modal {
   background: rgba(1, 6, 15, 0.34);
   backdrop-filter: blur(3px) saturate(0.94);
   -webkit-backdrop-filter: blur(3px) saturate(0.94);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .playtalk-video-background__media {
-    animation: none !important;
-  }
 }

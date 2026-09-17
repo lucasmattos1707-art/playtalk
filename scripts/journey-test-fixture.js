@@ -51,7 +51,11 @@ async function createFixture(options = {}) {
       return user;
     },
     validateImage: async buffer => { await sharp(buffer).metadata(); },
-    generateText: async () => { counters.generated++; return { portuguese, english }; },
+    generateText: async (_topic, range = { min: 151 }) => {
+      counters.generated++;
+      const length = Math.max(1, Number(range.min) || 151);
+      return { title: 'Rotina da manhã', portuguese: 'p'.repeat(length), english: 'e'.repeat(length) };
+    },
     generateHarryAudio: async () => wav(),
     transcribe: async () => { counters.spoken++; return deps.transcript; },
     transcript: english
@@ -76,8 +80,8 @@ async function createFixture(options = {}) {
     fixtureAssets.set(audio, { mime: 'audio/wav', data: audioData });
     return call('/api/admin/journey', 'PUT', { revision: 0, steps: [
       { id: 'welcome', type: 'tutorial', title: 'Sua jornada começa aqui', audioAsset: audio, imageAsset: picture, points: 0 },
-      { id: 'morning', type: 'interactive', title: 'Uma nova manhã', portuguese, english, audioAsset: audio, points: 100 },
-      { id: 'cards', type: 'phase1', title: 'Vamos para a fase 1', level: 1, cards: 1, points: 100 }
+      { id: 'morning', type: 'interactive', title: 'Uma nova manhã', textSize: 'small', portuguese, english, audioAsset: audio, points: 100 },
+      { id: 'cards', type: 'phase1', title: 'Vamos para a fase 1', level: 1, cards: 1, explorerMode: 1, points: 100 }
     ] });
   }
   return { app, pool, deps, counters, origin, call, seed, close: async () => { await new Promise(resolve => server.close(resolve)); await pool.end(); } };

@@ -23,7 +23,11 @@
       <p class="journeyplan-note">Quando houver pelo menos uma etapa salva, o botão Jogar abrirá esta sequência. As mudanças no conteúdo reiniciam somente a etapa alterada; a ordem e os títulos preservam o progresso.</p>
       <div class="journeyplan-grid">
         <section class="journeyplan-panel" aria-label="Sequência da jornada"><h2>Etapas do curso</h2><ol id="stepsList" class="journeyplan-list"></ol><p id="emptyPlan">Sua jornada está vazia. Adicione o primeiro tutorial ou jogo.</p></section>
-        <section class="journeyplan-panel" aria-label="Editar etapa">
+      </div>
+      <div id="stepEditorModal" class="journeyplan-editor-modal" hidden>
+        <button id="closeEditorBackdrop" class="journeyplan-editor-backdrop" type="button" aria-label="Fechar edição"></button>
+        <section class="journeyplan-panel journeyplan-editor-card" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
+          <header class="journeyplan-editor-header"><div><p class="journeyplan-eyebrow">EDITAR ETAPA</p><h2 id="editorTitle">Configuração da etapa</h2></div><button id="closeEditor" class="journeyplan-editor-close" type="button" aria-label="Fechar edição">×</button></header>
           <form id="stepForm" hidden>
             <p id="stepType" class="journeyplan-eyebrow"></p>
             <label>Título no topo<input id="stepTitle" maxlength="160" required></label>
@@ -35,21 +39,33 @@
             </div>
             <div id="interactiveFields" hidden>
               <label>Assunto do texto<textarea id="generationTopic" rows="2" maxlength="600" placeholder="Ex.: uma conversa simples sobre a rotina da manhã"></textarea></label>
+              <label>Tamanho do texto<select id="textSize"><option value="micro">Micro · 80 a 150 caracteres</option><option value="small">Pequeno · 151 a 200 caracteres</option><option value="medium">Médio · 201 a 300 caracteres</option><option value="large">Grande · 301 a 400 caracteres</option></select></label>
               <button id="generateStep" class="journey-button" type="button">Gerar texto com Luna + voz Harry</button>
-              <label>Português<textarea id="stepPortuguese" rows="4" maxlength="180"></textarea><span id="portugueseCount" class="journeyplan-counter"></span></label>
-              <label>Inglês<textarea id="stepEnglish" rows="4" maxlength="180"></textarea><span id="englishCount" class="journeyplan-counter"></span></label>
+              <label>Português<textarea id="stepPortuguese" rows="5" maxlength="400"></textarea><span id="portugueseCount" class="journeyplan-counter"></span></label>
+              <label>Inglês<textarea id="stepEnglish" rows="5" maxlength="400"></textarea><span id="englishCount" class="journeyplan-counter"></span></label>
               <p id="generatedAudioStatus" class="journeyplan-file-status"></p>
-              <p class="journeyplan-note">Cada texto deve ter entre 150 e 180 caracteres. O áudio é apenas em inglês, com Harry. Se editar o inglês, gere novamente o áudio antes de salvar.</p>
+              <p id="textSizeNote" class="journeyplan-note"></p>
             </div>
-            <div id="phaseFields" hidden><label>Nível<input id="phaseLevel" type="number" min="1" max="10000" value="1"></label><label>Quantidade de cartas<input id="phaseCards" type="number" min="1" max="25" value="1"></label></div>
+            <div id="phaseFields" hidden>
+              <label>Nível<input id="phaseLevel" type="number" min="1" max="10000" value="1"></label>
+              <label>Quantidade de cartas<input id="phaseCards" type="number" min="1" max="25" value="1"></label>
+              <fieldset class="journeyplan-modes"><legend>Modo de jogo · cinco estrelas por carta</legend>
+                <label><input type="radio" name="explorerMode" value="1"><span><strong>1. Ouvir e falar</strong><small>Áudio em inglês + resposta falada.</small></span></label>
+                <label><input type="radio" name="explorerMode" value="2"><span><strong>2. Ouvir e falar no idioma nativo</strong><small>Ouça o idioma nativo e responda falando em inglês.</small></span></label>
+                <label><input type="radio" name="explorerMode" value="3"><span><strong>3. Falar</strong><small>Veja a imagem e fale em inglês.</small></span></label>
+                <label><input type="radio" name="explorerMode" value="4"><span><strong>4. Escrever</strong><small>Veja a imagem e escreva em inglês.</small></span></label>
+                <label><input type="radio" name="explorerMode" value="5"><span><strong>5. Falar sem ajuda</strong><small>Fale em inglês sem dica de áudio.</small></span></label>
+                <label><input type="radio" name="explorerMode" value="6"><span><strong>6. Teclado de 9 letras</strong><small>Monte o inglês com o teclado do jogo.</small></span></label>
+              </fieldset>
+            </div>
             <label id="pointsField">Pontos ao concluir<input id="stepPoints" type="number" min="0" max="1000" value="100"></label>
-            <p class="journeyplan-note">A próxima etapa é sempre a seguinte na lista. Adicione uma Fase 1 depois de um tutorial para levar o aluno ao jogo existente.</p>
+            <p class="journeyplan-note">A próxima etapa é sempre a seguinte na lista. A fase existente roda dentro da jornada, repete somente o modo escolhido até cinco estrelas e não concede cartas, moedas ou XP.</p>
             <button id="previewStep" type="button" class="journey-button journey-button-secondary">▶ Visualizar e testar</button>
           </form>
           <p id="chooseStep">Selecione uma etapa para editar ou crie uma nova.</p>
         </section>
       </div>
-    </div>
+      </div>
   </main>
   <script src="js/android-config.js"></script><script src="js/api-config.js"></script><script src="js/android-shell.js"></script>
   <script src="js/vendor/opus-recorder/recorder.min.js"></script>
