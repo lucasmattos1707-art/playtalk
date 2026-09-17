@@ -1319,7 +1319,7 @@ textarea {
 }
 
 .comment-button.is-approved {
-  color: #06100c;
+  color: #fff;
   border-color: var(--green);
   background: var(--green);
   box-shadow: 0 0 0 3px rgba(85, 230, 138, 0.13), 0 0 24px rgba(85, 230, 138, 0.3);
@@ -1331,7 +1331,7 @@ textarea {
 
 .comment-button.is-approved .icon-approved {
   display: block;
-  stroke-width: 2.25;
+  stroke-width: 3.4;
 }
 
 .comment-count {
