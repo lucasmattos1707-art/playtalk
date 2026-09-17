@@ -13601,7 +13601,7 @@
     }
   </style>
   <link rel="stylesheet" href="css/video-background.css">
-  <link rel="stylesheet" href="css/journey.css">
+  <link rel="stylesheet" href="css/journey.css?v=20260917c">
 </head>
 <body class="flashcards-home-collapsed">
   <div class="container" aria-hidden="true"></div>
@@ -14623,7 +14623,7 @@
   <script src="js/android-speech.js"></script>
   <script src="js/gamesounds.js"></script>
   <script src="js/vendor/opus-recorder/recorder.min.js"></script>
-  <script src="js/journey-player.js"></script>
+  <script src="js/journey-player.js?v=20260917c"></script>
   <script>
     (() => {
       const FLASHCARDS_R2_PUBLIC_ROOT = window.PlaytalkApi?.publicAssetsRoot || 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
@@ -39416,13 +39416,21 @@
         if (!state.game.active) syncWelcomeGate();
       }
       async function startConfiguredJourney(event) {
-        if (journeyPhaseRuntime || !window.PlaytalkJourney || !state.user?.id) return false;
+        if (journeyPhaseRuntime || !window.PlaytalkJourney) return false;
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
         if (journeyEntryBusy) return true;
         journeyEntryBusy = true;
+        const playButton = event?.currentTarget instanceof HTMLButtonElement
+          ? event.currentTarget
+          : els.welcomeStartBtn;
+        if (playButton) {
+          playButton.disabled = true;
+          playButton.setAttribute('aria-busy', 'true');
+        }
         try {
           const handled = await window.PlaytalkJourney.tryStart({ onClose: restoreWelcomeAfterJourneyClose });
           if (handled) {
-            event?.preventDefault?.();
             closeWelcomeModeModal();
             stopActiveAudio();
             hideWelcomeGate();
@@ -39431,7 +39439,13 @@
         } catch (error) {
           setAuthStatus(error.message || 'Não foi possível abrir a jornada. Tente novamente.', 'error');
           return true;
-        } finally { journeyEntryBusy = false; }
+        } finally {
+          journeyEntryBusy = false;
+          if (playButton) {
+            playButton.disabled = false;
+            playButton.removeAttribute('aria-busy');
+          }
+        }
       }
 
       window.PlaytalkJourney?.setPhaseLauncher(async (step) => {
