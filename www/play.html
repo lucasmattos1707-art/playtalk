@@ -13601,6 +13601,7 @@
     }
   </style>
   <link rel="stylesheet" href="css/video-background.css">
+  <link rel="stylesheet" href="css/journey.css">
 </head>
 <body class="flashcards-home-collapsed">
   <div class="container" aria-hidden="true"></div>
@@ -14621,6 +14622,8 @@
   <script src="js/openai-stt.js"></script>
   <script src="js/android-speech.js"></script>
   <script src="js/gamesounds.js"></script>
+  <script src="js/vendor/opus-recorder/recorder.min.js"></script>
+  <script src="js/journey-player.js"></script>
   <script>
     (() => {
       const FLASHCARDS_R2_PUBLIC_ROOT = window.PlaytalkApi?.publicAssetsRoot || 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
@@ -19729,6 +19732,7 @@
       }
 
       function resolveLevelModeInitialStage() {
+        if (journeyPhaseRuntime) return 1;
         if (isFiveStarCardsModeActive()) {
           return selectedCardsModePracticeStage() || 1;
         }
@@ -24634,6 +24638,7 @@
       }
 
       async function startCardsBotBattle(botKey = '') {
+        if (await startConfiguredJourney()) return;
         if (cardsBattleFallbackBusy) return;
         cardsBattleFallbackBusy = true;
         renderCardsBattleFallback();
@@ -24898,7 +24903,8 @@
         }
       }
 
-      function openWelcomeModeModal(modeKey) {
+      async function openWelcomeModeModal(modeKey) {
+        if (await startConfiguredJourney()) return;
         const normalized = safeText(modeKey).toLowerCase();
         if (!WELCOME_MODE_CONFIG[normalized]) return;
         const cardsMode = normalized === 'cards';
@@ -27917,10 +27923,10 @@
           els.gameLevelLabel.textContent = formatSelectedGameLevelLabel(level);
         }
         if (els.gameLevelPrevBtn) {
-          els.gameLevelPrevBtn.disabled = level <= USER_LEVEL_MIN;
+          els.gameLevelPrevBtn.disabled = Boolean(journeyPhaseRuntime) || level <= USER_LEVEL_MIN;
         }
         if (els.gameLevelNextBtn) {
-          els.gameLevelNextBtn.disabled = level >= maxSelectableGameLevel();
+          els.gameLevelNextBtn.disabled = Boolean(journeyPhaseRuntime) || level >= maxSelectableGameLevel();
         }
       }
 
@@ -37168,7 +37174,8 @@
         setFinalChallengeExitConfirmOpen(Boolean(state.ui.finalChallengeExitConfirmOpen));
       }
 
-      function openFinalChallengeModal() {
+      async function openFinalChallengeModal() {
+        if (await startConfiguredJourney()) return;
         if (!els.finalChallengeModal) return;
         state.entry.pendingPlayStart = false;
         state.entry.welcomeStartRequested = false;
@@ -37689,6 +37696,7 @@
       }
 
       async function startFinalChallengeRun() {
+        if (await startConfiguredJourney()) return;
         refreshDueFinalChallengeRecords();
         const requiredReplayLevel = resolveRequiredFinalChallengeReplayLevel();
         const challengeLevel = requiredReplayLevel || currentFinalChallengeLevel();
@@ -37764,6 +37772,7 @@
       }
 
       async function startFinalChallengePracticeRun() {
+        if (await startConfiguredJourney()) return;
         refreshDueFinalChallengeRecords();
         const requiredReplayLevel = resolveRequiredFinalChallengeReplayLevel();
         const challengeLevel = requiredReplayLevel || currentFinalChallengeLevel();
@@ -37955,7 +37964,8 @@
         }
       }
 
-      function startWatch(options = {}) {
+      async function startWatch(options = {}) {
+        if (await startConfiguredJourney()) return;
         if (options.useDefaults) {
           applyDefaultWatchSettings();
         }
@@ -38214,7 +38224,8 @@
         setSelectedGameLevel(nextLevel);
       }
 
-      function beginTrainingGame(stage, count) {
+      async function beginTrainingGame(stage, count) {
+        if (await startConfiguredJourney()) return;
         state.ui.gamePausedAtWelcome = false;
         const targetStage = normalizeTrainingStage(stage);
         if (!targetStage) return;
@@ -38282,7 +38293,8 @@
         advanceToNextCard();
       }
 
-      function beginGame() {
+      async function beginGame() {
+        if (!journeyPhaseRuntime && await startConfiguredJourney()) return;
         state.ui.gamePausedAtWelcome = false;
         if (isManualNoEnergyBlocked()) {
           clearGameSessionLocally();
@@ -38337,7 +38349,8 @@
         advanceToNextCard();
       }
 
-      function beginBabyModeGame() {
+      async function beginBabyModeGame() {
+        if (await startConfiguredJourney()) return;
         state.ui.gamePausedAtWelcome = false;
         resetTrainingRuntime();
         hideWelcomeGate();
@@ -38397,7 +38410,8 @@
         advanceToNextCard();
       }
 
-      function beginTutorialGame(options = {}) {
+      async function beginTutorialGame(options = {}) {
+        if (await startConfiguredJourney()) return;
         state.ui.gamePausedAtWelcome = false;
         const tutorialCard = findTutorialPlanetCard();
         if (!tutorialCard) return;
@@ -38508,7 +38522,8 @@
         return true;
       }
 
-      function resumeFlashcardsGameFromWelcome() {
+      async function resumeFlashcardsGameFromWelcome() {
+        if (await startConfiguredJourney()) return true;
         if (!canResumePausedFlashGame() && (!state.game.active || !state.ui.gamePausedAtWelcome)) return false;
         state.ui.gamePausedAtWelcome = true;
         state.entry.pendingPlayStart = false;
@@ -38544,6 +38559,7 @@
       }
 
       async function exitGame() {
+        const exitingJourneyPhase = journeyPhaseRuntime;
         state.ui.gamePausedAtWelcome = false;
         const babyModeSessionActive = isBabyModeSessionActive();
         clearGameIdleAutoPauseTimer();
@@ -38615,6 +38631,14 @@
         els.topbar.classList.add('is-hidden');
         refreshLibrary();
         syncWelcomeGate();
+        if (exitingJourneyPhase && journeyPhaseRuntime === exitingJourneyPhase) {
+          journeyPhaseRuntime = null;
+          state.options.mode = exitingJourneyPhase.previousMode;
+          state.game.cardsModePracticeStage = exitingJourneyPhase.previousStage;
+          clearGameSessionLocally();
+          syncGameLevelNavigator();
+          exitingJourneyPhase.resolve(Boolean(exitingJourneyPhase.completed));
+        }
       }
 
       async function handleRecognitionResult(transcript, inputMode = 'speech') {
@@ -38659,6 +38683,24 @@
           return;
         }
         const { score, isHit } = evaluateAcceptedAnswers(expectedAnswers, transcript);
+        if (journeyPhaseRuntime) {
+          const runtime = journeyPhaseRuntime;
+          cleanupGameRecognition();
+          clearFirstStageMicHint({ clearStatus: true });
+          clearStageHintLoop({ clearStatus: true });
+          setGameStatus(isHit ? 'Muito bem!' : 'Tente falar novamente.', isHit ? 'hit' : 'miss');
+          if (!isHit) { playCueAudio(ACCESSKEY_ERROR_SOUND_PATH); return; }
+          playSuccessAudio();
+          runtime.hits++;
+          if (runtime.hits >= runtime.cards) {
+            runtime.completed = true;
+            await exitGame();
+          } else {
+            removeGameEntry(entry.id);
+            await advanceToNextCard();
+          }
+          return;
+        }
         if (inputMode === 'speech') {
           clearStageTutorialReminder();
           hideGameStageTutorial({ resume: false });
@@ -39364,9 +39406,56 @@
         return Boolean(result?.allowed);
       }
 
+      let journeyPhaseRuntime = null;
+      let journeyEntryBusy = false;
+      async function startConfiguredJourney(event) {
+        if (journeyPhaseRuntime || !window.PlaytalkJourney || !state.user?.id) return false;
+        if (journeyEntryBusy) return true;
+        journeyEntryBusy = true;
+        try {
+          const handled = await window.PlaytalkJourney.tryStart();
+          if (handled) {
+            event?.preventDefault?.();
+            closeWelcomeModeModal();
+            stopActiveAudio();
+          }
+          return handled;
+        } catch (error) {
+          setAuthStatus(error.message || 'Não foi possível abrir a jornada. Tente novamente.', 'error');
+          return true;
+        } finally { journeyEntryBusy = false; }
+      }
+
+      window.PlaytalkJourney?.setPhaseLauncher(async (step) => {
+        if (journeyPhaseRuntime) throw new Error('Já existe uma fase em andamento.');
+        await prepareCardsModeLevelFromGeneralLevels(step.level);
+        const available = buildLevelModeSourceCards(step.level);
+        if (available.length < step.cards) throw new Error('Este nível não tem cartas suficientes. Gere os níveis em /generallevels.');
+        let resolve;
+        const result = new Promise(done => { resolve = done; });
+        journeyPhaseRuntime = { resolve, hits: 0, cards: step.cards, completed: false, previousMode: state.options.mode, previousStage: state.game.cardsModePracticeStage };
+        state.options.mode = 'journey';
+        state.game.cardsModePracticeStage = 1;
+        setSelectedGameLevel(step.level);
+        state.game.selectedCount = step.cards;
+        try {
+          await beginGame();
+          if (!state.game.active || !state.game.entries.size) throw new Error('Não foi possível iniciar esta fase.');
+          els.gameLevelPrevBtn?.setAttribute('disabled', '');
+          els.gameLevelNextBtn?.setAttribute('disabled', '');
+        } catch (error) {
+          const runtime = journeyPhaseRuntime;
+          journeyPhaseRuntime = null;
+          if (runtime) { state.options.mode = runtime.previousMode; state.game.cardsModePracticeStage = runtime.previousStage; }
+          throw error;
+        }
+        return result;
+      });
+
       function bindEvents() {
         let cardsModeStartInFlight = false;
         const startLevelModeFromWelcome = async (event, options = {}) => {
+          if (await startConfiguredJourney(event)) return;
           const previewTargets = [event?.currentTarget, els.welcomeModeModalPlayBtn, els.welcomeStartBtn].filter(Boolean);
           if (await handleManualWelcomeNoEnergy(els.welcomeModeModalPlayBtn || els.welcomeStartBtn || event?.currentTarget)) return;
           if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
@@ -39388,6 +39477,7 @@
           void openAudioCheck();
         };
         const startTypingModeFromWelcome = async (event) => {
+          if (await startConfiguredJourney(event)) return;
           const previewTargets = [event?.currentTarget, els.welcomeModeModalPlayBtn, els.welcomeStartBtn].filter(Boolean);
           if (await handleManualWelcomeNoEnergy(els.welcomeModeModalPlayBtn || els.welcomeStartBtn || event?.currentTarget)) return;
           if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
@@ -39408,6 +39498,7 @@
           beginGame();
         };
         const startPlayingModeFromWelcome = async (event) => {
+          if (await startConfiguredJourney(event)) return;
           const previewTargets = [event?.currentTarget, els.welcomeModeModalPlayBtn, els.welcomeStartBtn].filter(Boolean);
           if (await handleManualWelcomeNoEnergy(els.welcomeModeModalPlayBtn || els.welcomeStartBtn || event?.currentTarget)) return;
           if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
@@ -39422,6 +39513,7 @@
           startWatch({ useDefaults: true });
         };
         const startCardsModeFromWelcome = async (event) => {
+          if (await startConfiguredJourney(event)) return;
           event?.preventDefault?.();
           event?.stopPropagation?.();
           if (cardsModeStartInFlight) return;
@@ -39503,6 +39595,7 @@
         };
         els.welcomeStartBtn?.addEventListener('click', (event) => {
           void (async () => {
+            if (await startConfiguredJourney(event)) return;
             playStatusCueAudio(WELCOME_PLAY_SOUND_PATH);
             event.preventDefault();
             event.stopPropagation();
@@ -39691,7 +39784,7 @@
         els.welcomeModeModalOnlineBtn?.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-          startCardsBattleSearch();
+          void (async () => { if (!(await startConfiguredJourney(event))) startCardsBattleSearch(); })();
         });
         els.cardsBattleSearchCancelBtn?.addEventListener('click', () => { void cancelCardsBattleSearch(); });
         els.cardsBattleModeTabs?.addEventListener('click', (event) => {
@@ -40604,7 +40697,15 @@
         }
       }
 
-      init();
+      init().then(async () => {
+        const previewId = new URLSearchParams(window.location.search).get('journeyPreview');
+        if (!previewId || !isAdminUser()) return;
+        try {
+          const { plan } = await window.PlaytalkJourney.request('/api/admin/journey');
+          const index = plan.steps.findIndex(step => step.id === previewId);
+          if (index >= 0) await window.PlaytalkJourney.preview(plan, index);
+        } catch (error) { setAuthStatus(error.message, 'error'); }
+      });
     })();
   </script>
   <script src="js/video-background.js"></script>

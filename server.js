@@ -14279,6 +14279,7 @@ async function requestOpenAiJsonPayload(prompt, options = {}) {
     body: JSON.stringify({
       model: options.model || OPENAI_CHAT_FAST_MODEL,
       input: prompt,
+      ...(options.reasoningEffort ? { reasoning: { effort: options.reasoningEffort } } : {}),
       ...(options.maxOutputTokens ? { max_output_tokens: options.maxOutputTokens } : {})
     })
   });
@@ -26373,6 +26374,48 @@ app.get(['/levels', '/levels/', '/levels.html'], (req, res) => {
 app.get(['/sequence', '/sequence/', '/sequence.html'], (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'www', 'sequence.html'));
+});
+
+require('./lib/journey-plan').installJourneyPlan(app, {
+  pool,
+  authenticate: readAuthenticatedUserFromRequest,
+  authorizeAdmin: requireAdminUserFromRequest,
+  pagePath: path.join(__dirname, 'www', 'journeyplan.html'),
+  validateImage: async (buffer, mime) => {
+    const metadata = await sharp(buffer, { limitInputPixels: 40000000 }).metadata();
+    if (metadata.format !== ({ 'image/png': 'png', 'image/jpeg': 'jpeg', 'image/webp': 'webp' })[mime]) {
+      throw Object.assign(new Error('A imagem deve ser PNG, JPG ou WebP.'), { statusCode: 400 });
+    }
+  },
+  generateText: async (topic) => {
+    const model = env(process.env.JOURNEY_TEXT_MODEL) || 'gpt-5.6-luna';
+    let feedback = '';
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { parsed } = await requestOpenAiJsonPayload(`Crie um pequeno texto educativo para praticar inglês sobre: ${topic}. Retorne SOMENTE JSON com as chaves portuguese e english. As duas versões devem ter EXATAMENTE de 150 a 180 caracteres cada, contando espaços e pontuação. Conte os caracteres antes de responder. Use frases naturais, fáceis de falar e traduções equivalentes. Não crie outros idiomas. ${feedback}`, { model, maxOutputTokens: 1200, reasoningEffort: 'none' });
+      if ([parsed.portuguese, parsed.english].every(t => typeof t === 'string' && Array.from(t.trim()).length >= 150 && Array.from(t.trim()).length <= 180)) return parsed;
+      feedback = 'A tentativa anterior estava fora do tamanho permitido. Ajuste para 165 caracteres em cada versão.';
+    }
+    throw Object.assign(new Error('O gerador não retornou textos com 150 a 180 caracteres. Tente novamente.'), { statusCode: 502 });
+  },
+  generateHarryAudio: async (text) => {
+    if (!ELEVENLABS_API_KEY || !ELEVENLABS_VOICE_ID_HARRY) throw Object.assign(new Error('Configure a chave ElevenLabs e a voz Harry.'), { statusCode: 503 });
+    return generateElevenLabsAudioBuffer({ text, voiceId: ELEVENLABS_VOICE_ID_HARRY, languageCode: 'en' });
+  },
+  transcribe: async (buffer) => {
+    if (!OPENAI_API_KEY) throw Object.assign(new Error('Transcrição de voz indisponível.'), { statusCode: 503 });
+    const form = new FormData();
+    form.append('file', new Blob([buffer], { type: 'audio/ogg' }), 'journey-recording.ogg');
+    form.append('model', OPENAI_STT_MODEL);
+    form.append('language', 'en');
+    form.append('response_format', 'json');
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST', headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }, body: form,
+      signal: AbortSignal.timeout(45000)
+    });
+    const payload = await response.json();
+    if (!response.ok || !String(payload.text || '').trim()) throw Object.assign(new Error('Não foi possível entender a gravação. Tente novamente.'), { statusCode: 502 });
+    return String(payload.text).trim();
+  }
 });
 
 app.get(['/generallevels', '/generallevels/', '/generallevels.html'], (req, res) => {

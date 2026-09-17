@@ -13,6 +13,7 @@
         "cap:open:android": "npx cap open android",
         "sync:levels": "node scripts/sync-local-level-assets.js",
         "test": "echo \"Error: no test specified\" && exit 1",
+        "test:journey": "node --test scripts/test-journey.js scripts/test-play-speech.js",
         "r2:init-content": "node scripts/init-r2-content.js",
         "r2:flashcards": "node scripts/publish-flashcards-r2.js",
         "r2:accesskey": "node scripts/upload-r2-folder.js --source=accesskey --prefix=accesskey --concurrency=4",
@@ -42,6 +43,8 @@
     "devDependencies": {
         "@capacitor/android": "^7.6.1",
         "@capacitor/cli": "^7.6.1",
+        "jsdom": "^26.1.0",
+        "pg-mem": "^3.0.14",
         "typescript": "^5.9.3"
     }
 }

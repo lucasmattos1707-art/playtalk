@@ -12,6 +12,7 @@ const appHtmlFiles = new Set([
   'auth.html',
   'landing.html',
   'play.html',
+  'journeyplan.html',
   'flashcards.html',
   'allcards.html',
   'users.html',

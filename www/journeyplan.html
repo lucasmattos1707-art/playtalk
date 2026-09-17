@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Jornada · PlayTalk</title>
+  <link rel="stylesheet" href="css/video-background.css">
+  <link rel="stylesheet" href="css/journey.css">
+  <link rel="stylesheet" href="css/journeyplan.css">
+</head>
+<body>
+  <main class="journeyplan-shell">
+    <header class="journeyplan-topbar">
+      <div><p class="journeyplan-eyebrow">PLAYTALK · ADMIN</p><h1>Planeje a jornada</h1><p>Crie a sequência que vai guiar cada aluno pelo curso.</p></div>
+      <a href="/play" class="journey-button journey-button-secondary">Voltar ao jogo</a>
+    </header>
+    <p id="planStatus" class="journeyplan-status" role="status" aria-live="polite">Carregando jornada…</p>
+    <div id="planEditor" hidden>
+      <div class="journeyplan-toolbar">
+        <div class="journeyplan-add"><button id="addTutorial" type="button">+ Tutorial</button><button id="addInteractive" type="button">+ Ouvir e falar</button><button id="addPhase" type="button">+ Fase 1 existente</button></div>
+        <button id="savePlan" class="journey-button" type="button">Salvar jornada</button>
+      </div>
+      <p class="journeyplan-note">Quando houver pelo menos uma etapa salva, o botão Jogar abrirá esta sequência. As mudanças no conteúdo reiniciam somente a etapa alterada; a ordem e os títulos preservam o progresso.</p>
+      <div class="journeyplan-grid">
+        <section class="journeyplan-panel" aria-label="Sequência da jornada"><h2>Etapas do curso</h2><ol id="stepsList" class="journeyplan-list"></ol><p id="emptyPlan">Sua jornada está vazia. Adicione o primeiro tutorial ou jogo.</p></section>
+        <section class="journeyplan-panel" aria-label="Editar etapa">
+          <form id="stepForm" hidden>
+            <p id="stepType" class="journeyplan-eyebrow"></p>
+            <label>Título no topo<input id="stepTitle" maxlength="160" required></label>
+            <div id="tutorialFields" hidden>
+              <label>Imagem central · PNG, JPG ou WebP<input id="tutorialImage" type="file" accept="image/png,image/jpeg,image/webp"></label>
+              <p id="imageStatus" class="journeyplan-file-status"></p>
+              <label>Áudio do tutorial · MP3, Ogg ou WAV<input id="tutorialAudio" type="file" accept="audio/mpeg,audio/ogg,audio/wav"></label>
+              <p id="audioStatus" class="journeyplan-file-status"></p>
+            </div>
+            <div id="interactiveFields" hidden>
+              <label>Assunto do texto<textarea id="generationTopic" rows="2" maxlength="600" placeholder="Ex.: uma conversa simples sobre a rotina da manhã"></textarea></label>
+              <button id="generateStep" class="journey-button" type="button">Gerar texto com Luna + voz Harry</button>
+              <label>Português<textarea id="stepPortuguese" rows="4" maxlength="180"></textarea><span id="portugueseCount" class="journeyplan-counter"></span></label>
+              <label>Inglês<textarea id="stepEnglish" rows="4" maxlength="180"></textarea><span id="englishCount" class="journeyplan-counter"></span></label>
+              <p id="generatedAudioStatus" class="journeyplan-file-status"></p>
+              <p class="journeyplan-note">Cada texto deve ter entre 150 e 180 caracteres. O áudio é apenas em inglês, com Harry. Se editar o inglês, gere novamente o áudio antes de salvar.</p>
+            </div>
+            <div id="phaseFields" hidden><label>Nível<input id="phaseLevel" type="number" min="1" max="10000" value="1"></label><label>Quantidade de cartas<input id="phaseCards" type="number" min="1" max="25" value="1"></label></div>
+            <label id="pointsField">Pontos ao concluir<input id="stepPoints" type="number" min="0" max="1000" value="100"></label>
+            <p class="journeyplan-note">A próxima etapa é sempre a seguinte na lista. Adicione uma Fase 1 depois de um tutorial para levar o aluno ao jogo existente.</p>
+            <button id="previewStep" type="button" class="journey-button journey-button-secondary">▶ Visualizar e testar</button>
+          </form>
+          <p id="chooseStep">Selecione uma etapa para editar ou crie uma nova.</p>
+        </section>
+      </div>
+    </div>
+  </main>
+  <script src="js/android-config.js"></script><script src="js/api-config.js"></script><script src="js/android-shell.js"></script>
+  <script src="js/vendor/opus-recorder/recorder.min.js"></script>
+  <script src="js/journey-player.js"></script><script src="js/journeyplan-page.js"></script><script src="js/video-background.js"></script>
+</body>
+</html>

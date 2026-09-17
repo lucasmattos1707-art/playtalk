@@ -1,0 +1,37 @@
+* { box-sizing: border-box; }
+body { margin: 0; color: #f4f8ff; font: 16px/1.5 Arial,sans-serif; background: #020610; }
+[hidden] { display: none !important; }
+.journeyplan-shell { max-width: 1240px; margin: auto; padding: 36px 24px 70px; }
+.journeyplan-topbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
+.journeyplan-topbar h1 { font-size: clamp(30px,4vw,46px); letter-spacing: -.04em; margin: 0 0 8px; }
+.journeyplan-topbar p { margin: 0; color: #c0d0e0; }
+.journeyplan-topbar a { text-decoration: none; flex-shrink: 0; }
+.journeyplan-eyebrow { letter-spacing: .13em; font-size: 12px; font-weight: 700; color: #90c9d8; margin-bottom: 10px !important; }
+.journeyplan-status { min-height: 26px; color: #78e9c3; }
+.journeyplan-status.is-error { color: #ffa1a1; }
+.journeyplan-toolbar { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.journeyplan-add { display: flex; flex-wrap: wrap; gap: 10px; }
+.journeyplan-add button,.journeyplan-row-actions button { border: 1px solid #ffffff30; border-radius: 18px; padding: 10px 14px; background: #ffffff0c; color: inherit; font: inherit; cursor: pointer; }
+.journeyplan-note { color: #a5b7c9; font-size: 13px; line-height: 1.6; }
+.journeyplan-grid { display: grid; grid-template-columns: minmax(300px,.9fr) minmax(320px,1.1fr); gap: 22px; margin-top: 22px; }
+.journeyplan-panel { background: #081627c9; border: 1px solid #afdcff22; border-radius: 26px; padding: 24px; }
+.journeyplan-panel h2 { margin: 0 0 20px; font-size: 20px; }
+.journeyplan-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.journeyplan-row { border: 1px solid #ffffff1c; border-radius: 18px; padding: 14px; background: #ffffff05; }
+.journeyplan-row.is-selected { border-color: #73deed; background: #73deed0a; }
+.journeyplan-step-select { padding: 0; border: 0; background: transparent; color: inherit; text-align: left; width: 100%; cursor: pointer; font: inherit; }
+.journeyplan-step-select strong { display: block; font-size: 16px; overflow-wrap: anywhere; }
+.journeyplan-step-select span { font-size: 12px; color: #a8bed1; }
+.journeyplan-row-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.journeyplan-row-actions button { padding: 5px 10px; font-size: 13px; }
+.journeyplan-row-actions .is-danger { color: #ffa4a4; }
+.journeyplan-panel form { display: flex; flex-direction: column; gap: 16px; }
+.journeyplan-panel label { display: block; color: #ccdbea; font-size: 14px; margin-bottom: 14px; }
+.journeyplan-panel input,.journeyplan-panel textarea { width: 100%; display: block; margin-top: 7px; border: 1px solid #c2dfff30; border-radius: 12px; background: #030b18; padding: 12px; font: inherit; color: #fff; }
+.journeyplan-panel textarea { resize: vertical; }
+.journeyplan-counter { font-size: 12px; color: #a2b7c8; }
+.journeyplan-counter.is-invalid { color: #ffb9a0; }
+.journeyplan-file-status { color: #7de0be; font-size: 13px; margin: -8px 0 14px; }
+button:disabled { opacity: .45; cursor: default !important; }
+button:focus-visible,a:focus-visible { outline: 3px solid #81e2ee; outline-offset: 3px; }
+@media(max-width:800px) { .journeyplan-grid { grid-template-columns: 1fr; } .journeyplan-topbar { align-items: flex-start; flex-direction: column; } .journeyplan-shell { padding: 24px 16px 50px; } .journeyplan-panel { padding: 20px; } }
