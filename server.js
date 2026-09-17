@@ -26169,7 +26169,8 @@ app.get('/api/musical-kelly/project', async (req, res) => {
       success: true,
       canEdit: isAdminUserRecord(authUser),
       canContribute: Boolean(authUser?.id),
-      canComment: Boolean(authUser?.id) && !isAdminUserRecord(authUser),
+      canComment: true,
+      canApprove: true,
       canDeleteComments: isAdminUserRecord(authUser),
       canReorder: Boolean(authUser?.id),
       unreadCardIds,
@@ -26332,11 +26333,7 @@ app.post('/api/musical-kelly/notifications/seen', async (req, res) => {
 
 app.post('/api/musical-kelly/cards/:cardId/comments', async (req, res) => {
   try {
-    const authUser = await requireMusicalKellyUserFromRequest(req);
-    if (isAdminUserRecord(authUser)) {
-      res.status(403).json({ success: false, message: 'O administrador pode visualizar e apagar comentarios, mas nao escrever.' });
-      return;
-    }
+    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     if (!isR2FluencyConfigured()) {
       res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
       return;
@@ -26350,8 +26347,8 @@ app.post('/api/musical-kelly/cards/:cardId/comments', async (req, res) => {
 
     const comment = {
       id: `comment-${crypto.randomBytes(12).toString('hex')}`,
-      userId: Number(authUser.id) || 0,
-      authorName: String(authUser.username || authUser.email || 'Usuario').trim().slice(0, 64),
+      userId: Number(authUser?.id) || 0,
+      authorName: String(authUser?.username || authUser?.email || 'Visitante').trim().slice(0, 64),
       text,
       createdAt: new Date().toISOString()
     };
@@ -26387,7 +26384,7 @@ app.post('/api/musical-kelly/cards/:cardId/comments', async (req, res) => {
 
 app.post('/api/musical-kelly/cards/:cardId/approve', async (req, res) => {
   try {
-    const adminUser = await requireAdminUserFromRequest(req);
+    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     if (!isR2FluencyConfigured()) {
       res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
       return;
@@ -26411,8 +26408,8 @@ app.post('/api/musical-kelly/cards/:cardId/approve', async (req, res) => {
         throw error;
       }
       card.approvedAt = new Date().toISOString();
-      card.approvedByUserId = Number(adminUser.id) || 0;
-      card.approvedByName = String(adminUser.username || adminUser.email || 'Admin').trim().slice(0, 64);
+      card.approvedByUserId = Number(authUser?.id) || 0;
+      card.approvedByName = String(authUser?.username || authUser?.email || 'Visitante').trim().slice(0, 64);
       return writeMusicalKellyGlobalProject(currentProject);
     });
     res.json({ success: true, project: hydrateMusicalKellyProject(project) });

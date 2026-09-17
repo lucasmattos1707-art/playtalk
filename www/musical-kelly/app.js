@@ -34,7 +34,6 @@
     sendCommentButton: document.getElementById('sendCommentButton'),
     approveTrackButton: document.getElementById('approveTrackButton'),
     closeCommentsDialog: document.getElementById('closeCommentsDialog'),
-    adminCommentNote: document.getElementById('adminCommentNote'),
     audioInput: document.getElementById('audioInput'),
     imageInput: document.getElementById('imageInput'),
     statusLine: document.getElementById('statusLine'),
@@ -52,6 +51,7 @@
     canEdit: false,
     canContribute: false,
     canComment: false,
+    canApprove: false,
     canDeleteComments: false,
     canReorder: false,
     unreadCardIds: new Set(),
@@ -582,12 +582,11 @@
       });
     }
     elements.commentForm.hidden = !state.canComment;
-    elements.approveTrackButton.hidden = !state.canEdit;
+    elements.approveTrackButton.hidden = !state.canApprove;
     elements.approveTrackButton.disabled = state.collaborationBusy || !card.audio || Boolean(card.approvedAt);
     elements.approveTrackButton.textContent = card.approvedAt
       ? 'Faixa aprovada'
       : (card.audio ? 'Aprovar faixa' : 'Adicione um áudio para aprovar');
-    elements.adminCommentNote.hidden = !state.canDeleteComments;
   }
 
   function openComments(cardId) {
@@ -628,7 +627,7 @@
   }
 
   async function approveTrack() {
-    if (!state.canEdit || state.collaborationBusy) return;
+    if (!state.canApprove || state.collaborationBusy) return;
     const card = getCard(state.activeCommentsCardId);
     if (!card?.audio) {
       showToast('Adicione um áudio antes de aprovar a faixa.', true);
@@ -1761,6 +1760,7 @@
       state.canEdit = payload.canEdit === true;
       state.canContribute = payload.canContribute === true;
       state.canComment = payload.canComment === true;
+      state.canApprove = payload.canApprove === true;
       state.canDeleteComments = payload.canDeleteComments === true;
       state.canReorder = payload.canReorder === true;
       state.unreadCardIds = new Set(Array.isArray(payload.unreadCardIds) ? payload.unreadCardIds : []);
