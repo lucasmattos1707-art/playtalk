@@ -199,7 +199,7 @@
           this.tutorialEnded = false;
           this.message('Ouça o tutorial completo para continuar.');
         } else {
-          this.text = this.create('p', 'journey-body-text', this.stage() >= 1 ? this.step.english : this.step.portuguese, this.content);
+          this.text = this.create('p', 'journey-body-text journey-reading-text', this.stage() >= 1 ? this.step.english : this.step.portuguese, this.content);
           this.text.lang = this.stage() >= 1 ? 'en' : 'pt-BR';
           this.meter = this.create('progress', 'journey-audio-progress', undefined, this.content); this.meter.max = 1; this.meter.value = 0;
           this.meter.setAttribute('aria-label', 'Progresso do áudio');

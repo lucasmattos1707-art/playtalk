@@ -39406,16 +39406,26 @@
 
       let journeyPhaseRuntime = null;
       let journeyEntryBusy = false;
+      function restoreWelcomeAfterJourneyClose() {
+        state.entry.pendingPlayStart = false;
+        state.entry.welcomeStartRequested = false;
+        state.entry.flashStartInFlight = false;
+        state.entry.welcomeFlashStartAt = 0;
+        state.entry.welcomeDismissed = false;
+        window.PlaytalkLoader?.hide?.('welcome-flash-start', { force: true });
+        if (!state.game.active) syncWelcomeGate();
+      }
       async function startConfiguredJourney(event) {
         if (journeyPhaseRuntime || !window.PlaytalkJourney || !state.user?.id) return false;
         if (journeyEntryBusy) return true;
         journeyEntryBusy = true;
         try {
-          const handled = await window.PlaytalkJourney.tryStart();
+          const handled = await window.PlaytalkJourney.tryStart({ onClose: restoreWelcomeAfterJourneyClose });
           if (handled) {
             event?.preventDefault?.();
             closeWelcomeModeModal();
             stopActiveAudio();
+            hideWelcomeGate();
           }
           return handled;
         } catch (error) {

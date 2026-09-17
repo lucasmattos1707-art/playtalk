@@ -150,6 +150,10 @@ test('player locks icons in order and submits ONLY after explicit send; pause/re
   const h = uiHarness();
   try {
     await h.window.PlaytalkJourney.tryStart();
+    assert.ok(h.window.document.querySelector('.journey-reading-text'));
+    const journeyCss = fs.readFileSync(path.join(__dirname, '../www/css/journey.css'), 'utf8');
+    assert.match(journeyCss, /font-family:\s*'JourneyReading'/);
+    assert.match(journeyCss, /\.journey-reading-text\s*\{[^}]*font-size:\s*34\.5px/s);
     let buttons = h.window.document.querySelectorAll('.journey-icon-button');
     assert.equal(buttons[0].disabled, false); assert.equal(buttons[1].disabled, true); assert.equal(buttons[2].disabled, true);
     await h.click('Ouvir com texto em português'); await h.endAudio();
@@ -214,6 +218,37 @@ test('existing-phase journey runtime requires five stars and suppresses cards, c
   assert.match(source, /!journeyPhaseRuntime && isLevelModeAcquisitionFlowActive\(\)/);
   assert.match(source, /const earnedCoins = journeyPhaseRuntime \? 0/);
   assert.match(source, /const earnedXp = journeyPhaseRuntime \? 0/);
+  assert.match(source, /tryStart\(\{ onClose: restoreWelcomeAfterJourneyClose \}\)/);
+  assert.match(source, /if \(handled\) \{[\s\S]{0,260}hideWelcomeGate\(\)/);
+  assert.match(source, /state\.entry\.welcomeDismissed = false;[\s\S]{0,180}if \(!state\.game\.active\) syncWelcomeGate\(\)/);
+});
+test('student phase launches the existing game, records completion and returns to the journey', async () => {
+  const dom = new JSDOM('<!DOCTYPE html><body><main><button>Jogar</button></main></body>', { url: 'http://localhost/play', runScripts: 'outside-only' });
+  const { window } = dom;
+  const phase = { id: 'cards', type: 'phase1', title: 'Cinco estrelas', level: 2, cards: 1, explorerMode: 4, points: 100 };
+  const progress = { steps: [{ id: phase.id, stage: 0, completed: false }], currentIndex: 0, points: 0 };
+  const actions = [];
+  window.PlaytalkApi = { url: value => value, authHeaders: extra => extra || {} };
+  window.fetch = async (url, options = {}) => {
+    if (url === '/api/journey') return { ok: true, json: async () => ({ success: true, plan: { revision: 3, steps: [phase] }, progress }) };
+    const body = JSON.parse(options.body || '{}'); actions.push(body);
+    progress.steps[0] = { id: phase.id, stage: 3, completed: true };
+    progress.currentIndex = 1; progress.points = 100;
+    return { ok: true, json: async () => ({ success: true, progress, stage: 3, completed: true, earnedPoints: 100 }) };
+  };
+  window.eval(fs.readFileSync(path.join(__dirname, '../www/js/journey-player.js'), 'utf8'));
+  let launched = null, closed = 0;
+  window.PlaytalkJourney.setPhaseLauncher(async stepValue => { launched = stepValue; return true; });
+  await window.PlaytalkJourney.tryStart({ onClose: () => { closed++; } });
+  const start = [...window.document.querySelectorAll('button')].find(button => button.textContent === 'Iniciar jogo');
+  assert.ok(start); start.click();
+  for (let i = 0; i < 12 && !actions.length; i++) await turn();
+  assert.equal(launched?.explorerMode, 4);
+  assert.equal(actions[0]?.action, 'phase1');
+  assert.match(window.document.getElementById('journey-modal-title').textContent, /Jornada concluída/);
+  window.PlaytalkJourney.close();
+  assert.equal(closed, 1);
+  dom.window.close();
 });
 test('shared site background creates a lightweight blue gradient without loading MP4 video', () => {
   const dom = new JSDOM('<!doctype html><body><main>PlayTalk</main></body>', { runScripts: 'outside-only' });
