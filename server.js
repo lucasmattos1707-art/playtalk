@@ -8374,6 +8374,8 @@ const FLASHCARDS_R2_PUBLIC_ROOT = (() => {
 const FLASHCARDS_R2_PREFIX = 'Star';
 const MUSICAL_KELLY_R2_PREFIX = 'musical-kelly';
 const MUSICAL_KELLY_MAX_CARDS = 80;
+const MUSICAL_KELLY_MAX_COMMENTS_PER_CARD = 200;
+const MUSICAL_KELLY_MAX_COMMENT_LENGTH = 800;
 const MUSICAL_KELLY_MAX_AUDIO_BYTES = 220 * 1024 * 1024;
 const MUSICAL_KELLY_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const FLASHCARD_CAMERA_OBJECT_KEY = 'FlashCards/camera.webp';
@@ -15992,6 +15994,19 @@ function normalizeMusicalKellyAsset(asset, kind) {
   };
 }
 
+function normalizeMusicalKellyComment(source) {
+  const id = normalizeMusicalKellyCardId(source?.id);
+  const text = String(source?.text || '').trim().slice(0, MUSICAL_KELLY_MAX_COMMENT_LENGTH);
+  if (!id || !text) return null;
+  return {
+    id,
+    userId: Math.max(0, Number.parseInt(source?.userId, 10) || 0),
+    authorName: String(source?.authorName || 'Usuario').trim().slice(0, 64) || 'Usuario',
+    text,
+    createdAt: String(source?.createdAt || '').trim().slice(0, 40) || new Date().toISOString()
+  };
+}
+
 function normalizeMusicalKellyProject(payload) {
   const sourceCards = Array.isArray(payload?.cards) ? payload.cards.slice(0, MUSICAL_KELLY_MAX_CARDS) : [];
   const usedIds = new Set();
@@ -16000,18 +16015,68 @@ function normalizeMusicalKellyProject(payload) {
     const id = normalizeMusicalKellyCardId(source?.id);
     if (!id || usedIds.has(id)) continue;
     usedIds.add(id);
+    const comments = (Array.isArray(source?.comments) ? source.comments : [])
+      .slice(0, MUSICAL_KELLY_MAX_COMMENTS_PER_CARD)
+      .map(normalizeMusicalKellyComment)
+      .filter(Boolean);
     cards.push({
       id,
       title: String(source?.title || 'Faixa').trim().slice(0, 120) || 'Faixa',
       audio: normalizeMusicalKellyAsset(source?.audio, 'audio'),
-      image: normalizeMusicalKellyAsset(source?.image, 'image')
+      image: normalizeMusicalKellyAsset(source?.image, 'image'),
+      createdByUserId: Math.max(0, Number.parseInt(source?.createdByUserId, 10) || 0),
+      createdByName: String(source?.createdByName || '').trim().slice(0, 64),
+      createdAt: String(source?.createdAt || '').trim().slice(0, 40),
+      comments
     });
   }
   return {
     version: 1,
-    updatedAt: new Date().toISOString(),
+    updatedAt: String(payload?.updatedAt || '').trim().slice(0, 40) || new Date().toISOString(),
     cards
   };
+}
+
+let musicalKellyProjectMutationQueue = Promise.resolve();
+
+function queueMusicalKellyProjectMutation(callback) {
+  const operation = musicalKellyProjectMutationQueue.then(callback, callback);
+  musicalKellyProjectMutationQueue = operation.catch(() => {});
+  return operation;
+}
+
+async function readMusicalKellyGlobalProject() {
+  try {
+    return normalizeMusicalKellyProject(await fetchR2JsonObject(`${musicalKellyGlobalRoot()}/project.json`));
+  } catch (error) {
+    if (Number(error?.status || error?.statusCode || 0) === 404) {
+      return normalizeMusicalKellyProject({ cards: [] });
+    }
+    throw error;
+  }
+}
+
+async function writeMusicalKellyGlobalProject(project) {
+  const normalized = normalizeMusicalKellyProject({
+    ...project,
+    updatedAt: new Date().toISOString()
+  });
+  await putR2Object(
+    `${musicalKellyGlobalRoot()}/project.json`,
+    Buffer.from(`${JSON.stringify(normalized, null, 2)}\n`, 'utf8'),
+    'application/json; charset=utf-8'
+  );
+  return normalized;
+}
+
+async function requireMusicalKellyUserFromRequest(req) {
+  const user = await readAuthenticatedUserFromRequest(req);
+  if (!user) {
+    const error = new Error('Entre na sua conta para participar do musical.');
+    error.statusCode = 401;
+    throw error;
+  }
+  return user;
 }
 
 function musicalKellyAssetUrl(kind, fileName) {
@@ -26030,6 +26095,10 @@ app.get('/api/musical-kelly/project', async (req, res) => {
     res.json({
       success: true,
       canEdit: isAdminUserRecord(authUser),
+      canContribute: Boolean(authUser?.id),
+      canComment: Boolean(authUser?.id) && !isAdminUserRecord(authUser),
+      canDeleteComments: isAdminUserRecord(authUser),
+      canReorder: Boolean(authUser?.id),
       project: hydrateMusicalKellyProject(project)
     });
   } catch (error) {
@@ -26049,15 +26118,212 @@ app.put('/api/musical-kelly/project', async (req, res) => {
       return;
     }
 
-    const project = normalizeMusicalKellyProject(req.body || {});
-    const objectKey = `${musicalKellyGlobalRoot()}/project.json`;
-    await putR2Object(objectKey, Buffer.from(`${JSON.stringify(project, null, 2)}\n`, 'utf8'), 'application/json; charset=utf-8');
+    const requestedUpdatedAt = String(req.body?.updatedAt || '').trim().slice(0, 40);
+    const requestedProject = normalizeMusicalKellyProject(req.body || {});
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      if (!requestedUpdatedAt || requestedUpdatedAt !== currentProject.updatedAt) {
+        const error = new Error('O musical mudou em outro aparelho. Atualize a pagina antes de salvar esta edicao.');
+        error.statusCode = 409;
+        throw error;
+      }
+      const currentCards = new Map(currentProject.cards.map((card) => [card.id, card]));
+      const mergedProject = {
+        ...requestedProject,
+        cards: requestedProject.cards.map((card) => {
+          const currentCard = currentCards.get(card.id);
+          if (!currentCard) return card;
+          return {
+            ...card,
+            createdByUserId: currentCard.createdByUserId,
+            createdByName: currentCard.createdByName,
+            createdAt: currentCard.createdAt,
+            comments: currentCard.comments
+          };
+        })
+      };
+      return writeMusicalKellyGlobalProject(mergedProject);
+    });
     res.json({ success: true, canEdit: true, project: hydrateMusicalKellyProject(project) });
   } catch (error) {
     console.error('Erro ao salvar musical Kelly:', error);
     res.status(Number(error?.statusCode) || 500).json({
       success: false,
       message: 'Nao foi possivel salvar as alteracoes do musical.'
+    });
+  }
+});
+
+app.post('/api/musical-kelly/cards', async (req, res) => {
+  try {
+    const authUser = await requireMusicalKellyUserFromRequest(req);
+    if (!isR2FluencyConfigured()) {
+      res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
+      return;
+    }
+    const title = String(req.body?.title || '').trim().slice(0, 120);
+    if (!title) {
+      res.status(400).json({ success: false, message: 'Digite o nome do container.' });
+      return;
+    }
+
+    const createdAt = new Date().toISOString();
+    const card = {
+      id: `cue-${Date.now().toString(36)}-${crypto.randomBytes(8).toString('hex')}`,
+      title,
+      audio: null,
+      image: null,
+      createdByUserId: Number(authUser.id) || 0,
+      createdByName: String(authUser.username || authUser.email || 'Usuario').trim().slice(0, 64),
+      createdAt,
+      comments: []
+    };
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      if (currentProject.cards.length >= MUSICAL_KELLY_MAX_CARDS) {
+        const error = new Error(`O musical aceita no maximo ${MUSICAL_KELLY_MAX_CARDS} containers.`);
+        error.statusCode = 409;
+        throw error;
+      }
+      currentProject.cards.push(card);
+      return writeMusicalKellyGlobalProject(currentProject);
+    });
+    res.status(201).json({ success: true, card, project: hydrateMusicalKellyProject(project) });
+  } catch (error) {
+    console.error('Erro ao adicionar container ao musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel adicionar o container.'
+    });
+  }
+});
+
+app.post('/api/musical-kelly/cards/:cardId/comments', async (req, res) => {
+  try {
+    const authUser = await requireMusicalKellyUserFromRequest(req);
+    if (isAdminUserRecord(authUser)) {
+      res.status(403).json({ success: false, message: 'O administrador pode visualizar e apagar comentarios, mas nao escrever.' });
+      return;
+    }
+    if (!isR2FluencyConfigured()) {
+      res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
+      return;
+    }
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const text = String(req.body?.text || '').trim().slice(0, MUSICAL_KELLY_MAX_COMMENT_LENGTH);
+    if (!cardId || !text) {
+      res.status(400).json({ success: false, message: 'Escreva um comentario antes de enviar.' });
+      return;
+    }
+
+    const comment = {
+      id: `comment-${crypto.randomBytes(12).toString('hex')}`,
+      userId: Number(authUser.id) || 0,
+      authorName: String(authUser.username || authUser.email || 'Usuario').trim().slice(0, 64),
+      text,
+      createdAt: new Date().toISOString()
+    };
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      const card = currentProject.cards.find((entry) => entry.id === cardId);
+      if (!card) {
+        const error = new Error('Este container nao existe mais.');
+        error.statusCode = 404;
+        throw error;
+      }
+      card.comments = Array.isArray(card.comments) ? card.comments : [];
+      if (card.comments.length >= MUSICAL_KELLY_MAX_COMMENTS_PER_CARD) {
+        const error = new Error('Este container atingiu o limite de comentarios.');
+        error.statusCode = 409;
+        throw error;
+      }
+      card.comments.push(comment);
+      return writeMusicalKellyGlobalProject(currentProject);
+    });
+    res.status(201).json({ success: true, comment, project: hydrateMusicalKellyProject(project) });
+  } catch (error) {
+    console.error('Erro ao comentar no musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel salvar o comentario.'
+    });
+  }
+});
+
+app.delete('/api/musical-kelly/cards/:cardId/comments/:commentId', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!isR2FluencyConfigured()) {
+      res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
+      return;
+    }
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const commentId = normalizeMusicalKellyCardId(req.params.commentId);
+    if (!cardId || !commentId) {
+      res.status(400).json({ success: false, message: 'Comentario invalido.' });
+      return;
+    }
+
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      const card = currentProject.cards.find((entry) => entry.id === cardId);
+      if (!card) {
+        const error = new Error('Este container nao existe mais.');
+        error.statusCode = 404;
+        throw error;
+      }
+      const comments = Array.isArray(card.comments) ? card.comments : [];
+      const nextComments = comments.filter((comment) => comment.id !== commentId);
+      if (nextComments.length === comments.length) {
+        const error = new Error('Este comentario nao existe mais.');
+        error.statusCode = 404;
+        throw error;
+      }
+      card.comments = nextComments;
+      return writeMusicalKellyGlobalProject(currentProject);
+    });
+    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+  } catch (error) {
+    console.error('Erro ao apagar comentario do musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel apagar o comentario.'
+    });
+  }
+});
+
+app.put('/api/musical-kelly/order', async (req, res) => {
+  try {
+    await requireMusicalKellyUserFromRequest(req);
+    if (!isR2FluencyConfigured()) {
+      res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
+      return;
+    }
+    const requestedIds = (Array.isArray(req.body?.cardIds) ? req.body.cardIds : [])
+      .map(normalizeMusicalKellyCardId)
+      .filter(Boolean);
+    if (!requestedIds.length || new Set(requestedIds).size !== requestedIds.length) {
+      res.status(400).json({ success: false, message: 'A nova ordem dos containers e invalida.' });
+      return;
+    }
+
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      const currentById = new Map(currentProject.cards.map((card) => [card.id, card]));
+      if (requestedIds.length !== currentProject.cards.length || requestedIds.some((id) => !currentById.has(id))) {
+        const error = new Error('A lista mudou enquanto voce organizava. Atualize a pagina e tente novamente.');
+        error.statusCode = 409;
+        throw error;
+      }
+      currentProject.cards = requestedIds.map((id) => currentById.get(id));
+      return writeMusicalKellyGlobalProject(currentProject);
+    });
+    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+  } catch (error) {
+    console.error('Erro ao reordenar musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel salvar a nova ordem.'
     });
   }
 });

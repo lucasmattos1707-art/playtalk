@@ -6,21 +6,22 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=7">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=8">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
   <div class="ambient ambient-two" aria-hidden="true"></div>
 
-  <header class="topbar" id="adminHeader" hidden>
-    <a class="brand" href="/play" aria-label="Voltar ao Fluent LevelUp">
-      <img src="/SVG/logo.svg" alt="">
-    </a>
-
+  <header class="topbar" id="topbar" hidden>
     <div class="top-actions">
       <button class="icon-action" id="downloadAllButton" type="button" title="Baixar todas as faixas para este aparelho" aria-label="Baixar todas as faixas">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18v2h14v-2"/>
+        </svg>
+      </button>
+      <button class="icon-action" id="sortButton" type="button" title="Alterar ordem dos containers" aria-label="Ativar modo de alterar ordem" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M8 6h12M4 6h.01M8 12h12M4 12h.01M8 18h12M4 18h.01"/>
         </svg>
       </button>
       <button class="primary-action" id="addCardButton" type="button" aria-label="Adicionar novo container" title="Adicionar novo container" hidden>
@@ -58,6 +59,7 @@
     <article class="track-card" tabindex="0">
       <div class="track-background" aria-hidden="true"></div>
       <div class="track-shade" aria-hidden="true"></div>
+      <h2 class="track-title"></h2>
       <div class="track-center-controls">
         <button class="card-seek card-seek-back" type="button" aria-label="Voltar 5 segundos" title="Voltar 5 segundos">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
@@ -67,6 +69,13 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
         </button>
       </div>
+      <button class="comment-button" type="button" title="Informações e comentários" aria-label="Abrir informações e comentários">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 10.5v6M12 7.5h.01"/>
+        </svg>
+        <span class="comment-count" hidden></span>
+      </button>
       <button class="download-button" type="button" title="Baixar para este aparelho" aria-label="Baixar faixa para este aparelho">
         <svg class="icon-download" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18v2h14v-2"/>
@@ -84,6 +93,48 @@
   <input id="audioInput" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.opus,.webm,.flac" hidden>
   <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" hidden>
 
+  <dialog class="musical-dialog" id="addCardDialog" aria-labelledby="addCardDialogTitle">
+    <form class="dialog-card" id="addCardForm">
+      <div class="dialog-heading">
+        <div>
+          <span class="dialog-kicker">Novo container</span>
+          <h2 id="addCardDialogTitle">Qual é o nome do container?</h2>
+        </div>
+        <button class="dialog-close" id="closeAddCardDialog" type="button" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <label class="dialog-field" for="newCardTitle">
+        <span>Título</span>
+        <input id="newCardTitle" maxlength="120" autocomplete="off" required placeholder="Ex.: Entrada do personagem">
+      </label>
+      <button class="dialog-primary" id="confirmAddCardButton" type="submit">Adicionar container</button>
+    </form>
+  </dialog>
+
+  <dialog class="musical-dialog" id="commentsDialog" aria-labelledby="commentsDialogTitle">
+    <section class="dialog-card comments-card">
+      <div class="dialog-heading">
+        <div>
+          <span class="dialog-kicker">Informações e comentários</span>
+          <h2 id="commentsDialogTitle">Container</h2>
+        </div>
+        <button class="dialog-close" id="closeCommentsDialog" type="button" aria-label="Fechar comentários">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <div class="comments-list" id="commentsList"></div>
+      <form class="comment-form" id="commentForm" hidden>
+        <label class="dialog-field" for="commentText">
+          <span>Adicionar comentário</span>
+          <textarea id="commentText" maxlength="800" rows="4" required placeholder="Escreva seu comentário sobre este bloco..."></textarea>
+        </label>
+        <button class="dialog-primary" id="sendCommentButton" type="submit">Enviar comentário</button>
+      </form>
+      <p class="admin-comment-note" id="adminCommentNote" hidden>O administrador pode visualizar e apagar comentários, mas não escrever.</p>
+    </section>
+  </dialog>
+
   <section class="player-bar" id="playerBar" aria-label="Controle da faixa atual" hidden>
     <button id="rewindButton" type="button" aria-label="Voltar 5 segundos" title="Voltar 5 segundos">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8H3V4M3.5 8.5A9 9 0 1 1 4 16M9.2 10.2h3.2l-2.5 2.3h1a2.6 2.6 0 1 1-2.3 3.8"/></svg>
@@ -98,6 +149,6 @@
   </section>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="/musical-kelly/app.js?v=9" defer></script>
+  <script src="/musical-kelly/app.js?v=10" defer></script>
 </body>
 </html>

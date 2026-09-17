@@ -4,11 +4,10 @@
   const API_ROOT = '/api/musical-kelly';
   const CACHE_NAME = 'playtalk-musical-kelly-media-v1';
   const LONG_PRESS_MS = 500;
-  const DEFAULT_CARD_COUNT = 6;
   const USE_NATIVE_AUDIO_ON_APPLE = isAppleTouchDevice();
 
   const elements = {
-    adminHeader: document.getElementById('adminHeader'),
+    topbar: document.getElementById('topbar'),
     trackList: document.getElementById('trackList'),
     trackTemplate: document.getElementById('trackTemplate'),
     selectionPanel: document.getElementById('selectionPanel'),
@@ -18,7 +17,21 @@
     removeCardButton: document.getElementById('removeCardButton'),
     closeSelectionButton: document.getElementById('closeSelectionButton'),
     addCardButton: document.getElementById('addCardButton'),
+    sortButton: document.getElementById('sortButton'),
     downloadAllButton: document.getElementById('downloadAllButton'),
+    addCardDialog: document.getElementById('addCardDialog'),
+    addCardForm: document.getElementById('addCardForm'),
+    newCardTitle: document.getElementById('newCardTitle'),
+    closeAddCardDialog: document.getElementById('closeAddCardDialog'),
+    confirmAddCardButton: document.getElementById('confirmAddCardButton'),
+    commentsDialog: document.getElementById('commentsDialog'),
+    commentsDialogTitle: document.getElementById('commentsDialogTitle'),
+    commentsList: document.getElementById('commentsList'),
+    commentForm: document.getElementById('commentForm'),
+    commentText: document.getElementById('commentText'),
+    sendCommentButton: document.getElementById('sendCommentButton'),
+    closeCommentsDialog: document.getElementById('closeCommentsDialog'),
+    adminCommentNote: document.getElementById('adminCommentNote'),
     audioInput: document.getElementById('audioInput'),
     imageInput: document.getElementById('imageInput'),
     statusLine: document.getElementById('statusLine'),
@@ -34,6 +47,14 @@
   const state = {
     project: { version: 1, cards: [] },
     canEdit: false,
+    canContribute: false,
+    canComment: false,
+    canDeleteComments: false,
+    canReorder: false,
+    sortMode: false,
+    sortingCardId: '',
+    activeCommentsCardId: '',
+    collaborationBusy: false,
     selectedId: '',
     current: null,
     colorMode: 'idle',
@@ -59,20 +80,6 @@
     scrubbing: false,
     progressFrame: 0
   };
-
-  function makeId() {
-    if (crypto.randomUUID) return `cue-${crypto.randomUUID()}`;
-    return `cue-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-  }
-
-  function makeDefaultCards(count = DEFAULT_CARD_COUNT) {
-    return Array.from({ length: count }, (_, index) => ({
-      id: makeId(),
-      title: `Faixa ${String(index + 1).padStart(2, '0')}`,
-      audio: null,
-      image: null
-    }));
-  }
 
   function getCard(cardId) {
     return state.project.cards.find((card) => card.id === cardId) || null;
@@ -120,6 +127,7 @@
   function projectForSave() {
     return {
       version: 1,
+      updatedAt: state.project.updatedAt,
       cards: state.project.cards.map((card) => ({
         id: card.id,
         title: card.title,
@@ -136,7 +144,17 @@
           contentType: card.image.contentType,
           size: card.image.size,
           updatedAt: card.image.updatedAt
-        } : null
+        } : null,
+        createdByUserId: card.createdByUserId,
+        createdByName: card.createdByName,
+        createdAt: card.createdAt,
+        comments: Array.isArray(card.comments) ? card.comments.map((comment) => ({
+          id: comment.id,
+          userId: comment.userId,
+          authorName: comment.authorName,
+          text: comment.text,
+          createdAt: comment.createdAt
+        })) : []
       }))
     };
   }
@@ -144,14 +162,15 @@
   function saveProject({ quiet = true } = {}) {
     if (!state.canEdit) return Promise.reject(new Error('Somente o administrador pode editar esta página.'));
     window.clearTimeout(state.saveTimer);
-    const payload = projectForSave();
     const operation = state.saveChain.then(async () => {
+      const payload = projectForSave();
       if (!quiet) setStatus('Salvando no R2…', true);
-      await apiJson(`${API_ROOT}/project`, {
+      const response = await apiJson(`${API_ROOT}/project`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      if (response?.project?.updatedAt) state.project.updatedAt = response.project.updatedAt;
       if (!quiet) setStatus('Tudo salvo no R2.');
     });
     state.saveChain = operation.catch((error) => {
@@ -238,6 +257,7 @@
     state.project.cards.forEach((card) => {
       const node = elements.trackTemplate.content.firstElementChild.cloneNode(true);
       node.dataset.cardId = card.id;
+      node.draggable = state.sortMode;
       const isPlaying = state.current?.cardId === card.id && !state.current.paused;
       const isFadingOut = state.transitioning && state.transitionFromId === card.id;
       const isFadingIn = state.transitioning && state.transitionTargetId === card.id;
@@ -248,11 +268,13 @@
       node.classList.toggle('is-color-full', isPlaying && state.colorMode === 'full');
       node.classList.toggle('is-fading-out', isFadingOut);
       node.classList.toggle('is-fading-in', isFadingIn);
+      node.classList.toggle('has-image', Boolean(card.image?.url));
       if (isFadingOut || isFadingIn) {
         node.style.setProperty('--transition-ms', `${Math.max(80, state.transitionDurationMs)}ms`);
       }
       node.setAttribute('aria-label', `${card.title}. ${card.audio ? 'Toque para reproduzir.' : 'Sem música.'}`);
       setCardBackground(node.querySelector('.track-background'), card);
+      node.querySelector('.track-title').textContent = card.title;
 
       const durationLabel = node.querySelector('.track-duration');
       const knownDuration = card.audio ? state.durations.get(card.audio.fileName) : 0;
@@ -287,13 +309,33 @@
         action.catch((error) => showToast(error.message, true));
       });
 
+      const commentButton = node.querySelector('.comment-button');
+      const commentCount = Array.isArray(card.comments) ? card.comments.length : 0;
+      const commentCountLabel = commentButton.querySelector('.comment-count');
+      commentCountLabel.hidden = commentCount === 0;
+      commentCountLabel.textContent = commentCount > 99 ? '99+' : String(commentCount);
+      commentButton.title = commentCount
+        ? `${commentCount} comentário${commentCount === 1 ? '' : 's'}`
+        : 'Informações e comentários';
+      commentButton.setAttribute('aria-label', `${commentButton.title} de ${card.title}`);
+      commentButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        openComments(card.id);
+      });
+
       bindCardGestures(node, card.id);
+      if (state.sortMode) bindSortGestures(node, card.id);
       fragment.appendChild(node);
     });
     elements.trackList.appendChild(fragment);
     document.body.classList.toggle('has-playing-track', Boolean(state.current && !state.current.paused));
-    elements.adminHeader.hidden = !state.canEdit;
-    elements.addCardButton.hidden = !state.canEdit;
+    document.body.classList.toggle('is-sorting', state.sortMode);
+    elements.topbar.hidden = false;
+    elements.addCardButton.hidden = !state.canContribute;
+    elements.sortButton.hidden = !state.canReorder;
+    elements.sortButton.classList.toggle('is-active', state.sortMode);
+    elements.sortButton.setAttribute('aria-label', state.sortMode ? 'Concluir alteração da ordem' : 'Ativar modo de alterar ordem');
+    elements.sortButton.title = state.sortMode ? 'Concluir e salvar ordem' : 'Alterar ordem dos containers';
     updateSelectionPanel();
     updateDownloadAllState();
     updatePlayerBar();
@@ -311,6 +353,7 @@
     };
 
     element.addEventListener('pointerdown', (event) => {
+      if (state.sortMode) return;
       if (event.target.closest('button')) return;
       startX = event.clientX;
       startY = event.clientY;
@@ -343,6 +386,10 @@
     });
     element.addEventListener('contextmenu', (event) => event.preventDefault());
     element.addEventListener('click', (event) => {
+      if (state.sortMode) {
+        event.preventDefault();
+        return;
+      }
       if (event.target.closest('button')) return;
       if (longPressed) {
         longPressed = false;
@@ -351,6 +398,7 @@
       playCard(cardId).catch((error) => showToast(error.message, true));
     });
     element.addEventListener('keydown', (event) => {
+      if (state.sortMode) return;
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
         playCard(cardId).catch((error) => showToast(error.message, true));
@@ -363,6 +411,292 @@
     state.selectedId = cardId;
     render();
     setStatus('Container selecionado. Use A para música ou P para imagem.');
+  }
+
+  function showDialog(dialog) {
+    if (!dialog) return;
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else dialog.setAttribute('open', '');
+  }
+
+  function closeDialog(dialog) {
+    if (!dialog) return;
+    if (typeof dialog.close === 'function') dialog.close();
+    else dialog.removeAttribute('open');
+  }
+
+  function applyCollaborationProject(project) {
+    if (!project || !Array.isArray(project.cards)) return;
+    state.project = project;
+    if (state.selectedId && !getCard(state.selectedId)) state.selectedId = '';
+    if (state.activeCommentsCardId && !getCard(state.activeCommentsCardId)) {
+      state.activeCommentsCardId = '';
+      closeDialog(elements.commentsDialog);
+    }
+    render();
+  }
+
+  function openAddCardDialog() {
+    if (!state.canContribute || state.collaborationBusy) return;
+    elements.newCardTitle.value = '';
+    showDialog(elements.addCardDialog);
+    window.setTimeout(() => elements.newCardTitle.focus(), 30);
+  }
+
+  async function submitNewCard(event) {
+    event.preventDefault();
+    if (!state.canContribute || state.collaborationBusy) return;
+    const title = elements.newCardTitle.value.trim().slice(0, 120);
+    if (!title) {
+      elements.newCardTitle.focus();
+      showToast('Digite o nome do container.', true);
+      return;
+    }
+    state.collaborationBusy = true;
+    elements.confirmAddCardButton.disabled = true;
+    setStatus(`Adicionando “${title}”…`, true);
+    try {
+      const payload = await apiJson(`${API_ROOT}/cards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      });
+      applyCollaborationProject(payload.project);
+      closeDialog(elements.addCardDialog);
+      showToast(`Container “${title}” adicionado para todos.`);
+      setStatus(`Container “${title}” adicionado ao musical.`);
+      window.requestAnimationFrame(() => {
+        elements.trackList.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    } finally {
+      state.collaborationBusy = false;
+      elements.confirmAddCardButton.disabled = false;
+    }
+  }
+
+  function formatCommentDate(value) {
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return '';
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  }
+
+  function renderComments() {
+    const card = getCard(state.activeCommentsCardId);
+    if (!card) return;
+    elements.commentsDialogTitle.textContent = card.title;
+    elements.commentsList.replaceChildren();
+    const comments = Array.isArray(card.comments) ? card.comments : [];
+    if (!comments.length) {
+      const empty = document.createElement('p');
+      empty.className = 'comments-empty';
+      empty.textContent = 'Nenhum comentário neste container ainda.';
+      elements.commentsList.appendChild(empty);
+    } else {
+      comments.forEach((comment) => {
+        const entry = document.createElement('article');
+        entry.className = 'comment-entry';
+        const meta = document.createElement('div');
+        meta.className = 'comment-meta';
+        const author = document.createElement('strong');
+        author.className = 'comment-author';
+        author.textContent = comment.authorName || 'Usuário';
+        const date = document.createElement('time');
+        date.className = 'comment-date';
+        date.dateTime = comment.createdAt || '';
+        date.textContent = formatCommentDate(comment.createdAt);
+        meta.append(author, date);
+        entry.appendChild(meta);
+        if (state.canDeleteComments) {
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'delete-comment-button';
+          remove.textContent = 'Apagar';
+          remove.addEventListener('click', () => {
+            deleteComment(card.id, comment.id).catch((error) => showToast(error.message, true));
+          });
+          entry.appendChild(remove);
+        }
+        const text = document.createElement('p');
+        text.className = 'comment-text';
+        text.textContent = comment.text;
+        entry.appendChild(text);
+        elements.commentsList.appendChild(entry);
+      });
+    }
+    elements.commentForm.hidden = !state.canComment;
+    elements.adminCommentNote.hidden = !state.canDeleteComments;
+  }
+
+  function openComments(cardId) {
+    const card = getCard(cardId);
+    if (!card) return;
+    state.activeCommentsCardId = cardId;
+    elements.commentText.value = '';
+    renderComments();
+    showDialog(elements.commentsDialog);
+  }
+
+  async function submitComment(event) {
+    event.preventDefault();
+    if (!state.canComment || state.collaborationBusy) return;
+    const card = getCard(state.activeCommentsCardId);
+    const text = elements.commentText.value.trim().slice(0, 800);
+    if (!card || !text) {
+      elements.commentText.focus();
+      showToast('Escreva um comentário antes de enviar.', true);
+      return;
+    }
+    state.collaborationBusy = true;
+    elements.sendCommentButton.disabled = true;
+    try {
+      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      applyCollaborationProject(payload.project);
+      elements.commentText.value = '';
+      renderComments();
+      showToast('Comentário adicionado.');
+    } finally {
+      state.collaborationBusy = false;
+      elements.sendCommentButton.disabled = false;
+    }
+  }
+
+  async function deleteComment(cardId, commentId) {
+    if (!state.canDeleteComments || state.collaborationBusy) return;
+    if (!window.confirm('Apagar este comentário?')) return;
+    state.collaborationBusy = true;
+    try {
+      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(cardId)}/comments/${encodeURIComponent(commentId)}`, {
+        method: 'DELETE'
+      });
+      applyCollaborationProject(payload.project);
+      renderComments();
+      showToast('Comentário apagado.');
+    } finally {
+      state.collaborationBusy = false;
+    }
+  }
+
+  function moveCardBeside(draggedId, targetId, placeAfter) {
+    if (!draggedId || !targetId || draggedId === targetId) return false;
+    const cards = state.project.cards;
+    const draggedIndex = cards.findIndex((card) => card.id === draggedId);
+    if (draggedIndex < 0) return false;
+    const [draggedCard] = cards.splice(draggedIndex, 1);
+    const targetIndex = cards.findIndex((card) => card.id === targetId);
+    if (targetIndex < 0) {
+      cards.splice(draggedIndex, 0, draggedCard);
+      return false;
+    }
+    cards.splice(targetIndex + (placeAfter ? 1 : 0), 0, draggedCard);
+
+    const draggedNode = elements.trackList.querySelector(`[data-card-id="${CSS.escape(draggedId)}"]`);
+    const targetNode = elements.trackList.querySelector(`[data-card-id="${CSS.escape(targetId)}"]`);
+    if (draggedNode && targetNode) {
+      elements.trackList.insertBefore(draggedNode, placeAfter ? targetNode.nextSibling : targetNode);
+    }
+    return true;
+  }
+
+  async function persistCardOrder() {
+    if (!state.canReorder || state.collaborationBusy) return;
+    state.collaborationBusy = true;
+    setStatus('Salvando nova ordem…', true);
+    try {
+      const payload = await apiJson(`${API_ROOT}/order`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cardIds: state.project.cards.map((card) => card.id) })
+      });
+      applyCollaborationProject(payload.project);
+      setStatus('Nova ordem salva para todos.');
+      showToast('Ordem dos containers atualizada.');
+    } catch (error) {
+      const payload = await apiJson(`${API_ROOT}/project`).catch(() => null);
+      if (payload?.project) applyCollaborationProject(payload.project);
+      throw error;
+    } finally {
+      state.collaborationBusy = false;
+    }
+  }
+
+  function bindSortGestures(element, cardId) {
+    let moved = false;
+    const moveFromPoint = (clientX, clientY) => {
+      const target = document.elementFromPoint(clientX, clientY)?.closest?.('.track-card');
+      const targetId = target?.dataset?.cardId;
+      if (!targetId || targetId === cardId) return;
+      const rect = target.getBoundingClientRect();
+      moved = moveCardBeside(cardId, targetId, clientY > rect.top + rect.height / 2) || moved;
+    };
+
+    element.addEventListener('dragstart', (event) => {
+      state.sortingCardId = cardId;
+      moved = false;
+      element.classList.add('is-dragging');
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', cardId);
+    });
+    element.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      const draggedId = state.sortingCardId || event.dataTransfer.getData('text/plain');
+      if (!draggedId || draggedId === cardId) return;
+      const rect = element.getBoundingClientRect();
+      moved = moveCardBeside(draggedId, cardId, event.clientY > rect.top + rect.height / 2) || moved;
+    });
+    element.addEventListener('drop', (event) => {
+      event.preventDefault();
+      state.sortingCardId = '';
+      element.classList.remove('is-dragging');
+      if (moved) persistCardOrder().catch((error) => showToast(error.message, true));
+      moved = false;
+    });
+    element.addEventListener('dragend', () => {
+      element.classList.remove('is-dragging');
+      state.sortingCardId = '';
+      if (moved) persistCardOrder().catch((error) => showToast(error.message, true));
+      moved = false;
+    });
+
+    element.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse') return;
+      event.preventDefault();
+      moved = false;
+      state.sortingCardId = cardId;
+      element.classList.add('is-dragging');
+      element.setPointerCapture?.(event.pointerId);
+    });
+    element.addEventListener('pointermove', (event) => {
+      if (state.sortingCardId !== cardId || event.pointerType === 'mouse') return;
+      event.preventDefault();
+      moveFromPoint(event.clientX, event.clientY);
+    });
+    const finishPointerSort = (event) => {
+      if (state.sortingCardId !== cardId || event.pointerType === 'mouse') return;
+      state.sortingCardId = '';
+      element.classList.remove('is-dragging');
+      element.releasePointerCapture?.(event.pointerId);
+      if (moved) persistCardOrder().catch((error) => showToast(error.message, true));
+      moved = false;
+    };
+    element.addEventListener('pointerup', finishPointerSort);
+    element.addEventListener('pointercancel', finishPointerSort);
+  }
+
+  function toggleSortMode() {
+    if (!state.canReorder || state.collaborationBusy) return;
+    state.sortMode = !state.sortMode;
+    render();
+    showToast(state.sortMode ? 'Modo de ordenar ativado. Arraste os containers.' : 'Modo de ordenar concluído.');
   }
 
   async function getCache() {
@@ -1238,23 +1572,6 @@
     (kind === 'audio' ? elements.audioInput : elements.imageInput).click();
   }
 
-  function addCard() {
-    if (!state.canEdit) return;
-    const card = {
-      id: makeId(),
-      title: `Faixa ${String(state.project.cards.length + 1).padStart(2, '0')}`,
-      audio: null,
-      image: null
-    };
-    state.project.cards.push(card);
-    state.selectedId = card.id;
-    render();
-    queueProjectSave(50);
-    window.requestAnimationFrame(() => {
-      elements.trackList.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-  }
-
   function removeSelectedCard() {
     if (!state.canEdit) return;
     const card = getCard(state.selectedId);
@@ -1274,7 +1591,21 @@
   }
 
   function bindControls() {
-    elements.addCardButton.addEventListener('click', addCard);
+    elements.addCardButton.addEventListener('click', openAddCardDialog);
+    elements.sortButton.addEventListener('click', toggleSortMode);
+    elements.addCardForm.addEventListener('submit', (event) => {
+      submitNewCard(event).catch((error) => showToast(error.message, true));
+    });
+    elements.closeAddCardDialog.addEventListener('click', () => closeDialog(elements.addCardDialog));
+    elements.commentForm.addEventListener('submit', (event) => {
+      submitComment(event).catch((error) => showToast(error.message, true));
+    });
+    elements.closeCommentsDialog.addEventListener('click', () => closeDialog(elements.commentsDialog));
+    [elements.addCardDialog, elements.commentsDialog].forEach((dialog) => {
+      dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) closeDialog(dialog);
+      });
+    });
     elements.downloadAllButton.addEventListener('click', () => {
       downloadAll().catch((error) => {
         setStatus('O download foi interrompido.');
@@ -1339,13 +1670,15 @@
     try {
       const payload = await apiJson(`${API_ROOT}/project`);
       state.canEdit = payload.canEdit === true;
+      state.canContribute = payload.canContribute === true;
+      state.canComment = payload.canComment === true;
+      state.canDeleteComments = payload.canDeleteComments === true;
+      state.canReorder = payload.canReorder === true;
       state.project = payload.project || { version: 1, cards: [] };
-      if (state.canEdit && (!Array.isArray(state.project.cards) || !state.project.cards.length)) {
-        state.project.cards = makeDefaultCards();
-        await saveProject().catch(() => {});
-      }
       render();
-      setStatus('Pronto. Toque para reproduzir; segure 500 ms para selecionar.');
+      setStatus(state.canEdit
+        ? 'Pronto. Toque para reproduzir; segure 500 ms para editar.'
+        : 'Pronto. Toque para reproduzir ou use + para adicionar um container.');
       refreshDownloadStates().catch(() => {});
     } catch (error) {
       setStatus('Não foi possível abrir o musical.');
