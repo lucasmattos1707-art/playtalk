@@ -20,6 +20,7 @@
     closeSelectionButton: document.getElementById('closeSelectionButton'),
     addCardButton: document.getElementById('addCardButton'),
     sortButton: document.getElementById('sortButton'),
+    refreshButton: document.getElementById('refreshButton'),
     downloadAllButton: document.getElementById('downloadAllButton'),
     addCardDialog: document.getElementById('addCardDialog'),
     addCardForm: document.getElementById('addCardForm'),
@@ -60,6 +61,7 @@
     sortingCardId: '',
     activeCommentsCardId: '',
     collaborationBusy: false,
+    refreshing: false,
     selectedId: '',
     current: null,
     colorMode: 'idle',
@@ -486,6 +488,39 @@
       closeDialog(elements.commentsDialog);
     }
     render();
+    if (state.activeCommentsCardId && elements.commentsDialog.hasAttribute('open')) renderComments();
+  }
+
+  function applyProjectPayload(payload) {
+    state.canEdit = payload.canEdit === true;
+    state.canContribute = payload.canContribute === true;
+    state.canComment = payload.canComment === true;
+    state.canApprove = payload.canApprove === true;
+    state.canDeleteComments = payload.canDeleteComments === true;
+    state.canReorder = payload.canReorder === true;
+    state.unreadCardIds = new Set(Array.isArray(payload.unreadCardIds) ? payload.unreadCardIds : []);
+    applyCollaborationProject(payload.project || { version: 1, cards: [] });
+  }
+
+  async function refreshProject() {
+    if (state.refreshing) return;
+    state.refreshing = true;
+    elements.refreshButton.disabled = true;
+    elements.refreshButton.classList.add('is-refreshing');
+    elements.refreshButton.setAttribute('aria-label', 'Atualizando o musical');
+    setStatus('Atualizando containers, áudios e comentários…', true);
+    try {
+      const payload = await apiJson(`${API_ROOT}/project`, { cache: 'no-store' });
+      applyProjectPayload(payload);
+      await refreshDownloadStates().catch(() => {});
+      setStatus('Musical atualizado agora.');
+      showToast('Musical atualizado.');
+    } finally {
+      state.refreshing = false;
+      elements.refreshButton.disabled = false;
+      elements.refreshButton.classList.remove('is-refreshing');
+      elements.refreshButton.setAttribute('aria-label', 'Atualizar containers, áudios e comentários');
+    }
   }
 
   function openAddCardDialog() {
@@ -1676,6 +1711,12 @@
   }
 
   function bindControls() {
+    elements.refreshButton.addEventListener('click', () => {
+      refreshProject().catch((error) => {
+        setStatus('Não foi possível atualizar o musical.');
+        showToast(error.message || 'Falha ao atualizar.', true);
+      });
+    });
     elements.addCardButton.addEventListener('click', openAddCardDialog);
     elements.sortButton.addEventListener('click', toggleSortMode);
     elements.addCardForm.addEventListener('submit', (event) => {
@@ -1757,15 +1798,7 @@
     runProgressLoop();
     try {
       const payload = await apiJson(`${API_ROOT}/project`);
-      state.canEdit = payload.canEdit === true;
-      state.canContribute = payload.canContribute === true;
-      state.canComment = payload.canComment === true;
-      state.canApprove = payload.canApprove === true;
-      state.canDeleteComments = payload.canDeleteComments === true;
-      state.canReorder = payload.canReorder === true;
-      state.unreadCardIds = new Set(Array.isArray(payload.unreadCardIds) ? payload.unreadCardIds : []);
-      state.project = payload.project || { version: 1, cards: [] };
-      render();
+      applyProjectPayload(payload);
       setStatus(state.canEdit
         ? 'Pronto. Toque para reproduzir; segure 500 ms para editar.'
         : 'Pronto. Toque para reproduzir ou use + para adicionar um container.');

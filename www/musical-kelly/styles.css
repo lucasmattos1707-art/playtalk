@@ -157,6 +157,15 @@ button {
   background: var(--green);
 }
 
+#refreshButton.is-refreshing svg {
+  animation: downloadLoop 720ms linear infinite;
+}
+
+#refreshButton:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .primary-action {
   border-color: rgba(85, 230, 138, 0.45);
   color: #07110c;
