@@ -3,6 +3,7 @@
 
   const API_ROOT = '/api/musical-kelly';
   const CACHE_NAME = 'playtalk-musical-kelly-media-v1';
+  const PROJECT_SNAPSHOT_KEY = 'playtalk-musical-kelly-project-snapshot-v1';
   const LONG_PRESS_MS = 500;
   const USE_NATIVE_AUDIO_ON_APPLE = isAppleTouchDevice();
 
@@ -109,6 +110,33 @@
     state.toastTimer = window.setTimeout(() => {
       elements.toast.hidden = true;
     }, isError ? 5200 : 3000);
+  }
+
+  function saveProjectSnapshot(project) {
+    try {
+      localStorage.setItem(PROJECT_SNAPSHOT_KEY, JSON.stringify({
+        savedAt: new Date().toISOString(),
+        permissions: {
+          canEdit: state.canEdit,
+          canContribute: state.canContribute,
+          canComment: state.canComment,
+          canApprove: state.canApprove,
+          canDeleteComments: state.canDeleteComments,
+          canReorder: state.canReorder
+        },
+        project
+      }));
+    } catch (_error) {}
+  }
+
+  function readProjectSnapshot() {
+    try {
+      const snapshot = JSON.parse(localStorage.getItem(PROJECT_SNAPSHOT_KEY) || 'null');
+      if (!snapshot?.project || !Array.isArray(snapshot.project.cards)) return null;
+      return snapshot;
+    } catch (_error) {
+      return null;
+    }
   }
 
   async function apiJson(url, options = {}) {
@@ -491,6 +519,7 @@
   function applyCollaborationProject(project) {
     if (!project || !Array.isArray(project.cards)) return;
     state.project = project;
+    saveProjectSnapshot(project);
     if (state.selectedId && !getCard(state.selectedId)) state.selectedId = '';
     if (state.activeCommentsCardId && !getCard(state.activeCommentsCardId)) {
       state.activeCommentsCardId = '';
@@ -1836,8 +1865,22 @@
         : 'Pronto. Toque para reproduzir ou use + para adicionar um container.');
       refreshDownloadStates().catch(() => {});
     } catch (error) {
-      setStatus('Não foi possível abrir o musical.');
-      showToast(error.message || 'Falha ao carregar.', true);
+      const snapshot = readProjectSnapshot();
+      if (snapshot) {
+        const permissions = snapshot.permissions || {};
+        state.canEdit = permissions.canEdit === true;
+        state.canContribute = permissions.canContribute !== false;
+        state.canComment = permissions.canComment !== false;
+        state.canApprove = permissions.canApprove !== false;
+        state.canDeleteComments = permissions.canDeleteComments === true;
+        state.canReorder = permissions.canReorder === true;
+        applyCollaborationProject(snapshot.project);
+        setStatus('Mostrando a última versão salva enquanto a conexão volta.');
+        showToast('Conexão instável. Exibindo a última versão salva.', true);
+      } else {
+        setStatus('Não foi possível abrir o musical.');
+        showToast(error.message || 'Falha ao carregar.', true);
+      }
     }
   }
 

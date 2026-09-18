@@ -8507,6 +8507,32 @@ function getR2Client() {
   return r2Client;
 }
 
+function resetR2Client() {
+  try { r2Client?.destroy?.(); } catch (_error) {}
+  r2Client = null;
+}
+
+async function sendR2CommandWithRecovery(command, options = {}) {
+  const timeoutMs = Math.max(1000, Number(options.timeoutMs) || 15000);
+  const retries = Math.max(0, Math.min(2, Number(options.retries) || 0));
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    timer.unref?.();
+    try {
+      return await getR2Client().send(command, { abortSignal: controller.signal });
+    } catch (error) {
+      lastError = error;
+      resetR2Client();
+      if (attempt >= retries) throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastError;
+}
+
 async function readR2BodyAsBuffer(body) {
   if (!body) {
     return Buffer.alloc(0);
@@ -8931,11 +8957,11 @@ async function requestR2(method, pathName, queryParams = {}) {
   }
 }
 
-async function putR2Object(objectKey, bodyBuffer, contentType = 'application/octet-stream') {
+async function putR2Object(objectKey, bodyBuffer, contentType = 'application/octet-stream', options = {}) {
   const payloadBuffer = Buffer.isBuffer(bodyBuffer) ? bodyBuffer : Buffer.from(bodyBuffer || []);
   const payloadHash = sha256HexBuffer(payloadBuffer);
   try {
-    await getR2Client().send(new PutObjectCommand({
+    const command = new PutObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: objectKey,
       Body: payloadBuffer,
@@ -8943,7 +8969,9 @@ async function putR2Object(objectKey, bodyBuffer, contentType = 'application/oct
       Metadata: {
         sha256: payloadHash
       }
-    }));
+    });
+    if (options.timeoutMs) await sendR2CommandWithRecovery(command, options);
+    else await getR2Client().send(command);
     return true;
   } catch (error) {
     const details = error?.message || error?.Code || String(error);
@@ -15917,14 +15945,39 @@ async function resolveFluencyPhaseObjectKey(dayNumber, phaseNumber) {
   return jsonKeys[0] || null;
 }
 
-async function fetchR2JsonObject(objectKey) {
+async function fetchR2JsonObject(objectKey, options = {}) {
   try {
-    const response = await getR2Client().send(new GetObjectCommand({
+    const command = new GetObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: objectKey
-    }));
-    const raw = (await readR2BodyAsBuffer(response?.Body)).toString('utf8');
-    return JSON.parse(raw);
+    });
+    if (!options.timeoutMs) {
+      const response = await getR2Client().send(command);
+      const raw = (await readR2BodyAsBuffer(response?.Body)).toString('utf8');
+      return JSON.parse(raw);
+    }
+    const timeoutMs = Math.max(1000, Number(options.timeoutMs) || 15000);
+    const retries = Math.max(0, Math.min(2, Number(options.retries) || 0));
+    let lastError;
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      timer.unref?.();
+      try {
+        const response = await getR2Client().send(command, { abortSignal: controller.signal });
+        const raw = (await readR2BodyAsBuffer(response?.Body)).toString('utf8');
+        return JSON.parse(raw);
+      } catch (error) {
+        lastError = error;
+        const status = Number(error?.$metadata?.httpStatusCode || 0);
+        if (status === 404 || error?.Code === 'NoSuchKey') throw error;
+        resetR2Client();
+        if (attempt >= retries) throw error;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    throw lastError;
   } catch (error) {
     const status = Number(error?.$metadata?.httpStatusCode || 0);
     if (status === 404 || error?.Code === 'NoSuchKey') {
@@ -16047,6 +16100,7 @@ function normalizeMusicalKellyProject(payload) {
 
 let musicalKellyProjectMutationQueue = Promise.resolve();
 const musicalKellyNotificationMutationQueues = new Map();
+let musicalKellyProjectCache = null;
 
 function queueMusicalKellyProjectMutation(callback) {
   const operation = musicalKellyProjectMutationQueue.then(callback, callback);
@@ -16110,11 +16164,19 @@ function musicalKellyUnreadCardIds(project, notificationState) {
 
 async function readMusicalKellyGlobalProject() {
   try {
-    return normalizeMusicalKellyProject(await fetchR2JsonObject(`${musicalKellyGlobalRoot()}/project.json`));
+    const project = normalizeMusicalKellyProject(await fetchR2JsonObject(
+      `${musicalKellyGlobalRoot()}/project.json`,
+      { timeoutMs: 12000, retries: 1 }
+    ));
+    musicalKellyProjectCache = project;
+    return normalizeMusicalKellyProject(project);
   } catch (error) {
     if (Number(error?.status || error?.statusCode || 0) === 404) {
-      return normalizeMusicalKellyProject({ cards: [] });
+      const emptyProject = normalizeMusicalKellyProject({ cards: [] });
+      musicalKellyProjectCache = emptyProject;
+      return normalizeMusicalKellyProject(emptyProject);
     }
+    if (musicalKellyProjectCache) return normalizeMusicalKellyProject(musicalKellyProjectCache);
     throw error;
   }
 }
@@ -16127,9 +16189,11 @@ async function writeMusicalKellyGlobalProject(project) {
   await putR2Object(
     `${musicalKellyGlobalRoot()}/project.json`,
     Buffer.from(`${JSON.stringify(normalized, null, 2)}\n`, 'utf8'),
-    'application/json; charset=utf-8'
+    'application/json; charset=utf-8',
+    { timeoutMs: 15000, retries: 1 }
   );
-  return normalized;
+  musicalKellyProjectCache = normalized;
+  return normalizeMusicalKellyProject(normalized);
 }
 
 async function requireMusicalKellyUserFromRequest(req) {
@@ -26147,11 +26211,18 @@ app.get('/api/musical-kelly/project', async (req, res) => {
     const objectKey = `${musicalKellyGlobalRoot()}/project.json`;
     let project;
     try {
-      project = normalizeMusicalKellyProject(await fetchR2JsonObject(objectKey));
+      project = normalizeMusicalKellyProject(await fetchR2JsonObject(objectKey, { timeoutMs: 12000, retries: 1 }));
+      musicalKellyProjectCache = project;
     } catch (error) {
-      if (Number(error?.status || error?.statusCode || 0) !== 404) throw error;
-      project = await migrateMusicalKellyAdminProjectToGlobal(authUser)
-        || normalizeMusicalKellyProject({ cards: [] });
+      if (Number(error?.status || error?.statusCode || 0) === 404) {
+        project = await migrateMusicalKellyAdminProjectToGlobal(authUser)
+          || normalizeMusicalKellyProject({ cards: [] });
+        musicalKellyProjectCache = project;
+      } else if (musicalKellyProjectCache) {
+        project = normalizeMusicalKellyProject(musicalKellyProjectCache);
+      } else {
+        throw error;
+      }
     }
 
     let unreadCardIds = [];
