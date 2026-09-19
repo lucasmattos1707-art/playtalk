@@ -80,6 +80,7 @@ test('course persistence, strict step/action order, 70% pass threshold and one-t
     assert.equal((await action('welcome', 'tutorial')).response.status, 200);
     assert.equal((await action('morning', 'speak', { audioDataUrl: ogg })).response.status, 409);
     assert.equal(fixture.counters.spoken, 0);
+    assert.equal((await action('cards', 'start')).response.status, 409);
     assert.equal((await action('morning', 'listenEn')).response.status, 409);
     assert.equal((await action('morning', 'listenPt')).payload.stage, 1);
     assert.equal((await action('morning', 'listenPt')).response.status, 409);
@@ -98,6 +99,13 @@ test('course persistence, strict step/action order, 70% pass threshold and one-t
     assert.equal((await action('cards', 'phase1')).payload.progress.points, 200);
     const loaded = await fixture.call('/api/journey', 'GET', null, 'user');
     assert.equal(loaded.payload.progress.currentIndex, 3);
+    const replay = await action('welcome', 'start');
+    assert.equal(replay.response.status, 200);
+    assert.equal(replay.payload.progress.currentIndex, 3);
+    assert.equal(replay.payload.progress.steps.find(item => item.id === 'welcome').plays, 1);
+    const replayedTutorial = await action('welcome', 'tutorial');
+    assert.equal(replayedTutorial.payload.progress.currentIndex, 3);
+    assert.equal(replayedTutorial.payload.earnedPoints, 0);
     const rows = (await fixture.pool.query('SELECT * FROM public.user_journey_course_progress')).rows;
     assert.equal(rows.some(row => Object.keys(row).some(key => /audio|recording|blob|transcript/i.test(key))), false);
   } finally { await fixture.close(); }
@@ -218,28 +226,54 @@ test('course rows expose the edit pen modal and all six isolated game modes', as
   assert.equal(window.document.getElementById('stepEditorModal').hidden, true);
   dom.window.close();
 });
-test('regular users entering journeyplan automatically open their current journey modal', async () => {
+test('regular users entering journeyplan see completed, current and locked lessons before playing', async () => {
   const html = fs.readFileSync(path.join(__dirname, '../www/journeyplan.html'), 'utf8');
   const dom = new JSDOM(html, { url: 'http://localhost/journeyplan', runScripts: 'outside-only' });
   const { window } = dom;
   const requested = [];
-  let started = 0, launcher = null;
+  let started = 0, launcher = null, startOptions = null;
+  const steps = [
+    { id: 'done', type: 'tutorial', title: 'Aula concluída' },
+    { id: 'current', type: 'interactive', title: 'Aula atual' },
+    { id: 'future', type: 'phase1', title: 'Aula futura' }
+  ];
   window.PlaytalkJourney = {
     request: async route => {
       requested.push(route);
       if (route === '/auth/session') return { user: { is_admin: false } };
+      if (route === '/api/journey') return {
+        plan: { revision: 1, steps },
+        progress: { currentIndex: 1, steps: [
+          { id: 'done', completed: true, plays: 2, accuracy: 0 },
+          { id: 'current', completed: false, plays: 1, accuracy: 55 },
+          { id: 'future', completed: false, plays: 0, accuracy: 0 }
+        ] }
+      };
       throw new Error(`Unexpected request: ${route}`);
     },
     post: async () => ({}), preview: async () => {},
     setPhaseLauncher: callback => { launcher = callback; },
-    tryStart: async options => { started++; assert.equal(typeof options.onClose, 'function'); return true; }
+    tryStart: async options => { started++; startOptions = options; assert.equal(typeof options.onClose, 'function'); return true; }
   };
   window.eval(fs.readFileSync(path.join(__dirname, '../www/js/journeyplan-page.js'), 'utf8'));
   for (let i = 0; i < 5; i++) await turn();
-  assert.equal(started, 1);
+  assert.equal(started, 0);
   assert.equal(typeof launcher, 'function');
-  assert.deepEqual(requested, ['/auth/session']);
+  assert.deepEqual(requested, ['/auth/session', '/api/journey']);
+  assert.equal(window.document.getElementById('journeyplanStudent').hidden, false);
   assert.equal(window.document.getElementById('journeyplanAdmin').hidden, true);
+  const lessonButtons = [...window.document.querySelectorAll('.journeyplan-student-step')];
+  assert.equal(lessonButtons.length, 3);
+  assert.equal(lessonButtons[0].disabled, false);
+  assert.equal(lessonButtons[1].disabled, false);
+  assert.equal(lessonButtons[2].disabled, true);
+  assert.equal(lessonButtons[0].querySelector('.journeyplan-student-plays').textContent, '2x');
+  assert.equal(lessonButtons[0].querySelector('.journeyplan-student-score').textContent, '100%');
+  assert.equal(lessonButtons[1].querySelector('.journeyplan-student-score').textContent, '55%');
+  lessonButtons[0].click(); await turn();
+  assert.equal(started, 1);
+  assert.equal(startOptions.index, 0);
+  assert.equal(startOptions.singleStep, true);
   dom.window.close();
 });
 test('existing-phase journey runtime requires five stars and suppresses cards, coins and XP', () => {
@@ -249,16 +283,16 @@ test('existing-phase journey runtime requires five stars and suppresses cards, c
   assert.match(source, /!journeyPhaseRuntime && isLevelModeAcquisitionFlowActive\(\)/);
   assert.match(source, /const earnedCoins = journeyPhaseRuntime \? 0/);
   assert.match(source, /const earnedXp = journeyPhaseRuntime \? 0/);
-  assert.match(source, /tryStart\(\{ onClose: restoreWelcomeAfterJourneyClose \}\)/);
+  assert.match(source, /tryStart\(\{ onClose, \.\.\.journeyOptions \}\)/);
   assert.doesNotMatch(source, /journeyPhaseRuntime \|\| !window\.PlaytalkJourney \|\| !state\.user\?\.id/);
-  assert.match(source, /event\?\.preventDefault\?\.\(\);[\s\S]{0,100}event\?\.stopPropagation\?\.\(\);[\s\S]{0,500}PlaytalkJourney\.tryStart/);
-  assert.match(source, /playButton\.setAttribute\('aria-busy', 'true'\)[\s\S]{0,900}playButton\.removeAttribute\('aria-busy'\)/);
+  assert.match(source, /event\?\.preventDefault\?\.\(\);[\s\S]{0,100}event\?\.stopPropagation\?\.\(\);[\s\S]{0,900}PlaytalkJourney\.tryStart/);
+  assert.match(source, /playButton\.setAttribute\('aria-busy', 'true'\)[\s\S]{0,1500}playButton\.removeAttribute\('aria-busy'\)/);
   assert.match(source, /if \(state\.entry\.journeyAvailable\) \{[\s\S]{0,120}closeWelcomeLanguageSetupModal\(\)/);
   assert.match(source, /PlaytalkJourney\.request\('\/api\/journey'\)[\s\S]{0,220}journeyAvailable = Boolean\(journeyPayload\?\.plan\?\.steps\?\.length\)/);
   assert.match(source, /if \(state\.entry\.journeyAvailable\) return false;/);
   assert.match(source, /if \(handled\) \{[\s\S]{0,260}hideWelcomeGate\(\)/);
   assert.match(source, /state\.entry\.welcomeDismissed = false;[\s\S]{0,180}if \(!state\.game\.active\) syncWelcomeGate\(\)/);
-  assert.match(source, /journeyParams\.get\('journeyAuto'\) === '1'[\s\S]{0,120}startConfiguredJourney\(\)/);
+  assert.match(source, /journeyParams\.get\('journeyAuto'\) === '1'[\s\S]{0,160}startConfiguredJourney\(null,/);
 });
 test('student phase launches the existing game, records completion and returns to the journey', async () => {
   const dom = new JSDOM('<!DOCTYPE html><body><main><button>Jogar</button></main></body>', { url: 'http://localhost/play', runScripts: 'outside-only' });
@@ -270,6 +304,7 @@ test('student phase launches the existing game, records completion and returns t
   window.fetch = async (url, options = {}) => {
     if (url === '/api/journey') return { ok: true, json: async () => ({ success: true, plan: { revision: 3, steps: [phase] }, progress }) };
     const body = JSON.parse(options.body || '{}'); actions.push(body);
+    if (body.action === 'start') return { ok: true, json: async () => ({ success: true, progress, stage: 0, completed: false, earnedPoints: 0 }) };
     progress.steps[0] = { id: phase.id, stage: 3, completed: true };
     progress.currentIndex = 1; progress.points = 100;
     return { ok: true, json: async () => ({ success: true, progress, stage: 3, completed: true, earnedPoints: 100 }) };
@@ -280,9 +315,9 @@ test('student phase launches the existing game, records completion and returns t
   await window.PlaytalkJourney.tryStart({ onClose: () => { closed++; } });
   const start = [...window.document.querySelectorAll('button')].find(button => button.textContent === 'Iniciar jogo');
   assert.ok(start); start.click();
-  for (let i = 0; i < 12 && !actions.length; i++) await turn();
+  for (let i = 0; i < 12 && actions.length < 2; i++) await turn();
   assert.equal(launched?.explorerMode, 4);
-  assert.equal(actions[0]?.action, 'phase1');
+  assert.deepEqual(actions.map(action => action.action), ['start', 'phase1']);
   assert.match(window.document.getElementById('journey-modal-title').textContent, /Jornada concluída/);
   window.PlaytalkJourney.close();
   assert.equal(closed, 1);

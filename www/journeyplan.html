@@ -6,10 +6,24 @@
   <title>Jornada · PlayTalk</title>
   <link rel="stylesheet" href="css/video-background.css">
   <link rel="stylesheet" href="css/journey.css?v=20260917d">
-  <link rel="stylesheet" href="css/journeyplan.css">
+  <link rel="stylesheet" href="css/journeyplan.css?v=20260919a">
 </head>
 <body>
   <div id="journeyplanEntryStatus" class="journeyplan-entry-status" role="status" aria-live="polite">Abrindo sua jornada…</div>
+  <main id="journeyplanStudent" class="journeyplan-shell journeyplan-student" hidden>
+    <header class="journeyplan-topbar">
+      <div><p class="journeyplan-eyebrow">PLAYTALK · SUA JORNADA</p><h1>Escolha uma aula</h1><p>Continue de onde parou ou jogue novamente uma aula já alcançada.</p></div>
+      <a href="/play" class="journey-button journey-button-secondary">Voltar ao jogo</a>
+    </header>
+    <section class="journeyplan-panel journeyplan-student-panel" aria-labelledby="studentJourneyTitle">
+      <div class="journeyplan-student-heading">
+        <div><h2 id="studentJourneyTitle">Aulas da jornada</h2><p id="studentJourneyProgress" class="journeyplan-note"></p></div>
+        <div class="journeyplan-student-legend" aria-hidden="true"><span>Jogadas</span><span>Melhor</span></div>
+      </div>
+      <ol id="studentStepsList" class="journeyplan-student-list"></ol>
+      <p id="studentJourneyStatus" class="journeyplan-status" role="status" aria-live="polite"></p>
+    </section>
+  </main>
   <main id="journeyplanAdmin" class="journeyplan-shell" hidden>
     <header class="journeyplan-topbar">
       <div><p class="journeyplan-eyebrow">PLAYTALK · ADMIN</p><h1>Planeje a jornada</h1><p>Crie a sequência que vai guiar cada aluno pelo curso.</p></div>
@@ -70,6 +84,6 @@
   </main>
   <script src="js/android-config.js"></script><script src="js/api-config.js"></script><script src="js/android-shell.js"></script>
   <script src="js/vendor/opus-recorder/recorder.min.js"></script>
-  <script src="js/journey-player.js?v=20260917d"></script><script src="js/journeyplan-page.js?v=20260917e"></script><script src="js/video-background.js"></script>
+  <script src="js/journey-player.js?v=20260919a"></script><script src="js/journeyplan-page.js?v=20260919a"></script><script src="js/video-background.js"></script>
 </body>
 </html>

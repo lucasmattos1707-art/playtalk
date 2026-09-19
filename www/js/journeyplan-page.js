@@ -18,6 +18,7 @@
   const pending = new Set();
   const entryStatus = $('journeyplanEntryStatus');
   const adminShell = $('journeyplanAdmin');
+  const studentShell = $('journeyplanStudent');
   const status = (text, error = false) => { $('planStatus').textContent = text; $('planStatus').classList.toggle('is-error', error); };
   const markDirty = () => { dirty = true; $('savePlan').textContent = 'Salvar jornada · alterações pendentes'; };
   const current = () => plan?.steps.find(s => s.id === selected);
@@ -26,6 +27,44 @@
     working++; syncBusy();
     try { await action(); } catch (error) { status(error.message, true); }
     finally { working--; syncBusy(); }
+  }
+  function studentScore(step, progress) {
+    if (step.type === 'interactive') return progress.accuracy > 0 ? `${progress.accuracy}%` : '—';
+    return progress.completed ? '100%' : '—';
+  }
+  async function loadStudentMenu() {
+    const payload = await window.PlaytalkJourney.request('/api/journey');
+    const completed = payload.progress.steps.filter(step => step.completed).length;
+    $('studentJourneyProgress').textContent = `${completed} de ${payload.plan.steps.length} ${payload.plan.steps.length === 1 ? 'aula concluída' : 'aulas concluídas'}`;
+    $('studentStepsList').replaceChildren();
+    payload.plan.steps.forEach((step, index) => {
+      const progress = payload.progress.steps.find(item => item.id === step.id) || { plays: 0, accuracy: 0, completed: false };
+      const locked = index > payload.progress.currentIndex;
+      const row = document.createElement('li'); row.className = `journeyplan-student-row${progress.completed ? ' is-complete' : ''}${locked ? ' is-locked' : ''}`;
+      const button = document.createElement('button'); button.type = 'button'; button.className = 'journeyplan-student-step'; button.disabled = locked;
+      button.setAttribute('aria-label', locked ? `${step.title}, bloqueada` : `${step.title}, jogar aula`);
+      const number = document.createElement('span'); number.className = 'journeyplan-student-number'; number.textContent = progress.completed ? '✓' : (locked ? '🔒' : String(index + 1));
+      const copy = document.createElement('span'); copy.className = 'journeyplan-student-copy';
+      const title = document.createElement('strong'); title.textContent = step.title;
+      const state = document.createElement('small'); state.textContent = progress.completed ? 'Concluída · jogar novamente' : (locked ? 'Conclua a aula anterior para liberar' : 'Disponível agora');
+      copy.append(title, state);
+      const plays = document.createElement('span'); plays.className = 'journeyplan-student-plays'; plays.textContent = `${progress.plays || 0}x`;
+      const score = document.createElement('span'); score.className = 'journeyplan-student-score'; score.textContent = studentScore(step, progress);
+      button.append(number, copy, plays, score); row.append(button); $('studentStepsList').append(row);
+      if (!locked) button.onclick = async () => {
+        button.disabled = true; $('studentJourneyStatus').textContent = 'Abrindo aula…';
+        try {
+          await window.PlaytalkJourney.tryStart({
+            index, singleStep: true,
+            onClose: () => loadStudentMenu().catch(error => { $('studentJourneyStatus').textContent = error.message; })
+          });
+          $('studentJourneyStatus').textContent = '';
+        } catch (error) {
+          button.disabled = false; $('studentJourneyStatus').textContent = error.message || 'Não foi possível abrir esta aula.';
+        }
+      };
+    });
+    entryStatus.hidden = true; studentShell.hidden = false;
   }
   function updateCounters() {
     const step = current();
@@ -189,14 +228,12 @@
   try {
     const session = await window.PlaytalkJourney.request('/auth/session');
     if (!session.user?.is_admin) {
-      window.PlaytalkJourney.setPhaseLauncher(async () => {
-        window.location.assign('/play?journeyAuto=1');
+      window.PlaytalkJourney.setPhaseLauncher(async step => {
+        const params = new URLSearchParams({ journeyAuto: '1', journeyStep: step.id, journeySingle: '1', journeyStarted: '1', journeyReturn: '1' });
+        window.location.assign(`/play?${params}`);
         return new Promise(() => {});
       });
-      const started = await window.PlaytalkJourney.tryStart({
-        onClose: () => window.location.assign('/play')
-      });
-      if (!started) window.location.replace('/play');
+      await loadStudentMenu();
       return;
     }
     entryStatus.hidden = true;

@@ -93,9 +93,9 @@
   class JourneyPlayer {
     constructor(plan, progress, options = {}) {
       this.plan = plan; this.progress = progress; this.preview = Boolean(options.preview);
-      this.index = this.preview ? Number(options.index || 0) : progress.currentIndex;
+      this.index = Number.isInteger(options.index) ? options.index : progress.currentIndex;
       this.urls = []; this.generation = 0; this.previewStage = 0;
-      this.onClose = options.onClose;
+      this.onClose = options.onClose; this.singleStep = Boolean(options.singleStep);
     }
     async open() {
       this.previousFocus = document.activeElement;
@@ -344,7 +344,12 @@
     async advance() {
       if (this.step.type === 'tutorial') { if (!this.tutorialEnded) return; await this.action('tutorial'); }
       if (this.preview) { this.close(); return; }
+      if (this.singleStep) { this.close(); return; }
       this.index = this.progress.currentIndex;
+      if (this.index < this.plan.steps.length) {
+        const started = await post(`/api/journey/steps/${this.plan.steps[this.index].id}/action`, { revision: this.plan.revision, action: 'start' }, this.abort.signal);
+        this.progress = started.progress;
+      }
       await this.render();
     }
     async launchPhase() {
@@ -381,7 +386,19 @@
     try {
       const payload = await request('/api/journey');
       if (!payload.plan.steps.length) return false;
-      active = new JourneyPlayer(payload.plan, payload.progress, options);
+      const stepIndex = options.stepId ? payload.plan.steps.findIndex(step => step.id === options.stepId) : -1;
+      if (options.stepId && stepIndex < 0) throw new Error('Esta aula não está mais disponível. Volte ao menu da jornada.');
+      const hasSelectedIndex = Number.isInteger(options.index) || stepIndex >= 0;
+      const index = Number.isInteger(options.index) ? options.index : (stepIndex >= 0 ? stepIndex : payload.progress.currentIndex);
+      const showingCompletion = !hasSelectedIndex && index === payload.plan.steps.length;
+      if (index < 0 || (!showingCompletion && index >= payload.plan.steps.length) || index > payload.progress.currentIndex) {
+        throw new Error('Esta aula ainda está bloqueada. Conclua a etapa atual primeiro.');
+      }
+      if (!showingCompletion && !options.skipStart) {
+        const started = await post(`/api/journey/steps/${payload.plan.steps[index].id}/action`, { revision: payload.plan.revision, action: 'start' });
+        payload.progress = started.progress;
+      }
+      active = new JourneyPlayer(payload.plan, payload.progress, { ...options, index });
       await active.open(); return true;
     } finally { startInFlight = false; }
   }

@@ -63,3 +63,35 @@ button:focus-visible,a:focus-visible { outline: 3px solid #81e2ee; outline-offse
 .journeyplan-entry-status[hidden] {
   display: none;
 }
+
+.journeyplan-student { max-width: 920px; }
+.journeyplan-student-panel { padding: 28px; }
+.journeyplan-student-heading { display: grid; grid-template-columns: minmax(0,1fr) 148px; align-items: end; gap: 18px; margin-bottom: 18px; }
+.journeyplan-student-heading h2 { margin-bottom: 4px; }
+.journeyplan-student-heading p { margin: 0; }
+.journeyplan-student-legend { display: grid; grid-template-columns: 62px 72px; gap: 14px; color: #8da5ba; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-align: center; text-transform: uppercase; }
+.journeyplan-student-list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.journeyplan-student-row { border: 1px solid #ffffff1c; border-radius: 18px; overflow: hidden; background: #ffffff06; transition: border-color .18s ease, transform .18s ease, background .18s ease; }
+.journeyplan-student-row:not(.is-locked):hover { border-color: #73deed80; background: #73deed0c; transform: translateY(-1px); }
+.journeyplan-student-row.is-complete { border-color: #69d9b73d; }
+.journeyplan-student-row.is-locked { opacity: .5; }
+.journeyplan-student-step { display: grid; grid-template-columns: 44px minmax(0,1fr) 62px 72px; align-items: center; gap: 14px; width: 100%; min-height: 78px; padding: 12px 16px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.journeyplan-student-number { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid #73deed59; border-radius: 50%; background: #73deed12; color: #bdf6ff; font-size: 15px; font-weight: 800; }
+.is-complete .journeyplan-student-number { border-color: #66ddb0; background: #66ddb01b; color: #8cf1cc; }
+.journeyplan-student-copy { min-width: 0; }
+.journeyplan-student-copy strong,.journeyplan-student-copy small { display: block; }
+.journeyplan-student-copy strong { overflow: hidden; font-size: 16px; text-overflow: ellipsis; white-space: nowrap; }
+.journeyplan-student-copy small { margin-top: 4px; color: #9eb3c6; font-size: 12px; }
+.journeyplan-student-plays { color: #b7c7d5; font-size: 13px; font-weight: 700; text-align: center; }
+.journeyplan-student-score { color: #82ead0; font-size: 17px; font-weight: 800; text-align: center; }
+.is-locked .journeyplan-student-score { color: #98a9b8; }
+@media(max-width:600px) {
+  .journeyplan-student-panel { padding: 18px 12px; }
+  .journeyplan-student-heading { grid-template-columns: minmax(0,1fr) 112px; }
+  .journeyplan-student-legend { grid-template-columns: 44px 58px; gap: 10px; font-size: 9px; }
+  .journeyplan-student-step { grid-template-columns: 36px minmax(0,1fr) 44px 58px; gap: 10px; padding: 11px 10px; }
+  .journeyplan-student-number { width: 34px; height: 34px; }
+  .journeyplan-student-copy strong { font-size: 14px; }
+  .journeyplan-student-copy small { font-size: 11px; }
+  .journeyplan-student-score { font-size: 15px; }
+}
