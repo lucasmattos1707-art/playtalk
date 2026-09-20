@@ -1355,6 +1355,24 @@ textarea {
   display: none;
 }
 
+.track-card.has-generated-image:not(.is-playing) .track-title {
+  right: auto;
+  display: -webkit-box;
+  width: min(38%, 430px);
+  overflow: hidden;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1rem, 4.1vw, 3.35rem);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
+  text-overflow: clip;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.98), 0 0 5px rgba(255, 255, 255, 0.5);
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 @keyframes imageGenerationSpin {
   to { transform: rotate(360deg); }
 }
@@ -1741,6 +1759,11 @@ body.is-sorting .track-card button {
     right: 112px;
     left: 16px;
     font-size: clamp(1rem, 6vw, 1.5rem);
+  }
+
+  .track-card.has-generated-image:not(.is-playing) .track-title {
+    width: 42%;
+    font-size: clamp(0.82rem, 5.1vw, 1.35rem);
   }
 
   .track-image-status {

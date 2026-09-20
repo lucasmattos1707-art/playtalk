@@ -469,6 +469,11 @@
       node.classList.toggle('is-fading-out', isFadingOut);
       node.classList.toggle('is-fading-in', isFadingIn);
       node.classList.toggle('has-image', Boolean(card.image?.url));
+      const imageFileName = String(card.image?.fileName || '');
+      const imageName = String(card.image?.name || '');
+      const hasGeneratedImage = /-openai-[^.]+\.webp$/i.test(imageFileName)
+        || /\s-\sopenai\.webp$/i.test(imageName);
+      node.classList.toggle('has-generated-image', hasGeneratedImage);
       const imageStatus = node.querySelector('.track-image-status');
       const imageStatusText = node.querySelector('.track-image-status-text');
       const imageIsPending = !card.image?.url && card.imageGenerationStatus === 'pending';

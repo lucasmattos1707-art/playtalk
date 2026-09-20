@@ -8379,8 +8379,9 @@ const MUSICAL_KELLY_MAX_COMMENTS_PER_CARD = 200;
 const MUSICAL_KELLY_MAX_COMMENT_LENGTH = 800;
 const MUSICAL_KELLY_MAX_AUDIO_BYTES = 220 * 1024 * 1024;
 const MUSICAL_KELLY_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
-const MUSICAL_KELLY_GENERATED_IMAGE_WIDTH = 1500;
-const MUSICAL_KELLY_GENERATED_IMAGE_HEIGHT = 300;
+const MUSICAL_KELLY_GENERATED_IMAGE_WIDTH = 1440;
+const MUSICAL_KELLY_GENERATED_IMAGE_HEIGHT = 288;
+const MUSICAL_KELLY_GENERATED_IMAGE_TARGET_BYTES = 420 * 1024;
 const FLASHCARD_CAMERA_OBJECT_KEY = 'FlashCards/camera.webp';
 const GLOBAL_BACKGROUND_OBJECT_KEYS = {
   desktop: 'backgrounds/playtalk-global-desktop.webp',
@@ -16318,15 +16319,21 @@ async function generateMusicalKellyCardImage(cardId, title) {
   }
 
   const generatedBuffer = Buffer.from(imageBase64, 'base64');
-  const optimizedBuffer = await sharp(generatedBuffer, { failOn: 'none', animated: false })
+  const imagePipeline = sharp(generatedBuffer, { failOn: 'none', animated: false })
     .rotate()
     .resize(MUSICAL_KELLY_GENERATED_IMAGE_WIDTH, MUSICAL_KELLY_GENERATED_IMAGE_HEIGHT, {
       fit: 'cover',
       position: 'attention',
       withoutEnlargement: false
-    })
-    .webp({ quality: 84, effort: 5, smartSubsample: true })
-    .toBuffer();
+    });
+  let optimizedBuffer = null;
+  for (const quality of [80, 72, 64, 56, 48]) {
+    optimizedBuffer = await imagePipeline
+      .clone()
+      .webp({ quality, effort: 6, smartSubsample: true, preset: 'photo' })
+      .toBuffer();
+    if (optimizedBuffer.length <= MUSICAL_KELLY_GENERATED_IMAGE_TARGET_BYTES) break;
+  }
   const fileName = `${cardId}-openai-${Date.now().toString(36)}.webp`;
   const objectKey = `${musicalKellyGlobalRoot()}/image/${fileName}`;
   await putR2Object(objectKey, optimizedBuffer, 'image/webp');
