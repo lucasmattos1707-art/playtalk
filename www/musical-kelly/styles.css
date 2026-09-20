@@ -1305,9 +1305,58 @@ textarea {
   transition: opacity 160ms ease;
 }
 
+.track-image-status {
+  position: absolute;
+  top: calc(50% + clamp(19px, 3vw, 32px));
+  left: clamp(20px, 4vw, 50px);
+  z-index: 8;
+  display: inline-flex;
+  max-width: calc(100% - 160px);
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(2, 7, 4, 0.48);
+  backdrop-filter: blur(9px);
+  font-size: clamp(0.58rem, 1.1vw, 0.72rem);
+  font-weight: 800;
+  letter-spacing: 0.025em;
+  pointer-events: none;
+}
+
+.track-image-status[hidden] {
+  display: none;
+}
+
+.track-image-spinner {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: imageGenerationSpin 750ms linear infinite;
+}
+
+.track-card.image-generation-failed .track-image-status {
+  color: #ffd7da;
+  border-color: rgba(255, 107, 116, 0.38);
+  background: rgba(65, 12, 18, 0.5);
+}
+
+.track-card.image-generation-failed .track-image-spinner {
+  display: none;
+}
+
 .track-card.has-image .track-title,
 .track-card.is-playing .track-title {
   display: none;
+}
+
+@keyframes imageGenerationSpin {
+  to { transform: rotate(360deg); }
 }
 
 .comment-button {
@@ -1609,6 +1658,17 @@ body.is-sorting .track-card button {
   background: rgba(255, 255, 255, 0.035);
 }
 
+.comment-entry.is-pending {
+  border-style: dashed;
+  border-color: rgba(255, 207, 102, 0.42);
+  background: rgba(255, 207, 102, 0.055);
+}
+
+.comment-entry.is-pending .comment-author,
+.comment-entry.is-pending .comment-date {
+  color: #ffd77d;
+}
+
 .comment-meta {
   display: flex;
   flex-wrap: wrap;
@@ -1681,6 +1741,21 @@ body.is-sorting .track-card button {
     right: 112px;
     left: 16px;
     font-size: clamp(1rem, 6vw, 1.5rem);
+  }
+
+  .track-image-status {
+    top: calc(50% + 16px);
+    left: 16px;
+    max-width: calc(100% - 124px);
+    gap: 5px;
+    padding: 3px 7px;
+    font-size: 0.54rem;
+  }
+
+  .track-image-spinner {
+    width: 9px;
+    height: 9px;
+    border-width: 1.5px;
   }
 
   .comment-button {

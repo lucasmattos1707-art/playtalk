@@ -4,8 +4,12 @@
   const API_ROOT = '/api/musical-kelly';
   const CACHE_NAME = 'playtalk-musical-kelly-media-v1';
   const PROJECT_SNAPSHOT_KEY = 'playtalk-musical-kelly-project-snapshot-v1';
+  const COMMENT_OUTBOX_DB_NAME = 'playtalk-musical-kelly-offline-v1';
+  const COMMENT_OUTBOX_STORE = 'comment-outbox';
+  const COMMENT_SYNC_TAG = 'musical-kelly-comments';
   const LONG_PRESS_MS = 500;
   const USE_NATIVE_AUDIO_ON_APPLE = isAppleTouchDevice();
+  let commentOutboxDbPromise = null;
 
   const elements = {
     topbar: document.getElementById('topbar'),
@@ -62,6 +66,11 @@
     sortingCardId: '',
     activeCommentsCardId: '',
     collaborationBusy: false,
+    pendingComments: [],
+    commentSubmitting: false,
+    commentFlushPromise: null,
+    imageGenerationPollTimer: null,
+    imageGenerationPolling: false,
     refreshing: false,
     selectedId: '',
     current: null,
@@ -137,6 +146,124 @@
     } catch (_error) {
       return null;
     }
+  }
+
+  function normalizePendingComment(source) {
+    const clientMutationId = String(source?.clientMutationId || '').trim();
+    const cardId = String(source?.cardId || '').trim();
+    const text = String(source?.text || '').trim().slice(0, 800);
+    if (!/^[a-zA-Z0-9_-]{8,64}$/.test(clientMutationId)) return null;
+    if (!/^[a-zA-Z0-9_-]{1,80}$/.test(cardId) || !text) return null;
+    const createdAt = new Date(source?.createdAt || '').toISOString();
+    return { clientMutationId, cardId, text, createdAt };
+  }
+
+  function openCommentOutboxDb() {
+    if (commentOutboxDbPromise) return commentOutboxDbPromise;
+    commentOutboxDbPromise = new Promise((resolve, reject) => {
+      if (!window.indexedDB) {
+        reject(new Error('O armazenamento offline não está disponível neste navegador.'));
+        return;
+      }
+      const request = window.indexedDB.open(COMMENT_OUTBOX_DB_NAME, 1);
+      request.addEventListener('upgradeneeded', () => {
+        if (!request.result.objectStoreNames.contains(COMMENT_OUTBOX_STORE)) {
+          request.result.createObjectStore(COMMENT_OUTBOX_STORE, { keyPath: 'clientMutationId' });
+        }
+      });
+      request.addEventListener('success', () => resolve(request.result));
+      request.addEventListener('error', () => reject(request.error || new Error('Falha ao abrir a fila offline.')));
+    }).catch((error) => {
+      commentOutboxDbPromise = null;
+      throw error;
+    });
+    return commentOutboxDbPromise;
+  }
+
+  async function readPendingComments() {
+    const database = await openCommentOutboxDb();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(COMMENT_OUTBOX_STORE, 'readonly');
+      const request = transaction.objectStore(COMMENT_OUTBOX_STORE).getAll();
+      request.addEventListener('success', () => {
+        const comments = (Array.isArray(request.result) ? request.result : [])
+          .map((entry) => {
+            try {
+              return normalizePendingComment(entry);
+            } catch (_error) {
+              return null;
+            }
+          })
+          .filter(Boolean)
+          .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+        resolve(comments);
+      });
+      request.addEventListener('error', () => reject(request.error || new Error('Falha ao ler a fila offline.')));
+    });
+  }
+
+  async function storePendingComment(comment) {
+    const normalized = normalizePendingComment(comment);
+    if (!normalized) throw new Error('Comentário offline inválido.');
+    const database = await openCommentOutboxDb();
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction(COMMENT_OUTBOX_STORE, 'readwrite');
+      transaction.objectStore(COMMENT_OUTBOX_STORE).put(normalized);
+      transaction.addEventListener('complete', resolve);
+      transaction.addEventListener('error', () => reject(transaction.error || new Error('Falha ao guardar o comentário.')));
+      transaction.addEventListener('abort', () => reject(transaction.error || new Error('Falha ao guardar o comentário.')));
+    });
+    return normalized;
+  }
+
+  async function deletePendingComment(clientMutationId) {
+    const database = await openCommentOutboxDb();
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction(COMMENT_OUTBOX_STORE, 'readwrite');
+      transaction.objectStore(COMMENT_OUTBOX_STORE).delete(clientMutationId);
+      transaction.addEventListener('complete', resolve);
+      transaction.addEventListener('error', () => reject(transaction.error || new Error('Falha ao atualizar a fila offline.')));
+      transaction.addEventListener('abort', () => reject(transaction.error || new Error('Falha ao atualizar a fila offline.')));
+    });
+  }
+
+  async function reloadPendingComments({ renderNow = true } = {}) {
+    state.pendingComments = await readPendingComments();
+    if (renderNow && Array.isArray(state.project?.cards)) {
+      render();
+      if (state.activeCommentsCardId && elements.commentsDialog.hasAttribute('open')) renderComments();
+    }
+    return state.pendingComments;
+  }
+
+  function pendingCommentsForCard(cardId) {
+    return state.pendingComments
+      .filter((comment) => comment.cardId === cardId)
+      .map((comment) => ({
+        id: `pending-${comment.clientMutationId}`,
+        clientMutationId: comment.clientMutationId,
+        authorName: 'Você',
+        text: comment.text,
+        createdAt: comment.createdAt,
+        pending: true
+      }));
+  }
+
+  function commentsForCard(card) {
+    const savedComments = Array.isArray(card?.comments) ? card.comments : [];
+    const savedIds = new Set(savedComments.map((comment) => comment.id));
+    return [
+      ...savedComments,
+      ...pendingCommentsForCard(card?.id)
+        .filter((comment) => !savedIds.has(`comment-${comment.clientMutationId}`))
+    ];
+  }
+
+  function createCommentMutationId() {
+    const randomPart = window.crypto?.randomUUID
+      ? window.crypto.randomUUID().replace(/-/g, '')
+      : `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+    return `offline-${Date.now().toString(36)}-${randomPart}`.slice(0, 64);
   }
 
   async function apiJson(url, options = {}) {
@@ -342,6 +469,14 @@
       node.classList.toggle('is-fading-out', isFadingOut);
       node.classList.toggle('is-fading-in', isFadingIn);
       node.classList.toggle('has-image', Boolean(card.image?.url));
+      const imageStatus = node.querySelector('.track-image-status');
+      const imageStatusText = node.querySelector('.track-image-status-text');
+      const imageIsPending = !card.image?.url && card.imageGenerationStatus === 'pending';
+      const imageFailed = !card.image?.url && card.imageGenerationStatus === 'failed';
+      node.classList.toggle('is-generating-image', imageIsPending);
+      node.classList.toggle('image-generation-failed', imageFailed);
+      imageStatus.hidden = !imageIsPending && !imageFailed;
+      imageStatusText.textContent = imageFailed ? 'Imagem indisponível' : 'Carregando imagem…';
       const isUnread = !state.canEdit && state.unreadCardIds.has(card.id);
       node.classList.toggle('has-new-audio', isUnread);
       if (isFadingOut || isFadingIn) {
@@ -398,7 +533,7 @@
       const commentButton = node.querySelector('.comment-button');
       const isApproved = Boolean(card.approvedAt);
       commentButton.classList.toggle('is-approved', isApproved);
-      const commentCount = Array.isArray(card.comments) ? card.comments.length : 0;
+      const commentCount = commentsForCard(card).length;
       const commentCountLabel = commentButton.querySelector('.comment-count');
       commentCountLabel.hidden = commentCount === 0;
       commentCountLabel.textContent = commentCount > 99 ? '99+' : String(commentCount);
@@ -518,6 +653,9 @@
 
   function applyCollaborationProject(project) {
     if (!project || !Array.isArray(project.cards)) return;
+    const previousPendingIds = new Set(state.project.cards
+      .filter((card) => card.imageGenerationStatus === 'pending')
+      .map((card) => card.id));
     state.project = project;
     saveProjectSnapshot(project);
     if (state.selectedId && !getCard(state.selectedId)) state.selectedId = '';
@@ -527,6 +665,42 @@
     }
     render();
     if (state.activeCommentsCardId && elements.commentsDialog.hasAttribute('open')) renderComments();
+    const completedCard = state.project.cards.find((card) => previousPendingIds.has(card.id) && card.image?.url);
+    const failedCard = state.project.cards.find((card) => previousPendingIds.has(card.id) && card.imageGenerationStatus === 'failed');
+    if (completedCard) {
+      setStatus(`Imagem de “${completedCard.title}” pronta.`);
+      showToast(`Imagem de “${completedCard.title}” pronta.`);
+    } else if (failedCard) {
+      setStatus(`O container “${failedCard.title}” foi criado sem imagem.`);
+      showToast(`O container “${failedCard.title}” foi criado, mas a imagem não ficou pronta.`, true);
+    }
+    syncImageGenerationPolling();
+  }
+
+  function syncImageGenerationPolling(delay = 2400) {
+    window.clearTimeout(state.imageGenerationPollTimer);
+    state.imageGenerationPollTimer = null;
+    if (!state.project.cards.some((card) => card.imageGenerationStatus === 'pending')) return;
+    state.imageGenerationPollTimer = window.setTimeout(() => {
+      pollImageGeneration().catch(() => {});
+    }, delay);
+  }
+
+  async function pollImageGeneration() {
+    if (state.imageGenerationPolling || !navigator.onLine) {
+      syncImageGenerationPolling(4000);
+      return;
+    }
+    state.imageGenerationPolling = true;
+    try {
+      const payload = await apiJson(`${API_ROOT}/project`, { cache: 'no-store' });
+      applyProjectPayload(payload);
+      await refreshDownloadStates().catch(() => {});
+    } catch (_error) {
+      syncImageGenerationPolling(5000);
+    } finally {
+      state.imageGenerationPolling = false;
+    }
   }
 
   function applyProjectPayload(payload) {
@@ -588,8 +762,8 @@
       });
       applyCollaborationProject(payload.project);
       closeDialog(elements.addCardDialog);
-      showToast(`Container “${title}” adicionado para todos.`);
-      setStatus(`Container “${title}” adicionado ao musical.`);
+      showToast(`Container “${title}” adicionado. A imagem está sendo criada.`);
+      setStatus(`Container “${title}” criado. Carregando imagem…`, true);
       window.requestAnimationFrame(() => {
         elements.trackList.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
@@ -639,7 +813,7 @@
     if (!card) return;
     elements.commentsDialogTitle.textContent = card.title;
     elements.commentsList.replaceChildren();
-    const comments = Array.isArray(card.comments) ? card.comments : [];
+    const comments = commentsForCard(card);
     if (!comments.length) {
       const empty = document.createElement('p');
       empty.className = 'comments-empty';
@@ -649,6 +823,7 @@
       comments.forEach((comment) => {
         const entry = document.createElement('article');
         entry.className = 'comment-entry';
+        entry.classList.toggle('is-pending', comment.pending === true);
         const meta = document.createElement('div');
         meta.className = 'comment-meta';
         const author = document.createElement('strong');
@@ -657,10 +832,21 @@
         const date = document.createElement('time');
         date.className = 'comment-date';
         date.dateTime = comment.createdAt || '';
-        date.textContent = formatCommentDate(comment.createdAt);
+        date.textContent = comment.pending
+          ? `${formatCommentDate(comment.createdAt)} · aguardando envio`
+          : formatCommentDate(comment.createdAt);
         meta.append(author, date);
         entry.appendChild(meta);
-        if (state.canDeleteComments) {
+        if (comment.pending) {
+          const cancel = document.createElement('button');
+          cancel.type = 'button';
+          cancel.className = 'delete-comment-button';
+          cancel.textContent = 'Cancelar';
+          cancel.addEventListener('click', () => {
+            cancelPendingComment(comment.clientMutationId).catch((error) => showToast(error.message, true));
+          });
+          entry.appendChild(cancel);
+        } else if (state.canDeleteComments) {
           const remove = document.createElement('button');
           remove.type = 'button';
           remove.className = 'delete-comment-button';
@@ -694,9 +880,69 @@
     showDialog(elements.commentsDialog);
   }
 
+  async function registerCommentBackgroundSync() {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      if (registration.sync?.register) await registration.sync.register(COMMENT_SYNC_TAG);
+    } catch (_error) {}
+  }
+
+  async function cancelPendingComment(clientMutationId) {
+    await deletePendingComment(clientMutationId);
+    await reloadPendingComments();
+    showToast('Comentário pendente cancelado.');
+  }
+
+  async function flushPendingComments({ announce = false } = {}) {
+    if (state.commentFlushPromise) return state.commentFlushPromise;
+    if (!navigator.onLine || !state.pendingComments.length) return 0;
+
+    state.commentFlushPromise = (async () => {
+      let sentCount = 0;
+      let lastError = null;
+      while (navigator.onLine) {
+        await reloadPendingComments({ renderNow: false });
+        const pending = state.pendingComments[0];
+        if (!pending) break;
+        try {
+          const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(pending.cardId)}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: pending.text,
+              clientMutationId: pending.clientMutationId
+            })
+          });
+          await deletePendingComment(pending.clientMutationId);
+          await reloadPendingComments({ renderNow: false });
+          applyCollaborationProject(payload.project);
+          sentCount += 1;
+        } catch (error) {
+          lastError = error;
+          break;
+        }
+      }
+
+      render();
+      if (state.activeCommentsCardId && elements.commentsDialog.hasAttribute('open')) renderComments();
+      if (announce && sentCount) {
+        showToast(sentCount === 1
+          ? 'Comentário offline enviado para o musical.'
+          : `${sentCount} comentários offline enviados para o musical.`);
+      } else if (announce && lastError) {
+        showToast('O comentário continua salvo e será enviado na próxima tentativa.', true);
+      }
+      return sentCount;
+    })().finally(() => {
+      state.commentFlushPromise = null;
+    });
+    return state.commentFlushPromise;
+  }
+
   async function submitComment(event) {
     event.preventDefault();
-    if (!state.canComment || state.collaborationBusy) return;
+    if (!state.canComment || state.commentSubmitting) return;
     const card = getCard(state.activeCommentsCardId);
     const text = elements.commentText.value.trim().slice(0, 800);
     if (!card || !text) {
@@ -704,20 +950,28 @@
       showToast('Escreva um comentário antes de enviar.', true);
       return;
     }
-    state.collaborationBusy = true;
+    const pending = {
+      clientMutationId: createCommentMutationId(),
+      cardId: card.id,
+      text,
+      createdAt: new Date().toISOString()
+    };
+    state.commentSubmitting = true;
     elements.sendCommentButton.disabled = true;
     try {
-      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      });
-      applyCollaborationProject(payload.project);
+      await storePendingComment(pending);
+      await reloadPendingComments();
       elements.commentText.value = '';
-      renderComments();
-      showToast('Comentário adicionado.');
+      registerCommentBackgroundSync();
+      await flushPendingComments();
+      const stillPending = state.pendingComments.some((comment) => comment.clientMutationId === pending.clientMutationId);
+      showToast(stillPending
+        ? 'Comentário salvo neste aparelho. Ele será enviado quando a conexão voltar.'
+        : 'Comentário adicionado.');
+    } catch (error) {
+      throw new Error(error?.message || 'Não foi possível guardar o comentário neste aparelho.');
     } finally {
-      state.collaborationBusy = false;
+      state.commentSubmitting = false;
       elements.sendCommentButton.disabled = false;
     }
   }
@@ -1830,9 +2084,41 @@
       uploadFile('image', elements.imageInput.files?.[0]).catch((error) => showToast(error.message, true));
     });
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) recoverAppleAudio();
+      if (!document.hidden) {
+        recoverAppleAudio();
+        flushPendingComments({ announce: true }).catch(() => {});
+        syncImageGenerationPolling(200);
+      }
     });
-    window.addEventListener('pageshow', () => recoverAppleAudio());
+    window.addEventListener('pageshow', () => {
+      recoverAppleAudio();
+      flushPendingComments({ announce: true }).catch(() => {});
+      syncImageGenerationPolling(200);
+    });
+    window.addEventListener('online', () => {
+      syncImageGenerationPolling(200);
+      if (!state.pendingComments.length) return;
+      setStatus('Conexão restabelecida. Enviando comentários pendentes…', true);
+      flushPendingComments({ announce: true }).finally(() => {
+        setStatus(state.pendingComments.length
+          ? 'Os comentários continuam salvos neste aparelho.'
+          : 'Comentários offline enviados.');
+      });
+    });
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data?.type !== 'musical-kelly-comments-synced') return;
+        reloadPendingComments({ renderNow: false })
+          .then(async () => {
+            const payload = await apiJson(`${API_ROOT}/project`, { cache: 'no-store' });
+            applyProjectPayload(payload);
+            showToast(event.data.count === 1
+              ? 'Comentário offline enviado para o musical.'
+              : 'Comentários offline enviados para o musical.');
+          })
+          .catch(() => {});
+      });
+    }
     elements.titleInput.addEventListener('input', () => {
       const card = getCard(state.selectedId);
       if (!card) return;
@@ -1854,9 +2140,22 @@
     });
   }
 
+  function registerOfflineSupport() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/musical-kelly/sw.js', { scope: '/musical-kelly' })
+      .then(() => {
+        if (state.pendingComments.length) registerCommentBackgroundSync();
+      })
+      .catch(() => {});
+  }
+
   async function init() {
     bindControls();
+    registerOfflineSupport();
     runProgressLoop();
+    await reloadPendingComments({ renderNow: false }).catch(() => {
+      state.pendingComments = [];
+    });
     try {
       const payload = await apiJson(`${API_ROOT}/project`);
       applyProjectPayload(payload);
@@ -1881,6 +2180,10 @@
         setStatus('Não foi possível abrir o musical.');
         showToast(error.message || 'Falha ao carregar.', true);
       }
+    }
+    if (state.pendingComments.length) {
+      registerCommentBackgroundSync();
+      flushPendingComments({ announce: true }).catch(() => {});
     }
   }
 

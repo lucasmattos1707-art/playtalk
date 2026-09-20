@@ -78,6 +78,7 @@ const ELEVENLABS_MODEL_ID = env(process.env.ELEVENLABS_MODEL_ID) || 'eleven_mult
 const OPENAI_API_KEY = env(process.env.OPENAI_API_KEY);
 const OPENAI_IMAGE_MODEL = env(process.env.OPENAI_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_AVATAR_IMAGE_MODEL = env(process.env.OPENAI_AVATAR_IMAGE_MODEL) || 'gpt-image-1-mini';
+const MUSICAL_KELLY_IMAGE_MODEL = env(process.env.MUSICAL_KELLY_IMAGE_MODEL) || 'gpt-image-2';
 const OPENAI_TEXT_MODEL = env(process.env.OPENAI_TEXT_MODEL) || 'gpt-5.4-nano';
 const OPENAI_FLASHCARD_ADMIN_TEXT_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_TEXT_MODEL) || 'gpt-5-nano';
 const OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL) || 'gpt-image-1-mini';
@@ -8378,6 +8379,8 @@ const MUSICAL_KELLY_MAX_COMMENTS_PER_CARD = 200;
 const MUSICAL_KELLY_MAX_COMMENT_LENGTH = 800;
 const MUSICAL_KELLY_MAX_AUDIO_BYTES = 220 * 1024 * 1024;
 const MUSICAL_KELLY_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+const MUSICAL_KELLY_GENERATED_IMAGE_WIDTH = 1500;
+const MUSICAL_KELLY_GENERATED_IMAGE_HEIGHT = 300;
 const FLASHCARD_CAMERA_OBJECT_KEY = 'FlashCards/camera.webp';
 const GLOBAL_BACKGROUND_OBJECT_KEYS = {
   desktop: 'backgrounds/playtalk-global-desktop.webp',
@@ -16032,6 +16035,11 @@ function normalizeMusicalKellyCardId(value) {
   return /^[a-zA-Z0-9_-]{1,80}$/.test(normalized) ? normalized : '';
 }
 
+function normalizeMusicalKellyCommentMutationId(value) {
+  const normalized = String(value || '').trim();
+  return /^[a-zA-Z0-9_-]{8,64}$/.test(normalized) ? normalized : '';
+}
+
 function normalizeMusicalKellyAssetFileName(value) {
   const normalized = path.posix.basename(String(value || '').trim());
   return /^[a-zA-Z0-9._-]{1,180}$/.test(normalized) ? normalized : '';
@@ -16076,11 +16084,17 @@ function normalizeMusicalKellyProject(payload) {
       .slice(0, MUSICAL_KELLY_MAX_COMMENTS_PER_CARD)
       .map(normalizeMusicalKellyComment)
       .filter(Boolean);
+    const image = normalizeMusicalKellyAsset(source?.image, 'image');
+    const imageGenerationStatus = image
+      ? ''
+      : (source?.imageGenerationStatus === 'pending'
+          ? 'pending'
+          : (source?.imageGenerationStatus === 'failed' ? 'failed' : ''));
     cards.push({
       id,
       title: String(source?.title || 'Faixa').trim().slice(0, 120) || 'Faixa',
       audio: normalizeMusicalKellyAsset(source?.audio, 'audio'),
-      image: normalizeMusicalKellyAsset(source?.image, 'image'),
+      image,
       createdByUserId: Math.max(0, Number.parseInt(source?.createdByUserId, 10) || 0),
       createdByName: String(source?.createdByName || '').trim().slice(0, 64),
       createdAt: String(source?.createdAt || '').trim().slice(0, 40),
@@ -16088,6 +16102,10 @@ function normalizeMusicalKellyProject(payload) {
       approvedAt: String(source?.approvedAt || '').trim().slice(0, 40),
       approvedByUserId: Math.max(0, Number.parseInt(source?.approvedByUserId, 10) || 0),
       approvedByName: String(source?.approvedByName || '').trim().slice(0, 64),
+      imageGenerationStatus,
+      imageGenerationRequestedAt: imageGenerationStatus
+        ? String(source?.imageGenerationRequestedAt || '').trim().slice(0, 40)
+        : '',
       comments
     });
   }
@@ -16240,6 +16258,108 @@ function sanitizeMusicalKellyUploadName(value, kind, contentType) {
     .replace(/^-+|-+$/g, '')
     .slice(0, 80) || kind;
   return { displayName: rawName.slice(0, 180) || `${base}${extension}`, extension, base };
+}
+
+function buildMusicalKellyImagePrompt(title) {
+  const safeTitle = String(title || 'Cena do musical').trim().slice(0, 120) || 'Cena do musical';
+  return [
+    'Create an original cinematic ultra-wide banner illustration inspired by the public-domain world of The Wonderful Wizard of Oz.',
+    `The music container title is: "${safeTitle}". Use the meaning and mood of this title as the main story context for the scene.`,
+    'Visual direction: warm vintage storybook realism, subtle sepia and emerald tones, dramatic soft light, richly detailed atmosphere, family-friendly theatrical magic.',
+    'Include recognizable Oz motifs only when they fit the title: the yellow brick road, Emerald City glow, poppy fields, a brave lion, a young traveler, a scarecrow, or a tin woodman.',
+    'Create an original interpretation and do not copy any film frame, actor likeness, logo, costume, or branded design.',
+    'Composition is critical: very wide 3:1 source designed for a final centered 5:1 crop. Keep the left 38% dark, calm, and uncluttered for an HTML title overlay. Place the main characters and narrative action in the center-right. Keep all important faces and objects inside the middle horizontal band.',
+    'No written words, letters, captions, logos, borders, or watermarks.'
+  ].join(' ');
+}
+
+async function generateMusicalKellyCardImage(cardId, title) {
+  if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
+    const error = new Error('OpenAI nao configurado para gerar a imagem do container.');
+    error.statusCode = 503;
+    throw error;
+  }
+
+  const upstreamResponse = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: MUSICAL_KELLY_IMAGE_MODEL,
+      prompt: buildMusicalKellyImagePrompt(title),
+      size: '1536x512',
+      quality: 'medium',
+      background: 'opaque',
+      output_format: 'webp'
+    })
+  });
+
+  const responseText = await upstreamResponse.text();
+  let payload = null;
+  try {
+    payload = responseText ? JSON.parse(responseText) : null;
+  } catch (_error) {
+    payload = null;
+  }
+  if (!upstreamResponse.ok) {
+    const error = new Error(payload?.error?.message || responseText.slice(0, 500) || 'Falha ao gerar imagem na OpenAI.');
+    error.statusCode = upstreamResponse.status;
+    throw error;
+  }
+
+  const image = Array.isArray(payload?.data) ? payload.data[0] : null;
+  const imageBase64 = String(image?.b64_json || '').trim();
+  if (!imageBase64) {
+    const error = new Error('A OpenAI nao retornou a imagem do container em base64.');
+    error.statusCode = 502;
+    throw error;
+  }
+
+  const generatedBuffer = Buffer.from(imageBase64, 'base64');
+  const optimizedBuffer = await sharp(generatedBuffer, { failOn: 'none', animated: false })
+    .rotate()
+    .resize(MUSICAL_KELLY_GENERATED_IMAGE_WIDTH, MUSICAL_KELLY_GENERATED_IMAGE_HEIGHT, {
+      fit: 'cover',
+      position: 'attention',
+      withoutEnlargement: false
+    })
+    .webp({ quality: 84, effort: 5, smartSubsample: true })
+    .toBuffer();
+  const fileName = `${cardId}-openai-${Date.now().toString(36)}.webp`;
+  const objectKey = `${musicalKellyGlobalRoot()}/image/${fileName}`;
+  await putR2Object(objectKey, optimizedBuffer, 'image/webp');
+
+  let imageAttached = false;
+  await queueMusicalKellyProjectMutation(async () => {
+    const currentProject = await readMusicalKellyGlobalProject();
+    const card = currentProject.cards.find((entry) => entry.id === cardId);
+    if (!card || card.image?.fileName) return currentProject;
+    card.image = {
+      fileName,
+      name: `${String(title || 'Container').trim().slice(0, 120) || 'Container'} - OpenAI.webp`,
+      contentType: 'image/webp',
+      size: optimizedBuffer.length,
+      updatedAt: new Date().toISOString()
+    };
+    card.imageGenerationStatus = '';
+    card.imageGenerationRequestedAt = '';
+    imageAttached = true;
+    return writeMusicalKellyGlobalProject(currentProject);
+  });
+
+  if (!imageAttached) await deleteR2Object(objectKey).catch(() => {});
+}
+
+async function markMusicalKellyImageGenerationFailed(cardId) {
+  await queueMusicalKellyProjectMutation(async () => {
+    const currentProject = await readMusicalKellyGlobalProject();
+    const card = currentProject.cards.find((entry) => entry.id === cardId);
+    if (!card || card.image?.fileName || card.imageGenerationStatus !== 'pending') return currentProject;
+    card.imageGenerationStatus = 'failed';
+    return writeMusicalKellyGlobalProject(currentProject);
+  });
 }
 
 async function migrateMusicalKellyAdminProjectToGlobal(authUser) {
@@ -26292,6 +26412,8 @@ app.put('/api/musical-kelly/project', async (req, res) => {
             approvedAt: audioPublished ? '' : currentCard.approvedAt,
             approvedByUserId: audioPublished ? 0 : currentCard.approvedByUserId,
             approvedByName: audioPublished ? '' : currentCard.approvedByName,
+            imageGenerationStatus: card.image?.fileName ? '' : currentCard.imageGenerationStatus,
+            imageGenerationRequestedAt: card.image?.fileName ? '' : currentCard.imageGenerationRequestedAt,
             comments: currentCard.comments
           };
         })
@@ -26334,6 +26456,8 @@ app.post('/api/musical-kelly/cards', async (req, res) => {
       approvedAt: '',
       approvedByUserId: 0,
       approvedByName: '',
+      imageGenerationStatus: 'pending',
+      imageGenerationRequestedAt: createdAt,
       comments: []
     };
     const project = await queueMusicalKellyProjectMutation(async () => {
@@ -26347,6 +26471,12 @@ app.post('/api/musical-kelly/cards', async (req, res) => {
       return writeMusicalKellyGlobalProject(currentProject);
     });
     res.status(201).json({ success: true, card, project: hydrateMusicalKellyProject(project) });
+    generateMusicalKellyCardImage(card.id, card.title).catch(async (error) => {
+      console.error('Erro ao gerar imagem do container do musical Kelly:', error?.message || error);
+      await markMusicalKellyImageGenerationFailed(card.id).catch((statusError) => {
+        console.error('Erro ao registrar falha da imagem do musical Kelly:', statusError?.message || statusError);
+      });
+    });
   } catch (error) {
     console.error('Erro ao adicionar container ao musical Kelly:', error);
     res.status(Number(error?.statusCode) || 500).json({
@@ -26411,18 +26541,28 @@ app.post('/api/musical-kelly/cards/:cardId/comments', async (req, res) => {
     }
     const cardId = normalizeMusicalKellyCardId(req.params.cardId);
     const text = String(req.body?.text || '').trim().slice(0, MUSICAL_KELLY_MAX_COMMENT_LENGTH);
+    const requestedMutationId = String(req.body?.clientMutationId || '').trim();
+    const clientMutationId = normalizeMusicalKellyCommentMutationId(requestedMutationId);
     if (!cardId || !text) {
       res.status(400).json({ success: false, message: 'Escreva um comentario antes de enviar.' });
       return;
     }
+    if (requestedMutationId && !clientMutationId) {
+      res.status(400).json({ success: false, message: 'Identificador do comentario invalido.' });
+      return;
+    }
 
     const comment = {
-      id: `comment-${crypto.randomBytes(12).toString('hex')}`,
+      id: clientMutationId
+        ? `comment-${clientMutationId}`
+        : `comment-${crypto.randomBytes(12).toString('hex')}`,
       userId: Number(authUser?.id) || 0,
       authorName: String(authUser?.username || authUser?.email || 'Visitante').trim().slice(0, 64),
       text,
       createdAt: new Date().toISOString()
     };
+    let persistedComment = comment;
+    let commentCreated = true;
     const project = await queueMusicalKellyProjectMutation(async () => {
       const currentProject = await readMusicalKellyGlobalProject();
       const card = currentProject.cards.find((entry) => entry.id === cardId);
@@ -26432,6 +26572,14 @@ app.post('/api/musical-kelly/cards/:cardId/comments', async (req, res) => {
         throw error;
       }
       card.comments = Array.isArray(card.comments) ? card.comments : [];
+      const existingComment = clientMutationId
+        ? card.comments.find((entry) => entry.id === comment.id)
+        : null;
+      if (existingComment) {
+        persistedComment = existingComment;
+        commentCreated = false;
+        return currentProject;
+      }
       if (card.comments.length >= MUSICAL_KELLY_MAX_COMMENTS_PER_CARD) {
         const error = new Error('Este container atingiu o limite de comentarios.');
         error.statusCode = 409;
@@ -26443,7 +26591,12 @@ app.post('/api/musical-kelly/cards/:cardId/comments', async (req, res) => {
       card.approvedByName = '';
       return writeMusicalKellyGlobalProject(currentProject);
     });
-    res.status(201).json({ success: true, comment, project: hydrateMusicalKellyProject(project) });
+    res.status(commentCreated ? 201 : 200).json({
+      success: true,
+      duplicate: !commentCreated,
+      comment: persistedComment,
+      project: hydrateMusicalKellyProject(project)
+    });
   } catch (error) {
     console.error('Erro ao comentar no musical Kelly:', error);
     res.status(Number(error?.statusCode) || 500).json({
@@ -26863,7 +27016,17 @@ app.get('/', (req, res) => {
   res.redirect(302, '/entrar');
 });
 
-app.get(['/musical-kelly', '/musical-kelly/'], (req, res) => {
+app.get('/musical-kelly/sw.js', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+  res.setHeader('Service-Worker-Allowed', '/musical-kelly');
+  res.sendFile(path.join(staticDir, 'musical-kelly', 'sw.js'));
+});
+
+app.get(/^\/musical-kelly$/, (_req, res) => {
+  res.redirect(302, '/musical-kelly/');
+});
+
+app.get('/musical-kelly/', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(staticDir, 'musical-kelly', 'index.html'));
 });
