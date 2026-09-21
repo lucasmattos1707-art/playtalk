@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=17">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=19">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -69,7 +69,12 @@
     <article class="track-card" tabindex="0">
       <div class="track-background" aria-hidden="true"></div>
       <div class="track-shade" aria-hidden="true"></div>
-      <h2 class="track-title"></h2>
+      <h2 class="track-title">
+        <span class="track-title-text"></span>
+        <svg class="track-title-flourish" viewBox="0 0 210 25" aria-hidden="true">
+          <path d="M4 7c32 0 43 14 72 14 34 0 47-18 84-18 21 0 34 6 46 14M67 21c-11 0-20-4-27-10m120-8c12 0 20 3 27 9"/>
+        </svg>
+      </h2>
       <div class="track-image-status" role="status" aria-live="polite" hidden>
         <span class="track-image-spinner" aria-hidden="true"></span>
         <span class="track-image-status-text">Carregando imagem…</span>
@@ -179,6 +184,6 @@
   </section>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="/musical-kelly/app.js?v=20" defer></script>
+  <script src="/musical-kelly/app.js?v=21" defer></script>
 </body>
 </html>

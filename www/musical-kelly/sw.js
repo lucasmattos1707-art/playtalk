@@ -5,8 +5,8 @@ const SHELL_CACHE_PREFIX = 'playtalk-musical-kelly-shell-';
 const MEDIA_CACHE = 'playtalk-musical-kelly-media-v1';
 const SHELL_URLS = [
   '/musical-kelly/',
-  '/musical-kelly/styles.css?v=17',
-  '/musical-kelly/app.js?v=20'
+  '/musical-kelly/styles.css?v=19',
+  '/musical-kelly/app.js?v=21'
 ];
 const COMMENT_OUTBOX_DB_NAME = 'playtalk-musical-kelly-offline-v1';
 const COMMENT_OUTBOX_STORE = 'comment-outbox';

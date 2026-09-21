@@ -489,7 +489,7 @@
       }
       node.setAttribute('aria-label', `${card.title}. ${card.audio ? 'Toque para reproduzir.' : 'Sem música.'}`);
       setCardBackground(node.querySelector('.track-background'), card);
-      node.querySelector('.track-title').textContent = card.title;
+      node.querySelector('.track-title-text').textContent = card.title;
 
       const durationLabel = node.querySelector('.track-duration');
       const knownDuration = card.audio ? state.durations.get(card.audio.fileName) : 0;

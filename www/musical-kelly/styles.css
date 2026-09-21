@@ -1357,20 +1357,46 @@ textarea {
 
 .track-card.has-generated-image:not(.is-playing) .track-title {
   right: auto;
-  display: -webkit-box;
-  width: min(38%, 430px);
-  overflow: hidden;
+  display: flex;
+  width: min(34%, 360px);
+  overflow: visible;
+  flex-direction: column;
+  align-items: flex-start;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1rem, 4.1vw, 3.35rem);
+  font-size: clamp(1rem, 4.6vw, 3.75rem);
   font-weight: 700;
   line-height: 0.9;
   letter-spacing: -0.05em;
-  text-wrap: balance;
   text-overflow: clip;
   text-shadow: 0 4px 16px rgba(0, 0, 0, 0.98), 0 0 5px rgba(255, 255, 255, 0.5);
   white-space: normal;
+}
+
+.track-card.has-generated-image:not(.is-playing) .track-title-text {
+  display: -webkit-box;
+  width: 100%;
+  overflow: hidden;
+  text-wrap: balance;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.track-title-flourish {
+  display: none;
+}
+
+.track-card.has-generated-image:not(.is-playing) .track-title-flourish {
+  display: block;
+  width: min(76%, 210px);
+  height: clamp(10px, 1.65vw, 21px);
+  margin: clamp(3px, 0.55vw, 7px) auto 0;
+  overflow: visible;
+  color: rgba(255, 255, 255, 0.92);
+  fill: none;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.9));
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
 }
 
 @keyframes imageGenerationSpin {
@@ -1764,6 +1790,12 @@ body.is-sorting .track-card button {
   .track-card.has-generated-image:not(.is-playing) .track-title {
     width: 42%;
     font-size: clamp(0.82rem, 5.1vw, 1.35rem);
+  }
+
+  .track-card.has-generated-image:not(.is-playing) .track-title-flourish {
+    height: 8px;
+    margin-top: 2px;
+    stroke-width: 2.8;
   }
 
   .track-image-status {
