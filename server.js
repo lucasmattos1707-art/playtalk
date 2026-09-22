@@ -27024,6 +27024,58 @@ app.post('/api/musical-kelly/cards/:cardId/lyrics/generate', async (req, res) =>
   }
 });
 
+app.get('/api/musical-kelly/cards/:cardId/audio', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const project = await readMusicalKellyGlobalProject();
+    const card = project.cards.find((entry) => entry.id === cardId);
+    const fileName = normalizeMusicalKellyAssetFileName(card?.audio?.fileName);
+    if (!card || !fileName) {
+      res.status(404).json({ success: false, message: 'Esta faixa nao tem audio no R2.' });
+      return;
+    }
+    const rangeHeader = typeof req.headers.range === 'string' && /^bytes=\d*-\d*$/i.test(req.headers.range.trim())
+      ? req.headers.range.trim()
+      : undefined;
+    const response = await getR2Client().send(new GetObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: `${musicalKellyGlobalRoot()}/audio/${fileName}`,
+      Range: rangeHeader
+    }));
+    res.status(response?.ContentRange ? 206 : 200);
+    res.setHeader('Content-Type', response?.ContentType || card.audio.contentType || contentTypeFromObjectKey(fileName));
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
+    res.setHeader('X-Musical-Kelly-Card-Id', card.id);
+    res.setHeader('X-Musical-Kelly-Audio-File', fileName);
+    if (Number.isFinite(Number(response?.ContentLength))) res.setHeader('Content-Length', String(response.ContentLength));
+    if (response?.ContentRange) res.setHeader('Content-Range', response.ContentRange);
+    if (response?.ETag) res.setHeader('ETag', response.ETag);
+    if (typeof response?.Body?.pipe === 'function') {
+      response.Body.on('error', (error) => {
+        console.error('Erro durante streaming do audio de sync do musical Kelly:', error);
+        if (!res.headersSent) res.status(500).end();
+        else res.destroy(error);
+      });
+      response.Body.pipe(res);
+      return;
+    }
+    res.send(await readR2BodyAsBuffer(response?.Body));
+  } catch (error) {
+    const status = Number(error?.$metadata?.httpStatusCode || error?.statusCode || 0);
+    if (status === 404 || error?.Code === 'NoSuchKey') {
+      res.status(404).json({ success: false, message: 'O audio atual desta faixa nao foi encontrado no R2.' });
+      return;
+    }
+    console.error('Erro ao servir audio de sync do musical Kelly:', error);
+    if (!res.headersSent) res.status(status || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel abrir o audio atual do R2.'
+    });
+  }
+});
+
 app.put('/api/musical-kelly/cards/:cardId/lyrics', async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -27126,6 +27178,38 @@ app.put('/api/musical-kelly/cards/:cardId/lyrics/timesync', async (req, res) => 
     res.status(Number(error?.statusCode) || 500).json({
       success: false,
       message: error?.message || 'Nao foi possivel salvar o timesync manual.'
+    });
+  }
+});
+
+app.delete('/api/musical-kelly/cards/:cardId/lyrics/timesync', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    if (!cardId) {
+      res.status(400).json({ success: false, message: 'Container invalido.' });
+      return;
+    }
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      const card = currentProject.cards.find((entry) => entry.id === cardId);
+      if (!card?.lyrics?.lines?.length) {
+        const error = new Error('Esta faixa ainda nao tem letra para atualizar.');
+        error.statusCode = 404;
+        throw error;
+      }
+      card.lyrics.mode = 'plain';
+      card.lyrics.source = 'admin';
+      card.lyrics.updatedAt = new Date().toISOString();
+      card.lyrics.lines = card.lyrics.lines.map((line) => ({ ...line, start: null, end: null }));
+      return writeMusicalKellyGlobalProject(currentProject);
+    });
+    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+  } catch (error) {
+    console.error('Erro ao excluir timesync do musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel excluir o timesync desta faixa.'
     });
   }
 });

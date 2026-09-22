@@ -93,7 +93,9 @@ test('admin can open editor and character context menu', async () => {
   document.getElementById('lyricsEditButton').click();
   assert.equal(document.getElementById('lyricsAdminPanel').hidden, false);
   assert.ok(document.getElementById('lyricsManualSyncButton'));
+  assert.ok(document.getElementById('lyricsClearTimesyncButton'));
   assert.equal(document.getElementById('manualSyncPanel').hidden, true);
+  assert.equal(document.getElementById('lyricsClearTimesyncButton').hidden, false);
   assert.match(document.getElementById('lyricsEditor').value, /^Dorothy: Não tenha medo\./);
   assert.equal(document.querySelector('.comment-button').hidden, false);
   document.querySelector('.lyric-line').dispatchEvent(new MouseEvent('contextmenu', {
@@ -115,6 +117,9 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(serverSource, /app\.post\('\/api\/musical-kelly\/cards\/:cardId\/lyrics\/generate'/);
   assert.match(serverSource, /app\.put\('\/api\/musical-kelly\/cards\/:cardId\/lyrics'/);
   assert.match(serverSource, /app\.put\('\/api\/musical-kelly\/cards\/:cardId\/lyrics\/timesync'/);
+  assert.match(serverSource, /app\.delete\('\/api\/musical-kelly\/cards\/:cardId\/lyrics\/timesync'/);
+  assert.match(serverSource, /app\.get\('\/api\/musical-kelly\/cards\/:cardId\/audio'/);
+  assert.match(serverSource, /Otherwise return an empty speaker/);
   assert.match(serverSource, /requireAdminUserFromRequest\(req\)/);
   assert.match(serverSource, /CREATE TABLE IF NOT EXISTS public\.musical_kelly_characters/);
   assert.match(serverSource, /\$\{musicalKellyGlobalRoot\(\)\}\/characters/);
@@ -126,6 +131,9 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(appSource, /function changeLyricsTrack\(direction\)/);
   assert.match(appSource, /playRequestGeneration/);
   assert.match(appSource, /state\.autoAdvance = \{ fromVoice: voice, nextVoice: null, timer \}/);
+  assert.match(appSource, /startManualSyncR2Audio\(card\)/);
+  assert.match(appSource, /forceNetwork: true, sourceUrl: manualSyncAudioUrl\(card\)/);
+  assert.match(appSource, /O R2 não confirmou o novo timesync/);
   assert.doesNotMatch(html, /id="lyricsCharacterLabel"/);
   assert.match(html, /aria-label="Faixa anterior"/);
   assert.match(html, /aria-label="Próxima faixa"/);

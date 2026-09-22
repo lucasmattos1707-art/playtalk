@@ -65,6 +65,7 @@
     lyricsEditor: document.getElementById('lyricsEditor'),
     lyricsSaveButton: document.getElementById('lyricsSaveButton'),
     lyricsManualSyncButton: document.getElementById('lyricsManualSyncButton'),
+    lyricsClearTimesyncButton: document.getElementById('lyricsClearTimesyncButton'),
     manualSyncPanel: document.getElementById('manualSyncPanel'),
     manualSyncProgress: document.getElementById('manualSyncProgress'),
     manualSyncInstruction: document.getElementById('manualSyncInstruction'),
@@ -762,6 +763,7 @@
     if (!card) return;
     elements.lyricsAdminTitle.textContent = card.lyrics?.lines?.length ? 'Corrigir ou recriar' : 'Criar letra';
     elements.lyricsEditor.value = (card.lyrics?.lines || []).map(lyricLineLabel).join('\n');
+    elements.lyricsClearTimesyncButton.hidden = card.lyrics?.mode !== 'timesync';
     elements.lyricsAdminPanel.hidden = false;
   }
 
@@ -937,7 +939,7 @@
     elements.manualSyncInstruction.textContent = sync.saving
       ? 'Aguarde só um instante.'
       : sync.lineIndex >= lines.length
-        ? 'No fim da última fala, toque em ↓ mais uma vez para concluir.'
+        ? 'Salvando o novo timesync no R2…'
         : `Quando começar “${String(lines[sync.lineIndex]?.text || '').slice(0, 70)}”, toque em ↓.`;
     elements.manualSyncAdvanceButton.disabled = sync.saving;
     elements.manualSyncCancelButton.disabled = sync.saving;
@@ -950,6 +952,7 @@
     elements.lyricsScreen.classList.remove('is-manual-sync');
     if (pause && state.current && !state.current.paused) pauseCurrent();
     if (!elements.lyricsScreen.hidden) renderLyricsScreen();
+    setStatus('Sync manual cancelado. Nenhuma marcação foi alterada.');
   }
 
   async function startManualSync() {
@@ -962,6 +965,15 @@
     if (!lines.length) throw new Error('Escreva ao menos uma linha da letra.');
     cancelPovPlayback({ pause: true });
     state.selectedCharacterId = '';
+    state.lyricsBusy = true;
+    elements.lyricsManualSyncButton.disabled = true;
+    setStatus(`Abrindo o áudio atual de “${card.title}” direto do R2…`, true);
+    try {
+      await startManualSyncR2Audio(card);
+    } finally {
+      state.lyricsBusy = false;
+      elements.lyricsManualSyncButton.disabled = false;
+    }
     state.manualSync = {
       cardId: card.id,
       lineIndex: 0,
@@ -971,7 +983,7 @@
     };
     elements.lyricsAdminPanel.hidden = true;
     renderLyricsScreen();
-    await ensureLyricsCardAt(card, 0);
+    setStatus(`Sincronizando “${card.title}” com o áudio atual do R2.`, true);
     showToast('Sync manual iniciado. Use ↓ a cada nova linha.');
   }
 
@@ -989,13 +1001,20 @@
       const previous = sync.marks[sync.marks.length - 1];
       sync.marks.push(previous == null ? position : Math.max(position, previous + 0.01));
       sync.lineIndex += 1;
-      renderLyricsScreen();
-      const targetIndex = Math.min(sync.lineIndex, lines.length - 1);
-      elements.lyricsLines.querySelector(`[data-line-index="${targetIndex}"]`)
-        ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      return;
+      if (sync.lineIndex < lines.length) {
+        renderLyricsScreen();
+        elements.lyricsLines.querySelector(`[data-line-index="${sync.lineIndex}"]`)
+          ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        return;
+      }
     }
-    const finalEnd = Math.max(position, sync.marks[sync.marks.length - 1] + 0.1);
+    if (sync.marks.length !== lines.length) return;
+    const audioDuration = Math.max(
+      0,
+      Number(state.current?.cardId === card.id ? state.current?.buffer?.duration : 0) || 0,
+      Number(state.durations.get(card.audio?.fileName)) || 0
+    );
+    const finalEnd = Math.max(audioDuration, position, sync.marks[sync.marks.length - 1] + 0.1);
     const timings = lines.map((line, index) => ({
       lineId: line.id,
       start: sync.marks[index],
@@ -1004,22 +1023,59 @@
     sync.saving = true;
     updateManualSyncPanel();
     try {
-      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}/lyrics/timesync`, {
+      await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}/lyrics/timesync`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ timings })
       });
-      applyCollaborationProject(payload.project);
+      const verification = await apiJson(`${API_ROOT}/project?timesync=${encodeURIComponent(`${card.id}-${Date.now()}`)}`, {
+        cache: 'no-store'
+      });
+      const verifiedCard = verification.project?.cards?.find((entry) => entry.id === card.id);
+      const verifiedLines = Array.isArray(verifiedCard?.lyrics?.lines) ? verifiedCard.lyrics.lines : [];
+      const timingsPersisted = verifiedCard?.lyrics?.mode === 'timesync'
+        && verifiedLines.length === timings.length
+        && timings.every((timing, index) => (
+          verifiedLines[index]?.id === timing.lineId
+          && Math.abs(Number(verifiedLines[index]?.start) - timing.start) < 0.002
+          && Math.abs(Number(verifiedLines[index]?.end) - timing.end) < 0.002
+        ));
+      if (!timingsPersisted) throw new Error('O R2 não confirmou o novo timesync. As marcações continuam abertas para tentar novamente.');
+      applyCollaborationProject(verification.project);
       state.manualSync = null;
       elements.manualSyncPanel.hidden = true;
       elements.lyricsScreen.classList.remove('is-manual-sync');
       if (state.current && !state.current.paused) pauseCurrent();
       renderLyricsScreen();
+      setStatus(`Timesync de “${card.title}” salvo e confirmado no R2.`);
       showToast('Timesync manual salvo com sucesso.');
     } catch (error) {
       sync.saving = false;
       updateManualSyncPanel();
+      setStatus('O novo timesync ainda não foi confirmado no R2.');
       throw error;
+    }
+  }
+
+  async function clearLyricsTimesync() {
+    if (!state.canEdit || state.lyricsBusy || state.manualSync) return;
+    const card = getCard(state.lyricsCardId);
+    if (!card?.lyrics?.lines?.length || card.lyrics.mode !== 'timesync') return;
+    const confirmed = window.confirm('Excluir todo o timesync desta faixa? A letra e os personagens serão mantidos.');
+    if (!confirmed) return;
+    await saveLyricsEdits({ closeEditor: false, announce: false });
+    state.lyricsBusy = true;
+    elements.lyricsClearTimesyncButton.disabled = true;
+    try {
+      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}/lyrics/timesync`, {
+        method: 'DELETE'
+      });
+      applyCollaborationProject(payload.project);
+      openLyricsEditor();
+      showToast('Timesync excluído. A letra e os personagens foram mantidos.');
+    } finally {
+      state.lyricsBusy = false;
+      elements.lyricsClearTimesyncButton.disabled = false;
     }
   }
 
@@ -2177,7 +2233,7 @@
     } catch (_error) {}
   }
 
-  async function startNativeCard(card, offset = 0, { natural = false } = {}) {
+  async function startNativeCard(card, offset = 0, { natural = false, sourceUrl = '' } = {}) {
     if (!card?.audio?.url) throw new Error('Este container ainda não tem música.');
     const media = ensureNativeAudio();
     const previous = state.current;
@@ -2187,7 +2243,7 @@
     clearColorTimer();
     if (previous) previous.replaced = true;
     media.pause();
-    media.src = absoluteUrl(card.audio.url);
+    media.src = absoluteUrl(sourceUrl || card.audio.url);
     media.load();
 
     const knownDuration = Math.max(0, Number(state.durations.get(card.audio.fileName)) || 0);
@@ -2237,9 +2293,17 @@
     setStatus(`No ar: “${card.title}”.`);
   }
 
-  async function fetchAssetResponse(asset) {
-    const request = new Request(absoluteUrl(asset.url), { credentials: 'same-origin' });
-    if ('caches' in window) {
+  function manualSyncAudioUrl(card) {
+    const token = encodeURIComponent(`${card.audio?.fileName || 'audio'}-${Date.now()}`);
+    return `${API_ROOT}/cards/${encodeURIComponent(card.id)}/audio?fresh=${token}`;
+  }
+
+  async function fetchAssetResponse(asset, { forceNetwork = false, sourceUrl = '' } = {}) {
+    const request = new Request(absoluteUrl(sourceUrl || asset.url), {
+      credentials: 'same-origin',
+      cache: forceNetwork ? 'no-store' : 'default'
+    });
+    if (!forceNetwork && 'caches' in window) {
       const cached = await (await getCache()).match(request);
       if (cached) return cached;
     }
@@ -2248,13 +2312,16 @@
     return response;
   }
 
-  async function loadAudioBuffer(card) {
+  async function loadAudioBuffer(card, { forceR2 = false } = {}) {
     if (!card?.audio?.url) throw new Error('Este container ainda não tem música.');
     const key = card.audio.fileName;
+    if (forceR2) state.bufferPromises.delete(key);
     if (!state.bufferPromises.has(key)) {
       const promise = (async () => {
         const context = await getAudioContext();
-        const response = await fetchAssetResponse(card.audio);
+        const response = await fetchAssetResponse(card.audio, forceR2
+          ? { forceNetwork: true, sourceUrl: manualSyncAudioUrl(card) }
+          : {});
         const bytes = await response.arrayBuffer();
         let buffer;
         try {
@@ -2271,6 +2338,22 @@
       state.bufferPromises.set(key, promise);
     }
     return state.bufferPromises.get(key);
+  }
+
+  async function startManualSyncR2Audio(card) {
+    const generation = ++state.playRequestGeneration;
+    cancelAutoAdvance();
+    clearTransitionTimers();
+    if (USE_NATIVE_AUDIO_ON_APPLE) {
+      await startNativeCard(card, 0, { sourceUrl: manualSyncAudioUrl(card) });
+      if (generation !== state.playRequestGeneration) throw new Error('A faixa mudou enquanto o áudio era aberto.');
+      cancelAutoAdvance();
+      return;
+    }
+    const buffer = await loadAudioBuffer(card, { forceR2: true });
+    if (generation !== state.playRequestGeneration) throw new Error('A faixa mudou enquanto o áudio era aberto.');
+    await startImmediately(card, buffer);
+    cancelAutoAdvance();
   }
 
   function releaseAudioBuffer(cardId) {
@@ -2850,6 +2933,9 @@
     });
     elements.lyricsManualSyncButton.addEventListener('click', () => {
       startManualSync().catch((error) => showToast(error.message, true));
+    });
+    elements.lyricsClearTimesyncButton.addEventListener('click', () => {
+      clearLyricsTimesync().catch((error) => showToast(error.message, true));
     });
     elements.manualSyncAdvanceButton.addEventListener('click', () => {
       advanceManualSync().catch((error) => showToast(error.message, true));

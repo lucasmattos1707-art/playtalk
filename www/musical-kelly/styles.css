@@ -2153,7 +2153,7 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
 .lyric-copy small {
   display: block;
   margin-bottom: 4px;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.5);
   font-family: system-ui, sans-serif;
   font-size: 0.62em;
   font-weight: 900;
@@ -2293,7 +2293,8 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   display: none;
 }
 
-.lyrics-manual-sync-button {
+.lyrics-manual-sync-button,
+.lyrics-clear-timesync-button {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr);
   gap: 10px;
@@ -2310,7 +2311,8 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   cursor: pointer;
 }
 
-.lyrics-manual-sync-button svg {
+.lyrics-manual-sync-button svg,
+.lyrics-clear-timesync-button svg {
   width: 25px;
   fill: none;
   stroke: currentColor;
@@ -2320,13 +2322,27 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
 
 .lyrics-manual-sync-button span,
 .lyrics-manual-sync-button strong,
-.lyrics-manual-sync-button small {
+.lyrics-manual-sync-button small,
+.lyrics-clear-timesync-button span,
+.lyrics-clear-timesync-button strong,
+.lyrics-clear-timesync-button small {
   display: block;
 }
 
-.lyrics-manual-sync-button small {
+.lyrics-manual-sync-button small,
+.lyrics-clear-timesync-button small {
   margin-top: 2px;
   color: rgba(255, 255, 255, 0.62);
+}
+
+.lyrics-clear-timesync-button {
+  border-color: rgba(255, 111, 134, 0.32);
+  color: #ffd8df;
+  background: linear-gradient(135deg, rgba(121, 24, 48, 0.24), rgba(52, 15, 35, 0.4));
+}
+
+.lyrics-clear-timesync-button[hidden] {
+  display: none;
 }
 
 .manual-sync-panel {

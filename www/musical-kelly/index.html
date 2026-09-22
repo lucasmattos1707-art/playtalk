@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=21">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=22">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -205,6 +205,10 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16M18 4v16M9 8h6M9 12h6M9 16h6"/></svg>
         <span><strong>Sincronizar manualmente</strong><small>Reproduzir e marcar cada linha com ↓</small></span>
       </button>
+      <button class="lyrics-clear-timesync-button" id="lyricsClearTimesyncButton" type="button" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 3h6l1 4H8l1-4ZM7 7l1 14h8l1-14M10 11v6M14 11v6"/></svg>
+        <span><strong>Excluir timesync</strong><small>Manter a letra e remover todos os tempos</small></span>
+      </button>
     </aside>
 
     <aside class="manual-sync-panel" id="manualSyncPanel" hidden>
@@ -309,6 +313,6 @@
   </section>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="/musical-kelly/app.js?v=23" defer></script>
+  <script src="/musical-kelly/app.js?v=24" defer></script>
 </body>
 </html>
