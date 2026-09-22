@@ -9,10 +9,11 @@ const { JSDOM } = require('jsdom');
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'www', 'musical-kelly', 'index.html'), 'utf8');
 const appSource = fs.readFileSync(path.join(root, 'www', 'musical-kelly', 'app.js'), 'utf8');
+const stylesSource = fs.readFileSync(path.join(root, 'www', 'musical-kelly', 'styles.css'), 'utf8');
 const serviceWorkerSource = fs.readFileSync(path.join(root, 'www', 'musical-kelly', 'sw.js'), 'utf8');
 const serverSource = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 
-function projectPayload(canEdit) {
+function projectPayload(canEdit, { withAudio = false } = {}) {
   return {
     success: true,
     canEdit,
@@ -33,8 +34,16 @@ function projectPayload(canEdit) {
       cards: [{
         id: 'cue-test',
         title: 'Dorothy encontra o Leão',
-        audio: null,
-        image: null,
+        audio: withAudio ? {
+          fileName: 'dorothy-leao.mp3',
+          name: 'dorothy-leao.mp3',
+          url: '/api/musical-kelly/assets/audio/dorothy-leao.mp3'
+        } : null,
+        image: withAudio ? {
+          fileName: 'dorothy-leao.webp',
+          name: 'dorothy-leao.webp',
+          url: '/api/musical-kelly/assets/image/dorothy-leao.webp'
+        } : null,
         comments: [],
         lyrics: {
           mode: 'timesync',
@@ -49,7 +58,7 @@ function projectPayload(canEdit) {
   };
 }
 
-async function boot(canEdit) {
+async function boot(canEdit, options = {}) {
   const dom = new JSDOM(html, {
     runScripts: 'outside-only',
     url: 'https://fluentlevelup.com/musical-kelly/'
@@ -62,8 +71,14 @@ async function boot(canEdit) {
   window.fetch = async () => ({
     ok: true,
     status: 200,
-    json: async () => projectPayload(canEdit)
+    json: async () => projectPayload(canEdit, options)
   });
+  window.caches = {
+    open: async () => ({
+      match: async () => null,
+      put: async () => {}
+    })
+  };
   window.eval(appSource);
   await new Promise((resolve) => setTimeout(resolve, 30));
   return dom;
@@ -79,6 +94,7 @@ test('viewer opens the fullscreen lyrics from the document icon', async () => {
   assert.equal(document.body.classList.contains('lyrics-open'), true);
   assert.equal(document.getElementById('lyricsScreenTitle').textContent, 'Faixa 1 de 1');
   assert.match(document.querySelector('.lyrics-track-heading').textContent, /Toque no texto que quiser/);
+  assert.equal(document.getElementById('lyricsTrackLabelTitle').textContent, 'Dorothy encontra o Leão');
   assert.equal(document.getElementById('playerBar'), null);
   assert.deepEqual(
     [...document.querySelectorAll('.lyric-line .lyric-copy > span')].map((node) => node.textContent),
@@ -87,6 +103,20 @@ test('viewer opens the fullscreen lyrics from the document icon', async () => {
   assert.equal(document.getElementById('lyricsEditButton').hidden, true);
   assert.equal(document.querySelector('.comment-button').hidden, true);
   assert.match(document.querySelector('.lyric-character-avatar').style.backgroundImage, /char-dorothy/);
+  dom.window.close();
+});
+
+test('tapping a track that is not downloaded opens the friendly single-track modal', async () => {
+  const dom = await boot(false, { withAudio: true });
+  const { document, MouseEvent } = dom.window;
+  document.querySelector('.track-card').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  const dialog = document.getElementById('downloadPromptDialog');
+  assert.equal(dialog.hasAttribute('open'), true);
+  assert.equal(document.getElementById('downloadPromptTitle').textContent, 'Baixe essa faixa de áudio para ensaiar');
+  assert.match(document.getElementById('downloadPromptCopy').textContent, /áudio, o rótulo da faixa e as imagens dos personagens usados/);
+  assert.equal(document.getElementById('confirmTrackDownloadLabel').textContent, 'Download');
+  assert.equal(document.getElementById('lyricsScreen').hidden, true);
   dom.window.close();
 });
 
@@ -146,7 +176,12 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(appSource, /forceNetwork: true, sourceUrl: manualSyncAudioUrl\(card\)/);
   assert.match(appSource, /O R2 não confirmou o novo timesync/);
   assert.match(appSource, /function cacheCharacterImages\(\)/);
-  assert.match(appSource, /state\.characters\.map\(async \(character\)/);
+  assert.match(appSource, /function charactersUsedByCard\(card\)/);
+  assert.match(appSource, /await cacheCardCharacterImages\(card\)/);
+  assert.match(appSource, /async function ensureCardDownloadedForPlayback\(card\)/);
+  assert.match(appSource, /openDownloadPrompt\(card\.id\)/);
+  assert.match(appSource, /if \(!await ensureCardDownloadedForPlayback\(card\)\) return/);
+  assert.match(appSource, /state\.characters\.map\(cacheCharacterImage\)/);
   assert.match(appSource, /cache\.put\(request, response\.clone\(\)\)/);
   assert.match(appSource, /window\.addEventListener\('online'[\s\S]*cacheCharacterImages\(\)/);
   assert.match(serviceWorkerSource, /url\.pathname\.startsWith\('\/api\/musical-kelly\/characters\/'\)/);
@@ -156,5 +191,11 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(html, /aria-label="Próxima faixa"/);
   assert.match(html, /aria-label="Voltar 5 segundos"/);
   assert.match(html, /aria-label="Avançar 5 segundos"/);
+  assert.match(html, /Baixe essa faixa de áudio para ensaiar/);
+  assert.match(html, /id="lyricsTrackLabel"/);
   assert.doesNotMatch(html, /id="playerBar"/);
+  assert.match(stylesSource, /font-size: clamp\(1\.4rem, 3\.08vw, 2\.1rem\)/);
+  assert.match(stylesSource, /font-size: 1\.26rem/);
+  assert.match(stylesSource, /\.lyrics-lines[\s\S]*padding: 14px 22px 24px/);
+  assert.doesNotMatch(stylesSource, /padding: 31vh 10px 37vh/);
 });

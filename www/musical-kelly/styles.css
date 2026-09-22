@@ -1658,6 +1658,59 @@ body.is-sorting .track-card button {
   cursor: wait;
 }
 
+.download-prompt-dialog {
+  width: min(520px, calc(100% - 24px));
+}
+
+.download-prompt-card {
+  gap: 16px;
+}
+
+.download-prompt-card > p {
+  margin: -2px 0 4px;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.58;
+}
+
+.download-prompt-button {
+  display: inline-flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #fff;
+  background: linear-gradient(135deg, #1474c8 0%, #0a4583 100%);
+  box-shadow: 0 12px 30px rgba(5, 64, 120, 0.34);
+}
+
+.download-prompt-button svg {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.download-prompt-spinner {
+  display: none;
+}
+
+.download-prompt-button.is-busy .download-prompt-icon {
+  display: none;
+}
+
+.download-prompt-button.is-busy .download-prompt-spinner {
+  display: block;
+  animation: downloadPromptLoop 720ms linear infinite;
+}
+
+@keyframes downloadPromptLoop {
+  to { transform: rotate(360deg); }
+}
+
 .approve-track-button {
   min-height: 48px;
   padding: 0 18px;
@@ -1979,7 +2032,7 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   overflow: hidden;
   margin: 0;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1rem, 2.2vw, 1.5rem);
+  font-size: clamp(1.4rem, 3.08vw, 2.1rem);
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2132,13 +2185,59 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   display: none;
 }
 
+.lyrics-track-label {
+  position: relative;
+  isolation: isolate;
+  width: min(calc(100% - 44px), 880px);
+  aspect-ratio: 5 / 1;
+  min-height: 96px;
+  max-height: 176px;
+  margin: 18px auto 0;
+  overflow: hidden;
+  border: 1px solid rgba(118, 190, 255, 0.2);
+  border-radius: 18px;
+  background: #07111b;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.3);
+}
+
+.lyrics-track-label__background,
+.lyrics-track-label__shade {
+  position: absolute;
+  inset: 0;
+}
+
+.lyrics-track-label__background {
+  z-index: -2;
+  background: linear-gradient(135deg, #16314a, #07111b) center / cover no-repeat;
+}
+
+.lyrics-track-label__shade {
+  z-index: -1;
+  background: linear-gradient(90deg, rgba(1, 4, 8, 0.94) 0%, rgba(1, 4, 8, 0.66) 33%, rgba(1, 4, 8, 0.08) 72%, rgba(1, 4, 8, 0.38) 100%);
+}
+
+.lyrics-track-label h2 {
+  display: flex;
+  width: min(38%, 330px);
+  height: 100%;
+  align-items: center;
+  margin: 0;
+  padding: 12px clamp(18px, 3.5vw, 40px);
+  color: #fff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1rem, 3.1vw, 2.55rem);
+  line-height: 0.94;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+  text-shadow: 0 4px 15px rgba(0, 0, 0, 0.98), 0 0 4px rgba(255, 255, 255, 0.34);
+}
+
 .lyrics-lines {
   display: grid;
   gap: 10px;
   width: min(100%, 880px);
-  min-height: 100%;
   margin: 0 auto;
-  padding: 34vh 22px 38vh;
+  padding: 14px 22px 24px;
   align-content: start;
 }
 
@@ -2227,7 +2326,7 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
 
 .lyrics-empty {
   display: grid;
-  min-height: 100%;
+  min-height: 36vh;
   place-content: center;
   place-items: center;
   gap: 14px;
@@ -2805,7 +2904,7 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   .lyrics-header h1 {
     position: static;
     max-width: none;
-    font-size: 0.9rem;
+    font-size: 1.26rem;
     transform: none;
   }
 
@@ -2825,6 +2924,19 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
 
   .lyrics-track-heading small {
     font-size: 0.58rem;
+  }
+
+  .lyrics-track-label {
+    width: calc(100% - 20px);
+    min-height: 72px;
+    margin-top: 10px;
+    border-radius: 13px;
+  }
+
+  .lyrics-track-label h2 {
+    width: 42%;
+    padding: 8px 14px;
+    font-size: clamp(0.8rem, 4.4vw, 1.18rem);
   }
 
   .lyrics-character-switch {
@@ -2858,7 +2970,7 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   .lyrics-lines {
     grid-template-columns: 1fr;
     gap: 8px;
-    padding: 31vh 10px 37vh;
+    padding: 10px 10px 18px;
   }
 
   .lyric-line {

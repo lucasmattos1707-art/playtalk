@@ -49,6 +49,9 @@
     lyricsPreviousTrackButton: document.getElementById('lyricsPreviousTrackButton'),
     lyricsNextTrackButton: document.getElementById('lyricsNextTrackButton'),
     lyricsStage: document.getElementById('lyricsStage'),
+    lyricsTrackLabel: document.getElementById('lyricsTrackLabel'),
+    lyricsTrackLabelBackground: document.getElementById('lyricsTrackLabelBackground'),
+    lyricsTrackLabelTitle: document.getElementById('lyricsTrackLabelTitle'),
     lyricsLines: document.getElementById('lyricsLines'),
     lyricsEmpty: document.getElementById('lyricsEmpty'),
     lyricsBackButton: document.getElementById('lyricsBackButton'),
@@ -88,6 +91,11 @@
     characterImageInput: document.getElementById('characterImageInput'),
     characterImageLabel: document.getElementById('characterImageLabel'),
     characterSaveButton: document.getElementById('characterSaveButton'),
+    downloadPromptDialog: document.getElementById('downloadPromptDialog'),
+    downloadPromptCopy: document.getElementById('downloadPromptCopy'),
+    closeDownloadPrompt: document.getElementById('closeDownloadPrompt'),
+    confirmTrackDownload: document.getElementById('confirmTrackDownload'),
+    confirmTrackDownloadLabel: document.getElementById('confirmTrackDownloadLabel'),
     toast: document.getElementById('toast')
   };
 
@@ -142,6 +150,8 @@
     characterDialogMode: 'pov',
     characterMenuLineId: '',
     selectedCharacterId: '',
+    downloadPromptCardId: '',
+    downloadPromptBusy: false,
     povPlayback: null,
     manualSync: null,
     progressFrame: 0
@@ -716,6 +726,58 @@
     else dialog.removeAttribute('open');
   }
 
+  function setDownloadPromptBusy(busy) {
+    state.downloadPromptBusy = Boolean(busy);
+    elements.confirmTrackDownload.disabled = state.downloadPromptBusy;
+    elements.closeDownloadPrompt.disabled = state.downloadPromptBusy;
+    elements.confirmTrackDownload.classList.toggle('is-busy', state.downloadPromptBusy);
+    elements.confirmTrackDownloadLabel.textContent = state.downloadPromptBusy ? 'Baixando…' : 'Download';
+  }
+
+  function openDownloadPrompt(cardId) {
+    const card = getCard(cardId);
+    if (!card?.audio) return;
+    state.downloadPromptCardId = card.id;
+    elements.downloadPromptCopy.textContent = `Baixe “${card.title}” para levar o áudio, o rótulo da faixa e as imagens dos personagens usados nela para este aparelho.`;
+    setDownloadPromptBusy(false);
+    if (!elements.downloadPromptDialog.hasAttribute('open')) showDialog(elements.downloadPromptDialog);
+  }
+
+  function closeDownloadPrompt() {
+    if (state.downloadPromptBusy) return;
+    state.downloadPromptCardId = '';
+    closeDialog(elements.downloadPromptDialog);
+  }
+
+  async function downloadPromptTrack() {
+    if (state.downloadPromptBusy) return;
+    const cardId = state.downloadPromptCardId;
+    const card = getCard(cardId);
+    if (!card?.audio) {
+      closeDownloadPrompt();
+      return;
+    }
+    setDownloadPromptBusy(true);
+    try {
+      await downloadCard(card.id);
+      closeDialog(elements.downloadPromptDialog);
+      state.downloadPromptCardId = '';
+      showToast('Faixa pronta para ensaiar neste aparelho.');
+      await openLyricsAndPlay(card.id);
+    } finally {
+      setDownloadPromptBusy(false);
+    }
+  }
+
+  async function ensureCardDownloadedForPlayback(card) {
+    if (!card?.audio) return false;
+    const downloaded = await isCardCached(card).catch(() => false);
+    state.downloadStates.set(card.id, downloaded ? 'done' : 'idle');
+    if (downloaded) return true;
+    openDownloadPrompt(card.id);
+    return false;
+  }
+
   function characterById(characterId) {
     return state.characters.find((character) => character.id === characterId) || null;
   }
@@ -746,6 +808,7 @@
       showToast('Este container ainda não tem música. Pressione A para adicionar.', true);
       return;
     }
+    if (!await ensureCardDownloadedForPlayback(card)) return;
     openLyrics(cardId);
     if (state.current?.cardId === card.id && !state.current.paused) {
       cancelAutoAdvance();
@@ -790,6 +853,9 @@
     const trackNumber = playableIndex >= 0 ? playableIndex + 1 : 1;
     const trackTotal = Math.max(1, playableCards.length);
     elements.lyricsScreenTitle.textContent = `Faixa ${trackNumber} de ${trackTotal}`;
+    elements.lyricsTrackLabelTitle.textContent = card.title;
+    elements.lyricsTrackLabel.setAttribute('aria-label', `Faixa atual: ${card.title}`);
+    setCardBackground(elements.lyricsTrackLabelBackground, card);
     elements.lyricsPreviousTrackButton.disabled = Boolean(state.manualSync) || playableIndex <= 0;
     elements.lyricsNextTrackButton.disabled = Boolean(state.manualSync)
       || playableIndex < 0
@@ -935,6 +1001,7 @@
 
   async function ensureLyricsCardAt(card, position, { play = true } = {}) {
     if (!card?.audio) throw new Error('Este container ainda não tem música.');
+    if (!await ensureCardDownloadedForPlayback(card)) return false;
     if (state.current?.cardId !== card.id) {
       await playCard(card.id);
     } else if (play && state.current.paused) {
@@ -942,6 +1009,7 @@
     }
     await seekTo(position);
     cancelAutoAdvance();
+    return true;
   }
 
   function updateManualSyncPanel() {
@@ -978,6 +1046,7 @@
     if (!state.canEdit || state.lyricsBusy || state.manualSync) return;
     const cardBeforeSave = getCard(state.lyricsCardId);
     if (!cardBeforeSave?.audio) throw new Error('Adicione o áudio antes de sincronizar.');
+    if (!await ensureCardDownloadedForPlayback(cardBeforeSave)) return;
     await saveLyricsEdits({ closeEditor: false, announce: false });
     const card = getCard(state.lyricsCardId);
     const lines = Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
@@ -1436,6 +1505,7 @@
   async function toggleLyricsPlayback() {
     const card = getCard(state.lyricsCardId);
     if (!card?.audio) throw new Error('Este container ainda não tem música.');
+    if (!await ensureCardDownloadedForPlayback(card)) return;
     if (state.current?.cardId === card.id && !state.current.paused) {
       clearPovTimers();
       pauseCurrent();
@@ -1464,6 +1534,7 @@
     const currentIndex = playableCards.findIndex((card) => card.id === state.lyricsCardId);
     const target = playableCards[currentIndex + direction];
     if (!target) return;
+    if (!await ensureCardDownloadedForPlayback(target)) return;
     cancelPovPlayback({ pause: true });
     state.lyricsCardId = target.id;
     state.lyricsActiveLineIndex = -1;
@@ -2003,32 +2074,53 @@
     await cache.put(request, response.clone());
   }
 
+  function charactersUsedByCard(card) {
+    const usedIds = new Set((Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [])
+      .map((line) => String(line?.characterId || '').trim())
+      .filter(Boolean));
+    return state.characters.filter((character) => usedIds.has(String(character?.id || '')));
+  }
+
+  async function cacheCharacterImage(character) {
+    if (!character?.imageUrl) return;
+    const cache = await getCache();
+    const request = new Request(absoluteUrl(character.imageUrl), { credentials: 'same-origin' });
+    const existing = await cache.match(request, { ignoreVary: true });
+    if (existing) return;
+    const response = await fetch(request);
+    if (!response.ok) throw new Error(`Não foi possível salvar a imagem de ${character.name || 'personagem'} offline.`);
+    await cache.put(request, response.clone());
+  }
+
   async function cacheCharacterImages() {
     if (!navigator.onLine || !('caches' in window) || !state.characters.length) return;
     await requestPersistentStorage();
-    const cache = await getCache();
-    await Promise.allSettled(state.characters.map(async (character) => {
-      if (!character?.imageUrl) return;
-      const request = new Request(absoluteUrl(character.imageUrl), { credentials: 'same-origin' });
-      const existing = await cache.match(request, { ignoreVary: true });
-      if (existing) return;
-      const response = await fetch(request);
-      if (!response.ok) throw new Error(`Não foi possível salvar a imagem de ${character.name || 'personagem'} offline.`);
-      await cache.put(request, response.clone());
-    }));
+    await Promise.allSettled(state.characters.map(cacheCharacterImage));
+  }
+
+  async function cacheCardCharacterImages(card) {
+    const characters = charactersUsedByCard(card);
+    await Promise.all(characters.map(cacheCharacterImage));
   }
 
   async function isAssetCached(asset) {
     if (!asset?.url || !('caches' in window)) return false;
     const cache = await getCache();
-    return Boolean(await cache.match(new Request(absoluteUrl(asset.url), { credentials: 'same-origin' })));
+    return Boolean(await cache.match(new Request(absoluteUrl(asset.url), { credentials: 'same-origin' }), { ignoreVary: true }));
+  }
+
+  async function areCardCharacterImagesCached(card) {
+    const characters = charactersUsedByCard(card);
+    const states = await Promise.all(characters.map((character) => isAssetCached({ url: character.imageUrl })));
+    return states.every(Boolean);
   }
 
   async function isCardCached(card) {
     if (!card?.audio) return false;
     const audioReady = await isAssetCached(card.audio);
     const imageReady = !card.image || await isAssetCached(card.image);
-    return audioReady && imageReady;
+    const characterImagesReady = await areCardCharacterImagesCached(card);
+    return audioReady && imageReady && characterImagesReady;
   }
 
   async function refreshDownloadStates() {
@@ -2061,8 +2153,10 @@
       await requestPersistentStorage();
       await cacheAsset(card.audio);
       await cacheAsset(card.image);
+      await cacheCardCharacterImages(card);
+      saveProjectSnapshot(state.project);
       state.downloadStates.set(cardId, 'done');
-      if (!quiet) setStatus(`“${card.title}” está pronta para tocar sem depender da internet.`);
+      if (!quiet) setStatus(`“${card.title}” está pronta com áudio, rótulo e personagens para ensaiar offline.`);
     } catch (error) {
       state.downloadStates.set(cardId, 'idle');
       if (error?.name === 'QuotaExceededError') {
@@ -2568,6 +2662,7 @@
     if (!voice || !nextCard || voice.paused || voice.cancelled) return;
 
     try {
+      if (!await isCardCached(nextCard)) return;
       const buffer = await loadAudioBuffer(nextCard);
       if (generation !== state.autoAdvanceGeneration || voice.replaced || voice.cancelled || voice.paused) return;
       if (voice.ended) {
@@ -2721,6 +2816,7 @@
       showToast('Este container ainda não tem música. Pressione A para adicionar.', true);
       return;
     }
+    if (!await ensureCardDownloadedForPlayback(card)) return;
     if (USE_NATIVE_AUDIO_ON_APPLE) {
       if (state.current?.cardId === cardId) {
         if (state.current.paused) await resumeCurrent();
@@ -2844,6 +2940,20 @@
       dialog.addEventListener('click', (event) => {
         if (event.target === dialog) closeDialog(dialog);
       });
+    });
+    elements.closeDownloadPrompt.addEventListener('click', closeDownloadPrompt);
+    elements.confirmTrackDownload.addEventListener('click', () => {
+      downloadPromptTrack().catch((error) => showToast(error.message, true));
+    });
+    elements.downloadPromptDialog.addEventListener('click', (event) => {
+      if (event.target === elements.downloadPromptDialog) closeDownloadPrompt();
+    });
+    elements.downloadPromptDialog.addEventListener('cancel', (event) => {
+      if (state.downloadPromptBusy) {
+        event.preventDefault();
+        return;
+      }
+      state.downloadPromptCardId = '';
     });
     elements.lyricsBackButton.addEventListener('click', closeLyrics);
     elements.lyricsEditButton.addEventListener('click', openLyricsEditor);
