@@ -2122,13 +2122,22 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
 }
 
 .lyric-line.is-sync-target {
-  color: #ffe100;
+  color: #fff;
   border-color: rgba(74, 175, 255, 0.78);
   background: linear-gradient(135deg, rgba(14, 73, 126, 0.98), rgba(8, 42, 78, 0.98));
   box-shadow: 0 10px 35px rgba(0, 75, 145, 0.24);
 }
 
 .lyric-line.is-sync-recorded {
+  color: #ffe100;
+  opacity: 1;
+  border-color: rgba(82, 173, 255, 0.48);
+  background: linear-gradient(135deg, rgba(12, 57, 99, 0.94), rgba(7, 34, 65, 0.96));
+  transform: translateX(3px);
+  text-shadow: 0 0 26px rgba(255, 225, 0, 0.18);
+}
+
+.lyric-line.is-sync-past {
   opacity: 0.48;
 }
 

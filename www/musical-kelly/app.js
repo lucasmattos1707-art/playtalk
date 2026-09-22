@@ -797,7 +797,8 @@
       button.dataset.lineId = line.id;
       button.dataset.lineIndex = String(index);
       button.classList.toggle('is-pov-muted', Boolean(state.selectedCharacterId && line.characterId !== state.selectedCharacterId));
-      button.classList.toggle('is-sync-recorded', Boolean(state.manualSync && index < state.manualSync.lineIndex));
+      button.classList.toggle('is-sync-past', Boolean(state.manualSync && index < state.manualSync.lineIndex - 1));
+      button.classList.toggle('is-sync-recorded', Boolean(state.manualSync && index === state.manualSync.lineIndex - 1));
       button.classList.toggle('is-sync-target', Boolean(state.manualSync && index === state.manualSync.lineIndex));
 
       const avatar = document.createElement('span');
@@ -998,12 +999,13 @@
     const position = Math.max(0, Number(livePosition) || Number(sync.lastPosition) || 0);
     sync.lastPosition = position;
     if (sync.lineIndex < lines.length) {
+      const recordedLineIndex = sync.lineIndex;
       const previous = sync.marks[sync.marks.length - 1];
       sync.marks.push(previous == null ? position : Math.max(position, previous + 0.01));
       sync.lineIndex += 1;
       if (sync.lineIndex < lines.length) {
         renderLyricsScreen();
-        elements.lyricsLines.querySelector(`[data-line-index="${sync.lineIndex}"]`)
+        elements.lyricsLines.querySelector(`[data-line-index="${recordedLineIndex}"]`)
           ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
         return;
       }
@@ -2954,7 +2956,19 @@
     elements.lyricsClearTimesyncButton.addEventListener('click', () => {
       clearLyricsTimesync().catch((error) => showToast(error.message, true));
     });
+    let manualSyncPointerHandled = false;
+    elements.manualSyncAdvanceButton.addEventListener('pointerdown', (event) => {
+      if (event.button != null && event.button !== 0) return;
+      event.preventDefault();
+      manualSyncPointerHandled = true;
+      window.setTimeout(() => { manualSyncPointerHandled = false; }, 700);
+      advanceManualSync().catch((error) => showToast(error.message, true));
+    });
     elements.manualSyncAdvanceButton.addEventListener('click', () => {
+      if (manualSyncPointerHandled) {
+        manualSyncPointerHandled = false;
+        return;
+      }
       advanceManualSync().catch((error) => showToast(error.message, true));
     });
     elements.manualSyncCancelButton.addEventListener('click', () => {

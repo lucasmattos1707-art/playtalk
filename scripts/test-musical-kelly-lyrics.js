@@ -129,6 +129,9 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(appSource, /Number\(line\.end\) \+ 3/);
   assert.match(appSource, /event\.key === 'ArrowDown'/);
   assert.match(appSource, /function advanceManualSync\(\)/);
+  assert.match(appSource, /index === state\.manualSync\.lineIndex - 1/);
+  assert.match(appSource, /data-line-index="\$\{recordedLineIndex\}"/);
+  assert.match(appSource, /manualSyncAdvanceButton\.addEventListener\('pointerdown'/);
   assert.match(appSource, /function changeLyricsTrack\(direction\)/);
   assert.match(appSource, /playRequestGeneration/);
   assert.match(appSource, /state\.autoAdvance = \{ fromVoice: voice, nextVoice: null, timer \}/);
