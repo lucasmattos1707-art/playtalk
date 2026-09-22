@@ -2200,36 +2200,12 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.3);
 }
 
-.lyrics-track-label__background,
-.lyrics-track-label__shade {
+.lyrics-track-label__background {
   position: absolute;
   inset: 0;
-}
-
-.lyrics-track-label__background {
-  z-index: -2;
-  background: linear-gradient(135deg, #16314a, #07111b) center / cover no-repeat;
-}
-
-.lyrics-track-label__shade {
   z-index: -1;
-  background: linear-gradient(90deg, rgba(1, 4, 8, 0.94) 0%, rgba(1, 4, 8, 0.66) 33%, rgba(1, 4, 8, 0.08) 72%, rgba(1, 4, 8, 0.38) 100%);
-}
-
-.lyrics-track-label h2 {
-  display: flex;
-  width: min(38%, 330px);
-  height: 100%;
-  align-items: center;
-  margin: 0;
-  padding: 12px clamp(18px, 3.5vw, 40px);
-  color: #fff;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1rem, 3.1vw, 2.55rem);
-  line-height: 0.94;
-  letter-spacing: -0.045em;
-  text-wrap: balance;
-  text-shadow: 0 4px 15px rgba(0, 0, 0, 0.98), 0 0 4px rgba(255, 255, 255, 0.34);
+  opacity: 1;
+  background: #07111b center / cover no-repeat;
 }
 
 .lyrics-lines {
@@ -2933,12 +2909,6 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
     border-radius: 13px;
   }
 
-  .lyrics-track-label h2 {
-    width: 42%;
-    padding: 8px 14px;
-    font-size: clamp(0.8rem, 4.4vw, 1.18rem);
-  }
-
   .lyrics-character-switch {
     width: 42px;
     height: 42px;
@@ -2947,8 +2917,8 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   }
 
   .lyrics-character-switch__avatar {
-    width: 32px;
-    height: 32px;
+    width: 38px;
+    height: 38px;
   }
 
   .lyrics-back-button {
@@ -2974,16 +2944,18 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   }
 
   .lyric-line {
-    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-columns: 52px minmax(0, 1fr);
     gap: 9px;
-    padding: 11px 12px;
+    min-height: 66px;
+    padding: 7px 10px;
     border-radius: 13px;
     font-size: clamp(0.95rem, 4.2vw, 1.18rem);
   }
 
   .lyric-character-avatar {
-    width: 36px;
-    height: 36px;
+    width: 52px;
+    height: 52px;
+    align-self: center;
   }
 
   .lyrics-player {

@@ -13,7 +13,48 @@ const stylesSource = fs.readFileSync(path.join(root, 'www', 'musical-kelly', 'st
 const serviceWorkerSource = fs.readFileSync(path.join(root, 'www', 'musical-kelly', 'sw.js'), 'utf8');
 const serverSource = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 
-function projectPayload(canEdit, { withAudio = false } = {}) {
+function projectPayload(canEdit, { withAudio = false, withSecondTrack = false } = {}) {
+  const cards = [{
+    id: 'cue-test',
+    title: 'Dorothy encontra o Leão',
+    audio: withAudio ? {
+      fileName: 'dorothy-leao.mp3',
+      name: 'dorothy-leao.mp3',
+      url: '/api/musical-kelly/assets/audio/dorothy-leao.mp3'
+    } : null,
+    image: withAudio ? {
+      fileName: 'dorothy-leao.webp',
+      name: 'dorothy-leao.webp',
+      url: '/api/musical-kelly/assets/image/dorothy-leao.webp'
+    } : null,
+    comments: [],
+    lyrics: {
+      mode: 'timesync',
+      source: 'ai',
+      lines: [
+        { id: 'line-1', speaker: 'Dorothy', characterId: 'char-dorothy', text: 'Não tenha medo.', start: 1, end: 3 },
+        { id: 'line-2', speaker: '', characterId: '', text: 'Eu estou com você.', start: 3, end: 5 }
+      ]
+    }
+  }];
+  if (withSecondTrack) {
+    cards.push({
+      id: 'cue-next',
+      title: 'Siga o Tijolo Amarelo',
+      audio: {
+        fileName: 'tijolo-amarelo.mp3',
+        name: 'tijolo-amarelo.mp3',
+        url: '/api/musical-kelly/assets/audio/tijolo-amarelo.mp3'
+      },
+      image: {
+        fileName: 'tijolo-amarelo.webp',
+        name: 'tijolo-amarelo.webp',
+        url: '/api/musical-kelly/assets/image/tijolo-amarelo.webp'
+      },
+      comments: [],
+      lyrics: { mode: 'plain', source: 'admin', lines: [] }
+    });
+  }
   return {
     success: true,
     canEdit,
@@ -31,29 +72,7 @@ function projectPayload(canEdit, { withAudio = false } = {}) {
     project: {
       version: 1,
       updatedAt: '2026-09-22T00:00:00.000Z',
-      cards: [{
-        id: 'cue-test',
-        title: 'Dorothy encontra o Leão',
-        audio: withAudio ? {
-          fileName: 'dorothy-leao.mp3',
-          name: 'dorothy-leao.mp3',
-          url: '/api/musical-kelly/assets/audio/dorothy-leao.mp3'
-        } : null,
-        image: withAudio ? {
-          fileName: 'dorothy-leao.webp',
-          name: 'dorothy-leao.webp',
-          url: '/api/musical-kelly/assets/image/dorothy-leao.webp'
-        } : null,
-        comments: [],
-        lyrics: {
-          mode: 'timesync',
-          source: 'ai',
-          lines: [
-            { id: 'line-1', speaker: 'Dorothy', characterId: 'char-dorothy', text: 'Não tenha medo.', start: 1, end: 3 },
-            { id: 'line-2', speaker: '', characterId: '', text: 'Eu estou com você.', start: 3, end: 5 }
-          ]
-        }
-      }]
+      cards
     }
   };
 }
@@ -94,7 +113,7 @@ test('viewer opens the fullscreen lyrics from the document icon', async () => {
   assert.equal(document.body.classList.contains('lyrics-open'), true);
   assert.equal(document.getElementById('lyricsScreenTitle').textContent, 'Faixa 1 de 1');
   assert.match(document.querySelector('.lyrics-track-heading').textContent, /Toque no texto que quiser/);
-  assert.equal(document.getElementById('lyricsTrackLabelTitle').textContent, 'Dorothy encontra o Leão');
+  assert.equal(document.getElementById('lyricsTrackLabelTitle'), null);
   assert.equal(document.getElementById('playerBar'), null);
   assert.deepEqual(
     [...document.querySelectorAll('.lyric-line .lyric-copy > span')].map((node) => node.textContent),
@@ -117,6 +136,19 @@ test('tapping a track that is not downloaded opens the friendly single-track mod
   assert.match(document.getElementById('downloadPromptCopy').textContent, /áudio, o rótulo da faixa e as imagens dos personagens usados/);
   assert.equal(document.getElementById('confirmTrackDownloadLabel').textContent, 'Download');
   assert.equal(document.getElementById('lyricsScreen').hidden, true);
+  dom.window.close();
+});
+
+test('advancing to a track that is not downloaded opens its download modal', async () => {
+  const dom = await boot(false, { withAudio: true, withSecondTrack: true });
+  const { document } = dom.window;
+  document.querySelector('.lyrics-button').click();
+  assert.equal(document.getElementById('lyricsScreenTitle').textContent, 'Faixa 1 de 2');
+  document.getElementById('lyricsNextTrackButton').click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(document.getElementById('downloadPromptDialog').hasAttribute('open'), true);
+  assert.match(document.getElementById('downloadPromptCopy').textContent, /Siga o Tijolo Amarelo/);
+  assert.equal(document.getElementById('lyricsScreenTitle').textContent, 'Faixa 1 de 2');
   dom.window.close();
 });
 
@@ -193,9 +225,16 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(html, /aria-label="Avançar 5 segundos"/);
   assert.match(html, /Baixe essa faixa de áudio para ensaiar/);
   assert.match(html, /id="lyricsTrackLabel"/);
+  assert.doesNotMatch(html, /lyrics-track-label__shade/);
+  assert.doesNotMatch(html, /id="lyricsTrackLabelTitle"/);
   assert.doesNotMatch(html, /id="playerBar"/);
   assert.match(stylesSource, /font-size: clamp\(1\.4rem, 3\.08vw, 2\.1rem\)/);
   assert.match(stylesSource, /font-size: 1\.26rem/);
   assert.match(stylesSource, /\.lyrics-lines[\s\S]*padding: 14px 22px 24px/);
+  assert.match(stylesSource, /\.lyrics-track-label__background[\s\S]*opacity: 1/);
+  assert.doesNotMatch(stylesSource, /\.lyrics-track-label__shade/);
+  assert.match(stylesSource, /grid-template-columns: 52px minmax\(0, 1fr\)/);
+  assert.match(stylesSource, /\.lyric-character-avatar \{[\s\S]*width: 52px;[\s\S]*height: 52px/);
+  assert.match(stylesSource, /\.lyrics-character-switch__avatar \{[\s\S]*width: 38px;[\s\S]*height: 38px/);
   assert.doesNotMatch(stylesSource, /padding: 31vh 10px 37vh/);
 });

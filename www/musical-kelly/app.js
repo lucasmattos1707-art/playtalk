@@ -51,7 +51,6 @@
     lyricsStage: document.getElementById('lyricsStage'),
     lyricsTrackLabel: document.getElementById('lyricsTrackLabel'),
     lyricsTrackLabelBackground: document.getElementById('lyricsTrackLabelBackground'),
-    lyricsTrackLabelTitle: document.getElementById('lyricsTrackLabelTitle'),
     lyricsLines: document.getElementById('lyricsLines'),
     lyricsEmpty: document.getElementById('lyricsEmpty'),
     lyricsBackButton: document.getElementById('lyricsBackButton'),
@@ -853,8 +852,6 @@
     const trackNumber = playableIndex >= 0 ? playableIndex + 1 : 1;
     const trackTotal = Math.max(1, playableCards.length);
     elements.lyricsScreenTitle.textContent = `Faixa ${trackNumber} de ${trackTotal}`;
-    elements.lyricsTrackLabelTitle.textContent = card.title;
-    elements.lyricsTrackLabel.setAttribute('aria-label', `Faixa atual: ${card.title}`);
     setCardBackground(elements.lyricsTrackLabelBackground, card);
     elements.lyricsPreviousTrackButton.disabled = Boolean(state.manualSync) || playableIndex <= 0;
     elements.lyricsNextTrackButton.disabled = Boolean(state.manualSync)
