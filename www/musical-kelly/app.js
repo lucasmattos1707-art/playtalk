@@ -44,13 +44,10 @@
     imageInput: document.getElementById('imageInput'),
     statusLine: document.getElementById('statusLine'),
     statusText: document.getElementById('statusText'),
-    playerBar: document.getElementById('playerBar'),
-    rewindButton: document.getElementById('rewindButton'),
-    forwardButton: document.getElementById('forwardButton'),
-    seekSlider: document.getElementById('seekSlider'),
-    currentTimeLabel: document.getElementById('currentTimeLabel'),
     lyricsScreen: document.getElementById('lyricsScreen'),
     lyricsScreenTitle: document.getElementById('lyricsScreenTitle'),
+    lyricsPreviousTrackButton: document.getElementById('lyricsPreviousTrackButton'),
+    lyricsNextTrackButton: document.getElementById('lyricsNextTrackButton'),
     lyricsStage: document.getElementById('lyricsStage'),
     lyricsLines: document.getElementById('lyricsLines'),
     lyricsEmpty: document.getElementById('lyricsEmpty'),
@@ -138,7 +135,6 @@
     saveTimer: null,
     saveChain: Promise.resolve(),
     toastTimer: null,
-    scrubbing: false,
     lyricsCardId: '',
     lyricsActiveLineIndex: -1,
     lyricsScrubbing: false,
@@ -584,7 +580,7 @@
           return;
         }
         const action = state.downloadStates.get(card.id) === 'done'
-          ? playCard(card.id)
+          ? openLyricsAndPlay(card.id)
           : downloadCard(card.id);
         action.catch((error) => showToast(error.message, true));
       });
@@ -690,13 +686,13 @@
         longPressed = false;
         return;
       }
-      playCard(cardId).catch((error) => showToast(error.message, true));
+      openLyricsAndPlay(cardId).catch((error) => showToast(error.message, true));
     });
     element.addEventListener('keydown', (event) => {
       if (state.sortMode) return;
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        playCard(cardId).catch((error) => showToast(error.message, true));
+        openLyricsAndPlay(cardId).catch((error) => showToast(error.message, true));
       }
     });
   }
@@ -743,6 +739,21 @@
     if (state.canEdit && !card.lyrics?.lines?.length) openLyricsEditor();
   }
 
+  async function openLyricsAndPlay(cardId) {
+    const card = getCard(cardId);
+    if (!card?.audio) {
+      selectCard(cardId);
+      showToast('Este container ainda não tem música. Pressione A para adicionar.', true);
+      return;
+    }
+    openLyrics(cardId);
+    if (state.current?.cardId === card.id && !state.current.paused) {
+      cancelAutoAdvance();
+      return;
+    }
+    await toggleLyricsPlayback();
+  }
+
   function closeLyrics() {
     cancelManualSync({ pause: false });
     cancelPovPlayback({ pause: true });
@@ -754,7 +765,8 @@
     state.lyricsCardId = '';
     state.selectedCharacterId = '';
     state.lyricsActiveLineIndex = -1;
-    if (current && !current.paused) scheduleAutoAdvance(current);
+    cancelAutoAdvance();
+    if (current && !current.paused) pauseCurrent();
   }
 
   function openLyricsEditor() {
@@ -773,7 +785,15 @@
       closeLyrics();
       return;
     }
-    elements.lyricsScreenTitle.textContent = card.title;
+    const playableCards = state.project.cards.filter((entry) => entry.audio?.fileName);
+    const playableIndex = playableCards.findIndex((entry) => entry.id === card.id);
+    const trackNumber = playableIndex >= 0 ? playableIndex + 1 : 1;
+    const trackTotal = Math.max(1, playableCards.length);
+    elements.lyricsScreenTitle.textContent = `Faixa ${trackNumber} de ${trackTotal}`;
+    elements.lyricsPreviousTrackButton.disabled = Boolean(state.manualSync) || playableIndex <= 0;
+    elements.lyricsNextTrackButton.disabled = Boolean(state.manualSync)
+      || playableIndex < 0
+      || playableIndex >= playableCards.length - 1;
     elements.lyricsEditButton.hidden = !state.canEdit;
     const selectedCharacter = characterById(state.selectedCharacterId);
     const characterControlLabel = selectedCharacter
@@ -895,10 +915,8 @@
     const isPlaying = isCurrent && !state.current.paused;
     elements.lyricsPlayButton.classList.toggle('is-playing', isPlaying);
     elements.lyricsPlayButton.setAttribute('aria-label', isPlaying ? 'Pausar' : 'Reproduzir');
-    const playableCards = state.project.cards.filter((entry) => entry.audio?.fileName);
-    const playableIndex = playableCards.findIndex((entry) => entry.id === card.id);
-    elements.lyricsRewindButton.disabled = Boolean(state.manualSync) || playableIndex <= 0;
-    elements.lyricsForwardButton.disabled = Boolean(state.manualSync) || playableIndex < 0 || playableIndex >= playableCards.length - 1;
+    elements.lyricsRewindButton.disabled = Boolean(state.manualSync) || !isCurrent || duration <= 0;
+    elements.lyricsForwardButton.disabled = Boolean(state.manualSync) || !isCurrent || duration <= 0;
     elements.lyricsSeekSlider.disabled = Boolean(state.manualSync) || !card.audio || duration <= 0;
     const lines = Array.isArray(card.lyrics?.lines) ? card.lyrics.lines : [];
     if (state.manualSync) {
@@ -1453,6 +1471,7 @@
     renderLyricsScreen();
     loadCardDuration(target).then(updateLyricsPlayer).catch(() => {});
     await ensureLyricsCardAt(target, 0);
+    cancelAutoAdvance();
   }
 
   async function seekLyricsRelative(deltaSeconds) {
@@ -2223,14 +2242,6 @@
       const voice = state.current;
       if (!voice?.native || voice.media !== media || voice.cancelled || voice.replaced) return;
       voice.ended = true;
-      const nextCard = nextPlayableCard(voice.cardId);
-      if (nextCard) {
-        startNativeCard(nextCard, 0, { natural: true }).catch((error) => {
-          setStatus('A próxima faixa não pôde ser iniciada.');
-          showToast(error.message, true);
-        });
-        return;
-      }
       clearColorTimer();
       state.colorMode = 'idle';
       state.current = null;
@@ -2439,69 +2450,13 @@
     return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
   }
 
-  function timelineCards() {
-    return state.project.cards.filter((card) => card.audio);
-  }
-
-  function cardDuration(card) {
-    if (!card?.audio) return 0;
-    if (state.current?.cardId === card.id && state.current.buffer) return state.current.buffer.duration;
-    if (state.autoAdvance?.nextVoice?.cardId === card.id) return state.autoAdvance.nextVoice.buffer.duration;
-    return Math.max(0, Number(state.durations.get(card.audio.fileName)) || 0);
-  }
-
-  function timelineMetrics(cardId, localPosition = 0) {
-    let offset = 0;
-    let total = 0;
-    timelineCards().forEach((card) => {
-      const duration = cardDuration(card);
-      if (card.id === cardId) offset = total;
-      total += duration;
-    });
-    return {
-      offset,
-      total,
-      position: Math.max(0, Math.min(total, offset + Math.max(0, Number(localPosition) || 0)))
-    };
-  }
-
-  function resolveTimelinePosition(targetSeconds) {
-    const cards = timelineCards();
-    const total = cards.reduce((sum, card) => sum + cardDuration(card), 0);
-    if (!cards.length || total <= 0) return null;
-    let remaining = Math.max(0, Math.min(Number(targetSeconds) || 0, Math.max(0, total - 0.02)));
-    for (let index = 0; index < cards.length; index += 1) {
-      const card = cards[index];
-      const duration = cardDuration(card);
-      if (duration <= 0) continue;
-      if (remaining < duration || index === cards.length - 1) {
-        return { card, offset: Math.min(remaining, Math.max(0, duration - 0.02)), total };
-      }
-      remaining -= duration;
-    }
-    return null;
-  }
-
   function updatePlayerBar() {
     const voice = state.current;
-    elements.playerBar.hidden = !voice;
     if (!voice) return;
     const duration = Math.max(0, Number(voice.buffer?.duration) || 0);
     const liveLocalPosition = Math.min(duration, currentPosition(voice));
-    const timeline = timelineMetrics(voice.cardId, liveLocalPosition);
-    const displayedTimelinePosition = state.scrubbing
-      ? Number(elements.seekSlider.value || 0)
-      : timeline.position;
-    elements.seekSlider.max = String(Math.max(0.01, timeline.total));
-    if (!state.scrubbing) elements.seekSlider.value = String(timeline.position);
-    elements.currentTimeLabel.textContent = formatTime(displayedTimelinePosition);
-    elements.currentTimeLabel.dateTime = `PT${Math.floor(displayedTimelinePosition / 60)}M${Math.floor(displayedTimelinePosition % 60)}S`;
     const activeCardTime = elements.trackList.querySelector('.track-card.is-playing .track-duration');
     if (activeCardTime) activeCardTime.textContent = formatDuration(liveLocalPosition);
-    const disabled = state.transitioning || timeline.total <= 0;
-    elements.seekSlider.disabled = disabled;
-    elements.rewindButton.disabled = disabled;
-    elements.forwardButton.disabled = disabled;
   }
 
   function runProgressLoop() {
@@ -2564,52 +2519,6 @@
   function seekRelative(deltaSeconds) {
     if (!state.current || (!state.current.native && !state.audioContext)) return;
     seekTo(currentPosition(state.current) + deltaSeconds).catch((error) => showToast(error.message, true));
-  }
-
-  async function seekTimelineTo(targetSeconds) {
-    if (!USE_NATIVE_AUDIO_ON_APPLE) await getAudioContext({ fromUserGesture: true });
-    const target = resolveTimelinePosition(targetSeconds);
-    if (!target) throw new Error('Aguarde um instante enquanto o navegador mede as faixas.');
-    if (state.current?.cardId === target.card.id) {
-      await seekTo(target.offset);
-      return;
-    }
-
-    if (USE_NATIVE_AUDIO_ON_APPLE) {
-      await startNativeCard(target.card, target.offset);
-      return;
-    }
-
-    setStatus(`Indo para “${target.card.title}”…`, true);
-    const buffer = await loadAudioBuffer(target.card);
-    if (state.current?.cardId === target.card.id) {
-      await seekTo(target.offset);
-      return;
-    }
-
-    const previousCardId = state.current?.cardId;
-    cancelAutoAdvance();
-    clearTransitionTimers();
-    clearColorTimer();
-    if (state.current?.source) stopVoice(state.current);
-    const context = state.audioContext;
-    const when = context.currentTime + 0.005;
-    const voice = createVoice(target.card.id, buffer, when, target.offset, 1);
-    state.current = voice;
-    state.colorMode = 'full';
-    state.transitioning = false;
-    state.transitionFromId = '';
-    state.transitionTargetId = '';
-    releaseAudioBuffer(previousCardId);
-    render();
-    setStatus(`No ar: “${target.card.title}”.`);
-    scheduleAutoAdvance(voice);
-  }
-
-  function seekTimelineRelative(deltaSeconds) {
-    if (!state.current || (!state.current.native && !state.audioContext)) return;
-    const timeline = timelineMetrics(state.current.cardId, currentPosition(state.current));
-    seekTimelineTo(timeline.position + deltaSeconds).catch((error) => showToast(error.message, true));
   }
 
   function seekCardRelative(cardId, deltaSeconds) {
@@ -2994,11 +2903,17 @@
     elements.lyricsPlayButton.addEventListener('click', () => {
       toggleLyricsPlayback().catch((error) => showToast(error.message, true));
     });
-    elements.lyricsRewindButton.addEventListener('click', () => {
+    elements.lyricsPreviousTrackButton.addEventListener('click', () => {
       changeLyricsTrack(-1).catch((error) => showToast(error.message, true));
     });
-    elements.lyricsForwardButton.addEventListener('click', () => {
+    elements.lyricsNextTrackButton.addEventListener('click', () => {
       changeLyricsTrack(1).catch((error) => showToast(error.message, true));
+    });
+    elements.lyricsRewindButton.addEventListener('click', () => {
+      seekLyricsRelative(-5).catch((error) => showToast(error.message, true));
+    });
+    elements.lyricsForwardButton.addEventListener('click', () => {
+      seekLyricsRelative(5).catch((error) => showToast(error.message, true));
     });
     elements.lyricsSeekSlider.addEventListener('pointerdown', () => {
       state.lyricsScrubbing = true;
@@ -3037,20 +2952,6 @@
     elements.closeSelectionButton.addEventListener('click', () => {
       state.selectedId = '';
       render();
-    });
-    elements.rewindButton.addEventListener('click', () => seekTimelineRelative(-5));
-    elements.forwardButton.addEventListener('click', () => seekTimelineRelative(5));
-    elements.seekSlider.addEventListener('pointerdown', () => {
-      state.scrubbing = true;
-    });
-    elements.seekSlider.addEventListener('input', () => {
-      state.scrubbing = true;
-      elements.currentTimeLabel.textContent = formatTime(elements.seekSlider.value);
-    });
-    elements.seekSlider.addEventListener('change', () => {
-      const target = Number(elements.seekSlider.value || 0);
-      state.scrubbing = false;
-      seekTimelineTo(target).catch((error) => showToast(error.message, true));
     });
     elements.audioInput.addEventListener('change', () => {
       uploadFile('audio', elements.audioInput.files?.[0]).catch((error) => showToast(error.message, true));

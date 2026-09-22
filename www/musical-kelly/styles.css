@@ -789,7 +789,7 @@ body.has-playing-track .track-card:not(.is-playing):not(.is-cued) {
 
 main {
   padding-top: 22px;
-  padding-bottom: 132px;
+  padding-bottom: 40px;
 }
 
 .status-line {
@@ -1055,7 +1055,7 @@ body.has-playing-track .track-card:not(.is-playing):not(.is-cued) {
 
   main {
     padding-top: 12px;
-    padding-bottom: 116px;
+    padding-bottom: 28px;
   }
 
   .selection-panel {
@@ -1985,6 +1985,62 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   white-space: nowrap;
 }
 
+.lyrics-track-heading {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  justify-items: center;
+}
+
+.lyrics-track-navigation {
+  display: grid;
+  grid-template-columns: 34px minmax(90px, auto) 34px;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.lyrics-track-navigation button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+}
+
+.lyrics-track-navigation button:hover:not(:disabled) {
+  color: #bfe2ff;
+  background: rgba(86, 166, 235, 0.1);
+}
+
+.lyrics-track-navigation button:disabled {
+  opacity: 0.24;
+  cursor: default;
+}
+
+.lyrics-track-navigation svg {
+  width: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lyrics-track-heading small {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.69rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
 .lyrics-character-switch,
 .lyrics-back-button,
 .lyrics-edit-button {
@@ -2239,6 +2295,13 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.lyrics-player button > span {
+  position: absolute;
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .lyrics-play-button {
@@ -2733,17 +2796,35 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   }
 
   .lyrics-header {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    gap: 4px;
     min-height: 66px;
     padding-inline: 10px;
   }
 
   .lyrics-header h1 {
-    position: absolute;
-    left: 50%;
-    max-width: 34%;
-    transform: translateX(-50%);
+    position: static;
+    max-width: none;
+    font-size: 0.9rem;
+    transform: none;
+  }
+
+  .lyrics-track-navigation {
+    grid-template-columns: 27px minmax(74px, auto) 27px;
+    gap: 2px;
+  }
+
+  .lyrics-track-navigation button {
+    width: 27px;
+    height: 32px;
+  }
+
+  .lyrics-track-navigation svg {
+    width: 18px;
+  }
+
+  .lyrics-track-heading small {
+    font-size: 0.58rem;
   }
 
   .lyrics-character-switch {

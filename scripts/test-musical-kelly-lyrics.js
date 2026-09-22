@@ -77,6 +77,9 @@ test('viewer opens the fullscreen lyrics from the document icon', async () => {
   button.click();
   assert.equal(document.getElementById('lyricsScreen').hidden, false);
   assert.equal(document.body.classList.contains('lyrics-open'), true);
+  assert.equal(document.getElementById('lyricsScreenTitle').textContent, 'Faixa 1 de 1');
+  assert.match(document.querySelector('.lyrics-track-heading').textContent, /Toque no texto que quiser/);
+  assert.equal(document.getElementById('playerBar'), null);
   assert.deepEqual(
     [...document.querySelectorAll('.lyric-line .lyric-copy > span')].map((node) => node.textContent),
     ['Não tenha medo.', 'Eu estou com você.']
@@ -133,6 +136,10 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(appSource, /data-line-index="\$\{recordedLineIndex\}"/);
   assert.match(appSource, /manualSyncAdvanceButton\.addEventListener\('pointerdown'/);
   assert.match(appSource, /function changeLyricsTrack\(direction\)/);
+  assert.match(appSource, /function openLyricsAndPlay\(cardId\)/);
+  assert.match(appSource, /if \(current && !current\.paused\) pauseCurrent\(\)/);
+  assert.match(appSource, /lyricsRewindButton[\s\S]*seekLyricsRelative\(-5\)/);
+  assert.match(appSource, /lyricsForwardButton[\s\S]*seekLyricsRelative\(5\)/);
   assert.match(appSource, /playRequestGeneration/);
   assert.match(appSource, /state\.autoAdvance = \{ fromVoice: voice, nextVoice: null, timer \}/);
   assert.match(appSource, /startManualSyncR2Audio\(card\)/);
@@ -147,4 +154,7 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.doesNotMatch(html, /id="lyricsCharacterLabel"/);
   assert.match(html, /aria-label="Faixa anterior"/);
   assert.match(html, /aria-label="Próxima faixa"/);
+  assert.match(html, /aria-label="Voltar 5 segundos"/);
+  assert.match(html, /aria-label="Avançar 5 segundos"/);
+  assert.doesNotMatch(html, /id="playerBar"/);
 });
