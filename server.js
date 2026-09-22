@@ -27060,6 +27060,76 @@ app.put('/api/musical-kelly/cards/:cardId/lyrics', async (req, res) => {
   }
 });
 
+app.put('/api/musical-kelly/cards/:cardId/lyrics/timesync', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const requestedTimings = Array.isArray(req.body?.timings) ? req.body.timings : [];
+    if (!cardId || !requestedTimings.length) {
+      res.status(400).json({ success: false, message: 'Marque todas as linhas antes de salvar o timesync.' });
+      return;
+    }
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      const card = currentProject.cards.find((entry) => entry.id === cardId);
+      const lines = Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
+      if (!card) {
+        const error = new Error('Este container nao existe mais.');
+        error.statusCode = 404;
+        throw error;
+      }
+      if (!card.audio?.fileName) {
+        const error = new Error('Adicione o audio antes de sincronizar.');
+        error.statusCode = 409;
+        throw error;
+      }
+      if (!lines.length || requestedTimings.length !== lines.length) {
+        const error = new Error('A letra mudou durante o sync. Abra o editor e tente novamente.');
+        error.statusCode = 409;
+        throw error;
+      }
+      let previousEnd = 0;
+      const normalizedTimings = requestedTimings.map((timing, index) => {
+        const lineId = normalizeMusicalKellyCardId(timing?.lineId);
+        const start = Number(timing?.start);
+        const end = Number(timing?.end);
+        if (lineId !== lines[index].id
+          || !Number.isFinite(start)
+          || !Number.isFinite(end)
+          || start < 0
+          || end <= start
+          || start + 0.05 < previousEnd
+          || end > 43200) {
+          const error = new Error('As marcacoes do timesync estao invalidas. Tente sincronizar novamente.');
+          error.statusCode = 400;
+          throw error;
+        }
+        const normalized = {
+          start: Math.round(start * 1000) / 1000,
+          end: Math.round(end * 1000) / 1000
+        };
+        previousEnd = normalized.end;
+        return normalized;
+      });
+      lines.forEach((line, index) => {
+        line.start = normalizedTimings[index].start;
+        line.end = normalizedTimings[index].end;
+      });
+      card.lyrics.mode = 'timesync';
+      card.lyrics.source = 'admin';
+      card.lyrics.updatedAt = new Date().toISOString();
+      return writeMusicalKellyGlobalProject(currentProject);
+    });
+    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+  } catch (error) {
+    console.error('Erro ao salvar timesync manual do musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel salvar o timesync manual.'
+    });
+  }
+});
+
 app.put('/api/musical-kelly/cards/:cardId/lyrics/:lineId/character', async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);

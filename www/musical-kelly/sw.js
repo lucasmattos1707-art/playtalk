@@ -1,12 +1,12 @@
 'use strict';
 
-const SHELL_CACHE = 'playtalk-musical-kelly-shell-v20';
+const SHELL_CACHE = 'playtalk-musical-kelly-shell-v21';
 const SHELL_CACHE_PREFIX = 'playtalk-musical-kelly-shell-';
 const MEDIA_CACHE = 'playtalk-musical-kelly-media-v1';
 const SHELL_URLS = [
   '/musical-kelly/',
-  '/musical-kelly/styles.css?v=20',
-  '/musical-kelly/app.js?v=22'
+  '/musical-kelly/styles.css?v=21',
+  '/musical-kelly/app.js?v=23'
 ];
 const COMMENT_OUTBOX_DB_NAME = 'playtalk-musical-kelly-offline-v1';
 const COMMENT_OUTBOX_STORE = 'comment-outbox';

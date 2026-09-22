@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=20">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=21">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -152,7 +152,6 @@
         <span class="lyrics-character-switch__avatar" id="lyricsCharacterAvatar" aria-hidden="true">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c.7-4.3 2.8-6.5 6.5-6.5s5.8 2.2 6.5 6.5"/></svg>
         </span>
-        <span id="lyricsCharacterLabel">Personagem</span>
       </button>
       <h1 id="lyricsScreenTitle">Letra</h1>
       <div class="lyrics-header-actions">
@@ -202,11 +201,26 @@
       </label>
       <p class="lyrics-editor-note">Use “Personagem: fala” quando quiser registrar quem está falando. Se a quantidade de linhas mudar, os tempos serão redistribuídos e poderão ser recriados pela IA.</p>
       <button class="lyrics-save-button" id="lyricsSaveButton" type="button">Salvar correções</button>
+      <button class="lyrics-manual-sync-button" id="lyricsManualSyncButton" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16M18 4v16M9 8h6M9 12h6M9 16h6"/></svg>
+        <span><strong>Sincronizar manualmente</strong><small>Reproduzir e marcar cada linha com ↓</small></span>
+      </button>
+    </aside>
+
+    <aside class="manual-sync-panel" id="manualSyncPanel" hidden>
+      <div class="manual-sync-copy">
+        <span id="manualSyncProgress">Linha 1 de 1</span>
+        <strong id="manualSyncInstruction">Pressione ↓ quando esta fala começar</strong>
+      </div>
+      <button class="manual-sync-advance" id="manualSyncAdvanceButton" type="button" aria-label="Marcar esta linha e avançar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15m0 0 6-6m-6 6-6-6"/></svg>
+      </button>
+      <button class="manual-sync-cancel" id="manualSyncCancelButton" type="button">Cancelar</button>
     </aside>
 
     <footer class="lyrics-player" id="lyricsPlayer">
-      <button id="lyricsRewindButton" type="button" aria-label="Voltar 5 segundos" title="Voltar 5 segundos">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8H3V4M3.5 8.5A9 9 0 1 1 4 16"/></svg><span>5</span>
+      <button id="lyricsRewindButton" type="button" aria-label="Faixa anterior" title="Faixa anterior">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M18 6 9 12l9 6Z"/></svg>
       </button>
       <button class="lyrics-play-button" id="lyricsPlayButton" type="button" aria-label="Reproduzir">
         <svg class="lyrics-icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5 18 12 8 18.5Z"/></svg>
@@ -216,8 +230,8 @@
         <input id="lyricsSeekSlider" type="range" min="0" max="1" step="0.01" value="0" aria-label="Posição nesta faixa">
         <div><time id="lyricsCurrentTime">00:00</time><time id="lyricsDuration">00:00</time></div>
       </div>
-      <button id="lyricsForwardButton" type="button" aria-label="Avançar 5 segundos" title="Avançar 5 segundos">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8h4V4m-.5 4.5A9 9 0 1 0 20 16"/></svg><span>5</span>
+      <button id="lyricsForwardButton" type="button" aria-label="Próxima faixa" title="Próxima faixa">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M6 6l9 6-9 6Z"/></svg>
       </button>
     </footer>
   </section>
@@ -295,6 +309,6 @@
   </section>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="/musical-kelly/app.js?v=22" defer></script>
+  <script src="/musical-kelly/app.js?v=23" defer></script>
 </body>
 </html>

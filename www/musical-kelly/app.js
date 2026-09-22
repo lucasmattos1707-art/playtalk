@@ -64,9 +64,14 @@
     lyricsGenerationStatus: document.getElementById('lyricsGenerationStatus'),
     lyricsEditor: document.getElementById('lyricsEditor'),
     lyricsSaveButton: document.getElementById('lyricsSaveButton'),
+    lyricsManualSyncButton: document.getElementById('lyricsManualSyncButton'),
+    manualSyncPanel: document.getElementById('manualSyncPanel'),
+    manualSyncProgress: document.getElementById('manualSyncProgress'),
+    manualSyncInstruction: document.getElementById('manualSyncInstruction'),
+    manualSyncAdvanceButton: document.getElementById('manualSyncAdvanceButton'),
+    manualSyncCancelButton: document.getElementById('manualSyncCancelButton'),
     lyricsCharacterSwitch: document.getElementById('lyricsCharacterSwitch'),
     lyricsCharacterAvatar: document.getElementById('lyricsCharacterAvatar'),
-    lyricsCharacterLabel: document.getElementById('lyricsCharacterLabel'),
     lyricsPlayer: document.getElementById('lyricsPlayer'),
     lyricsRewindButton: document.getElementById('lyricsRewindButton'),
     lyricsPlayButton: document.getElementById('lyricsPlayButton'),
@@ -123,6 +128,7 @@
     audioContext: null,
     nativeAudio: null,
     nativeGeneration: 0,
+    playRequestGeneration: 0,
     bufferPromises: new Map(),
     durations: new Map(),
     durationPromises: new Map(),
@@ -140,6 +146,7 @@
     characterMenuLineId: '',
     selectedCharacterId: '',
     povPlayback: null,
+    manualSync: null,
     progressFrame: 0
   };
 
@@ -582,6 +589,7 @@
       });
 
       const commentButton = node.querySelector('.comment-button');
+      commentButton.hidden = !state.canEdit;
       const isApproved = Boolean(card.approvedAt);
       commentButton.classList.toggle('is-approved', isApproved);
       const commentCount = commentsForCard(card).length;
@@ -735,6 +743,7 @@
   }
 
   function closeLyrics() {
+    cancelManualSync({ pause: false });
     cancelPovPlayback({ pause: true });
     const current = state.current;
     elements.lyricsScreen.hidden = true;
@@ -765,7 +774,11 @@
     elements.lyricsScreenTitle.textContent = card.title;
     elements.lyricsEditButton.hidden = !state.canEdit;
     const selectedCharacter = characterById(state.selectedCharacterId);
-    elements.lyricsCharacterLabel.textContent = selectedCharacter?.name || 'Personagem';
+    const characterControlLabel = selectedCharacter
+      ? `Ponto de vista: ${selectedCharacter.name}`
+      : 'Escolher ponto de vista';
+    elements.lyricsCharacterSwitch.setAttribute('aria-label', characterControlLabel);
+    elements.lyricsCharacterSwitch.title = characterControlLabel;
     elements.lyricsCharacterAvatar.classList.toggle('has-image', Boolean(selectedCharacter));
     elements.lyricsCharacterAvatar.style.backgroundImage = selectedCharacter
       ? `url("${String(selectedCharacter.imageUrl).replace(/["\\]/g, '')}")`
@@ -782,6 +795,8 @@
       button.dataset.lineId = line.id;
       button.dataset.lineIndex = String(index);
       button.classList.toggle('is-pov-muted', Boolean(state.selectedCharacterId && line.characterId !== state.selectedCharacterId));
+      button.classList.toggle('is-sync-recorded', Boolean(state.manualSync && index < state.manualSync.lineIndex));
+      button.classList.toggle('is-sync-target', Boolean(state.manualSync && index === state.manualSync.lineIndex));
 
       const avatar = document.createElement('span');
       avatar.className = `lyric-character-avatar${character ? '' : ' is-empty'}`;
@@ -807,9 +822,10 @@
           characterLongPressed = false;
           return;
         }
+        if (state.manualSync) return;
         seekToLyricLine(index).catch((error) => showToast(error.message, true));
       });
-      if (state.canEdit) {
+      if (state.canEdit && !state.manualSync) {
         button.addEventListener('pointerdown', (event) => {
           characterLongPressed = false;
           characterPressX = event.clientX;
@@ -838,6 +854,7 @@
       elements.lyricsLines.appendChild(button);
     });
     if (state.canEdit && !elements.lyricsAdminPanel.hidden) openLyricsEditor();
+    updateManualSyncPanel();
     updateLyricsPlayer();
   }
 
@@ -866,6 +883,7 @@
       ? Math.max(0, Number(state.current?.buffer?.duration) || 0)
       : Math.max(0, Number(state.durations.get(card.audio?.fileName)) || 0);
     const position = isCurrent ? Math.min(duration || Infinity, currentPosition(state.current)) : 0;
+    if (state.manualSync && isCurrent) state.manualSync.lastPosition = position;
     if (!state.lyricsScrubbing) elements.lyricsSeekSlider.value = String(position);
     elements.lyricsSeekSlider.max = String(Math.max(0.01, duration));
     elements.lyricsSeekSlider.disabled = !card.audio || duration <= 0;
@@ -874,8 +892,15 @@
     const isPlaying = isCurrent && !state.current.paused;
     elements.lyricsPlayButton.classList.toggle('is-playing', isPlaying);
     elements.lyricsPlayButton.setAttribute('aria-label', isPlaying ? 'Pausar' : 'Reproduzir');
+    const playableCards = state.project.cards.filter((entry) => entry.audio?.fileName);
+    const playableIndex = playableCards.findIndex((entry) => entry.id === card.id);
+    elements.lyricsRewindButton.disabled = Boolean(state.manualSync) || playableIndex <= 0;
+    elements.lyricsForwardButton.disabled = Boolean(state.manualSync) || playableIndex < 0 || playableIndex >= playableCards.length - 1;
+    elements.lyricsSeekSlider.disabled = Boolean(state.manualSync) || !card.audio || duration <= 0;
     const lines = Array.isArray(card.lyrics?.lines) ? card.lyrics.lines : [];
-    if (card.lyrics?.mode === 'timesync' && isCurrent) {
+    if (state.manualSync) {
+      setActiveLyricLine(-1);
+    } else if (card.lyrics?.mode === 'timesync' && isCurrent) {
       let activeIndex = -1;
       for (let index = 0; index < lines.length; index += 1) {
         if (position >= Number(lines[index].start)) activeIndex = index;
@@ -896,6 +921,106 @@
     }
     await seekTo(position);
     cancelAutoAdvance();
+  }
+
+  function updateManualSyncPanel() {
+    const sync = state.manualSync;
+    elements.manualSyncPanel.hidden = !sync;
+    elements.lyricsScreen.classList.toggle('is-manual-sync', Boolean(sync));
+    if (!sync) return;
+    const card = getCard(sync.cardId);
+    const lines = Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
+    const completed = Math.min(sync.lineIndex, lines.length);
+    elements.manualSyncProgress.textContent = sync.saving
+      ? 'Salvando marcações…'
+      : `${completed} de ${lines.length} linhas marcadas`;
+    elements.manualSyncInstruction.textContent = sync.saving
+      ? 'Aguarde só um instante.'
+      : sync.lineIndex >= lines.length
+        ? 'No fim da última fala, toque em ↓ mais uma vez para concluir.'
+        : `Quando começar “${String(lines[sync.lineIndex]?.text || '').slice(0, 70)}”, toque em ↓.`;
+    elements.manualSyncAdvanceButton.disabled = sync.saving;
+    elements.manualSyncCancelButton.disabled = sync.saving;
+  }
+
+  function cancelManualSync({ pause = true } = {}) {
+    if (!state.manualSync) return;
+    state.manualSync = null;
+    elements.manualSyncPanel.hidden = true;
+    elements.lyricsScreen.classList.remove('is-manual-sync');
+    if (pause && state.current && !state.current.paused) pauseCurrent();
+    if (!elements.lyricsScreen.hidden) renderLyricsScreen();
+  }
+
+  async function startManualSync() {
+    if (!state.canEdit || state.lyricsBusy || state.manualSync) return;
+    const cardBeforeSave = getCard(state.lyricsCardId);
+    if (!cardBeforeSave?.audio) throw new Error('Adicione o áudio antes de sincronizar.');
+    await saveLyricsEdits({ closeEditor: false, announce: false });
+    const card = getCard(state.lyricsCardId);
+    const lines = Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
+    if (!lines.length) throw new Error('Escreva ao menos uma linha da letra.');
+    cancelPovPlayback({ pause: true });
+    state.selectedCharacterId = '';
+    state.manualSync = {
+      cardId: card.id,
+      lineIndex: 0,
+      marks: [],
+      lastPosition: 0,
+      saving: false
+    };
+    elements.lyricsAdminPanel.hidden = true;
+    renderLyricsScreen();
+    await ensureLyricsCardAt(card, 0);
+    showToast('Sync manual iniciado. Use ↓ a cada nova linha.');
+  }
+
+  async function advanceManualSync() {
+    const sync = state.manualSync;
+    const card = getCard(sync?.cardId);
+    const lines = Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
+    if (!sync || !card || sync.saving) return;
+    const livePosition = state.current?.cardId === card.id
+      ? currentPosition(state.current)
+      : sync.lastPosition;
+    const position = Math.max(0, Number(livePosition) || Number(sync.lastPosition) || 0);
+    sync.lastPosition = position;
+    if (sync.lineIndex < lines.length) {
+      const previous = sync.marks[sync.marks.length - 1];
+      sync.marks.push(previous == null ? position : Math.max(position, previous + 0.01));
+      sync.lineIndex += 1;
+      renderLyricsScreen();
+      const targetIndex = Math.min(sync.lineIndex, lines.length - 1);
+      elements.lyricsLines.querySelector(`[data-line-index="${targetIndex}"]`)
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
+    const finalEnd = Math.max(position, sync.marks[sync.marks.length - 1] + 0.1);
+    const timings = lines.map((line, index) => ({
+      lineId: line.id,
+      start: sync.marks[index],
+      end: index + 1 < sync.marks.length ? sync.marks[index + 1] : finalEnd
+    }));
+    sync.saving = true;
+    updateManualSyncPanel();
+    try {
+      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}/lyrics/timesync`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timings })
+      });
+      applyCollaborationProject(payload.project);
+      state.manualSync = null;
+      elements.manualSyncPanel.hidden = true;
+      elements.lyricsScreen.classList.remove('is-manual-sync');
+      if (state.current && !state.current.paused) pauseCurrent();
+      renderLyricsScreen();
+      showToast('Timesync manual salvo com sucesso.');
+    } catch (error) {
+      sync.saving = false;
+      updateManualSyncPanel();
+      throw error;
+    }
   }
 
   async function seekToLyricLine(index) {
@@ -1095,7 +1220,7 @@
     }
   }
 
-  async function saveLyricsEdits() {
+  async function saveLyricsEdits({ closeEditor = true, announce = true } = {}) {
     if (!state.canEdit || state.lyricsBusy) return;
     const card = getCard(state.lyricsCardId);
     const text = elements.lyricsEditor.value.trim();
@@ -1109,8 +1234,9 @@
         body: JSON.stringify({ mode: card.lyrics?.mode || 'plain', text })
       });
       applyCollaborationProject(payload.project);
-      elements.lyricsAdminPanel.hidden = true;
-      showToast(payload.mode === 'timesync' ? 'Correções salvas com timesync.' : 'Correções salvas na letra.');
+      if (closeEditor) elements.lyricsAdminPanel.hidden = true;
+      if (announce) showToast(payload.mode === 'timesync' ? 'Correções salvas com timesync.' : 'Correções salvas na letra.');
+      return getCard(card.id);
     } finally {
       state.lyricsBusy = false;
       elements.lyricsSaveButton.disabled = false;
@@ -1250,6 +1376,24 @@
     if (state.current?.cardId === card.id && state.current.paused) await resumeCurrent();
     else if (state.current?.cardId !== card.id) await playCard(card.id);
     cancelAutoAdvance();
+  }
+
+  async function changeLyricsTrack(direction) {
+    if (state.manualSync) {
+      showToast('Conclua ou cancele o sync manual antes de trocar de faixa.');
+      return;
+    }
+    const playableCards = state.project.cards.filter((card) => card.audio?.fileName);
+    const currentIndex = playableCards.findIndex((card) => card.id === state.lyricsCardId);
+    const target = playableCards[currentIndex + direction];
+    if (!target) return;
+    cancelPovPlayback({ pause: true });
+    state.lyricsCardId = target.id;
+    state.lyricsActiveLineIndex = -1;
+    state.selectedCharacterId = '';
+    renderLyricsScreen();
+    loadCardDuration(target).then(updateLyricsPlayer).catch(() => {});
+    await ensureLyricsCardAt(target, 0);
   }
 
   async function seekLyricsRelative(deltaSeconds) {
@@ -2304,14 +2448,10 @@
     const context = await getAudioContext();
     const now = context.currentTime;
     current.replaced = true;
-    current.gain.gain.cancelScheduledValues(now);
-    current.gain.gain.setValueAtTime(Math.max(0.0001, current.gain.gain.value), now);
-    current.gain.gain.linearRampToValueAtTime(0, now + 0.055);
-    try { current.source.stop(now + 0.06); } catch (_error) {}
+    stopVoice(current, now);
 
-    const when = now + 0.018;
-    const nextVoice = createVoice(current.cardId, current.buffer, when, target, 0);
-    nextVoice.gain.gain.linearRampToValueAtTime(1, when + 0.075);
+    const when = now + 0.005;
+    const nextVoice = createVoice(current.cardId, current.buffer, when, target, 1);
     state.current = nextVoice;
     clearColorTimer();
     state.colorMode = 'full';
@@ -2427,35 +2567,43 @@
       const context = await getAudioContext();
       const startAt = voice.startedAt + Math.max(0, voice.buffer.duration - voice.offset);
       if (startAt <= context.currentTime + 0.025) {
-        if (state.current === voice) await startNaturalImmediately(nextCard, buffer);
+        if (state.current === voice) {
+          stopVoice(voice, context.currentTime);
+          state.current = null;
+          await startNaturalImmediately(nextCard, buffer);
+        }
         return;
       }
 
-      voice.replaced = true;
-      const nextVoice = createVoice(nextCard.id, buffer, startAt, 0, 1);
-      const timer = window.setTimeout(() => {
+      const timer = window.setTimeout(async () => {
         if (generation !== state.autoAdvanceGeneration) {
-          stopVoice(nextVoice);
           return;
         }
         state.autoAdvance = null;
-        state.current = nextVoice;
-        releaseAudioBuffer(voice.cardId);
-        beginColorReveal(nextCard.id);
-        render();
-        setStatus(`No ar: “${nextCard.title}”.`);
-        scheduleAutoAdvance(nextVoice);
-      }, Math.max(0, (startAt - context.currentTime) * 1000));
-      state.autoAdvance = { fromVoice: voice, nextVoice, timer };
+        if (state.current !== voice || voice.cancelled || voice.paused) return;
+        stopVoice(voice, state.audioContext?.currentTime || 0);
+        state.current = null;
+        try {
+          await startNaturalImmediately(nextCard, buffer);
+        } catch (error) {
+          console.warn('Não foi possível iniciar a próxima faixa:', error);
+        }
+      }, Math.max(0, ((startAt - context.currentTime) * 1000) - 35));
+      state.autoAdvance = { fromVoice: voice, nextVoice: null, timer };
     } catch (error) {
       console.warn('Não foi possível preparar a próxima faixa:', error);
     }
   }
 
   async function startNaturalImmediately(card, buffer) {
-    const previousCardId = state.current?.cardId;
+    const previousVoice = state.current;
+    const previousCardId = previousVoice?.cardId;
     cancelAutoAdvance();
     const context = await getAudioContext();
+    if (previousVoice) {
+      previousVoice.replaced = true;
+      stopVoice(previousVoice, context.currentTime);
+    }
     const when = context.currentTime + 0.005;
     const voice = createVoice(card.id, buffer, when, 0, 1);
     state.current = voice;
@@ -2470,9 +2618,14 @@
   }
 
   async function startImmediately(card, buffer) {
-    const previousCardId = state.current?.cardId;
+    const previousVoice = state.current;
+    const previousCardId = previousVoice?.cardId;
     cancelAutoAdvance();
     const context = await getAudioContext();
+    if (previousVoice) {
+      previousVoice.replaced = true;
+      stopVoice(previousVoice, context.currentTime);
+    }
     const when = context.currentTime + 0.025;
     const voice = createVoice(card.id, buffer, when, 0, 0);
     voice.gain.gain.linearRampToValueAtTime(1, when + 0.12);
@@ -2549,6 +2702,7 @@
   }
 
   async function playCard(cardId) {
+    const requestGeneration = ++state.playRequestGeneration;
     const card = getCard(cardId);
     markCardNotificationSeen(cardId);
     if (!card?.audio) {
@@ -2566,6 +2720,7 @@
       return;
     }
     await getAudioContext({ fromUserGesture: true });
+    if (requestGeneration !== state.playRequestGeneration) return;
     if (state.transitioning) {
       showToast('Aguarde a transição atual terminar.');
       return;
@@ -2576,8 +2731,9 @@
       return;
     }
 
-    setStatus(`Preparando “${card.title}”… a faixa atual continua tocando.`, true);
+    setStatus(`Preparando “${card.title}”…`, true);
     const buffer = await loadAudioBuffer(card);
+    if (requestGeneration !== state.playRequestGeneration) return;
     if (!state.current || state.current.paused) {
       if (state.current?.source) stopVoice(state.current);
       await startImmediately(card, buffer);
@@ -2692,6 +2848,16 @@
     elements.lyricsSaveButton.addEventListener('click', () => {
       saveLyricsEdits().catch((error) => showToast(error.message, true));
     });
+    elements.lyricsManualSyncButton.addEventListener('click', () => {
+      startManualSync().catch((error) => showToast(error.message, true));
+    });
+    elements.manualSyncAdvanceButton.addEventListener('click', () => {
+      advanceManualSync().catch((error) => showToast(error.message, true));
+    });
+    elements.manualSyncCancelButton.addEventListener('click', () => {
+      cancelManualSync();
+      showToast('Sync manual cancelado; nenhuma marcação foi salva.');
+    });
     elements.lyricsCharacterSwitch.addEventListener('click', () => openCharacterDialog('pov'));
     elements.closeCharacterDialog.addEventListener('click', () => closeDialog(elements.characterDialog));
     elements.characterAddToggle.addEventListener('click', () => {
@@ -2712,10 +2878,10 @@
       toggleLyricsPlayback().catch((error) => showToast(error.message, true));
     });
     elements.lyricsRewindButton.addEventListener('click', () => {
-      seekLyricsRelative(-5).catch((error) => showToast(error.message, true));
+      changeLyricsTrack(-1).catch((error) => showToast(error.message, true));
     });
     elements.lyricsForwardButton.addEventListener('click', () => {
-      seekLyricsRelative(5).catch((error) => showToast(error.message, true));
+      changeLyricsTrack(1).catch((error) => showToast(error.message, true));
     });
     elements.lyricsSeekSlider.addEventListener('pointerdown', () => {
       state.lyricsScrubbing = true;
@@ -2820,13 +2986,20 @@
     elements.titleInput.addEventListener('blur', () => saveProject().catch(() => {}));
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && !elements.lyricsScreen.hidden) {
-        if (!elements.lyricsAdminPanel.hidden) elements.lyricsAdminPanel.hidden = true;
+        if (state.manualSync) cancelManualSync();
+        else if (!elements.lyricsAdminPanel.hidden) elements.lyricsAdminPanel.hidden = true;
         else closeLyrics();
         return;
       }
-      if (!state.canEdit || event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
       const tagName = document.activeElement?.tagName;
-      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+      const isTyping = tagName === 'INPUT' || tagName === 'TEXTAREA' || document.activeElement?.isContentEditable;
+      if (event.key === 'ArrowDown' && state.manualSync && !isTyping && !event.repeat) {
+        event.preventDefault();
+        advanceManualSync().catch((error) => showToast(error.message, true));
+        return;
+      }
+      if (!state.canEdit || event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
+      if (isTyping) return;
       if (event.key.toLowerCase() === 'a') {
         event.preventDefault();
         openPicker('audio');

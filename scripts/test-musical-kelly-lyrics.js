@@ -81,6 +81,7 @@ test('viewer opens the fullscreen lyrics from the document icon', async () => {
     ['Não tenha medo.', 'Eu estou com você.']
   );
   assert.equal(document.getElementById('lyricsEditButton').hidden, true);
+  assert.equal(document.querySelector('.comment-button').hidden, true);
   assert.match(document.querySelector('.lyric-character-avatar').style.backgroundImage, /char-dorothy/);
   dom.window.close();
 });
@@ -91,7 +92,10 @@ test('admin can open editor and character context menu', async () => {
   document.querySelector('.lyrics-button').click();
   document.getElementById('lyricsEditButton').click();
   assert.equal(document.getElementById('lyricsAdminPanel').hidden, false);
+  assert.ok(document.getElementById('lyricsManualSyncButton'));
+  assert.equal(document.getElementById('manualSyncPanel').hidden, true);
   assert.match(document.getElementById('lyricsEditor').value, /^Dorothy: Não tenha medo\./);
+  assert.equal(document.querySelector('.comment-button').hidden, false);
   document.querySelector('.lyric-line').dispatchEvent(new MouseEvent('contextmenu', {
     bubbles: true,
     cancelable: true,
@@ -110,10 +114,19 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(serverSource, /timestamp_granularities\[\]/);
   assert.match(serverSource, /app\.post\('\/api\/musical-kelly\/cards\/:cardId\/lyrics\/generate'/);
   assert.match(serverSource, /app\.put\('\/api\/musical-kelly\/cards\/:cardId\/lyrics'/);
+  assert.match(serverSource, /app\.put\('\/api\/musical-kelly\/cards\/:cardId\/lyrics\/timesync'/);
   assert.match(serverSource, /requireAdminUserFromRequest\(req\)/);
   assert.match(serverSource, /CREATE TABLE IF NOT EXISTS public\.musical_kelly_characters/);
   assert.match(serverSource, /\$\{musicalKellyGlobalRoot\(\)\}\/characters/);
   assert.match(appSource, /fadeCurrentVoice\(1, 1500\)/);
   assert.match(appSource, /Number\(line\.start\) - 3/);
   assert.match(appSource, /Number\(line\.end\) \+ 3/);
+  assert.match(appSource, /event\.key === 'ArrowDown'/);
+  assert.match(appSource, /function advanceManualSync\(\)/);
+  assert.match(appSource, /function changeLyricsTrack\(direction\)/);
+  assert.match(appSource, /playRequestGeneration/);
+  assert.match(appSource, /state\.autoAdvance = \{ fromVoice: voice, nextVoice: null, timer \}/);
+  assert.doesNotMatch(html, /id="lyricsCharacterLabel"/);
+  assert.match(html, /aria-label="Faixa anterior"/);
+  assert.match(html, /aria-label="Próxima faixa"/);
 });
