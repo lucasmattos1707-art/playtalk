@@ -1223,6 +1223,7 @@
         body: file
       });
       state.characters = Array.isArray(payload.characters) ? payload.characters : state.characters;
+      cacheCharacterImages().catch(() => {});
       const createdCharacter = state.characters.find((character) => character.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'));
       const pendingLineId = state.characterMenuLineId;
       saveProjectSnapshot(state.project);
@@ -1539,6 +1540,7 @@
     if (Array.isArray(payload.characters)) state.characters = payload.characters;
     state.unreadCardIds = new Set(Array.isArray(payload.unreadCardIds) ? payload.unreadCardIds : []);
     applyCollaborationProject(payload.project || { version: 1, cards: [] });
+    cacheCharacterImages().catch(() => {});
   }
 
   async function refreshProject() {
@@ -1978,6 +1980,21 @@
     const response = await fetch(request);
     if (!response.ok) throw new Error(`Não foi possível baixar ${asset.name || 'o arquivo'}.`);
     await cache.put(request, response.clone());
+  }
+
+  async function cacheCharacterImages() {
+    if (!navigator.onLine || !('caches' in window) || !state.characters.length) return;
+    await requestPersistentStorage();
+    const cache = await getCache();
+    await Promise.allSettled(state.characters.map(async (character) => {
+      if (!character?.imageUrl) return;
+      const request = new Request(absoluteUrl(character.imageUrl), { credentials: 'same-origin' });
+      const existing = await cache.match(request, { ignoreVary: true });
+      if (existing) return;
+      const response = await fetch(request);
+      if (!response.ok) throw new Error(`Não foi possível salvar a imagem de ${character.name || 'personagem'} offline.`);
+      await cache.put(request, response.clone());
+    }));
   }
 
   async function isAssetCached(asset) {
@@ -3041,6 +3058,7 @@
     });
     window.addEventListener('online', () => {
       syncImageGenerationPolling(200);
+      cacheCharacterImages().catch(() => {});
       if (!state.pendingComments.length) return;
       setStatus('Conexão restabelecida. Enviando comentários pendentes…', true);
       flushPendingComments({ announce: true }).finally(() => {

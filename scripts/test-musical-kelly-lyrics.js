@@ -9,6 +9,7 @@ const { JSDOM } = require('jsdom');
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'www', 'musical-kelly', 'index.html'), 'utf8');
 const appSource = fs.readFileSync(path.join(root, 'www', 'musical-kelly', 'app.js'), 'utf8');
+const serviceWorkerSource = fs.readFileSync(path.join(root, 'www', 'musical-kelly', 'sw.js'), 'utf8');
 const serverSource = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 
 function projectPayload(canEdit) {
@@ -134,6 +135,12 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(appSource, /startManualSyncR2Audio\(card\)/);
   assert.match(appSource, /forceNetwork: true, sourceUrl: manualSyncAudioUrl\(card\)/);
   assert.match(appSource, /O R2 não confirmou o novo timesync/);
+  assert.match(appSource, /function cacheCharacterImages\(\)/);
+  assert.match(appSource, /state\.characters\.map\(async \(character\)/);
+  assert.match(appSource, /cache\.put\(request, response\.clone\(\)\)/);
+  assert.match(appSource, /window\.addEventListener\('online'[\s\S]*cacheCharacterImages\(\)/);
+  assert.match(serviceWorkerSource, /url\.pathname\.startsWith\('\/api\/musical-kelly\/characters\/'\)/);
+  assert.match(serviceWorkerSource, /serveCharacterImage\(request\)/);
   assert.doesNotMatch(html, /id="lyricsCharacterLabel"/);
   assert.match(html, /aria-label="Faixa anterior"/);
   assert.match(html, /aria-label="Próxima faixa"/);
