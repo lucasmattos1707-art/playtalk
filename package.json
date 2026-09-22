@@ -14,6 +14,7 @@
         "sync:levels": "node scripts/sync-local-level-assets.js",
         "test": "echo \"Error: no test specified\" && exit 1",
         "test:journey": "node --test scripts/test-journey.js scripts/test-play-speech.js",
+        "test:musical-kelly": "node --test scripts/test-musical-kelly-lyrics.js",
         "r2:init-content": "node scripts/init-r2-content.js",
         "r2:flashcards": "node scripts/publish-flashcards-r2.js",
         "r2:accesskey": "node scripts/upload-r2-folder.js --source=accesskey --prefix=accesskey --concurrency=4",

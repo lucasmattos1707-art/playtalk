@@ -49,6 +49,42 @@
     forwardButton: document.getElementById('forwardButton'),
     seekSlider: document.getElementById('seekSlider'),
     currentTimeLabel: document.getElementById('currentTimeLabel'),
+    lyricsScreen: document.getElementById('lyricsScreen'),
+    lyricsScreenTitle: document.getElementById('lyricsScreenTitle'),
+    lyricsStage: document.getElementById('lyricsStage'),
+    lyricsLines: document.getElementById('lyricsLines'),
+    lyricsEmpty: document.getElementById('lyricsEmpty'),
+    lyricsBackButton: document.getElementById('lyricsBackButton'),
+    lyricsEditButton: document.getElementById('lyricsEditButton'),
+    lyricsAdminPanel: document.getElementById('lyricsAdminPanel'),
+    lyricsAdminTitle: document.getElementById('lyricsAdminTitle'),
+    lyricsCloseEditor: document.getElementById('lyricsCloseEditor'),
+    generatePlainLyrics: document.getElementById('generatePlainLyrics'),
+    generateTimedLyrics: document.getElementById('generateTimedLyrics'),
+    lyricsGenerationStatus: document.getElementById('lyricsGenerationStatus'),
+    lyricsEditor: document.getElementById('lyricsEditor'),
+    lyricsSaveButton: document.getElementById('lyricsSaveButton'),
+    lyricsCharacterSwitch: document.getElementById('lyricsCharacterSwitch'),
+    lyricsCharacterAvatar: document.getElementById('lyricsCharacterAvatar'),
+    lyricsCharacterLabel: document.getElementById('lyricsCharacterLabel'),
+    lyricsPlayer: document.getElementById('lyricsPlayer'),
+    lyricsRewindButton: document.getElementById('lyricsRewindButton'),
+    lyricsPlayButton: document.getElementById('lyricsPlayButton'),
+    lyricsSeekSlider: document.getElementById('lyricsSeekSlider'),
+    lyricsCurrentTime: document.getElementById('lyricsCurrentTime'),
+    lyricsDuration: document.getElementById('lyricsDuration'),
+    lyricsForwardButton: document.getElementById('lyricsForwardButton'),
+    characterMenu: document.getElementById('characterMenu'),
+    characterDialog: document.getElementById('characterDialog'),
+    characterDialogTitle: document.getElementById('characterDialogTitle'),
+    closeCharacterDialog: document.getElementById('closeCharacterDialog'),
+    characterGrid: document.getElementById('characterGrid'),
+    characterAddToggle: document.getElementById('characterAddToggle'),
+    characterAddForm: document.getElementById('characterAddForm'),
+    characterNameInput: document.getElementById('characterNameInput'),
+    characterImageInput: document.getElementById('characterImageInput'),
+    characterImageLabel: document.getElementById('characterImageLabel'),
+    characterSaveButton: document.getElementById('characterSaveButton'),
     toast: document.getElementById('toast')
   };
 
@@ -61,6 +97,7 @@
     canDeleteComments: false,
     canReorder: false,
     unreadCardIds: new Set(),
+    characters: [],
     notificationRequests: new Set(),
     sortMode: false,
     sortingCardId: '',
@@ -95,6 +132,14 @@
     saveChain: Promise.resolve(),
     toastTimer: null,
     scrubbing: false,
+    lyricsCardId: '',
+    lyricsActiveLineIndex: -1,
+    lyricsScrubbing: false,
+    lyricsBusy: false,
+    characterDialogMode: 'pov',
+    characterMenuLineId: '',
+    selectedCharacterId: '',
+    povPlayback: null,
     progressFrame: 0
   };
 
@@ -133,6 +178,7 @@
           canDeleteComments: state.canDeleteComments,
           canReorder: state.canReorder
         },
+        characters: state.characters,
         project
       }));
     } catch (_error) {}
@@ -553,6 +599,15 @@
         openComments(card.id);
       });
 
+      const lyricsButton = node.querySelector('.lyrics-button');
+      lyricsButton.classList.toggle('has-lyrics', Boolean(card.lyrics?.lines?.length));
+      lyricsButton.title = card.lyrics?.lines?.length ? 'Abrir letra' : 'Letra ainda não disponível';
+      lyricsButton.setAttribute('aria-label', `${lyricsButton.title}: ${card.title}`);
+      lyricsButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        openLyrics(card.id);
+      });
+
       bindCardGestures(node, card.id);
       if (state.sortMode) bindSortGestures(node, card.id);
       fragment.appendChild(node);
@@ -656,6 +711,571 @@
     else dialog.removeAttribute('open');
   }
 
+  function characterById(characterId) {
+    return state.characters.find((character) => character.id === characterId) || null;
+  }
+
+  function lyricLineLabel(line) {
+    const speaker = String(line?.speaker || '').trim();
+    return speaker ? `${speaker}: ${line.text}` : String(line?.text || '').trim();
+  }
+
+  function openLyrics(cardId) {
+    const card = getCard(cardId);
+    if (!card) return;
+    state.lyricsCardId = cardId;
+    state.lyricsActiveLineIndex = -1;
+    state.selectedCharacterId = '';
+    elements.lyricsScreen.hidden = false;
+    document.body.classList.add('lyrics-open');
+    if (state.current?.cardId === cardId) cancelAutoAdvance();
+    renderLyricsScreen();
+    if (card.audio) loadCardDuration(card).then(updateLyricsPlayer).catch(() => {});
+    if (state.canEdit && !card.lyrics?.lines?.length) openLyricsEditor();
+  }
+
+  function closeLyrics() {
+    cancelPovPlayback({ pause: true });
+    const current = state.current;
+    elements.lyricsScreen.hidden = true;
+    elements.lyricsAdminPanel.hidden = true;
+    elements.characterMenu.hidden = true;
+    document.body.classList.remove('lyrics-open');
+    state.lyricsCardId = '';
+    state.selectedCharacterId = '';
+    state.lyricsActiveLineIndex = -1;
+    if (current && !current.paused) scheduleAutoAdvance(current);
+  }
+
+  function openLyricsEditor() {
+    if (!state.canEdit) return;
+    const card = getCard(state.lyricsCardId);
+    if (!card) return;
+    elements.lyricsAdminTitle.textContent = card.lyrics?.lines?.length ? 'Corrigir ou recriar' : 'Criar letra';
+    elements.lyricsEditor.value = (card.lyrics?.lines || []).map(lyricLineLabel).join('\n');
+    elements.lyricsAdminPanel.hidden = false;
+  }
+
+  function renderLyricsScreen() {
+    const card = getCard(state.lyricsCardId);
+    if (!card) {
+      closeLyrics();
+      return;
+    }
+    elements.lyricsScreenTitle.textContent = card.title;
+    elements.lyricsEditButton.hidden = !state.canEdit;
+    const selectedCharacter = characterById(state.selectedCharacterId);
+    elements.lyricsCharacterLabel.textContent = selectedCharacter?.name || 'Personagem';
+    elements.lyricsCharacterAvatar.classList.toggle('has-image', Boolean(selectedCharacter));
+    elements.lyricsCharacterAvatar.style.backgroundImage = selectedCharacter
+      ? `url("${String(selectedCharacter.imageUrl).replace(/["\\]/g, '')}")`
+      : '';
+    const lines = Array.isArray(card.lyrics?.lines) ? card.lyrics.lines : [];
+    elements.lyricsEmpty.hidden = lines.length > 0;
+    elements.lyricsLines.hidden = lines.length === 0;
+    elements.lyricsLines.replaceChildren();
+    lines.forEach((line, index) => {
+      const character = characterById(line.characterId);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'lyric-line';
+      button.dataset.lineId = line.id;
+      button.dataset.lineIndex = String(index);
+      button.classList.toggle('is-pov-muted', Boolean(state.selectedCharacterId && line.characterId !== state.selectedCharacterId));
+
+      const avatar = document.createElement('span');
+      avatar.className = `lyric-character-avatar${character ? '' : ' is-empty'}`;
+      if (character) avatar.style.backgroundImage = `url("${String(character.imageUrl).replace(/["\\]/g, '')}")`;
+      const copy = document.createElement('span');
+      copy.className = 'lyric-copy';
+      const visibleSpeaker = character?.name || line.speaker;
+      if (visibleSpeaker) {
+        const speaker = document.createElement('small');
+        speaker.textContent = visibleSpeaker;
+        copy.appendChild(speaker);
+      }
+      const text = document.createElement('span');
+      text.textContent = line.text;
+      copy.appendChild(text);
+      button.append(avatar, copy);
+      let characterPressTimer = null;
+      let characterLongPressed = false;
+      let characterPressX = 0;
+      let characterPressY = 0;
+      button.addEventListener('click', () => {
+        if (characterLongPressed) {
+          characterLongPressed = false;
+          return;
+        }
+        seekToLyricLine(index).catch((error) => showToast(error.message, true));
+      });
+      if (state.canEdit) {
+        button.addEventListener('pointerdown', (event) => {
+          characterLongPressed = false;
+          characterPressX = event.clientX;
+          characterPressY = event.clientY;
+          characterPressTimer = window.setTimeout(() => {
+            characterLongPressed = true;
+            if (navigator.vibrate) navigator.vibrate(20);
+            const rect = button.getBoundingClientRect();
+            openCharacterMenu(line.id, event.clientX || rect.left + rect.width / 2, event.clientY || rect.top + rect.height / 2);
+          }, LONG_PRESS_MS);
+        });
+        button.addEventListener('pointermove', (event) => {
+          if (Math.hypot(event.clientX - characterPressX, event.clientY - characterPressY) > 12) {
+            window.clearTimeout(characterPressTimer);
+          }
+        });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach((eventName) => {
+          button.addEventListener(eventName, () => window.clearTimeout(characterPressTimer));
+        });
+        button.addEventListener('contextmenu', (event) => {
+          event.preventDefault();
+          window.clearTimeout(characterPressTimer);
+          openCharacterMenu(line.id, event.clientX, event.clientY);
+        });
+      }
+      elements.lyricsLines.appendChild(button);
+    });
+    if (state.canEdit && !elements.lyricsAdminPanel.hidden) openLyricsEditor();
+    updateLyricsPlayer();
+  }
+
+  function setActiveLyricLine(index) {
+    if (state.lyricsActiveLineIndex === index) return;
+    state.lyricsActiveLineIndex = index;
+    elements.lyricsLines.querySelectorAll('.lyric-line').forEach((line, lineIndex) => {
+      line.classList.toggle('is-active', lineIndex === index);
+    });
+    if (index >= 0) {
+      elements.lyricsLines.querySelector(`[data-line-index="${index}"]`)
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+
+  function currentLyricsPosition() {
+    return state.current?.cardId === state.lyricsCardId ? currentPosition(state.current) : 0;
+  }
+
+  function updateLyricsPlayer() {
+    if (elements.lyricsScreen.hidden) return;
+    const card = getCard(state.lyricsCardId);
+    if (!card) return;
+    const isCurrent = state.current?.cardId === card.id;
+    const duration = isCurrent
+      ? Math.max(0, Number(state.current?.buffer?.duration) || 0)
+      : Math.max(0, Number(state.durations.get(card.audio?.fileName)) || 0);
+    const position = isCurrent ? Math.min(duration || Infinity, currentPosition(state.current)) : 0;
+    if (!state.lyricsScrubbing) elements.lyricsSeekSlider.value = String(position);
+    elements.lyricsSeekSlider.max = String(Math.max(0.01, duration));
+    elements.lyricsSeekSlider.disabled = !card.audio || duration <= 0;
+    elements.lyricsCurrentTime.textContent = formatTime(state.lyricsScrubbing ? elements.lyricsSeekSlider.value : position);
+    elements.lyricsDuration.textContent = formatTime(duration);
+    const isPlaying = isCurrent && !state.current.paused;
+    elements.lyricsPlayButton.classList.toggle('is-playing', isPlaying);
+    elements.lyricsPlayButton.setAttribute('aria-label', isPlaying ? 'Pausar' : 'Reproduzir');
+    const lines = Array.isArray(card.lyrics?.lines) ? card.lyrics.lines : [];
+    if (card.lyrics?.mode === 'timesync' && isCurrent) {
+      let activeIndex = -1;
+      for (let index = 0; index < lines.length; index += 1) {
+        if (position >= Number(lines[index].start)) activeIndex = index;
+        else break;
+      }
+      setActiveLyricLine(activeIndex);
+    } else if (!isCurrent) {
+      setActiveLyricLine(-1);
+    }
+  }
+
+  async function ensureLyricsCardAt(card, position, { play = true } = {}) {
+    if (!card?.audio) throw new Error('Este container ainda não tem música.');
+    if (state.current?.cardId !== card.id) {
+      await playCard(card.id);
+    } else if (play && state.current.paused) {
+      await resumeCurrent();
+    }
+    await seekTo(position);
+    cancelAutoAdvance();
+  }
+
+  async function seekToLyricLine(index) {
+    const card = getCard(state.lyricsCardId);
+    const line = card?.lyrics?.lines?.[index];
+    if (!card || !line) return;
+    if (card.lyrics.mode !== 'timesync' || !Number.isFinite(Number(line.start))) {
+      showToast('Esta letra foi criada sem timesync. O admin pode gerar a versão sincronizada.');
+      return;
+    }
+    if (state.selectedCharacterId) {
+      if (line.characterId !== state.selectedCharacterId) {
+        showToast('Este trecho pertence a outro personagem.');
+        return;
+      }
+      const clips = buildPovClips(card, state.selectedCharacterId);
+      const clipIndex = clips.findIndex((clip) => Number(line.start) >= clip.start && Number(line.start) <= clip.end);
+      await startPovPlayback(card, state.selectedCharacterId, Math.max(0, clipIndex), Number(line.start));
+      return;
+    }
+    cancelPovPlayback();
+    await ensureLyricsCardAt(card, Number(line.start));
+  }
+
+  function openCharacterMenu(lineId, clientX, clientY) {
+    if (!state.canEdit) return;
+    state.characterMenuLineId = lineId;
+    elements.characterMenu.replaceChildren();
+    state.characters.forEach((character) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.setAttribute('role', 'menuitem');
+      const image = document.createElement('img');
+      image.src = character.imageUrl;
+      image.alt = '';
+      const label = document.createElement('span');
+      label.textContent = character.name;
+      button.append(image, label);
+      button.addEventListener('click', () => assignCharacterToLine(lineId, character.id));
+      elements.characterMenu.appendChild(button);
+    });
+    const addButton = document.createElement('button');
+    addButton.type = 'button';
+    addButton.setAttribute('role', 'menuitem');
+    addButton.textContent = '＋ Adicionar personagem';
+    addButton.addEventListener('click', () => {
+      elements.characterMenu.hidden = true;
+      openCharacterDialog('add');
+    });
+    elements.characterMenu.appendChild(addButton);
+    const clearButton = document.createElement('button');
+    clearButton.type = 'button';
+    clearButton.textContent = 'Sem personagem';
+    clearButton.addEventListener('click', () => assignCharacterToLine(lineId, ''));
+    if (state.characters.length) elements.characterMenu.appendChild(clearButton);
+    elements.characterMenu.hidden = false;
+    const width = 280;
+    elements.characterMenu.style.left = `${Math.max(8, Math.min(clientX, window.innerWidth - width - 8))}px`;
+    elements.characterMenu.style.top = `${Math.max(8, Math.min(clientY, window.innerHeight - 260))}px`;
+  }
+
+  async function assignCharacterToLine(lineId, characterId) {
+    const card = getCard(state.lyricsCardId);
+    if (!card) return;
+    elements.characterMenu.hidden = true;
+    state.characterMenuLineId = '';
+    const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}/lyrics/${encodeURIComponent(lineId)}/character`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ characterId })
+    });
+    applyCollaborationProject(payload.project);
+    showToast(characterId ? 'Personagem atribuído ao trecho.' : 'Personagem removido do trecho.');
+  }
+
+  function openCharacterDialog(mode = 'pov') {
+    if (mode === 'pov') state.characterMenuLineId = '';
+    state.characterDialogMode = mode;
+    elements.characterDialogTitle.textContent = mode === 'add' ? 'Adicionar personagem' : 'Escolha um personagem';
+    elements.characterAddToggle.hidden = !state.canEdit || mode === 'add';
+    elements.characterAddForm.hidden = !(state.canEdit && mode === 'add');
+    renderCharacterGrid();
+    showDialog(elements.characterDialog);
+    if (mode === 'add') window.setTimeout(() => elements.characterNameInput.focus(), 40);
+  }
+
+  function renderCharacterGrid() {
+    elements.characterGrid.replaceChildren();
+    if (state.characterDialogMode === 'pov') {
+      const allButton = document.createElement('button');
+      allButton.type = 'button';
+      allButton.className = `character-option${state.selectedCharacterId ? '' : ' is-selected'}`;
+      allButton.textContent = 'Todas as falas';
+      allButton.addEventListener('click', () => selectPovCharacter(''));
+      elements.characterGrid.appendChild(allButton);
+    }
+    state.characters.forEach((character) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `character-option${state.selectedCharacterId === character.id ? ' is-selected' : ''}`;
+      const image = document.createElement('img');
+      image.src = character.imageUrl;
+      image.alt = '';
+      const label = document.createElement('span');
+      label.textContent = character.name;
+      button.append(image, label);
+      if (state.characterDialogMode === 'pov') button.addEventListener('click', () => selectPovCharacter(character.id));
+      elements.characterGrid.appendChild(button);
+    });
+    if (!state.characters.length && state.characterDialogMode !== 'pov') elements.characterGrid.hidden = true;
+    else elements.characterGrid.hidden = false;
+  }
+
+  function selectPovCharacter(characterId) {
+    cancelPovPlayback({ pause: true });
+    state.selectedCharacterId = characterId;
+    closeDialog(elements.characterDialog);
+    renderLyricsScreen();
+    if (!characterId) {
+      showToast('Linha do tempo completa selecionada.');
+      return;
+    }
+    const card = getCard(state.lyricsCardId);
+    const character = characterById(characterId);
+    const clips = buildPovClips(card, characterId);
+    if (!clips.length) showToast(`${character?.name || 'Este personagem'} ainda não tem falas sincronizadas.`, true);
+    else showToast(`Ponto de vista: ${character?.name}. Toque no play.`);
+  }
+
+  async function createCharacter(event) {
+    event.preventDefault();
+    if (!state.canEdit || state.lyricsBusy) return;
+    const name = elements.characterNameInput.value.trim().slice(0, 80);
+    const file = elements.characterImageInput.files?.[0];
+    if (!name || !file) throw new Error('Digite o nome e escolha uma imagem PNG.');
+    if (file.type !== 'image/png' && !/\.png$/i.test(file.name)) throw new Error('A imagem precisa ser PNG.');
+    state.lyricsBusy = true;
+    elements.characterSaveButton.disabled = true;
+    try {
+      const query = new URLSearchParams({ name });
+      const payload = await apiJson(`${API_ROOT}/characters?${query}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'image/png' },
+        body: file
+      });
+      state.characters = Array.isArray(payload.characters) ? payload.characters : state.characters;
+      const createdCharacter = state.characters.find((character) => character.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'));
+      const pendingLineId = state.characterMenuLineId;
+      saveProjectSnapshot(state.project);
+      elements.characterNameInput.value = '';
+      elements.characterImageInput.value = '';
+      elements.characterImageLabel.textContent = 'Escolher PNG';
+      if (pendingLineId && createdCharacter) {
+        state.characterMenuLineId = '';
+        closeDialog(elements.characterDialog);
+        await assignCharacterToLine(pendingLineId, createdCharacter.id);
+        showToast(`“${name}” foi criado e atribuído ao trecho.`);
+      } else {
+        elements.characterAddForm.hidden = true;
+        state.characterDialogMode = 'pov';
+        elements.characterDialogTitle.textContent = 'Escolha um personagem';
+        elements.characterAddToggle.hidden = false;
+        renderCharacterGrid();
+        renderLyricsScreen();
+        showToast(`Personagem “${name}” adicionado.`);
+      }
+    } finally {
+      state.lyricsBusy = false;
+      elements.characterSaveButton.disabled = false;
+    }
+  }
+
+  async function generateLyrics(mode) {
+    if (!state.canEdit || state.lyricsBusy) return;
+    const card = getCard(state.lyricsCardId);
+    if (!card?.audio) throw new Error('Adicione o áudio antes de gerar a letra.');
+    state.lyricsBusy = true;
+    elements.lyricsGenerationStatus.hidden = false;
+    elements.generatePlainLyrics.disabled = true;
+    elements.generateTimedLyrics.disabled = true;
+    elements.lyricsSaveButton.disabled = true;
+    try {
+      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}/lyrics/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode })
+      });
+      applyCollaborationProject(payload.project);
+      openLyricsEditor();
+      showToast(mode === 'timesync' ? 'Letra sincronizada criada.' : 'Letra criada.');
+    } finally {
+      state.lyricsBusy = false;
+      elements.lyricsGenerationStatus.hidden = true;
+      elements.generatePlainLyrics.disabled = false;
+      elements.generateTimedLyrics.disabled = false;
+      elements.lyricsSaveButton.disabled = false;
+    }
+  }
+
+  async function saveLyricsEdits() {
+    if (!state.canEdit || state.lyricsBusy) return;
+    const card = getCard(state.lyricsCardId);
+    const text = elements.lyricsEditor.value.trim();
+    if (!card || !text) throw new Error('Escreva ao menos uma linha da letra.');
+    state.lyricsBusy = true;
+    elements.lyricsSaveButton.disabled = true;
+    try {
+      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}/lyrics`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: card.lyrics?.mode || 'plain', text })
+      });
+      applyCollaborationProject(payload.project);
+      elements.lyricsAdminPanel.hidden = true;
+      showToast(payload.mode === 'timesync' ? 'Correções salvas com timesync.' : 'Correções salvas na letra.');
+    } finally {
+      state.lyricsBusy = false;
+      elements.lyricsSaveButton.disabled = false;
+    }
+  }
+
+  function buildPovClips(card, characterId) {
+    if (card?.lyrics?.mode !== 'timesync') return [];
+    const duration = Math.max(0, Number(state.durations.get(card.audio?.fileName)) || 0);
+    const clips = card.lyrics.lines
+      .filter((line) => line.characterId === characterId && Number.isFinite(Number(line.start)) && Number.isFinite(Number(line.end)))
+      .map((line) => ({
+        start: Math.max(0, Number(line.start) - 3),
+        end: duration > 0 ? Math.min(duration, Number(line.end) + 3) : Number(line.end) + 3
+      }))
+      .sort((left, right) => left.start - right.start);
+    return clips.reduce((merged, clip) => {
+      const previous = merged[merged.length - 1];
+      if (previous && clip.start <= previous.end) previous.end = Math.max(previous.end, clip.end);
+      else merged.push({ ...clip });
+      return merged;
+    }, []);
+  }
+
+  function clearPovTimers(playback = state.povPlayback) {
+    if (!playback) return;
+    (playback.timers || []).forEach((timer) => window.clearTimeout(timer));
+    playback.timers = [];
+    if (playback.fadeFrame) window.cancelAnimationFrame(playback.fadeFrame);
+    playback.fadeFrame = 0;
+  }
+
+  function setCurrentVoiceVolume(value) {
+    const voice = state.current;
+    const volume = Math.max(0, Math.min(1, Number(value) || 0));
+    if (!voice) return;
+    if (voice.native) {
+      try { voice.media.volume = volume; } catch (_error) {}
+      return;
+    }
+    if (voice.gain && state.audioContext) {
+      const now = state.audioContext.currentTime;
+      voice.gain.gain.cancelScheduledValues(now);
+      voice.gain.gain.setValueAtTime(volume, now);
+    }
+  }
+
+  function fadeCurrentVoice(target, durationMs) {
+    const voice = state.current;
+    if (!voice) return;
+    if (!voice.native && voice.gain && state.audioContext) {
+      const now = state.audioContext.currentTime;
+      const parameter = voice.gain.gain;
+      parameter.cancelScheduledValues(now);
+      parameter.setValueAtTime(Math.max(0.0001, parameter.value), now);
+      parameter.linearRampToValueAtTime(Math.max(0.0001, target), now + durationMs / 1000);
+      return;
+    }
+    const playback = state.povPlayback;
+    if (!playback) return;
+    if (playback.fadeFrame) window.cancelAnimationFrame(playback.fadeFrame);
+    const startAt = performance.now();
+    const initial = Number(voice.media?.volume) || 0;
+    const step = (now) => {
+      if (state.current !== voice || state.povPlayback !== playback) return;
+      const progress = Math.min(1, (now - startAt) / Math.max(1, durationMs));
+      try { voice.media.volume = initial + ((target - initial) * progress); } catch (_error) {}
+      if (progress < 1) playback.fadeFrame = window.requestAnimationFrame(step);
+    };
+    playback.fadeFrame = window.requestAnimationFrame(step);
+  }
+
+  function cancelPovPlayback({ pause = false } = {}) {
+    const playback = state.povPlayback;
+    clearPovTimers(playback);
+    state.povPlayback = null;
+    setCurrentVoiceVolume(1);
+    if (pause && state.current && !state.current.paused) pauseCurrent();
+  }
+
+  async function playPovClip(index, requestedPosition = null, generation = state.povPlayback?.generation) {
+    const playback = state.povPlayback;
+    const card = getCard(playback?.cardId);
+    const clip = playback?.clips?.[index];
+    if (!playback || !card || !clip || playback.generation !== generation) return;
+    clearPovTimers(playback);
+    playback.index = index;
+    const start = Math.max(clip.start, Math.min(Number(requestedPosition) || clip.start, Math.max(clip.start, clip.end - 0.05)));
+    await ensureLyricsCardAt(card, start);
+    if (state.povPlayback !== playback || playback.generation !== generation) return;
+    setCurrentVoiceVolume(0);
+    fadeCurrentVoice(1, 1500);
+    const remainingMs = Math.max(80, (clip.end - start) * 1000);
+    const fadeOutDelay = Math.max(0, remainingMs - 1500);
+    playback.timers.push(window.setTimeout(() => {
+      if (state.povPlayback === playback) fadeCurrentVoice(0, Math.min(1500, remainingMs));
+    }, fadeOutDelay));
+    playback.timers.push(window.setTimeout(() => {
+      if (state.povPlayback !== playback) return;
+      if (index + 1 < playback.clips.length) {
+        playPovClip(index + 1, null, generation).catch((error) => showToast(error.message, true));
+      } else {
+        setCurrentVoiceVolume(1);
+        state.povPlayback = null;
+        if (state.current && !state.current.paused) pauseCurrent();
+        showToast('Fim das falas deste personagem.');
+      }
+    }, remainingMs));
+  }
+
+  async function startPovPlayback(card, characterId, index = 0, requestedPosition = null) {
+    const clips = buildPovClips(card, characterId);
+    if (!clips.length) throw new Error('Este personagem ainda não tem falas sincronizadas.');
+    cancelPovPlayback();
+    const generation = Date.now() + Math.random();
+    state.povPlayback = { cardId: card.id, characterId, clips, index, timers: [], fadeFrame: 0, generation };
+    await playPovClip(Math.min(Math.max(0, index), clips.length - 1), requestedPosition, generation);
+  }
+
+  async function toggleLyricsPlayback() {
+    const card = getCard(state.lyricsCardId);
+    if (!card?.audio) throw new Error('Este container ainda não tem música.');
+    if (state.current?.cardId === card.id && !state.current.paused) {
+      clearPovTimers();
+      pauseCurrent();
+      return;
+    }
+    if (state.selectedCharacterId) {
+      const clips = buildPovClips(card, state.selectedCharacterId);
+      const position = currentLyricsPosition();
+      let index = clips.findIndex((clip) => position >= clip.start && position < clip.end);
+      if (index < 0) index = Math.max(0, clips.findIndex((clip) => clip.start > position));
+      await startPovPlayback(card, state.selectedCharacterId, index);
+      return;
+    }
+    cancelPovPlayback();
+    if (state.current?.cardId === card.id && state.current.paused) await resumeCurrent();
+    else if (state.current?.cardId !== card.id) await playCard(card.id);
+    cancelAutoAdvance();
+  }
+
+  async function seekLyricsRelative(deltaSeconds) {
+    const card = getCard(state.lyricsCardId);
+    if (!card?.audio) return;
+    const target = Math.max(0, currentLyricsPosition() + deltaSeconds);
+    if (state.selectedCharacterId) {
+      const clips = buildPovClips(card, state.selectedCharacterId);
+      let index = clips.findIndex((clip) => target >= clip.start && target < clip.end);
+      if (index < 0 && deltaSeconds < 0) {
+        index = 0;
+        for (let clipIndex = clips.length - 1; clipIndex >= 0; clipIndex -= 1) {
+          if (clips[clipIndex].start < target) {
+            index = clipIndex;
+            break;
+          }
+        }
+      } else if (index < 0) {
+        index = Math.max(0, clips.findIndex((clip) => clip.start > target));
+      }
+      await startPovPlayback(card, state.selectedCharacterId, index, target);
+      return;
+    }
+    await ensureLyricsCardAt(card, target);
+  }
+
   function applyCollaborationProject(project) {
     if (!project || !Array.isArray(project.cards)) return;
     const previousPendingIds = new Set(state.project.cards
@@ -670,6 +1290,7 @@
     }
     render();
     if (state.activeCommentsCardId && elements.commentsDialog.hasAttribute('open')) renderComments();
+    if (state.lyricsCardId && !elements.lyricsScreen.hidden) renderLyricsScreen();
     const completedCard = state.project.cards.find((card) => previousPendingIds.has(card.id) && card.image?.url);
     const failedCard = state.project.cards.find((card) => previousPendingIds.has(card.id) && card.imageGenerationStatus === 'failed');
     if (completedCard) {
@@ -715,6 +1336,7 @@
     state.canApprove = payload.canApprove === true;
     state.canDeleteComments = payload.canDeleteComments === true;
     state.canReorder = payload.canReorder === true;
+    if (Array.isArray(payload.characters)) state.characters = payload.characters;
     state.unreadCardIds = new Set(Array.isArray(payload.unreadCardIds) ? payload.unreadCardIds : []);
     applyCollaborationProject(payload.project || { version: 1, cards: [] });
   }
@@ -1638,6 +2260,7 @@
 
   function runProgressLoop() {
     updatePlayerBar();
+    updateLyricsPlayer();
     state.progressFrame = window.requestAnimationFrame(runProgressLoop);
   }
 
@@ -2050,10 +2673,74 @@
       approveTrack().catch((error) => showToast(error.message, true));
     });
     elements.closeCommentsDialog.addEventListener('click', () => closeDialog(elements.commentsDialog));
-    [elements.addCardDialog, elements.commentsDialog].forEach((dialog) => {
+    [elements.addCardDialog, elements.commentsDialog, elements.characterDialog].forEach((dialog) => {
       dialog.addEventListener('click', (event) => {
         if (event.target === dialog) closeDialog(dialog);
       });
+    });
+    elements.lyricsBackButton.addEventListener('click', closeLyrics);
+    elements.lyricsEditButton.addEventListener('click', openLyricsEditor);
+    elements.lyricsCloseEditor.addEventListener('click', () => {
+      elements.lyricsAdminPanel.hidden = true;
+    });
+    elements.generatePlainLyrics.addEventListener('click', () => {
+      generateLyrics('plain').catch((error) => showToast(error.message, true));
+    });
+    elements.generateTimedLyrics.addEventListener('click', () => {
+      generateLyrics('timesync').catch((error) => showToast(error.message, true));
+    });
+    elements.lyricsSaveButton.addEventListener('click', () => {
+      saveLyricsEdits().catch((error) => showToast(error.message, true));
+    });
+    elements.lyricsCharacterSwitch.addEventListener('click', () => openCharacterDialog('pov'));
+    elements.closeCharacterDialog.addEventListener('click', () => closeDialog(elements.characterDialog));
+    elements.characterAddToggle.addEventListener('click', () => {
+      state.characterDialogMode = 'add';
+      elements.characterDialogTitle.textContent = 'Adicionar personagem';
+      elements.characterAddToggle.hidden = true;
+      elements.characterAddForm.hidden = false;
+      renderCharacterGrid();
+      elements.characterNameInput.focus();
+    });
+    elements.characterAddForm.addEventListener('submit', (event) => {
+      createCharacter(event).catch((error) => showToast(error.message, true));
+    });
+    elements.characterImageInput.addEventListener('change', () => {
+      elements.characterImageLabel.textContent = elements.characterImageInput.files?.[0]?.name || 'Escolher PNG';
+    });
+    elements.lyricsPlayButton.addEventListener('click', () => {
+      toggleLyricsPlayback().catch((error) => showToast(error.message, true));
+    });
+    elements.lyricsRewindButton.addEventListener('click', () => {
+      seekLyricsRelative(-5).catch((error) => showToast(error.message, true));
+    });
+    elements.lyricsForwardButton.addEventListener('click', () => {
+      seekLyricsRelative(5).catch((error) => showToast(error.message, true));
+    });
+    elements.lyricsSeekSlider.addEventListener('pointerdown', () => {
+      state.lyricsScrubbing = true;
+    });
+    elements.lyricsSeekSlider.addEventListener('input', () => {
+      state.lyricsScrubbing = true;
+      elements.lyricsCurrentTime.textContent = formatTime(elements.lyricsSeekSlider.value);
+    });
+    elements.lyricsSeekSlider.addEventListener('change', () => {
+      const card = getCard(state.lyricsCardId);
+      const target = Number(elements.lyricsSeekSlider.value || 0);
+      state.lyricsScrubbing = false;
+      if (!card) return;
+      const operation = state.selectedCharacterId
+        ? (() => {
+            const clips = buildPovClips(card, state.selectedCharacterId);
+            let index = clips.findIndex((clip) => target >= clip.start && target < clip.end);
+            if (index < 0) index = Math.max(0, clips.findIndex((clip) => clip.start > target));
+            return startPovPlayback(card, state.selectedCharacterId, index, target);
+          })()
+        : ensureLyricsCardAt(card, target);
+      operation.catch((error) => showToast(error.message, true));
+    });
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('#characterMenu')) elements.characterMenu.hidden = true;
     });
     elements.downloadAllButton.addEventListener('click', () => {
       downloadAll().catch((error) => {
@@ -2132,6 +2819,11 @@
     });
     elements.titleInput.addEventListener('blur', () => saveProject().catch(() => {}));
     document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !elements.lyricsScreen.hidden) {
+        if (!elements.lyricsAdminPanel.hidden) elements.lyricsAdminPanel.hidden = true;
+        else closeLyrics();
+        return;
+      }
       if (!state.canEdit || event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
       const tagName = document.activeElement?.tagName;
       if (tagName === 'INPUT' || tagName === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
@@ -2178,6 +2870,7 @@
         state.canApprove = permissions.canApprove !== false;
         state.canDeleteComments = permissions.canDeleteComments === true;
         state.canReorder = permissions.canReorder === true;
+        state.characters = Array.isArray(snapshot.characters) ? snapshot.characters : [];
         applyCollaborationProject(snapshot.project);
         setStatus('Mostrando a última versão salva enquanto a conexão volta.');
         showToast('Conexão instável. Exibindo a última versão salva.', true);

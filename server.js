@@ -85,6 +85,8 @@ const OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL = env(process.env.OPENAI_FLASHCARD_ADMI
 const OPENAI_STORY_MODEL = env(process.env.OPENAI_STORY_MODEL) || 'gpt-5.4-nano';
 const OPENAI_TTS_MODEL = env(process.env.OPENAI_TTS_MODEL) || 'gpt-4o-mini-tts';
 const OPENAI_STT_MODEL = env(process.env.OPENAI_STT_MODEL) || 'gpt-4o-mini-transcribe';
+const MUSICAL_KELLY_LYRICS_MODEL = env(process.env.MUSICAL_KELLY_LYRICS_MODEL) || 'gpt-5.6-luna';
+const MUSICAL_KELLY_TRANSCRIPTION_MODEL = env(process.env.MUSICAL_KELLY_TRANSCRIPTION_MODEL) || 'whisper-1';
 const OPENAI_CHAT_FAST_MODEL = env(process.env.OPENAI_CHAT_FAST_MODEL) || 'gpt-5-mini';
 const INSONIC_TEXT_MODEL = env(process.env.INSONIC_TEXT_MODEL) || OPENAI_CHAT_FAST_MODEL;
 const OPENAI_USERNAME_REVIEW_MODEL = env(process.env.OPENAI_USERNAME_REVIEW_MODEL) || 'gpt-4.1';
@@ -8382,6 +8384,10 @@ const MUSICAL_KELLY_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const MUSICAL_KELLY_GENERATED_IMAGE_WIDTH = 1440;
 const MUSICAL_KELLY_GENERATED_IMAGE_HEIGHT = 288;
 const MUSICAL_KELLY_GENERATED_IMAGE_TARGET_BYTES = 420 * 1024;
+const MUSICAL_KELLY_MAX_LYRIC_LINES = 600;
+const MUSICAL_KELLY_MAX_LYRIC_LINE_LENGTH = 500;
+const MUSICAL_KELLY_MAX_TRANSCRIPTION_BYTES = 24 * 1024 * 1024;
+const MUSICAL_KELLY_MAX_CHARACTER_IMAGE_BYTES = 5 * 1024 * 1024;
 const FLASHCARD_CAMERA_OBJECT_KEY = 'FlashCards/camera.webp';
 const GLOBAL_BACKGROUND_OBJECT_KEYS = {
   desktop: 'backgrounds/playtalk-global-desktop.webp',
@@ -16073,6 +16079,42 @@ function normalizeMusicalKellyComment(source) {
   };
 }
 
+function normalizeMusicalKellyLyrics(source) {
+  if (!source || typeof source !== 'object') return null;
+  const requestedMode = source.mode === 'timesync' ? 'timesync' : 'plain';
+  const sourceLines = Array.isArray(source.lines) ? source.lines : [];
+  const lines = [];
+  for (const [index, entry] of sourceLines.slice(0, MUSICAL_KELLY_MAX_LYRIC_LINES).entries()) {
+    const text = String(entry?.text || '').trim().slice(0, MUSICAL_KELLY_MAX_LYRIC_LINE_LENGTH);
+    if (!text) continue;
+    const rawStart = Number(entry?.start);
+    const rawEnd = Number(entry?.end);
+    const hasTiming = requestedMode === 'timesync'
+      && Number.isFinite(rawStart)
+      && Number.isFinite(rawEnd)
+      && rawStart >= 0
+      && rawEnd > rawStart;
+    lines.push({
+      id: normalizeMusicalKellyCardId(entry?.id) || `line-${index + 1}`,
+      speaker: String(entry?.speaker || '').trim().slice(0, 80),
+      characterId: normalizeMusicalKellyCardId(entry?.characterId),
+      text,
+      start: hasTiming ? Math.round(rawStart * 1000) / 1000 : null,
+      end: hasTiming ? Math.round(rawEnd * 1000) / 1000 : null
+    });
+  }
+  if (!lines.length) return null;
+  const hasCompleteTiming = requestedMode === 'timesync'
+    && lines.every((line) => line.start !== null && line.end !== null);
+  return {
+    mode: hasCompleteTiming ? 'timesync' : 'plain',
+    lines: lines.map((line) => hasCompleteTiming ? line : { ...line, start: null, end: null }),
+    source: source.source === 'ai' ? 'ai' : 'admin',
+    generatedAt: String(source.generatedAt || '').trim().slice(0, 40),
+    updatedAt: String(source.updatedAt || '').trim().slice(0, 40) || new Date().toISOString()
+  };
+}
+
 function normalizeMusicalKellyProject(payload) {
   const sourceCards = Array.isArray(payload?.cards) ? payload.cards.slice(0, MUSICAL_KELLY_MAX_CARDS) : [];
   const usedIds = new Set();
@@ -16107,6 +16149,7 @@ function normalizeMusicalKellyProject(payload) {
       imageGenerationRequestedAt: imageGenerationStatus
         ? String(source?.imageGenerationRequestedAt || '').trim().slice(0, 40)
         : '',
+      lyrics: normalizeMusicalKellyLyrics(source?.lyrics),
       comments
     });
   }
@@ -16120,6 +16163,62 @@ function normalizeMusicalKellyProject(payload) {
 let musicalKellyProjectMutationQueue = Promise.resolve();
 const musicalKellyNotificationMutationQueues = new Map();
 let musicalKellyProjectCache = null;
+let musicalKellyCharacterSchemaReadyPromise = null;
+
+async function ensureMusicalKellyCharacterSchema() {
+  if (!pool) {
+    const error = new Error('O PostgreSQL ainda nao esta configurado para os personagens.');
+    error.statusCode = 503;
+    throw error;
+  }
+  if (!musicalKellyCharacterSchemaReadyPromise) {
+    musicalKellyCharacterSchemaReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.musical_kelly_characters (
+          id text PRIMARY KEY,
+          name text NOT NULL,
+          image_file_name text NOT NULL,
+          image_content_type text NOT NULL DEFAULT 'image/png',
+          created_by_user_id integer,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS musical_kelly_characters_name_unique_idx
+        ON public.musical_kelly_characters (lower(name))
+      `);
+    })().catch((error) => {
+      musicalKellyCharacterSchemaReadyPromise = null;
+      throw error;
+    });
+  }
+  await musicalKellyCharacterSchemaReadyPromise;
+}
+
+function musicalKellyCharacterFromRow(row) {
+  const id = normalizeMusicalKellyCardId(row?.id);
+  const fileName = normalizeMusicalKellyAssetFileName(row?.image_file_name);
+  if (!id || !fileName) return null;
+  return {
+    id,
+    name: String(row?.name || '').trim().slice(0, 80),
+    imageUrl: `/api/musical-kelly/characters/${encodeURIComponent(id)}/image`,
+    createdAt: row?.created_at instanceof Date
+      ? row.created_at.toISOString()
+      : String(row?.created_at || '').slice(0, 40)
+  };
+}
+
+async function readMusicalKellyCharacters() {
+  await ensureMusicalKellyCharacterSchema();
+  const result = await pool.query(`
+    SELECT id, name, image_file_name, image_content_type, created_at
+    FROM public.musical_kelly_characters
+    ORDER BY lower(name), created_at
+  `);
+  return result.rows.map(musicalKellyCharacterFromRow).filter(Boolean);
+}
 
 function queueMusicalKellyProjectMutation(callback) {
   const operation = musicalKellyProjectMutationQueue.then(callback, callback);
@@ -16273,6 +16372,208 @@ function buildMusicalKellyImagePrompt(title) {
     'COMPOSITION — create a 3:1 source for a final centered 5:1 crop. Keep the left 34% dark, calm, and free of faces or important objects for an HTML title lockup. Put the principal character or character pair between 36% and 82% of the width, occupying roughly 55% to 80% of the image height. Keep every face and essential interaction inside the middle 58% vertically so the 5:1 crop cannot cut them off. Keep the far-right 12% quiet enough for interface buttons.',
     'ORIGINALITY AND TEXT — create an original interpretation. Do not copy any film frame, actor likeness, logo, branded costume, or protected production design. No written words, letters, captions, logos, borders, or watermarks anywhere in the image.'
   ].join(' ');
+}
+
+function parseMusicalKellyLyricEditorLines(rawText) {
+  return String(rawText || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, MUSICAL_KELLY_MAX_LYRIC_LINES)
+    .map((line, index) => {
+      const match = /^([^:]{1,80}):\s+(.+)$/.exec(line);
+      return {
+        id: `line-${index + 1}`,
+        speaker: match ? match[1].trim() : '',
+        characterId: '',
+        text: String(match ? match[2] : line).trim().slice(0, MUSICAL_KELLY_MAX_LYRIC_LINE_LENGTH),
+        start: null,
+        end: null
+      };
+    })
+    .filter((line) => line.text);
+}
+
+function reconcileMusicalKellyEditedLyrics(existingLyrics, editedLines, requestedMode) {
+  const now = new Date().toISOString();
+  const existingLines = Array.isArray(existingLyrics?.lines) ? existingLyrics.lines : [];
+  const copyIdentity = (line, index) => ({
+    ...line,
+    characterId: existingLines[index]?.characterId || '',
+    speaker: line.speaker || existingLines[index]?.speaker || ''
+  });
+  if (requestedMode !== 'timesync' || existingLyrics?.mode !== 'timesync') {
+    return normalizeMusicalKellyLyrics({
+      mode: 'plain',
+      lines: editedLines.map(copyIdentity),
+      source: 'admin',
+      updatedAt: now
+    });
+  }
+  if (!existingLines.length || !existingLines.every((line) => Number.isFinite(line.start) && Number.isFinite(line.end))) {
+    return normalizeMusicalKellyLyrics({ mode: 'plain', lines: editedLines.map(copyIdentity), source: 'admin', updatedAt: now });
+  }
+  if (existingLines.length === editedLines.length) {
+    return normalizeMusicalKellyLyrics({
+      mode: 'timesync',
+      source: 'admin',
+      generatedAt: existingLyrics.generatedAt,
+      updatedAt: now,
+      lines: editedLines.map((line, index) => ({
+        ...copyIdentity(line, index),
+        start: existingLines[index].start,
+        end: existingLines[index].end
+      }))
+    });
+  }
+  const rangeStart = existingLines[0].start;
+  const rangeEnd = existingLines[existingLines.length - 1].end;
+  const weights = editedLines.map((line) => Math.max(6, line.text.length));
+  const totalWeight = weights.reduce((sum, value) => sum + value, 0);
+  let elapsedWeight = 0;
+  const timedLines = editedLines.map((line, index) => {
+    const start = rangeStart + ((rangeEnd - rangeStart) * elapsedWeight / totalWeight);
+    elapsedWeight += weights[index];
+    const end = rangeStart + ((rangeEnd - rangeStart) * elapsedWeight / totalWeight);
+    return { ...copyIdentity(line, index), start, end: Math.max(start + 0.12, end) };
+  });
+  return normalizeMusicalKellyLyrics({
+    mode: 'timesync',
+    source: 'admin',
+    generatedAt: existingLyrics.generatedAt,
+    updatedAt: now,
+    lines: timedLines
+  });
+}
+
+async function transcribeMusicalKellyAudio(card, audioBuffer) {
+  const form = new FormData();
+  form.append('file', new Blob([audioBuffer], {
+    type: card.audio?.contentType || contentTypeFromObjectKey(card.audio?.fileName)
+  }), card.audio?.name || card.audio?.fileName || 'faixa.mp3');
+  form.append('model', MUSICAL_KELLY_TRANSCRIPTION_MODEL);
+  form.append('response_format', 'verbose_json');
+  form.append('timestamp_granularities[]', 'segment');
+  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+    body: form
+  });
+  const responseText = await response.text();
+  let payload = null;
+  try { payload = responseText ? JSON.parse(responseText) : null; } catch (_error) {}
+  if (!response.ok) {
+    const error = new Error(payload?.error?.message || responseText.slice(0, 500) || 'Falha ao transcrever a faixa.');
+    error.statusCode = response.status || 502;
+    throw error;
+  }
+  if (!String(payload?.text || '').trim()) {
+    const error = new Error('A transcricao nao encontrou falas ou canto nesta faixa.');
+    error.statusCode = 422;
+    throw error;
+  }
+  return payload;
+}
+
+async function structureMusicalKellyLyrics(card, transcription, mode) {
+  const segments = (Array.isArray(transcription?.segments) ? transcription.segments : [])
+    .map((segment) => ({
+      start: Math.max(0, Number(segment?.start) || 0),
+      end: Math.max(0, Number(segment?.end) || 0),
+      text: String(segment?.text || '').trim()
+    }))
+    .filter((segment) => segment.text);
+  const schema = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['lines'],
+    properties: {
+      lines: {
+        type: 'array',
+        minItems: 1,
+        maxItems: MUSICAL_KELLY_MAX_LYRIC_LINES,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['speaker', 'text', 'start', 'end'],
+          properties: {
+            speaker: { type: 'string' },
+            text: { type: 'string' },
+            start: { type: 'number' },
+            end: { type: 'number' }
+          }
+        }
+      }
+    }
+  };
+  const prompt = [
+    'Organize this musical transcription into accurate subtitle lines.',
+    `Container title: ${JSON.stringify(card.title)}.`,
+    `Requested result: ${mode === 'timesync' ? 'lyrics with precise time sync' : 'clean lyrics without visible time sync'}.`,
+    'Every returned item is exactly one subtitle line. Preserve the original language, words, repetitions, sung interjections, and dramatic meaning. Never translate, summarize, creatively correct, or invent missing words.',
+    'Create short, readable lines. Split intelligently at sentence, musical phrase, breath, and character-turn boundaries. Never combine different speakers in one line.',
+    'When a character can be inferred with reasonable confidence, put only the character name in speaker. Otherwise return an empty speaker.',
+    'Use the supplied segment timings to give each line monotonic, non-overlapping start and end seconds. A line must remain on screen throughout its spoken or sung words.',
+    'Do not omit transcript content. Do not add stage directions unless they were spoken.',
+    `Transcript: ${JSON.stringify(String(transcription.text || '').trim())}`,
+    `Timed segments: ${JSON.stringify(segments)}`
+  ].join('\n');
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: MUSICAL_KELLY_LYRICS_MODEL,
+      input: prompt,
+      reasoning: { effort: 'low' },
+      max_output_tokens: 16000,
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'musical_kelly_lyrics',
+          strict: true,
+          schema
+        }
+      }
+    })
+  });
+  const responseText = await response.text();
+  let payload = null;
+  try { payload = responseText ? JSON.parse(responseText) : null; } catch (_error) {}
+  if (!response.ok) {
+    const error = new Error(payload?.error?.message || responseText.slice(0, 500) || 'Falha ao organizar a letra com a OpenAI.');
+    error.statusCode = response.status || 502;
+    throw error;
+  }
+  const parsed = parseModelJsonResponse(extractResponseText(payload));
+  const duration = Math.max(0, Number(transcription?.duration) || Number(segments.at(-1)?.end) || 0);
+  const rawLines = Array.isArray(parsed?.lines) ? parsed.lines : [];
+  let previousEnd = 0;
+  const lines = rawLines.map((line, index) => {
+    const rawStart = Math.max(0, Number(line?.start) || previousEnd);
+    const start = Math.max(previousEnd, Math.min(rawStart, Math.max(0, duration - 0.12)));
+    const rawEnd = Math.max(start + 0.12, Number(line?.end) || start + 2);
+    const end = duration > 0 ? Math.max(start + 0.12, Math.min(duration, rawEnd)) : rawEnd;
+    previousEnd = end;
+    return {
+      id: `line-${index + 1}`,
+      speaker: String(line?.speaker || '').trim().slice(0, 80),
+      characterId: '',
+      text: String(line?.text || '').trim().slice(0, MUSICAL_KELLY_MAX_LYRIC_LINE_LENGTH),
+      start,
+      end
+    };
+  }).filter((line) => line.text);
+  const now = new Date().toISOString();
+  const lyrics = normalizeMusicalKellyLyrics({ mode, lines, source: 'ai', generatedAt: now, updatedAt: now });
+  if (!lyrics) {
+    const error = new Error('A OpenAI nao retornou linhas de letra utilizaveis.');
+    error.statusCode = 502;
+    throw error;
+  }
+  return lyrics;
 }
 
 async function generateMusicalKellyCardImage(cardId, title) {
@@ -26363,6 +26664,13 @@ app.get('/api/musical-kelly/project', async (req, res) => {
       }
     }
 
+    let characters = [];
+    try {
+      characters = await readMusicalKellyCharacters();
+    } catch (characterError) {
+      console.warn('Falha ao carregar personagens do musical Kelly:', characterError?.message || characterError);
+    }
+
     res.setHeader('Cache-Control', 'no-store');
     res.json({
       success: true,
@@ -26374,6 +26682,7 @@ app.get('/api/musical-kelly/project', async (req, res) => {
       canReorder: Boolean(authUser?.id),
       unreadCardIds,
       unreadCount: unreadCardIds.length,
+      characters,
       project: hydrateMusicalKellyProject(project)
     });
   } catch (error) {
@@ -26422,6 +26731,7 @@ app.put('/api/musical-kelly/project', async (req, res) => {
             approvedByName: audioPublished ? '' : currentCard.approvedByName,
             imageGenerationStatus: card.image?.fileName ? '' : currentCard.imageGenerationStatus,
             imageGenerationRequestedAt: card.image?.fileName ? '' : currentCard.imageGenerationRequestedAt,
+            lyrics: audioPublished ? null : currentCard.lyrics,
             comments: currentCard.comments
           };
         })
@@ -26654,6 +26964,143 @@ app.post('/api/musical-kelly/cards/:cardId/approve', async (req, res) => {
   }
 });
 
+app.post('/api/musical-kelly/cards/:cardId/lyrics/generate', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
+      res.status(503).json({ success: false, message: 'A OpenAI ainda nao esta configurada no servidor.' });
+      return;
+    }
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const mode = req.body?.mode === 'timesync' ? 'timesync' : 'plain';
+    const initialProject = await readMusicalKellyGlobalProject();
+    const initialCard = initialProject.cards.find((entry) => entry.id === cardId);
+    if (!initialCard) {
+      res.status(404).json({ success: false, message: 'Este container nao existe mais.' });
+      return;
+    }
+    if (!initialCard.audio?.fileName) {
+      res.status(409).json({ success: false, message: 'Adicione o audio antes de gerar a letra.' });
+      return;
+    }
+    if (initialCard.audio.size > MUSICAL_KELLY_MAX_TRANSCRIPTION_BYTES) {
+      res.status(413).json({ success: false, message: 'Para gerar a letra, use um audio de ate 24 MB.' });
+      return;
+    }
+    const audioBuffer = await fetchR2ObjectBuffer(`${musicalKellyGlobalRoot()}/audio/${initialCard.audio.fileName}`);
+    if (audioBuffer.length > MUSICAL_KELLY_MAX_TRANSCRIPTION_BYTES) {
+      res.status(413).json({ success: false, message: 'Para gerar a letra, use um audio de ate 24 MB.' });
+      return;
+    }
+    const transcription = await transcribeMusicalKellyAudio(initialCard, audioBuffer);
+    const lyrics = await structureMusicalKellyLyrics(initialCard, transcription, mode);
+    const characters = await readMusicalKellyCharacters().catch(() => []);
+    const characterByName = new Map(characters.map((character) => [
+      character.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase(),
+      character.id
+    ]));
+    lyrics.lines.forEach((line) => {
+      const key = line.speaker.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+      line.characterId = characterByName.get(key) || '';
+    });
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      const currentCard = currentProject.cards.find((entry) => entry.id === cardId);
+      if (!currentCard || currentCard.audio?.fileName !== initialCard.audio.fileName) {
+        const error = new Error('O audio mudou durante a geracao. Gere a letra novamente.');
+        error.statusCode = 409;
+        throw error;
+      }
+      currentCard.lyrics = lyrics;
+      return writeMusicalKellyGlobalProject(currentProject);
+    });
+    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+  } catch (error) {
+    console.error('Erro ao gerar letra do musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel gerar a letra agora.'
+    });
+  }
+});
+
+app.put('/api/musical-kelly/cards/:cardId/lyrics', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const requestedMode = req.body?.mode === 'timesync' ? 'timesync' : 'plain';
+    const editedLines = parseMusicalKellyLyricEditorLines(req.body?.text);
+    if (!cardId || !editedLines.length) {
+      res.status(400).json({ success: false, message: 'Escreva ao menos uma linha da letra.' });
+      return;
+    }
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      const card = currentProject.cards.find((entry) => entry.id === cardId);
+      if (!card) {
+        const error = new Error('Este container nao existe mais.');
+        error.statusCode = 404;
+        throw error;
+      }
+      card.lyrics = reconcileMusicalKellyEditedLyrics(card.lyrics, editedLines, requestedMode);
+      return writeMusicalKellyGlobalProject(currentProject);
+    });
+    const savedCard = project.cards.find((entry) => entry.id === cardId);
+    res.json({
+      success: true,
+      mode: savedCard?.lyrics?.mode || 'plain',
+      project: hydrateMusicalKellyProject(project)
+    });
+  } catch (error) {
+    console.error('Erro ao salvar letra do musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel salvar a letra.'
+    });
+  }
+});
+
+app.put('/api/musical-kelly/cards/:cardId/lyrics/:lineId/character', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const lineId = normalizeMusicalKellyCardId(req.params.lineId);
+    const characterId = normalizeMusicalKellyCardId(req.body?.characterId);
+    if (!cardId || !lineId) {
+      res.status(400).json({ success: false, message: 'Trecho invalido.' });
+      return;
+    }
+    if (characterId) {
+      await ensureMusicalKellyCharacterSchema();
+      const result = await pool.query('SELECT 1 FROM public.musical_kelly_characters WHERE id = $1', [characterId]);
+      if (!result.rowCount) {
+        res.status(404).json({ success: false, message: 'Este personagem nao existe mais.' });
+        return;
+      }
+    }
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      const card = currentProject.cards.find((entry) => entry.id === cardId);
+      const line = card?.lyrics?.lines?.find((entry) => entry.id === lineId);
+      if (!line) {
+        const error = new Error('Este trecho nao existe mais.');
+        error.statusCode = 404;
+        throw error;
+      }
+      line.characterId = characterId;
+      card.lyrics.updatedAt = new Date().toISOString();
+      return writeMusicalKellyGlobalProject(currentProject);
+    });
+    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+  } catch (error) {
+    console.error('Erro ao atribuir personagem no musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel atribuir o personagem.'
+    });
+  }
+});
+
 app.delete('/api/musical-kelly/cards/:cardId', async (req, res) => {
   try {
     if (!isR2FluencyConfigured()) {
@@ -26766,6 +27213,91 @@ app.put('/api/musical-kelly/order', async (req, res) => {
       success: false,
       message: error?.message || 'Nao foi possivel salvar a nova ordem.'
     });
+  }
+});
+
+app.post(
+  '/api/musical-kelly/characters',
+  express.raw({ type: () => true, limit: `${MUSICAL_KELLY_MAX_CHARACTER_IMAGE_BYTES}b` }),
+  async (req, res) => {
+    let objectKey = '';
+    try {
+      const authUser = await requireAdminUserFromRequest(req);
+      await ensureMusicalKellyCharacterSchema();
+      const name = String(req.query?.name || '').trim().replace(/\s+/g, ' ').slice(0, 80);
+      if (!name) {
+        res.status(400).json({ success: false, message: 'Digite o nome do personagem.' });
+        return;
+      }
+      if (!Buffer.isBuffer(req.body) || !req.body.length) {
+        res.status(400).json({ success: false, message: 'Escolha uma imagem PNG.' });
+        return;
+      }
+      if (req.body.length > MUSICAL_KELLY_MAX_CHARACTER_IMAGE_BYTES) {
+        res.status(413).json({ success: false, message: 'O PNG pode ter no maximo 5 MB.' });
+        return;
+      }
+      const metadata = await sharp(req.body, { limitInputPixels: 30000000 }).metadata();
+      if (metadata.format !== 'png') {
+        res.status(415).json({ success: false, message: 'A imagem do personagem precisa ser PNG.' });
+        return;
+      }
+      const id = `char-${Date.now().toString(36)}-${crypto.randomBytes(5).toString('hex')}`;
+      const fileName = `${id}.png`;
+      objectKey = `${musicalKellyGlobalRoot()}/characters/${fileName}`;
+      const optimizedBuffer = await sharp(req.body, { limitInputPixels: 30000000 })
+        .rotate()
+        .resize(384, 384, { fit: 'cover', position: 'attention' })
+        .png({ compressionLevel: 9, palette: true, quality: 90 })
+        .toBuffer();
+      await putR2Object(objectKey, optimizedBuffer, 'image/png');
+      await pool.query(`
+        INSERT INTO public.musical_kelly_characters
+          (id, name, image_file_name, image_content_type, created_by_user_id)
+        VALUES ($1, $2, $3, 'image/png', $4)
+      `, [id, name, fileName, Number(authUser?.id) || null]);
+      const characters = await readMusicalKellyCharacters();
+      res.status(201).json({ success: true, characters });
+    } catch (error) {
+      if (objectKey) await deleteR2Object(objectKey).catch(() => {});
+      console.error('Erro ao criar personagem do musical Kelly:', error);
+      res.status(error?.code === '23505' ? 409 : (Number(error?.statusCode) || 500)).json({
+        success: false,
+        message: error?.code === '23505'
+          ? 'Ja existe um personagem com esse nome.'
+          : (error?.message || 'Nao foi possivel criar o personagem.')
+      });
+    }
+  }
+);
+
+app.get('/api/musical-kelly/characters/:characterId/image', async (req, res) => {
+  try {
+    await ensureMusicalKellyCharacterSchema();
+    const characterId = normalizeMusicalKellyCardId(req.params.characterId);
+    const result = await pool.query(`
+      SELECT image_file_name, image_content_type
+      FROM public.musical_kelly_characters
+      WHERE id = $1
+    `, [characterId]);
+    const row = result.rows[0];
+    const fileName = normalizeMusicalKellyAssetFileName(row?.image_file_name);
+    if (!fileName) {
+      res.status(404).end();
+      return;
+    }
+    const buffer = await fetchR2ObjectBuffer(`${musicalKellyGlobalRoot()}/characters/${fileName}`);
+    res.setHeader('Content-Type', row.image_content_type || 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+    res.send(buffer);
+  } catch (error) {
+    const status = Number(error?.status || error?.statusCode || error?.$metadata?.httpStatusCode || 0);
+    if (status === 404 || error?.Code === 'NoSuchKey') {
+      res.status(404).end();
+      return;
+    }
+    console.error('Erro ao servir personagem do musical Kelly:', error);
+    res.status(500).end();
   }
 });
 

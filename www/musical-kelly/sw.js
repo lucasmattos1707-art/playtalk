@@ -1,12 +1,12 @@
 'use strict';
 
-const SHELL_CACHE = 'playtalk-musical-kelly-shell-v19';
+const SHELL_CACHE = 'playtalk-musical-kelly-shell-v20';
 const SHELL_CACHE_PREFIX = 'playtalk-musical-kelly-shell-';
 const MEDIA_CACHE = 'playtalk-musical-kelly-media-v1';
 const SHELL_URLS = [
   '/musical-kelly/',
-  '/musical-kelly/styles.css?v=19',
-  '/musical-kelly/app.js?v=21'
+  '/musical-kelly/styles.css?v=20',
+  '/musical-kelly/app.js?v=22'
 ];
 const COMMENT_OUTBOX_DB_NAME = 'playtalk-musical-kelly-offline-v1';
 const COMMENT_OUTBOX_STORE = 'comment-outbox';
@@ -133,6 +133,15 @@ async function serveMusicalMedia(request) {
   return fetch(request);
 }
 
+async function serveCharacterImage(request) {
+  const cache = await caches.open(MEDIA_CACHE);
+  const cached = await cache.match(request, { ignoreVary: true });
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok) await cache.put(request, response.clone());
+  return response;
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(SHELL_CACHE);
@@ -163,6 +172,10 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/musical-kelly/assets/')) {
     event.respondWith(serveMusicalMedia(request));
+    return;
+  }
+  if (url.pathname.startsWith('/api/musical-kelly/characters/')) {
+    event.respondWith(serveCharacterImage(request));
     return;
   }
   if (!url.pathname.startsWith('/musical-kelly')) return;
