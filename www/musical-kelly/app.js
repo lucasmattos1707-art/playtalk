@@ -36,11 +36,19 @@
     commentsDialog: document.getElementById('commentsDialog'),
     commentsDialogTitle: document.getElementById('commentsDialogTitle'),
     commentsList: document.getElementById('commentsList'),
+    openCommentComposer: document.getElementById('openCommentComposer'),
+    openReplyComposer: document.getElementById('openReplyComposer'),
+    commentComposerDialog: document.getElementById('commentComposerDialog'),
+    commentComposerForm: document.getElementById('commentComposerForm'),
+    commentComposerKicker: document.getElementById('commentComposerKicker'),
+    commentComposerTitle: document.getElementById('commentComposerTitle'),
+    commentComposerFieldLabel: document.getElementById('commentComposerFieldLabel'),
+    commentComposerText: document.getElementById('commentComposerText'),
+    sendCommentComposer: document.getElementById('sendCommentComposer'),
+    sendCommentComposerLabel: document.getElementById('sendCommentComposerLabel'),
+    closeCommentComposerDialog: document.getElementById('closeCommentComposerDialog'),
     commenterIdentity: document.getElementById('commenterIdentity'),
     commenterIdentityText: document.getElementById('commenterIdentityText'),
-    commentForm: document.getElementById('commentForm'),
-    commentText: document.getElementById('commentText'),
-    sendCommentButton: document.getElementById('sendCommentButton'),
     approveTrackButton: document.getElementById('approveTrackButton'),
     closeCommentsDialog: document.getElementById('closeCommentsDialog'),
     commentDetailDialog: document.getElementById('commentDetailDialog'),
@@ -52,11 +60,6 @@
     deleteCommentButton: document.getElementById('deleteCommentButton'),
     closeCommentDetailDialog: document.getElementById('closeCommentDetailDialog'),
     commentReplies: document.getElementById('commentReplies'),
-    replyForm: document.getElementById('replyForm'),
-    replyText: document.getElementById('replyText'),
-    sendReplyButton: document.getElementById('sendReplyButton'),
-    replyCommenterIdentity: document.getElementById('replyCommenterIdentity'),
-    replyCommenterIdentityText: document.getElementById('replyCommenterIdentityText'),
     commenterNameDialog: document.getElementById('commenterNameDialog'),
     commenterNameForm: document.getElementById('commenterNameForm'),
     commenterNameInput: document.getElementById('commenterNameInput'),
@@ -135,6 +138,7 @@
     sortingCardId: '',
     activeCommentsCardId: '',
     activeCommentId: '',
+    commentComposerMode: 'comment',
     collaborationBusy: false,
     pendingComments: [],
     commentSubmitting: false,
@@ -225,13 +229,9 @@
 
   function syncCommenterIdentity() {
     const identity = readCommenterIdentity();
-    const label = identity.name
-      ? `Comentando como ${identity.name}`
-      : 'Coloque seu nome para comentar';
-    elements.commenterIdentityText.textContent = label;
-    elements.replyCommenterIdentityText.textContent = label;
+    elements.commenterIdentity.hidden = !identity.name;
+    elements.commenterIdentityText.textContent = identity.name;
     elements.commenterIdentity.classList.toggle('has-name', Boolean(identity.name));
-    elements.replyCommenterIdentity.classList.toggle('has-name', Boolean(identity.name));
   }
 
   function requireCommenterName(afterSave) {
@@ -547,7 +547,23 @@
     }
   }
 
+  function cardHasImage(card) {
+    return Boolean(card?.image?.url || card?.image?.fileName);
+  }
+
+  function cardPublicLabel(card) {
+    if (!cardHasImage(card)) return card?.title || 'Faixa';
+    const index = state.project.cards.findIndex((entry) => entry.id === card?.id);
+    return `Faixa ${index >= 0 ? index + 1 : 1}`;
+  }
+
   function setCardBackground(element, card) {
+    if (card?.image?.url) {
+      const imageValue = `url("${String(card.image.url).replace(/["\\]/g, '')}")`;
+      element.style.backgroundImage = imageValue;
+      element.style.setProperty('--track-image', imageValue);
+      return;
+    }
     const seed = `${card?.id || ''}:${card?.title || ''}`;
     let hash = 0;
     for (let index = 0; index < seed.length; index += 1) hash = ((hash << 5) - hash + seed.charCodeAt(index)) | 0;
@@ -657,14 +673,16 @@
       node.classList.toggle('is-color-full', isPlaying && state.colorMode === 'full');
       node.classList.toggle('is-fading-out', isFadingOut);
       node.classList.toggle('is-fading-in', isFadingIn);
+      node.classList.toggle('has-image', cardHasImage(card));
       const isUnread = !state.canEdit && state.unreadCardIds.has(card.id);
       node.classList.toggle('has-new-audio', isUnread);
       if (isFadingOut || isFadingIn) {
         node.style.setProperty('--transition-ms', `${Math.max(80, state.transitionDurationMs)}ms`);
       }
-      node.setAttribute('aria-label', `${card.title}. ${card.audio ? 'Toque para reproduzir.' : 'Sem música.'}`);
+      const publicLabel = cardPublicLabel(card);
+      node.setAttribute('aria-label', `${publicLabel}. ${card.audio ? 'Toque para reproduzir.' : 'Sem música.'}`);
       setCardBackground(node.querySelector('.track-background'), card);
-      node.querySelector('.track-title-text').textContent = card.title;
+      node.querySelector('.track-title-text').textContent = cardHasImage(card) ? '' : card.title;
 
       const durationLabel = node.querySelector('.track-duration');
       const knownDuration = card.audio ? state.durations.get(card.audio.fileName) : 0;
@@ -696,7 +714,7 @@
         applyDownloadState(card.id, downloadButton);
       } else {
         downloadButton.title = 'Excluir container vazio';
-        downloadButton.setAttribute('aria-label', `Excluir container vazio: ${card.title}`);
+        downloadButton.setAttribute('aria-label', `Excluir container vazio: ${publicLabel}`);
       }
       downloadButton.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -722,7 +740,7 @@
       commentButton.title = commentCount
           ? `${commentCount} comentário${commentCount === 1 ? '' : 's'}`
           : 'Comentários';
-      commentButton.setAttribute('aria-label', `${commentButton.title} de ${card.title}`);
+      commentButton.setAttribute('aria-label', `${commentButton.title} de ${publicLabel}`);
       commentButton.addEventListener('click', (event) => {
         event.stopPropagation();
         openComments(card.id);
@@ -731,7 +749,7 @@
       const lyricsButton = node.querySelector('.lyrics-button');
       lyricsButton.classList.toggle('has-lyrics', Boolean(card.lyrics?.lines?.length));
       lyricsButton.title = card.lyrics?.lines?.length ? 'Abrir letra' : 'Letra ainda não disponível';
-      lyricsButton.setAttribute('aria-label', `${lyricsButton.title}: ${card.title}`);
+      lyricsButton.setAttribute('aria-label', `${lyricsButton.title}: ${publicLabel}`);
       lyricsButton.addEventListener('click', (event) => {
         event.stopPropagation();
         openLyrics(card.id);
@@ -852,7 +870,7 @@
     const card = getCard(cardId);
     if (!card?.audio) return;
     state.downloadPromptCardId = card.id;
-    elements.downloadPromptCopy.textContent = `Baixe “${card.title}” para levar o áudio, o rótulo da faixa e as imagens dos personagens usados nela para este aparelho.`;
+    elements.downloadPromptCopy.textContent = `Baixe “${cardPublicLabel(card)}” para levar o áudio, o rótulo da faixa e as imagens dos personagens usados nela para este aparelho.`;
     setDownloadPromptBusy(false);
     if (!elements.downloadPromptDialog.hasAttribute('open')) showDialog(elements.downloadPromptDialog);
   }
@@ -968,7 +986,8 @@
     const trackTotal = Math.max(1, playableCards.length);
     elements.lyricsScreenTitle.textContent = `Faixa ${trackNumber} de ${trackTotal}`;
     setCardBackground(elements.lyricsTrackLabelBackground, card);
-    elements.lyricsTrackLabelTitle.textContent = card.title;
+    elements.lyricsTrackLabel.classList.toggle('has-image', cardHasImage(card));
+    elements.lyricsTrackLabelTitle.textContent = cardHasImage(card) ? '' : card.title;
     elements.lyricsPreviousTrackButton.disabled = Boolean(state.manualSync) || playableIndex <= 0;
     elements.lyricsNextTrackButton.disabled = Boolean(state.manualSync)
       || playableIndex < 0
@@ -1168,7 +1187,7 @@
     state.selectedCharacterId = '';
     state.lyricsBusy = true;
     elements.lyricsManualSyncButton.disabled = true;
-    setStatus(`Abrindo o áudio atual de “${card.title}” direto do R2…`, true);
+    setStatus(`Abrindo o áudio atual de “${cardPublicLabel(card)}” direto do R2…`, true);
     try {
       await startManualSyncR2Audio(card);
     } finally {
@@ -1184,7 +1203,7 @@
     };
     elements.lyricsAdminPanel.hidden = true;
     renderLyricsScreen();
-    setStatus(`Sincronizando “${card.title}” com o áudio atual do R2.`, true);
+    setStatus(`Sincronizando “${cardPublicLabel(card)}” com o áudio atual do R2.`, true);
     showToast('Sync manual iniciado. Use ↓ a cada nova linha.');
   }
 
@@ -1249,7 +1268,7 @@
       elements.lyricsScreen.classList.remove('is-manual-sync');
       if (state.current && !state.current.paused) pauseCurrent();
       renderLyricsScreen();
-      setStatus(`Timesync de “${card.title}” salvo e confirmado no R2.`);
+      setStatus(`Timesync de “${cardPublicLabel(card)}” salvo e confirmado no R2.`);
       showToast('Timesync manual salvo com sucesso.');
     } catch (error) {
       sync.saving = false;
@@ -1774,7 +1793,7 @@
     if (state.collaborationBusy) return;
     const card = getCard(cardId);
     if (!card || card.audio) return;
-    if (!window.confirm(`Excluir o container “${card.title}”?`)) return;
+    if (!window.confirm(`Excluir o container “${cardPublicLabel(card)}”?`)) return;
     state.collaborationBusy = true;
     button.disabled = true;
     button.classList.add('is-busy');
@@ -1783,7 +1802,7 @@
         method: 'DELETE'
       });
       applyCollaborationProject(payload.project);
-      showToast(`Container “${card.title}” excluído.`);
+      showToast(`Container “${cardPublicLabel(card)}” excluído.`);
     } finally {
       state.collaborationBusy = false;
       if (button.isConnected) {
@@ -1837,7 +1856,7 @@
   function renderComments() {
     const card = getCard(state.activeCommentsCardId);
     if (!card) return;
-    elements.commentsDialogTitle.textContent = card.title;
+    elements.commentsDialogTitle.textContent = cardPublicLabel(card);
     elements.commentsList.replaceChildren();
     const comments = commentsForCard(card);
     if (!comments.length) {
@@ -1882,8 +1901,6 @@
         elements.commentsList.appendChild(entry);
       });
     }
-    elements.commentForm.hidden = false;
-    syncCommenterIdentity();
     elements.approveTrackButton.hidden = !state.canApprove;
     elements.approveTrackButton.disabled = state.collaborationBusy || !card.audio || Boolean(card.approvedAt);
     elements.approveTrackButton.querySelector('span').textContent = card.approvedAt
@@ -1896,7 +1913,6 @@
     if (!card) return;
     state.activeCommentsCardId = cardId;
     state.activeCommentId = '';
-    elements.commentText.value = '';
     markCommentsSeen(card);
     renderComments();
     render();
@@ -1923,7 +1939,6 @@
       state.activeCommentId = '';
       return;
     }
-    syncCommenterIdentity();
     elements.commentDetailTitle.textContent = commentDisplayTitle(comment);
     elements.commentDetailAuthor.replaceChildren(authorLine(comment));
     const date = document.createElement('time');
@@ -1969,9 +1984,25 @@
 
   function openCommentDetail(commentId) {
     state.activeCommentId = commentId;
-    elements.replyText.value = '';
     renderCommentDetail();
     showDialog(elements.commentDetailDialog);
+  }
+
+  function openCommentComposer(mode = 'comment') {
+    if (mode === 'reply' && !activeComment()) return;
+    const identity = requireCommenterName(() => openCommentComposer(mode));
+    if (!identity) return;
+    state.commentComposerMode = mode === 'reply' ? 'reply' : 'comment';
+    const isReply = state.commentComposerMode === 'reply';
+    elements.commentComposerKicker.textContent = isReply ? 'Nova resposta' : 'Novo comentário';
+    elements.commentComposerTitle.textContent = isReply ? 'Comentar nesta conversa' : 'Comentar nesta faixa';
+    elements.commentComposerFieldLabel.textContent = isReply ? 'Sua resposta' : 'Seu comentário';
+    elements.commentComposerText.placeholder = isReply ? 'Escreva uma resposta...' : 'Escreva seu comentário...';
+    elements.sendCommentComposerLabel.textContent = isReply ? 'Enviar resposta' : 'Enviar comentário';
+    elements.commentComposerText.value = '';
+    syncCommenterIdentity();
+    showDialog(elements.commentComposerDialog);
+    window.setTimeout(() => elements.commentComposerText.focus(), 30);
   }
 
   async function registerCommentBackgroundSync() {
@@ -2051,9 +2082,9 @@
   async function submitCommentFromForm(existingIdentity = null) {
     if (!state.canComment || state.commentSubmitting) return;
     const card = getCard(state.activeCommentsCardId);
-    const text = elements.commentText.value.trim().slice(0, 800);
+    const text = elements.commentComposerText.value.trim().slice(0, 800);
     if (!card || !text) {
-      elements.commentText.focus();
+      elements.commentComposerText.focus();
       showToast('Escreva um comentário antes de enviar.', true);
       return;
     }
@@ -2072,16 +2103,17 @@
       createdAt: new Date().toISOString()
     };
     state.commentSubmitting = true;
-    elements.sendCommentButton.disabled = true;
+    elements.sendCommentComposer.disabled = true;
     try {
       await storePendingComment(pending);
       await reloadPendingComments();
-      elements.commentText.value = '';
+      elements.commentComposerText.value = '';
       registerCommentBackgroundSync();
       await flushPendingComments();
       const stillPending = state.pendingComments.some((comment) => comment.clientMutationId === pending.clientMutationId);
       markCommentsSeen(getCard(card.id));
       render();
+      closeDialog(elements.commentComposerDialog);
       showToast(stillPending
         ? 'Comentário salvo neste aparelho. Ele será enviado quando a conexão voltar.'
         : 'Comentário adicionado.');
@@ -2089,7 +2121,7 @@
       throw new Error(error?.message || 'Não foi possível guardar o comentário neste aparelho.');
     } finally {
       state.commentSubmitting = false;
-      elements.sendCommentButton.disabled = false;
+      elements.sendCommentComposer.disabled = false;
     }
   }
 
@@ -2104,9 +2136,9 @@
   async function submitReplyFromForm(existingIdentity = null) {
     const card = getCard(state.activeCommentsCardId);
     const comment = activeComment();
-    const text = elements.replyText.value.trim().slice(0, 800);
+    const text = elements.commentComposerText.value.trim().slice(0, 800);
     if (!card || !comment || !text) {
-      elements.replyText.focus();
+      elements.commentComposerText.focus();
       showToast('Escreva uma resposta antes de enviar.', true);
       return;
     }
@@ -2116,7 +2148,7 @@
       return;
     }
     state.commentSubmitting = true;
-    elements.sendReplyButton.disabled = true;
+    elements.sendCommentComposer.disabled = true;
     try {
       const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}/comments/${encodeURIComponent(comment.id)}/replies`, {
         method: 'POST',
@@ -2129,13 +2161,14 @@
       });
       applyCollaborationProject(payload.project);
       markCommentsSeen(getCard(card.id));
-      elements.replyText.value = '';
+      elements.commentComposerText.value = '';
       render();
       renderCommentDetail();
+      closeDialog(elements.commentComposerDialog);
       showToast('Resposta adicionada.');
     } finally {
       state.commentSubmitting = false;
-      elements.sendReplyButton.disabled = false;
+      elements.sendCommentComposer.disabled = false;
     }
   }
 
@@ -2427,7 +2460,7 @@
     if (!card?.audio) throw new Error('Adicione uma música neste container primeiro.');
     state.downloadStates.set(cardId, 'busy');
     render();
-    if (!quiet) setStatus(`Baixando “${card.title}” para este aparelho…`, true);
+    if (!quiet) setStatus(`Baixando “${cardPublicLabel(card)}” para este aparelho…`, true);
     try {
       await requestPersistentStorage();
       await cacheAsset(card.audio);
@@ -2435,7 +2468,7 @@
       await cacheCardCharacterImages(card);
       saveProjectSnapshot(state.project);
       state.downloadStates.set(cardId, 'done');
-      if (!quiet) setStatus(`“${card.title}” está pronta com áudio, rótulo e personagens para ensaiar offline.`);
+      if (!quiet) setStatus(`“${cardPublicLabel(card)}” está pronta com áudio, rótulo e personagens para ensaiar offline.`);
     } catch (error) {
       state.downloadStates.set(cardId, 'idle');
       if (error?.name === 'QuotaExceededError') {
@@ -2672,7 +2705,7 @@
     media.addEventListener('loadedmetadata', () => applyNativeOffset(voice, offset), { once: true });
     applyNativeOffset(voice, offset);
     render();
-    setStatus(`${natural ? 'Abrindo' : 'Preparando'} “${card.title}” no áudio do iPhone…`, true);
+    setStatus(`${natural ? 'Abrindo' : 'Preparando'} “${cardPublicLabel(card)}” no áudio do iPhone…`, true);
 
     let playback;
     try {
@@ -2693,7 +2726,7 @@
     syncNativeDuration(voice);
     beginColorReveal(card.id);
     render();
-    setStatus(`No ar: “${card.title}”.`);
+    setStatus(`No ar: “${cardPublicLabel(card)}”.`);
   }
 
   function manualSyncAudioUrl(card) {
@@ -2998,7 +3031,7 @@
     releaseAudioBuffer(previousCardId);
     beginColorReveal(card.id);
     render();
-    setStatus(`No ar: “${card.title}”.`);
+    setStatus(`No ar: “${cardPublicLabel(card)}”.`);
     scheduleAutoAdvance(voice);
   }
 
@@ -3021,7 +3054,7 @@
     releaseAudioBuffer(previousCardId);
     beginColorReveal(card.id);
     render();
-    setStatus(`No ar: “${card.title}”.`);
+    setStatus(`No ar: “${cardPublicLabel(card)}”.`);
     scheduleAutoAdvance(voice);
   }
 
@@ -3117,7 +3150,7 @@
       return;
     }
 
-    setStatus(`Preparando “${card.title}”…`, true);
+    setStatus(`Preparando “${cardPublicLabel(card)}”…`, true);
     const buffer = await loadAudioBuffer(card);
     if (requestGeneration !== state.playRequestGeneration) return;
     if (!state.current || state.current.paused) {
@@ -3181,7 +3214,7 @@
     if (!state.canEdit) return;
     const card = getCard(state.selectedId);
     if (!card) return;
-    if (!window.confirm(`Remover o container “${card.title}” do musical?`)) return;
+    if (!window.confirm(`Remover o container “${cardPublicLabel(card)}” do musical?`)) return;
     if (state.current?.cardId === card.id) {
       cancelAutoAdvance();
       clearColorTimer();
@@ -3208,11 +3241,13 @@
       submitNewCard(event).catch((error) => showToast(error.message, true));
     });
     elements.closeAddCardDialog.addEventListener('click', () => closeDialog(elements.addCardDialog));
-    elements.commentForm.addEventListener('submit', (event) => {
-      submitComment(event).catch((error) => showToast(error.message, true));
-    });
-    elements.replyForm.addEventListener('submit', (event) => {
-      submitReply(event).catch((error) => showToast(error.message, true));
+    elements.openCommentComposer.addEventListener('click', () => openCommentComposer('comment'));
+    elements.openReplyComposer.addEventListener('click', () => openCommentComposer('reply'));
+    elements.commentComposerForm.addEventListener('submit', (event) => {
+      const operation = state.commentComposerMode === 'reply'
+        ? submitReply(event)
+        : submitComment(event);
+      operation.catch((error) => showToast(error.message, true));
     });
     elements.editCommentButton.addEventListener('click', () => {
       editCommentEntry(activeComment()).catch((error) => showToast(error.message, true));
@@ -3229,7 +3264,6 @@
       showDialog(elements.commenterNameDialog);
       window.setTimeout(() => elements.commenterNameInput.focus(), 30);
     });
-    elements.replyCommenterIdentity.addEventListener('click', () => elements.commenterIdentity.click());
     elements.commenterNameForm.addEventListener('submit', (event) => {
       event.preventDefault();
       const name = elements.commenterNameInput.value.trim().slice(0, 64);
@@ -3251,11 +3285,12 @@
       approveTrack().catch((error) => showToast(error.message, true));
     });
     elements.closeCommentsDialog.addEventListener('click', () => closeDialog(elements.commentsDialog));
+    elements.closeCommentComposerDialog.addEventListener('click', () => closeDialog(elements.commentComposerDialog));
     elements.closeCommentDetailDialog.addEventListener('click', () => {
       state.activeCommentId = '';
       closeDialog(elements.commentDetailDialog);
     });
-    [elements.addCardDialog, elements.commentsDialog, elements.commentDetailDialog, elements.commenterNameDialog, elements.characterDialog].forEach((dialog) => {
+    [elements.addCardDialog, elements.commentsDialog, elements.commentDetailDialog, elements.commentComposerDialog, elements.commenterNameDialog, elements.characterDialog].forEach((dialog) => {
       dialog.addEventListener('click', (event) => {
         if (event.target !== dialog) return;
         if (dialog === elements.commentDetailDialog) state.activeCommentId = '';

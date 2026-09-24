@@ -143,7 +143,7 @@ test('viewer opens the fullscreen lyrics from the document icon', async () => {
 });
 
 test('anonymous viewer opens main comments, detail and replies before choosing a name', async () => {
-  const dom = await boot(false, { withComments: true });
+  const dom = await boot(false, { withComments: true, withAudio: true });
   const { document, Event } = dom.window;
   const commentButton = document.querySelector('.comment-button');
   assert.equal(commentButton.hidden, false);
@@ -151,6 +151,10 @@ test('anonymous viewer opens main comments, detail and replies before choosing a
   assert.equal(commentButton.classList.contains('has-unseen-comments'), true);
   commentButton.click();
   assert.equal(document.getElementById('commentsDialog').hasAttribute('open'), true);
+  assert.equal(document.getElementById('commentsDialogTitle').textContent, 'Faixa 1');
+  assert.doesNotMatch(document.getElementById('commentsDialog').textContent, /Dorothy encontra o Leão/);
+  assert.ok(document.querySelector('.comments-heading-icon svg'));
+  assert.equal(document.getElementById('commenterIdentity').hidden, true);
   assert.equal(document.querySelector('.comment-notification strong').textContent, 'Entrada mais suave');
   assert.equal(document.querySelector('.comment-preview').textContent, 'A entrada da música ...');
   assert.match(document.querySelector('.comment-user-line').textContent, /Maria/);
@@ -159,11 +163,17 @@ test('anonymous viewer opens main comments, detail and replies before choosing a
   assert.equal(document.getElementById('commentDetailDialog').hasAttribute('open'), true);
   assert.match(document.getElementById('commentDetailText').textContent, /mais suave/);
   assert.match(document.getElementById('commentReplies').textContent, /primeiro compasso/);
-  document.getElementById('replyText').value = 'Vou testar novamente.';
-  document.getElementById('replyForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  document.getElementById('openReplyComposer').click();
   await new Promise((resolve) => setTimeout(resolve, 5));
   assert.equal(document.getElementById('commenterNameDialog').hasAttribute('open'), true);
   assert.equal(document.getElementById('commenterNameDialogTitle').textContent, 'Coloque seu nome para comentar');
+  document.getElementById('commenterNameInput').value = 'Lucas';
+  document.getElementById('commenterNameForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(document.getElementById('commentComposerDialog').hasAttribute('open'), true);
+  assert.equal(document.getElementById('commenterIdentity').hidden, false);
+  assert.equal(document.getElementById('commenterIdentityText').textContent, 'Lucas');
+  assert.doesNotMatch(document.getElementById('commenterIdentityText').textContent, /Comentando como/);
   dom.window.close();
 });
 
@@ -173,10 +183,15 @@ test('tapping a track that is not downloaded opens the friendly single-track mod
   document.querySelector('.track-card').dispatchEvent(new MouseEvent('click', { bubbles: true }));
   await new Promise((resolve) => setTimeout(resolve, 10));
   const dialog = document.getElementById('downloadPromptDialog');
+  assert.equal(document.querySelector('.track-card').classList.contains('has-image'), true);
+  assert.match(document.querySelector('.track-background').style.backgroundImage, /dorothy-leao\.webp/);
+  assert.equal(document.querySelector('.track-title-text').textContent, '');
   assert.equal(dialog.hasAttribute('open'), true);
   assert.equal(document.getElementById('downloadPromptTitle').textContent, 'Baixe essa faixa de áudio para ensaiar');
   assert.match(document.getElementById('downloadPromptCopy').textContent, /áudio, o rótulo da faixa e as imagens dos personagens usados/);
   assert.equal(document.getElementById('confirmTrackDownloadLabel').textContent, 'Download');
+  assert.match(document.getElementById('downloadPromptCopy').textContent, /Faixa 1/);
+  assert.doesNotMatch(document.getElementById('downloadPromptCopy').textContent, /Dorothy encontra o Leão/);
   assert.equal(document.getElementById('lyricsScreen').hidden, true);
   dom.window.close();
 });
@@ -189,7 +204,8 @@ test('advancing to a track that is not downloaded opens its download modal', asy
   document.getElementById('lyricsNextTrackButton').click();
   await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(document.getElementById('downloadPromptDialog').hasAttribute('open'), true);
-  assert.match(document.getElementById('downloadPromptCopy').textContent, /Siga o Tijolo Amarelo/);
+  assert.match(document.getElementById('downloadPromptCopy').textContent, /Faixa 2/);
+  assert.doesNotMatch(document.getElementById('downloadPromptCopy').textContent, /Siga o Tijolo Amarelo/);
   assert.equal(document.getElementById('lyricsScreenTitle').textContent, 'Faixa 1 de 2');
   dom.window.close();
 });

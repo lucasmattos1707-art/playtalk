@@ -3033,12 +3033,16 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   }
 }
 
-/* Gradient-only containers and public comments */
-.track-background::after {
+/* Existing artwork, gradient-only new containers and public comments */
+.track-card:not(.has-image) .track-background::after {
   display: none;
 }
 
-.track-card .track-title {
+.track-card.has-image .track-background::after {
+  display: block;
+}
+
+.track-card:not(.has-image) .track-title {
   right: 210px;
   display: block;
   max-width: min(62%, 720px);
@@ -3051,8 +3055,13 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   display: none;
 }
 
-.track-title-flourish {
+.track-card:not(.has-image) .track-title-flourish {
   display: none;
+}
+
+.comment-button .icon-comments {
+  fill: currentColor;
+  stroke: none;
 }
 
 .comment-button.is-approved {
@@ -3124,6 +3133,32 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
 
 .comments-list {
   gap: 13px;
+}
+
+.comments-heading-copy {
+  display: flex;
+  min-width: 0;
+  gap: 12px;
+  align-items: center;
+}
+
+.comments-heading-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  color: rgba(98, 183, 255, .9);
+  background: rgba(42, 142, 238, .09);
+  box-shadow: inset 0 0 0 1px rgba(72, 165, 255, .14);
+}
+
+.comments-heading-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  stroke: none;
 }
 
 .comment-entry {
@@ -3276,6 +3311,10 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   cursor: pointer;
 }
 
+.commenter-identity[hidden] {
+  display: none;
+}
+
 .commenter-identity svg {
   width: 17px;
   height: 17px;
@@ -3404,6 +3443,69 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   border-top: 1px solid rgba(65, 158, 255, .14);
 }
 
+.open-comment-composer {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 17px;
+  border: 1px solid rgba(66, 160, 255, .3);
+  border-radius: 13px;
+  color: #a6d7ff;
+  background: linear-gradient(135deg, rgba(28, 119, 211, .16), rgba(9, 48, 86, .22));
+  font-size: .8rem;
+  font-weight: 850;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.open-comment-composer:hover {
+  color: #fff;
+  border-color: rgba(87, 177, 255, .5);
+  transform: translateY(-1px);
+}
+
+.open-comment-composer svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+  stroke: none;
+}
+
+.comment-composer-dialog {
+  width: min(620px, calc(100% - 24px));
+  border-color: rgba(60, 158, 255, .28);
+  background: linear-gradient(145deg, rgba(7, 20, 36, .99), rgba(3, 8, 15, .99));
+}
+
+.comment-composer-dialog::backdrop {
+  background: rgba(0, 4, 10, .76);
+  backdrop-filter: blur(14px);
+}
+
+.comment-composer-card {
+  gap: 18px;
+}
+
+.comment-composer-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: #fff;
+  background: linear-gradient(135deg, #238cf0, #0b5aa5);
+  box-shadow: 0 12px 30px rgba(18, 111, 200, .23);
+}
+
+.comment-composer-send svg {
+  width: 19px;
+  height: 19px;
+  fill: currentColor;
+  stroke: none;
+}
+
 .reply-form-label {
   display: inline-flex;
   align-items: center;
@@ -3453,8 +3555,12 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   transform: translateY(-50%);
 }
 
+.lyrics-track-label.has-image .lyrics-track-label__title {
+  display: none;
+}
+
 @media (max-width: 560px) {
-  .track-card .track-title {
+  .track-card:not(.has-image) .track-title {
     right: 154px;
     left: 14px;
     max-width: calc(100% - 168px);
