@@ -1994,7 +1994,7 @@ body.lyrics-open {
   overflow: hidden;
 }
 
-body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dialog):not(.toast) {
+body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dialog):not(.download-prompt-dialog):not(.toast) {
   visibility: hidden;
 }
 

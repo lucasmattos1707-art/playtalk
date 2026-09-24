@@ -1666,8 +1666,9 @@
     const currentIndex = playableCards.findIndex((card) => card.id === state.lyricsCardId);
     const target = playableCards[currentIndex + direction];
     if (!target) return;
-    if (!await ensureCardDownloadedForPlayback(target)) return;
     cancelPovPlayback({ pause: true });
+    cancelAutoAdvance();
+    if (!await ensureCardDownloadedForPlayback(target)) return;
     state.lyricsCardId = target.id;
     state.lyricsActiveLineIndex = -1;
     state.selectedCharacterId = '';

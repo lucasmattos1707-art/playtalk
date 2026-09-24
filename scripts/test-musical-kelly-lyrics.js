@@ -198,7 +198,7 @@ test('tapping a track that is not downloaded opens the friendly single-track mod
 
 test('advancing to a track that is not downloaded opens its download modal', async () => {
   const dom = await boot(false, { withAudio: true, withSecondTrack: true });
-  const { document } = dom.window;
+  const { document, getComputedStyle } = dom.window;
   document.querySelector('.lyrics-button').click();
   assert.equal(document.getElementById('lyricsScreenTitle').textContent, 'Faixa 1 de 2');
   document.getElementById('lyricsNextTrackButton').click();
@@ -207,6 +207,7 @@ test('advancing to a track that is not downloaded opens its download modal', asy
   assert.match(document.getElementById('downloadPromptCopy').textContent, /Faixa 2/);
   assert.doesNotMatch(document.getElementById('downloadPromptCopy').textContent, /Siga o Tijolo Amarelo/);
   assert.equal(document.getElementById('lyricsScreenTitle').textContent, 'Faixa 1 de 2');
+  assert.equal(getComputedStyle(document.getElementById('downloadPromptDialog')).visibility, 'visible');
   dom.window.close();
 });
 
@@ -260,6 +261,15 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(appSource, /data-line-index="\$\{recordedLineIndex\}"/);
   assert.match(appSource, /manualSyncAdvanceButton\.addEventListener\('pointerdown'/);
   assert.match(appSource, /function changeLyricsTrack\(direction\)/);
+  const changeLyricsTrackSource = appSource.slice(
+    appSource.indexOf('async function changeLyricsTrack(direction)'),
+    appSource.indexOf('async function seekLyricsRelative', appSource.indexOf('async function changeLyricsTrack(direction)'))
+  );
+  assert.ok(
+    changeLyricsTrackSource.indexOf('cancelPovPlayback({ pause: true })')
+      < changeLyricsTrackSource.indexOf('ensureCardDownloadedForPlayback(target)'),
+    'the current track must pause before checking whether the destination track is downloaded'
+  );
   assert.match(appSource, /function openLyricsAndPlay\(cardId\)/);
   assert.match(appSource, /if \(current && !current\.paused\) pauseCurrent\(\)/);
   assert.match(appSource, /lyricsRewindButton[\s\S]*seekLyricsRelative\(-5\)/);
@@ -300,5 +310,6 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(stylesSource, /grid-template-columns: 52px minmax\(0, 1fr\)/);
   assert.match(stylesSource, /\.lyric-character-avatar \{[\s\S]*width: 52px;[\s\S]*height: 52px/);
   assert.match(stylesSource, /\.lyrics-character-switch__avatar \{[\s\S]*width: 38px;[\s\S]*height: 38px/);
+  assert.match(stylesSource, /body\.lyrics-open > [^{]*:not\(\.download-prompt-dialog\)/);
   assert.doesNotMatch(stylesSource, /padding: 31vh 10px 37vh/);
 });
