@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=30">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=31">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -116,6 +116,22 @@
   </template>
 
   <input id="audioInput" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.opus,.webm,.flac" hidden>
+  <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,.jpg,.jpeg,.png,.webp,.gif,.avif" hidden>
+
+  <div class="container-upload-menu" id="containerUploadMenu" role="menu" aria-label="Enviar arquivo para o container" hidden>
+    <button id="containerUploadAudio" type="button" role="menuitem">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l10-2v13M9 9l10-2M6.5 21A2.5 2.5 0 1 0 6.5 16a2.5 2.5 0 0 0 0 5ZM16.5 19a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
+      <span><strong>Enviar áudio</strong><small>MP3, M4A, WAV e outros</small></span>
+    </button>
+    <button id="containerUploadImage" type="button" role="menuitem">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm-4 7 5-5 3 3 2-2 6 6"/></svg>
+      <span><strong>Enviar imagem</strong><small>JPG, PNG, WebP, GIF ou AVIF</small></span>
+    </button>
+    <button id="containerDownloadAudio" type="button" role="menuitem">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18v2h14v-2"/></svg>
+      <span><strong>Baixar áudio</strong><small id="containerDownloadAudioHint">Salvar o arquivo original</small></span>
+    </button>
+  </div>
 
   <dialog class="musical-dialog" id="addCardDialog" aria-labelledby="addCardDialogTitle">
     <form class="dialog-card" id="addCardForm">
@@ -411,6 +427,6 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="/musical-kelly/app.js?v=32" defer></script>
+  <script src="/musical-kelly/app.js?v=33" defer></script>
 </body>
 </html>

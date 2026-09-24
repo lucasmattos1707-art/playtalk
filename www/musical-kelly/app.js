@@ -65,6 +65,12 @@
     commenterNameInput: document.getElementById('commenterNameInput'),
     closeCommenterNameDialog: document.getElementById('closeCommenterNameDialog'),
     audioInput: document.getElementById('audioInput'),
+    imageInput: document.getElementById('imageInput'),
+    containerUploadMenu: document.getElementById('containerUploadMenu'),
+    containerUploadAudio: document.getElementById('containerUploadAudio'),
+    containerUploadImage: document.getElementById('containerUploadImage'),
+    containerDownloadAudio: document.getElementById('containerDownloadAudio'),
+    containerDownloadAudioHint: document.getElementById('containerDownloadAudioHint'),
     statusLine: document.getElementById('statusLine'),
     statusText: document.getElementById('statusText'),
     lyricsScreen: document.getElementById('lyricsScreen'),
@@ -755,6 +761,13 @@
         openLyrics(card.id);
       });
 
+      node.addEventListener('contextmenu', (event) => {
+        if (!state.canEdit || state.sortMode) return;
+        event.preventDefault();
+        event.stopPropagation();
+        openContainerUploadMenu(card.id, event.clientX, event.clientY);
+      });
+
       bindCardGestures(node, card.id);
       if (state.sortMode) bindSortGestures(node, card.id);
       fragment.appendChild(node);
@@ -817,7 +830,6 @@
         cancelTimer();
       }
     });
-    element.addEventListener('contextmenu', (event) => event.preventDefault());
     element.addEventListener('click', (event) => {
       if (state.sortMode) {
         event.preventDefault();
@@ -844,6 +856,45 @@
     state.selectedId = cardId;
     render();
     setStatus('Container selecionado. Use A para adicionar ou trocar a música.');
+  }
+
+  function closeContainerUploadMenu() {
+    elements.containerUploadMenu.hidden = true;
+  }
+
+  function openContainerUploadMenu(cardId, clientX, clientY) {
+    if (!state.canEdit || !getCard(cardId)) return;
+    state.selectedId = cardId;
+    render();
+    const menu = elements.containerUploadMenu;
+    const card = getCard(cardId);
+    elements.containerDownloadAudio.disabled = !card.audio?.url;
+    elements.containerDownloadAudioHint.textContent = card.audio?.url
+      ? 'Salvar o arquivo original'
+      : 'Áudio ainda não enviado';
+    menu.hidden = false;
+    const width = Math.min(286, window.innerWidth - 24);
+    const height = menu.getBoundingClientRect().height || 214;
+    menu.style.left = `${Math.max(12, Math.min(clientX, window.innerWidth - width - 12))}px`;
+    menu.style.top = `${Math.max(12, Math.min(clientY, window.innerHeight - height - 12))}px`;
+    elements.containerUploadAudio.focus();
+    setStatus(`Escolha o arquivo para “${cardPublicLabel(getCard(cardId))}”.`);
+  }
+
+  function downloadSelectedContainerAudio() {
+    if (!state.canEdit) return;
+    const card = getCard(state.selectedId);
+    if (!card?.audio?.url) {
+      showToast('Este container ainda não tem áudio.', true);
+      return;
+    }
+    const anchor = document.createElement('a');
+    anchor.href = card.audio.url;
+    anchor.download = card.audio.name || card.audio.fileName || 'faixa.mp3';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    showToast('Download do áudio iniciado.');
   }
 
   function showDialog(dialog) {
@@ -3167,15 +3218,18 @@
   async function uploadFile(kind, file) {
     if (!state.canEdit) throw new Error('Somente o administrador pode enviar arquivos.');
     const card = getCard(state.selectedId);
-    if (!card) throw new Error('Segure um container por 500 ms para selecioná-lo.');
+    if (!card) throw new Error('Selecione um container antes de enviar o arquivo.');
     if (!file) return;
     const isAudio = kind === 'audio';
-    const maxBytes = 220 * 1024 * 1024;
-    if (!isAudio) throw new Error('Os containers usam apenas o degradê com o nome da faixa.');
-    if (file.size > maxBytes) throw new Error('A faixa pode ter no máximo 220 MB.');
+    const isImage = kind === 'image';
+    if (!isAudio && !isImage) throw new Error('Tipo de arquivo inválido.');
+    const maxBytes = isAudio ? 220 * 1024 * 1024 : 20 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      throw new Error(isAudio ? 'A faixa pode ter no máximo 220 MB.' : 'A imagem pode ter no máximo 20 MB.');
+    }
 
     state.uploading = true;
-      setStatus('Enviando música para o R2…', true);
+    setStatus(isAudio ? 'Enviando música para o R2…' : 'Enviando imagem para o R2…', true);
     try {
       const query = new URLSearchParams({ cardId: card.id, name: file.name });
       const payload = await apiJson(`${API_ROOT}/assets/${kind}?${query}`, {
@@ -3195,20 +3249,20 @@
       state.downloadStates.set(card.id, 'idle');
       render();
       await saveProject({ quiet: false });
-      showToast('Música salva no R2.');
+      showToast(isAudio ? 'Música salva no R2.' : 'Imagem salva no R2.');
     } finally {
       state.uploading = false;
-      elements.audioInput.value = '';
+      (isAudio ? elements.audioInput : elements.imageInput).value = '';
     }
   }
 
   function openPicker(kind) {
     if (!state.canEdit) return;
     if (!getCard(state.selectedId)) {
-      showToast('Segure um container por 500 ms para selecioná-lo.', true);
+      showToast('Selecione um container antes de enviar o arquivo.', true);
       return;
     }
-    elements.audioInput.click();
+    (kind === 'image' ? elements.imageInput : elements.audioInput).click();
   }
 
   function removeSelectedCard() {
@@ -3415,6 +3469,18 @@
       });
     });
     elements.chooseAudioButton.addEventListener('click', () => openPicker('audio'));
+    elements.containerUploadAudio.addEventListener('click', () => {
+      closeContainerUploadMenu();
+      openPicker('audio');
+    });
+    elements.containerUploadImage.addEventListener('click', () => {
+      closeContainerUploadMenu();
+      openPicker('image');
+    });
+    elements.containerDownloadAudio.addEventListener('click', () => {
+      closeContainerUploadMenu();
+      downloadSelectedContainerAudio();
+    });
     elements.removeCardButton.addEventListener('click', removeSelectedCard);
     elements.closeSelectionButton.addEventListener('click', () => {
       state.selectedId = '';
@@ -3423,6 +3489,14 @@
     elements.audioInput.addEventListener('change', () => {
       uploadFile('audio', elements.audioInput.files?.[0]).catch((error) => showToast(error.message, true));
     });
+    elements.imageInput.addEventListener('change', () => {
+      uploadFile('image', elements.imageInput.files?.[0]).catch((error) => showToast(error.message, true));
+    });
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('#containerUploadMenu')) closeContainerUploadMenu();
+    });
+    window.addEventListener('resize', closeContainerUploadMenu);
+    window.addEventListener('scroll', closeContainerUploadMenu, true);
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
         recoverAppleAudio();
@@ -3465,6 +3539,10 @@
     });
     elements.titleInput.addEventListener('blur', () => saveProject().catch(() => {}));
     document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !elements.containerUploadMenu.hidden) {
+        closeContainerUploadMenu();
+        return;
+      }
       if (event.key === 'Escape' && !elements.lyricsScreen.hidden) {
         if (state.manualSync) cancelManualSync();
         else if (!elements.lyricsAdminPanel.hidden) elements.lyricsAdminPanel.hidden = true;

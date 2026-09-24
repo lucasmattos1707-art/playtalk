@@ -2734,6 +2734,82 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   box-shadow: 0 20px 55px rgba(0, 0, 0, 0.7);
 }
 
+.container-upload-menu {
+  position: fixed;
+  z-index: 180;
+  display: grid;
+  width: min(286px, calc(100vw - 24px));
+  gap: 5px;
+  padding: 7px;
+  border: 1px solid rgba(112, 181, 255, 0.28);
+  border-radius: 16px;
+  color: #fff;
+  background: rgba(4, 13, 23, 0.98);
+  box-shadow: 0 22px 64px rgba(0, 0, 0, 0.64), 0 0 30px rgba(45, 134, 218, 0.12);
+  backdrop-filter: blur(18px);
+}
+
+.container-upload-menu[hidden] {
+  display: none;
+}
+
+.container-upload-menu button {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 11px;
+  align-items: center;
+  min-height: 58px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 11px;
+  color: #fff;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.container-upload-menu button:hover,
+.container-upload-menu button:focus-visible {
+  outline: none;
+  background: rgba(80, 164, 244, 0.14);
+}
+
+.container-upload-menu button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.container-upload-menu button:disabled:hover {
+  background: transparent;
+}
+
+.container-upload-menu svg {
+  width: 28px;
+  height: 28px;
+  padding: 6px;
+  border-radius: 10px;
+  fill: none;
+  stroke: #86c8ff;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  background: rgba(71, 160, 244, 0.12);
+}
+
+.container-upload-menu span {
+  display: grid;
+  gap: 2px;
+}
+
+.container-upload-menu strong {
+  font-size: 0.88rem;
+}
+
+.container-upload-menu small {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.68rem;
+}
+
 .character-menu[hidden] {
   display: none;
 }

@@ -235,6 +235,72 @@ test('admin can open editor and character context menu', async () => {
   dom.window.close();
 });
 
+test('admin opens audio and image upload menu with right click on a container', async () => {
+  const dom = await boot(true, { withAudio: true });
+  const { document, MouseEvent } = dom.window;
+  let audioPickerOpened = false;
+  let imagePickerOpened = false;
+  let downloadedAudio = null;
+  document.getElementById('audioInput').addEventListener('click', () => { audioPickerOpened = true; });
+  document.getElementById('imageInput').addEventListener('click', () => { imagePickerOpened = true; });
+  dom.window.HTMLAnchorElement.prototype.click = function clickDownloadAnchor() {
+    downloadedAudio = { href: this.getAttribute('href'), download: this.getAttribute('download') };
+  };
+
+  document.querySelector('.track-card').dispatchEvent(new MouseEvent('contextmenu', {
+    bubbles: true,
+    cancelable: true,
+    clientX: 180,
+    clientY: 120
+  }));
+  const menu = document.getElementById('containerUploadMenu');
+  assert.equal(menu.hidden, false);
+  assert.match(menu.textContent, /Enviar áudio/);
+  assert.match(menu.textContent, /Enviar imagem/);
+  assert.match(menu.textContent, /Baixar áudio/);
+  assert.equal(document.querySelector('.track-card').classList.contains('is-selected'), true);
+  document.getElementById('containerUploadImage').click();
+  assert.equal(imagePickerOpened, true);
+  assert.equal(menu.hidden, true);
+
+  document.querySelector('.track-card').dispatchEvent(new MouseEvent('contextmenu', {
+    bubbles: true,
+    cancelable: true,
+    clientX: 180,
+    clientY: 120
+  }));
+  document.getElementById('containerUploadAudio').click();
+  assert.equal(audioPickerOpened, true);
+  assert.equal(menu.hidden, true);
+
+  document.querySelector('.track-card').dispatchEvent(new MouseEvent('contextmenu', {
+    bubbles: true,
+    cancelable: true,
+    clientX: 180,
+    clientY: 120
+  }));
+  document.getElementById('containerDownloadAudio').click();
+  assert.deepEqual(downloadedAudio, {
+    href: '/api/musical-kelly/assets/audio/dorothy-leao.mp3',
+    download: 'dorothy-leao.mp3'
+  });
+  assert.equal(menu.hidden, true);
+  dom.window.close();
+});
+
+test('viewer does not receive the admin upload menu on right click', async () => {
+  const dom = await boot(false, { withAudio: true });
+  const { document, MouseEvent } = dom.window;
+  document.querySelector('.track-card').dispatchEvent(new MouseEvent('contextmenu', {
+    bubbles: true,
+    cancelable: true,
+    clientX: 180,
+    clientY: 120
+  }));
+  assert.equal(document.getElementById('containerUploadMenu').hidden, true);
+  dom.window.close();
+});
+
 test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(serverSource, /MUSICAL_KELLY_LYRICS_MODEL[\s\S]*gpt-5\.6-luna/);
   assert.match(serverSource, /musical_kelly_comment_title/);
@@ -283,6 +349,8 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(appSource, /function charactersUsedByCard\(card\)/);
   assert.match(appSource, /await cacheCardCharacterImages\(card\)/);
   assert.match(appSource, /async function ensureCardDownloadedForPlayback\(card\)/);
+  assert.match(appSource, /openContainerUploadMenu\(card\.id, event\.clientX, event\.clientY\)/);
+  assert.match(appSource, /uploadFile\('image', elements\.imageInput\.files\?\.\[0\]\)/);
   assert.match(appSource, /openDownloadPrompt\(card\.id\)/);
   assert.match(appSource, /if \(!await ensureCardDownloadedForPlayback\(card\)\) return/);
   assert.match(appSource, /state\.characters\.map\(cacheCharacterImage\)/);
@@ -300,6 +368,10 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.doesNotMatch(html, /lyrics-track-label__shade/);
   assert.match(html, /id="lyricsTrackLabelTitle"/);
   assert.match(html, /id="commenterNameDialogTitle">Coloque seu nome para comentar/);
+  assert.match(html, /id="containerUploadAudio"/);
+  assert.match(html, /id="containerUploadImage"/);
+  assert.match(html, /id="containerDownloadAudio"/);
+  assert.match(html, /id="imageInput"[^>]*accept="image\/jpeg,image\/png,image\/webp/);
   assert.match(html, /class="icon-comments"/);
   assert.doesNotMatch(html, /id="playerBar"/);
   assert.match(stylesSource, /font-size: clamp\(1\.4rem, 3\.08vw, 2\.1rem\)/);
@@ -311,5 +383,6 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(stylesSource, /\.lyric-character-avatar \{[\s\S]*width: 52px;[\s\S]*height: 52px/);
   assert.match(stylesSource, /\.lyrics-character-switch__avatar \{[\s\S]*width: 38px;[\s\S]*height: 38px/);
   assert.match(stylesSource, /body\.lyrics-open > [^{]*:not\(\.download-prompt-dialog\)/);
+  assert.match(stylesSource, /\.container-upload-menu \{[\s\S]*position: fixed;[\s\S]*z-index: 180/);
   assert.doesNotMatch(stylesSource, /padding: 31vh 10px 37vh/);
 });
