@@ -13,7 +13,7 @@ const stylesSource = fs.readFileSync(path.join(root, 'www', 'musical-kelly', 'st
 const serviceWorkerSource = fs.readFileSync(path.join(root, 'www', 'musical-kelly', 'sw.js'), 'utf8');
 const serverSource = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 
-function projectPayload(canEdit, { withAudio = false, withSecondTrack = false } = {}) {
+function projectPayload(canEdit, { withAudio = false, withSecondTrack = false, withComments = false } = {}) {
   const cards = [{
     id: 'cue-test',
     title: 'Dorothy encontra o Leão',
@@ -27,7 +27,24 @@ function projectPayload(canEdit, { withAudio = false, withSecondTrack = false } 
       name: 'dorothy-leao.webp',
       url: '/api/musical-kelly/assets/image/dorothy-leao.webp'
     } : null,
-    comments: [],
+    comments: withComments ? [{
+      id: 'comment-main',
+      ownerId: 'person-another',
+      authorName: 'Maria',
+      title: 'Entrada mais suave',
+      text: 'A entrada da música precisa ficar um pouco mais suave.',
+      createdAt: '2026-09-23T12:00:00.000Z',
+      updatedAt: '',
+      replies: [{
+        id: 'reply-main',
+        ownerId: 'person-another',
+        authorName: 'João',
+        title: 'Resposta sobre a entrada',
+        text: 'Concordo, principalmente no primeiro compasso.',
+        createdAt: '2026-09-23T13:00:00.000Z',
+        updatedAt: ''
+      }]
+    }] : [],
     lyrics: {
       mode: 'timesync',
       source: 'ai',
@@ -113,15 +130,40 @@ test('viewer opens the fullscreen lyrics from the document icon', async () => {
   assert.equal(document.body.classList.contains('lyrics-open'), true);
   assert.equal(document.getElementById('lyricsScreenTitle').textContent, 'Faixa 1 de 1');
   assert.match(document.querySelector('.lyrics-track-heading').textContent, /Toque no texto que quiser/);
-  assert.equal(document.getElementById('lyricsTrackLabelTitle'), null);
+  assert.equal(document.getElementById('lyricsTrackLabelTitle').textContent, 'Dorothy encontra o Leão');
   assert.equal(document.getElementById('playerBar'), null);
   assert.deepEqual(
     [...document.querySelectorAll('.lyric-line .lyric-copy > span')].map((node) => node.textContent),
     ['Não tenha medo.', 'Eu estou com você.']
   );
   assert.equal(document.getElementById('lyricsEditButton').hidden, true);
-  assert.equal(document.querySelector('.comment-button').hidden, true);
+  assert.equal(document.querySelector('.comment-button').hidden, false);
   assert.match(document.querySelector('.lyric-character-avatar').style.backgroundImage, /char-dorothy/);
+  dom.window.close();
+});
+
+test('anonymous viewer opens main comments, detail and replies before choosing a name', async () => {
+  const dom = await boot(false, { withComments: true });
+  const { document, Event } = dom.window;
+  const commentButton = document.querySelector('.comment-button');
+  assert.equal(commentButton.hidden, false);
+  assert.equal(commentButton.querySelector('.comment-count').textContent, '2');
+  assert.equal(commentButton.classList.contains('has-unseen-comments'), true);
+  commentButton.click();
+  assert.equal(document.getElementById('commentsDialog').hasAttribute('open'), true);
+  assert.equal(document.querySelector('.comment-notification strong').textContent, 'Entrada mais suave');
+  assert.equal(document.querySelector('.comment-preview').textContent, 'A entrada da música ...');
+  assert.match(document.querySelector('.comment-user-line').textContent, /Maria/);
+  assert.equal(document.querySelector('.comment-button').classList.contains('has-unseen-comments'), false);
+  document.querySelector('.comment-notification').click();
+  assert.equal(document.getElementById('commentDetailDialog').hasAttribute('open'), true);
+  assert.match(document.getElementById('commentDetailText').textContent, /mais suave/);
+  assert.match(document.getElementById('commentReplies').textContent, /primeiro compasso/);
+  document.getElementById('replyText').value = 'Vou testar novamente.';
+  document.getElementById('replyForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(document.getElementById('commenterNameDialog').hasAttribute('open'), true);
+  assert.equal(document.getElementById('commenterNameDialogTitle').textContent, 'Coloque seu nome para comentar');
   dom.window.close();
 });
 
@@ -178,6 +220,10 @@ test('admin can open editor and character context menu', async () => {
 
 test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(serverSource, /MUSICAL_KELLY_LYRICS_MODEL[\s\S]*gpt-5\.6-luna/);
+  assert.match(serverSource, /musical_kelly_comment_title/);
+  assert.match(serverSource, /app\.post\('\/api\/musical-kelly\/cards\/:cardId\/comments\/:commentId\/replies'/);
+  assert.match(serverSource, /app\.patch\('\/api\/musical-kelly\/cards\/:cardId\/comments\/:commentId'/);
+  assert.doesNotMatch(serverSource, /generateMusicalKellyCardImage/);
   assert.match(serverSource, /v1\/audio\/transcriptions/);
   assert.match(serverSource, /timestamp_granularities\[\]/);
   assert.match(serverSource, /app\.post\('\/api\/musical-kelly\/cards\/:cardId\/lyrics\/generate'/);
@@ -226,7 +272,9 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(html, /Baixe essa faixa de áudio para ensaiar/);
   assert.match(html, /id="lyricsTrackLabel"/);
   assert.doesNotMatch(html, /lyrics-track-label__shade/);
-  assert.doesNotMatch(html, /id="lyricsTrackLabelTitle"/);
+  assert.match(html, /id="lyricsTrackLabelTitle"/);
+  assert.match(html, /id="commenterNameDialogTitle">Coloque seu nome para comentar/);
+  assert.match(html, /class="icon-comments"/);
   assert.doesNotMatch(html, /id="playerBar"/);
   assert.match(stylesSource, /font-size: clamp\(1\.4rem, 3\.08vw, 2\.1rem\)/);
   assert.match(stylesSource, /font-size: 1\.26rem/);

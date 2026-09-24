@@ -4,6 +4,8 @@
   const API_ROOT = '/api/musical-kelly';
   const CACHE_NAME = 'playtalk-musical-kelly-media-v1';
   const PROJECT_SNAPSHOT_KEY = 'playtalk-musical-kelly-project-snapshot-v1';
+  const COMMENTER_IDENTITY_KEY = 'playtalk-musical-kelly-commenter-v1';
+  const COMMENT_SEEN_KEY = 'playtalk-musical-kelly-comment-seen-v1';
   const COMMENT_OUTBOX_DB_NAME = 'playtalk-musical-kelly-offline-v1';
   const COMMENT_OUTBOX_STORE = 'comment-outbox';
   const COMMENT_SYNC_TAG = 'musical-kelly-comments';
@@ -20,7 +22,6 @@
     selectionPanel: document.getElementById('selectionPanel'),
     titleInput: document.getElementById('titleInput'),
     chooseAudioButton: document.getElementById('chooseAudioButton'),
-    chooseImageButton: document.getElementById('chooseImageButton'),
     removeCardButton: document.getElementById('removeCardButton'),
     closeSelectionButton: document.getElementById('closeSelectionButton'),
     addCardButton: document.getElementById('addCardButton'),
@@ -35,13 +36,32 @@
     commentsDialog: document.getElementById('commentsDialog'),
     commentsDialogTitle: document.getElementById('commentsDialogTitle'),
     commentsList: document.getElementById('commentsList'),
+    commenterIdentity: document.getElementById('commenterIdentity'),
+    commenterIdentityText: document.getElementById('commenterIdentityText'),
     commentForm: document.getElementById('commentForm'),
     commentText: document.getElementById('commentText'),
     sendCommentButton: document.getElementById('sendCommentButton'),
     approveTrackButton: document.getElementById('approveTrackButton'),
     closeCommentsDialog: document.getElementById('closeCommentsDialog'),
+    commentDetailDialog: document.getElementById('commentDetailDialog'),
+    commentDetailTitle: document.getElementById('commentDetailTitle'),
+    commentDetailAuthor: document.getElementById('commentDetailAuthor'),
+    commentDetailText: document.getElementById('commentDetailText'),
+    commentOwnerActions: document.getElementById('commentOwnerActions'),
+    editCommentButton: document.getElementById('editCommentButton'),
+    deleteCommentButton: document.getElementById('deleteCommentButton'),
+    closeCommentDetailDialog: document.getElementById('closeCommentDetailDialog'),
+    commentReplies: document.getElementById('commentReplies'),
+    replyForm: document.getElementById('replyForm'),
+    replyText: document.getElementById('replyText'),
+    sendReplyButton: document.getElementById('sendReplyButton'),
+    replyCommenterIdentity: document.getElementById('replyCommenterIdentity'),
+    replyCommenterIdentityText: document.getElementById('replyCommenterIdentityText'),
+    commenterNameDialog: document.getElementById('commenterNameDialog'),
+    commenterNameForm: document.getElementById('commenterNameForm'),
+    commenterNameInput: document.getElementById('commenterNameInput'),
+    closeCommenterNameDialog: document.getElementById('closeCommenterNameDialog'),
     audioInput: document.getElementById('audioInput'),
-    imageInput: document.getElementById('imageInput'),
     statusLine: document.getElementById('statusLine'),
     statusText: document.getElementById('statusText'),
     lyricsScreen: document.getElementById('lyricsScreen'),
@@ -51,6 +71,7 @@
     lyricsStage: document.getElementById('lyricsStage'),
     lyricsTrackLabel: document.getElementById('lyricsTrackLabel'),
     lyricsTrackLabelBackground: document.getElementById('lyricsTrackLabelBackground'),
+    lyricsTrackLabelTitle: document.getElementById('lyricsTrackLabelTitle'),
     lyricsLines: document.getElementById('lyricsLines'),
     lyricsEmpty: document.getElementById('lyricsEmpty'),
     lyricsBackButton: document.getElementById('lyricsBackButton'),
@@ -106,18 +127,19 @@
     canApprove: false,
     canDeleteComments: false,
     canReorder: false,
+    viewerUserId: 0,
     unreadCardIds: new Set(),
     characters: [],
     notificationRequests: new Set(),
     sortMode: false,
     sortingCardId: '',
     activeCommentsCardId: '',
+    activeCommentId: '',
     collaborationBusy: false,
     pendingComments: [],
     commentSubmitting: false,
     commentFlushPromise: null,
-    imageGenerationPollTimer: null,
-    imageGenerationPolling: false,
+    afterCommenterName: null,
     refreshing: false,
     selectedId: '',
     current: null,
@@ -156,6 +178,105 @@
     progressFrame: 0
   };
 
+  function randomLocalId(prefix) {
+    const value = window.crypto?.randomUUID
+      ? window.crypto.randomUUID().replace(/-/g, '')
+      : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+    return `${prefix}-${value}`.slice(0, 90);
+  }
+
+  function readCommenterIdentity({ create = true } = {}) {
+    let identity = null;
+    try { identity = JSON.parse(localStorage.getItem(COMMENTER_IDENTITY_KEY) || 'null'); } catch (_error) {}
+    const valid = identity
+      && /^[a-zA-Z0-9_-]{8,96}$/.test(String(identity.ownerId || ''))
+      && String(identity.ownerToken || '').length >= 16;
+    if (!valid && create) {
+      identity = {
+        ownerId: randomLocalId('person'),
+        ownerToken: randomLocalId('secret'),
+        name: ''
+      };
+      try { localStorage.setItem(COMMENTER_IDENTITY_KEY, JSON.stringify(identity)); } catch (_error) {}
+    }
+    if (!identity) return { ownerId: '', ownerToken: '', name: '' };
+    return {
+      ownerId: String(identity.ownerId || ''),
+      ownerToken: String(identity.ownerToken || ''),
+      name: String(identity.name || '').trim().slice(0, 64)
+    };
+  }
+
+  function saveCommenterName(name) {
+    const identity = readCommenterIdentity();
+    identity.name = String(name || '').trim().slice(0, 64);
+    try { localStorage.setItem(COMMENTER_IDENTITY_KEY, JSON.stringify(identity)); } catch (_error) {}
+    syncCommenterIdentity();
+    return identity;
+  }
+
+  function commenterRequestHeaders() {
+    const identity = readCommenterIdentity();
+    return {
+      'X-Musical-Kelly-Commenter-Id': identity.ownerId,
+      'X-Musical-Kelly-Commenter-Token': identity.ownerToken
+    };
+  }
+
+  function syncCommenterIdentity() {
+    const identity = readCommenterIdentity();
+    const label = identity.name
+      ? `Comentando como ${identity.name}`
+      : 'Coloque seu nome para comentar';
+    elements.commenterIdentityText.textContent = label;
+    elements.replyCommenterIdentityText.textContent = label;
+    elements.commenterIdentity.classList.toggle('has-name', Boolean(identity.name));
+    elements.replyCommenterIdentity.classList.toggle('has-name', Boolean(identity.name));
+  }
+
+  function requireCommenterName(afterSave) {
+    const identity = readCommenterIdentity();
+    if (identity.name) return identity;
+    state.afterCommenterName = typeof afterSave === 'function' ? afterSave : null;
+    elements.commenterNameInput.value = '';
+    showDialog(elements.commenterNameDialog);
+    window.setTimeout(() => elements.commenterNameInput.focus(), 30);
+    return null;
+  }
+
+  function readSeenCommentFingerprints() {
+    try {
+      const value = JSON.parse(localStorage.getItem(COMMENT_SEEN_KEY) || '{}');
+      return value && typeof value === 'object' ? value : {};
+    } catch (_error) {
+      return {};
+    }
+  }
+
+  function commentTotal(card) {
+    return commentsForCard(card).reduce((total, comment) => total + 1 + (Array.isArray(comment.replies) ? comment.replies.length : 0), 0);
+  }
+
+  function commentFingerprint(card) {
+    return commentsForCard(card).map((comment) => [
+      comment.id,
+      comment.updatedAt || comment.createdAt,
+      ...(Array.isArray(comment.replies) ? comment.replies.map((reply) => `${reply.id}:${reply.updatedAt || reply.createdAt}`) : [])
+    ].join(':')).join('|');
+  }
+
+  function hasUnseenComments(card) {
+    if (!commentTotal(card)) return false;
+    return readSeenCommentFingerprints()[card.id] !== commentFingerprint(card);
+  }
+
+  function markCommentsSeen(card) {
+    if (!card) return;
+    const seen = readSeenCommentFingerprints();
+    seen[card.id] = commentFingerprint(card);
+    try { localStorage.setItem(COMMENT_SEEN_KEY, JSON.stringify(seen)); } catch (_error) {}
+  }
+
   function getCard(cardId) {
     return state.project.cards.find((card) => card.id === cardId) || null;
   }
@@ -189,7 +310,8 @@
           canComment: state.canComment,
           canApprove: state.canApprove,
           canDeleteComments: state.canDeleteComments,
-          canReorder: state.canReorder
+          canReorder: state.canReorder,
+          viewerUserId: state.viewerUserId
         },
         characters: state.characters,
         project
@@ -211,10 +333,13 @@
     const clientMutationId = String(source?.clientMutationId || '').trim();
     const cardId = String(source?.cardId || '').trim();
     const text = String(source?.text || '').trim().slice(0, 800);
+    const authorName = String(source?.authorName || '').trim().slice(0, 64);
+    const ownerId = String(source?.ownerId || '').trim().slice(0, 96);
+    const ownerToken = String(source?.ownerToken || '').trim().slice(0, 256);
     if (!/^[a-zA-Z0-9_-]{8,64}$/.test(clientMutationId)) return null;
-    if (!/^[a-zA-Z0-9_-]{1,80}$/.test(cardId) || !text) return null;
+    if (!/^[a-zA-Z0-9_-]{1,80}$/.test(cardId) || !text || !authorName || !ownerId || ownerToken.length < 16) return null;
     const createdAt = new Date(source?.createdAt || '').toISOString();
-    return { clientMutationId, cardId, text, createdAt };
+    return { clientMutationId, cardId, text, authorName, ownerId, ownerToken, createdAt };
   }
 
   function openCommentOutboxDb() {
@@ -301,9 +426,12 @@
       .map((comment) => ({
         id: `pending-${comment.clientMutationId}`,
         clientMutationId: comment.clientMutationId,
-        authorName: 'Você',
+        authorName: comment.authorName || 'Você',
+        ownerId: comment.ownerId,
+        title: 'Enviando comentário',
         text: comment.text,
         createdAt: comment.createdAt,
+        replies: [],
         pending: true
       }));
   }
@@ -420,14 +548,16 @@
   }
 
   function setCardBackground(element, card) {
-    if (card.image?.url) {
-      const imageValue = `url("${String(card.image.url).replace(/["\\]/g, '')}")`;
-      element.style.backgroundImage = imageValue;
-      element.style.setProperty('--track-image', imageValue);
-    } else {
-      element.style.backgroundImage = '';
-      element.style.removeProperty('--track-image');
-    }
+    const seed = `${card?.id || ''}:${card?.title || ''}`;
+    let hash = 0;
+    for (let index = 0; index < seed.length; index += 1) hash = ((hash << 5) - hash + seed.charCodeAt(index)) | 0;
+    const hue = 138 + (Math.abs(hash) % 46);
+    element.style.setProperty('--track-hue', String(hue));
+    element.style.backgroundImage = [
+      `radial-gradient(circle at 18% 28%, hsla(${hue}, 68%, 48%, .34), transparent 34%)`,
+      `linear-gradient(118deg, hsl(${hue}, 46%, 21%) 0%, hsl(${hue + 8}, 43%, 12%) 58%, #07100c 100%)`
+    ].join(', ');
+    element.style.removeProperty('--track-image');
   }
 
   function formatDuration(seconds) {
@@ -527,20 +657,6 @@
       node.classList.toggle('is-color-full', isPlaying && state.colorMode === 'full');
       node.classList.toggle('is-fading-out', isFadingOut);
       node.classList.toggle('is-fading-in', isFadingIn);
-      node.classList.toggle('has-image', Boolean(card.image?.url));
-      const imageFileName = String(card.image?.fileName || '');
-      const imageName = String(card.image?.name || '');
-      const hasGeneratedImage = /-openai-[^.]+\.webp$/i.test(imageFileName)
-        || /\s-\sopenai\.webp$/i.test(imageName);
-      node.classList.toggle('has-generated-image', hasGeneratedImage);
-      const imageStatus = node.querySelector('.track-image-status');
-      const imageStatusText = node.querySelector('.track-image-status-text');
-      const imageIsPending = !card.image?.url && card.imageGenerationStatus === 'pending';
-      const imageFailed = !card.image?.url && card.imageGenerationStatus === 'failed';
-      node.classList.toggle('is-generating-image', imageIsPending);
-      node.classList.toggle('image-generation-failed', imageFailed);
-      imageStatus.hidden = !imageIsPending && !imageFailed;
-      imageStatusText.textContent = imageFailed ? 'Imagem indisponível' : 'Carregando imagem…';
       const isUnread = !state.canEdit && state.unreadCardIds.has(card.id);
       node.classList.toggle('has-new-audio', isUnread);
       if (isFadingOut || isFadingIn) {
@@ -595,18 +711,17 @@
       });
 
       const commentButton = node.querySelector('.comment-button');
-      commentButton.hidden = !state.canEdit;
       const isApproved = Boolean(card.approvedAt);
       commentButton.classList.toggle('is-approved', isApproved);
-      const commentCount = commentsForCard(card).length;
+      const commentCount = commentTotal(card);
+      const hasUnreadComments = hasUnseenComments(card);
+      commentButton.classList.toggle('has-unseen-comments', hasUnreadComments);
       const commentCountLabel = commentButton.querySelector('.comment-count');
       commentCountLabel.hidden = commentCount === 0;
       commentCountLabel.textContent = commentCount > 99 ? '99+' : String(commentCount);
-      commentButton.title = isApproved
-        ? 'Faixa aprovada. Abrir comentários'
-        : (commentCount
+      commentButton.title = commentCount
           ? `${commentCount} comentário${commentCount === 1 ? '' : 's'}`
-          : 'Informações e comentários');
+          : 'Comentários';
       commentButton.setAttribute('aria-label', `${commentButton.title} de ${card.title}`);
       commentButton.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -710,7 +825,7 @@
     if (!state.canEdit) return;
     state.selectedId = cardId;
     render();
-    setStatus('Container selecionado. Use A para música ou P para imagem.');
+    setStatus('Container selecionado. Use A para adicionar ou trocar a música.');
   }
 
   function showDialog(dialog) {
@@ -853,6 +968,7 @@
     const trackTotal = Math.max(1, playableCards.length);
     elements.lyricsScreenTitle.textContent = `Faixa ${trackNumber} de ${trackTotal}`;
     setCardBackground(elements.lyricsTrackLabelBackground, card);
+    elements.lyricsTrackLabelTitle.textContent = card.title;
     elements.lyricsPreviousTrackButton.disabled = Boolean(state.manualSync) || playableIndex <= 0;
     elements.lyricsNextTrackButton.disabled = Boolean(state.manualSync)
       || playableIndex < 0
@@ -1568,9 +1684,6 @@
 
   function applyCollaborationProject(project) {
     if (!project || !Array.isArray(project.cards)) return;
-    const previousPendingIds = new Set(state.project.cards
-      .filter((card) => card.imageGenerationStatus === 'pending')
-      .map((card) => card.id));
     state.project = project;
     saveProjectSnapshot(project);
     if (state.selectedId && !getCard(state.selectedId)) state.selectedId = '';
@@ -1580,43 +1693,8 @@
     }
     render();
     if (state.activeCommentsCardId && elements.commentsDialog.hasAttribute('open')) renderComments();
+    if (state.activeCommentId && elements.commentDetailDialog.hasAttribute('open')) renderCommentDetail();
     if (state.lyricsCardId && !elements.lyricsScreen.hidden) renderLyricsScreen();
-    const completedCard = state.project.cards.find((card) => previousPendingIds.has(card.id) && card.image?.url);
-    const failedCard = state.project.cards.find((card) => previousPendingIds.has(card.id) && card.imageGenerationStatus === 'failed');
-    if (completedCard) {
-      setStatus(`Imagem de “${completedCard.title}” pronta.`);
-      showToast(`Imagem de “${completedCard.title}” pronta.`);
-    } else if (failedCard) {
-      setStatus(`O container “${failedCard.title}” foi criado sem imagem.`);
-      showToast(`O container “${failedCard.title}” foi criado, mas a imagem não ficou pronta.`, true);
-    }
-    syncImageGenerationPolling();
-  }
-
-  function syncImageGenerationPolling(delay = 2400) {
-    window.clearTimeout(state.imageGenerationPollTimer);
-    state.imageGenerationPollTimer = null;
-    if (!state.project.cards.some((card) => card.imageGenerationStatus === 'pending')) return;
-    state.imageGenerationPollTimer = window.setTimeout(() => {
-      pollImageGeneration().catch(() => {});
-    }, delay);
-  }
-
-  async function pollImageGeneration() {
-    if (state.imageGenerationPolling || !navigator.onLine) {
-      syncImageGenerationPolling(4000);
-      return;
-    }
-    state.imageGenerationPolling = true;
-    try {
-      const payload = await apiJson(`${API_ROOT}/project`, { cache: 'no-store' });
-      applyProjectPayload(payload);
-      await refreshDownloadStates().catch(() => {});
-    } catch (_error) {
-      syncImageGenerationPolling(5000);
-    } finally {
-      state.imageGenerationPolling = false;
-    }
   }
 
   function applyProjectPayload(payload) {
@@ -1626,6 +1704,7 @@
     state.canApprove = payload.canApprove === true;
     state.canDeleteComments = payload.canDeleteComments === true;
     state.canReorder = payload.canReorder === true;
+    state.viewerUserId = Math.max(0, Number(payload.viewerUserId) || 0);
     if (Array.isArray(payload.characters)) state.characters = payload.characters;
     state.unreadCardIds = new Set(Array.isArray(payload.unreadCardIds) ? payload.unreadCardIds : []);
     applyCollaborationProject(payload.project || { version: 1, cards: [] });
@@ -1680,8 +1759,8 @@
       });
       applyCollaborationProject(payload.project);
       closeDialog(elements.addCardDialog);
-      showToast(`Container “${title}” adicionado. A imagem está sendo criada.`);
-      setStatus(`Container “${title}” criado. Carregando imagem…`, true);
+      showToast(`Container “${title}” adicionado.`);
+      setStatus(`Container “${title}” criado.`);
       window.requestAnimationFrame(() => {
         elements.trackList.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
@@ -1726,6 +1805,35 @@
     }).format(date);
   }
 
+  function commentPreview(text) {
+    const value = String(text || '').replace(/\s+/g, ' ').trim();
+    return value.length > 20 ? `${value.slice(0, 20)}...` : value;
+  }
+
+  function commentDisplayTitle(comment) {
+    const value = String(comment?.title || '').trim();
+    if (value) return value;
+    const fallback = String(comment?.text || '').replace(/\s+/g, ' ').trim().split(' ').slice(0, 7).join(' ');
+    return fallback || 'Comentário sobre a faixa';
+  }
+
+  function isOwnCommentEntry(entry) {
+    const identity = readCommenterIdentity({ create: false });
+    return state.canDeleteComments
+      || Boolean(state.viewerUserId && Number(entry?.userId) === state.viewerUserId)
+      || Boolean(identity.ownerId && entry?.ownerId === identity.ownerId);
+  }
+
+  function authorLine(entry, { pending = false } = {}) {
+    const line = document.createElement('span');
+    line.className = 'comment-user-line';
+    line.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c.7-4.3 2.8-6.5 6.5-6.5s5.8 2.2 6.5 6.5"/></svg>';
+    const copy = document.createElement('span');
+    copy.textContent = `${entry?.authorName || 'Usuário'}${pending ? ' · aguardando envio' : ''}`;
+    line.appendChild(copy);
+    return line;
+  }
+
   function renderComments() {
     const card = getCard(state.activeCommentsCardId);
     if (!card) return;
@@ -1742,46 +1850,40 @@
         const entry = document.createElement('article');
         entry.className = 'comment-entry';
         entry.classList.toggle('is-pending', comment.pending === true);
-        const meta = document.createElement('div');
-        meta.className = 'comment-meta';
-        const author = document.createElement('strong');
-        author.className = 'comment-author';
-        author.textContent = comment.authorName || 'Usuário';
-        const date = document.createElement('time');
-        date.className = 'comment-date';
-        date.dateTime = comment.createdAt || '';
-        date.textContent = comment.pending
-          ? `${formatCommentDate(comment.createdAt)} · aguardando envio`
-          : formatCommentDate(comment.createdAt);
-        meta.append(author, date);
-        entry.appendChild(meta);
+        const open = document.createElement('button');
+        open.type = 'button';
+        open.className = 'comment-notification';
+        const copy = document.createElement('span');
+        copy.className = 'comment-notification-copy';
+        const title = document.createElement('strong');
+        title.textContent = commentDisplayTitle(comment);
+        const preview = document.createElement('span');
+        preview.className = 'comment-preview';
+        preview.textContent = commentPreview(comment.text);
+        copy.append(title, preview, authorLine(comment, { pending: comment.pending === true }));
+        const dots = document.createElement('span');
+        dots.className = 'comment-dots';
+        dots.setAttribute('aria-hidden', 'true');
+        dots.innerHTML = '<i></i><i></i><i></i>';
+        open.append(copy, dots);
+        open.disabled = comment.pending === true;
+        open.addEventListener('click', () => openCommentDetail(comment.id));
+        entry.appendChild(open);
         if (comment.pending) {
           const cancel = document.createElement('button');
           cancel.type = 'button';
-          cancel.className = 'delete-comment-button';
+          cancel.className = 'pending-comment-cancel';
           cancel.textContent = 'Cancelar';
           cancel.addEventListener('click', () => {
             cancelPendingComment(comment.clientMutationId).catch((error) => showToast(error.message, true));
           });
           entry.appendChild(cancel);
-        } else if (state.canDeleteComments) {
-          const remove = document.createElement('button');
-          remove.type = 'button';
-          remove.className = 'delete-comment-button';
-          remove.textContent = 'Apagar';
-          remove.addEventListener('click', () => {
-            deleteComment(card.id, comment.id).catch((error) => showToast(error.message, true));
-          });
-          entry.appendChild(remove);
         }
-        const text = document.createElement('p');
-        text.className = 'comment-text';
-        text.textContent = comment.text;
-        entry.appendChild(text);
         elements.commentsList.appendChild(entry);
       });
     }
-    elements.commentForm.hidden = !state.canComment;
+    elements.commentForm.hidden = false;
+    syncCommenterIdentity();
     elements.approveTrackButton.hidden = !state.canApprove;
     elements.approveTrackButton.disabled = state.collaborationBusy || !card.audio || Boolean(card.approvedAt);
     elements.approveTrackButton.querySelector('span').textContent = card.approvedAt
@@ -1793,9 +1895,83 @@
     const card = getCard(cardId);
     if (!card) return;
     state.activeCommentsCardId = cardId;
+    state.activeCommentId = '';
     elements.commentText.value = '';
+    markCommentsSeen(card);
     renderComments();
+    render();
     showDialog(elements.commentsDialog);
+  }
+
+  function activeComment() {
+    return getCard(state.activeCommentsCardId)?.comments?.find((comment) => comment.id === state.activeCommentId) || null;
+  }
+
+  function ownerActionButton(label, svg, action, danger = false) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `comment-inline-action${danger ? ' is-danger' : ''}`;
+    button.innerHTML = `${svg}<span>${label}</span>`;
+    button.addEventListener('click', action);
+    return button;
+  }
+
+  function renderCommentDetail() {
+    const comment = activeComment();
+    if (!comment) {
+      closeDialog(elements.commentDetailDialog);
+      state.activeCommentId = '';
+      return;
+    }
+    syncCommenterIdentity();
+    elements.commentDetailTitle.textContent = commentDisplayTitle(comment);
+    elements.commentDetailAuthor.replaceChildren(authorLine(comment));
+    const date = document.createElement('time');
+    date.dateTime = comment.updatedAt || comment.createdAt || '';
+    date.textContent = `${formatCommentDate(comment.updatedAt || comment.createdAt)}${comment.updatedAt ? ' · editado' : ''}`;
+    elements.commentDetailAuthor.appendChild(date);
+    elements.commentDetailText.textContent = comment.text;
+    elements.commentOwnerActions.hidden = !isOwnCommentEntry(comment);
+    elements.commentReplies.replaceChildren();
+    const replies = Array.isArray(comment.replies) ? comment.replies : [];
+    if (!replies.length) {
+      const empty = document.createElement('p');
+      empty.className = 'comment-replies-empty';
+      empty.textContent = 'Ainda não há respostas. Seja o primeiro a comentar.';
+      elements.commentReplies.appendChild(empty);
+    } else {
+      replies.forEach((reply) => {
+        const item = document.createElement('article');
+        item.className = 'comment-reply';
+        const heading = document.createElement('div');
+        heading.className = 'comment-reply-heading';
+        heading.appendChild(authorLine(reply));
+        const date = document.createElement('time');
+        date.dateTime = reply.updatedAt || reply.createdAt || '';
+        date.textContent = `${formatCommentDate(reply.updatedAt || reply.createdAt)}${reply.updatedAt ? ' · editado' : ''}`;
+        heading.appendChild(date);
+        const text = document.createElement('p');
+        text.textContent = reply.text;
+        item.append(heading, text);
+        if (isOwnCommentEntry(reply)) {
+          const actions = document.createElement('div');
+          actions.className = 'comment-reply-actions';
+          actions.append(
+            ownerActionButton('Editar', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4 4-.8L18 8.4 14.6 5 4 16Z"/></svg>', () => editCommentEntry(reply, reply.id)),
+            ownerActionButton('Apagar', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/></svg>', () => deleteComment(state.activeCommentsCardId, comment.id, reply.id).catch((error) => showToast(error.message, true)), true)
+          );
+          item.appendChild(actions);
+        }
+        elements.commentReplies.appendChild(item);
+      });
+    }
+  }
+
+  function openCommentDetail(commentId) {
+    state.activeCommentId = commentId;
+    elements.replyText.value = '';
+    renderCommentDetail();
+    showDialog(elements.commentDetailDialog);
   }
 
   async function registerCommentBackgroundSync() {
@@ -1826,15 +2002,21 @@
         try {
           const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(pending.cardId)}/comments`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Musical-Kelly-Commenter-Id': pending.ownerId,
+              'X-Musical-Kelly-Commenter-Token': pending.ownerToken
+            },
             body: JSON.stringify({
               text: pending.text,
+              authorName: pending.authorName,
               clientMutationId: pending.clientMutationId
             })
           });
           await deletePendingComment(pending.clientMutationId);
           await reloadPendingComments({ renderNow: false });
           applyCollaborationProject(payload.project);
+          markCommentsSeen(getCard(pending.cardId));
           sentCount += 1;
         } catch (error) {
           lastError = error;
@@ -1861,6 +2043,13 @@
   async function submitComment(event) {
     event.preventDefault();
     if (!state.canComment || state.commentSubmitting) return;
+    const identity = requireCommenterName(() => submitCommentFromForm().catch((error) => showToast(error.message, true)));
+    if (!identity) return;
+    await submitCommentFromForm(identity);
+  }
+
+  async function submitCommentFromForm(existingIdentity = null) {
+    if (!state.canComment || state.commentSubmitting) return;
     const card = getCard(state.activeCommentsCardId);
     const text = elements.commentText.value.trim().slice(0, 800);
     if (!card || !text) {
@@ -1868,10 +2057,18 @@
       showToast('Escreva um comentário antes de enviar.', true);
       return;
     }
+    const identity = existingIdentity || readCommenterIdentity();
+    if (!identity.name) {
+      requireCommenterName(() => submitCommentFromForm().catch((error) => showToast(error.message, true)));
+      return;
+    }
     const pending = {
       clientMutationId: createCommentMutationId(),
       cardId: card.id,
       text,
+      authorName: identity.name,
+      ownerId: identity.ownerId,
+      ownerToken: identity.ownerToken,
       createdAt: new Date().toISOString()
     };
     state.commentSubmitting = true;
@@ -1883,6 +2080,8 @@
       registerCommentBackgroundSync();
       await flushPendingComments();
       const stillPending = state.pendingComments.some((comment) => comment.clientMutationId === pending.clientMutationId);
+      markCommentsSeen(getCard(card.id));
+      render();
       showToast(stillPending
         ? 'Comentário salvo neste aparelho. Ele será enviado quando a conexão voltar.'
         : 'Comentário adicionado.');
@@ -1891,6 +2090,52 @@
     } finally {
       state.commentSubmitting = false;
       elements.sendCommentButton.disabled = false;
+    }
+  }
+
+  async function submitReply(event) {
+    event.preventDefault();
+    if (state.commentSubmitting) return;
+    const identity = requireCommenterName(() => submitReplyFromForm().catch((error) => showToast(error.message, true)));
+    if (!identity) return;
+    await submitReplyFromForm(identity);
+  }
+
+  async function submitReplyFromForm(existingIdentity = null) {
+    const card = getCard(state.activeCommentsCardId);
+    const comment = activeComment();
+    const text = elements.replyText.value.trim().slice(0, 800);
+    if (!card || !comment || !text) {
+      elements.replyText.focus();
+      showToast('Escreva uma resposta antes de enviar.', true);
+      return;
+    }
+    const identity = existingIdentity || readCommenterIdentity();
+    if (!identity.name) {
+      requireCommenterName(() => submitReplyFromForm().catch((error) => showToast(error.message, true)));
+      return;
+    }
+    state.commentSubmitting = true;
+    elements.sendReplyButton.disabled = true;
+    try {
+      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}/comments/${encodeURIComponent(comment.id)}/replies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...commenterRequestHeaders() },
+        body: JSON.stringify({
+          text,
+          authorName: identity.name,
+          clientMutationId: createCommentMutationId()
+        })
+      });
+      applyCollaborationProject(payload.project);
+      markCommentsSeen(getCard(card.id));
+      elements.replyText.value = '';
+      render();
+      renderCommentDetail();
+      showToast('Resposta adicionada.');
+    } finally {
+      state.commentSubmitting = false;
+      elements.sendReplyButton.disabled = false;
     }
   }
 
@@ -1916,17 +2161,54 @@
     }
   }
 
-  async function deleteComment(cardId, commentId) {
-    if (!state.canDeleteComments || state.collaborationBusy) return;
-    if (!window.confirm('Apagar este comentário?')) return;
+  async function editCommentEntry(entry, replyId = '') {
+    if (!entry || state.collaborationBusy) return;
+    const nextText = window.prompt(replyId ? 'Editar resposta' : 'Editar comentário', entry.text || '');
+    if (nextText === null) return;
+    const text = nextText.trim().slice(0, 800);
+    if (!text || text === entry.text) return;
+    const cardId = state.activeCommentsCardId;
+    const commentId = state.activeCommentId;
+    const suffix = replyId ? `/replies/${encodeURIComponent(replyId)}` : '';
     state.collaborationBusy = true;
     try {
-      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(cardId)}/comments/${encodeURIComponent(commentId)}`, {
-        method: 'DELETE'
+      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(cardId)}/comments/${encodeURIComponent(commentId)}${suffix}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...commenterRequestHeaders() },
+        body: JSON.stringify({ text })
       });
       applyCollaborationProject(payload.project);
+      markCommentsSeen(getCard(cardId));
+      render();
+      renderCommentDetail();
+      showToast(replyId ? 'Resposta editada.' : 'Comentário editado.');
+    } catch (error) {
+      showToast(error.message, true);
+    } finally {
+      state.collaborationBusy = false;
+    }
+  }
+
+  async function deleteComment(cardId, commentId, replyId = '') {
+    if (state.collaborationBusy) return;
+    if (!window.confirm(replyId ? 'Apagar esta resposta?' : 'Apagar este comentário?')) return;
+    state.collaborationBusy = true;
+    try {
+      const suffix = replyId ? `/replies/${encodeURIComponent(replyId)}` : '';
+      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(cardId)}/comments/${encodeURIComponent(commentId)}${suffix}`, {
+        method: 'DELETE',
+        headers: commenterRequestHeaders()
+      });
+      applyCollaborationProject(payload.project);
+      markCommentsSeen(getCard(cardId));
+      if (!replyId) {
+        closeDialog(elements.commentDetailDialog);
+        state.activeCommentId = '';
+      }
+      render();
       renderComments();
-      showToast('Comentário apagado.');
+      if (replyId) renderCommentDetail();
+      showToast(replyId ? 'Resposta apagada.' : 'Comentário apagado.');
     } finally {
       state.collaborationBusy = false;
     }
@@ -2854,11 +3136,12 @@
     if (!card) throw new Error('Segure um container por 500 ms para selecioná-lo.');
     if (!file) return;
     const isAudio = kind === 'audio';
-    const maxBytes = isAudio ? 220 * 1024 * 1024 : 20 * 1024 * 1024;
-    if (file.size > maxBytes) throw new Error(isAudio ? 'A faixa pode ter no máximo 220 MB.' : 'A imagem pode ter no máximo 20 MB.');
+    const maxBytes = 220 * 1024 * 1024;
+    if (!isAudio) throw new Error('Os containers usam apenas o degradê com o nome da faixa.');
+    if (file.size > maxBytes) throw new Error('A faixa pode ter no máximo 220 MB.');
 
     state.uploading = true;
-    setStatus(`Enviando ${isAudio ? 'música' : 'imagem'} para o R2…`, true);
+      setStatus('Enviando música para o R2…', true);
     try {
       const query = new URLSearchParams({ cardId: card.id, name: file.name });
       const payload = await apiJson(`${API_ROOT}/assets/${kind}?${query}`, {
@@ -2878,11 +3161,10 @@
       state.downloadStates.set(card.id, 'idle');
       render();
       await saveProject({ quiet: false });
-      showToast(`${isAudio ? 'Música' : 'Imagem'} salva no R2.`);
+      showToast('Música salva no R2.');
     } finally {
       state.uploading = false;
       elements.audioInput.value = '';
-      elements.imageInput.value = '';
     }
   }
 
@@ -2892,7 +3174,7 @@
       showToast('Segure um container por 500 ms para selecioná-lo.', true);
       return;
     }
-    (kind === 'audio' ? elements.audioInput : elements.imageInput).click();
+    elements.audioInput.click();
   }
 
   function removeSelectedCard() {
@@ -2929,13 +3211,56 @@
     elements.commentForm.addEventListener('submit', (event) => {
       submitComment(event).catch((error) => showToast(error.message, true));
     });
+    elements.replyForm.addEventListener('submit', (event) => {
+      submitReply(event).catch((error) => showToast(error.message, true));
+    });
+    elements.editCommentButton.addEventListener('click', () => {
+      editCommentEntry(activeComment()).catch((error) => showToast(error.message, true));
+    });
+    elements.deleteCommentButton.addEventListener('click', () => {
+      const comment = activeComment();
+      if (!comment) return;
+      deleteComment(state.activeCommentsCardId, comment.id).catch((error) => showToast(error.message, true));
+    });
+    elements.commenterIdentity.addEventListener('click', () => {
+      const identity = readCommenterIdentity();
+      state.afterCommenterName = null;
+      elements.commenterNameInput.value = identity.name;
+      showDialog(elements.commenterNameDialog);
+      window.setTimeout(() => elements.commenterNameInput.focus(), 30);
+    });
+    elements.replyCommenterIdentity.addEventListener('click', () => elements.commenterIdentity.click());
+    elements.commenterNameForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const name = elements.commenterNameInput.value.trim().slice(0, 64);
+      if (!name) {
+        elements.commenterNameInput.focus();
+        return;
+      }
+      saveCommenterName(name);
+      closeDialog(elements.commenterNameDialog);
+      const next = state.afterCommenterName;
+      state.afterCommenterName = null;
+      if (next) window.setTimeout(next, 0);
+    });
+    elements.closeCommenterNameDialog.addEventListener('click', () => {
+      state.afterCommenterName = null;
+      closeDialog(elements.commenterNameDialog);
+    });
     elements.approveTrackButton.addEventListener('click', () => {
       approveTrack().catch((error) => showToast(error.message, true));
     });
     elements.closeCommentsDialog.addEventListener('click', () => closeDialog(elements.commentsDialog));
-    [elements.addCardDialog, elements.commentsDialog, elements.characterDialog].forEach((dialog) => {
+    elements.closeCommentDetailDialog.addEventListener('click', () => {
+      state.activeCommentId = '';
+      closeDialog(elements.commentDetailDialog);
+    });
+    [elements.addCardDialog, elements.commentsDialog, elements.commentDetailDialog, elements.commenterNameDialog, elements.characterDialog].forEach((dialog) => {
       dialog.addEventListener('click', (event) => {
-        if (event.target === dialog) closeDialog(dialog);
+        if (event.target !== dialog) return;
+        if (dialog === elements.commentDetailDialog) state.activeCommentId = '';
+        if (dialog === elements.commenterNameDialog) state.afterCommenterName = null;
+        closeDialog(dialog);
       });
     });
     elements.closeDownloadPrompt.addEventListener('click', closeDownloadPrompt);
@@ -3054,7 +3379,6 @@
       });
     });
     elements.chooseAudioButton.addEventListener('click', () => openPicker('audio'));
-    elements.chooseImageButton.addEventListener('click', () => openPicker('image'));
     elements.removeCardButton.addEventListener('click', removeSelectedCard);
     elements.closeSelectionButton.addEventListener('click', () => {
       state.selectedId = '';
@@ -3063,23 +3387,17 @@
     elements.audioInput.addEventListener('change', () => {
       uploadFile('audio', elements.audioInput.files?.[0]).catch((error) => showToast(error.message, true));
     });
-    elements.imageInput.addEventListener('change', () => {
-      uploadFile('image', elements.imageInput.files?.[0]).catch((error) => showToast(error.message, true));
-    });
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
         recoverAppleAudio();
         flushPendingComments({ announce: true }).catch(() => {});
-        syncImageGenerationPolling(200);
       }
     });
     window.addEventListener('pageshow', () => {
       recoverAppleAudio();
       flushPendingComments({ announce: true }).catch(() => {});
-      syncImageGenerationPolling(200);
     });
     window.addEventListener('online', () => {
-      syncImageGenerationPolling(200);
       cacheCharacterImages().catch(() => {});
       if (!state.pendingComments.length) return;
       setStatus('Conexão restabelecida. Enviando comentários pendentes…', true);
@@ -3129,9 +3447,6 @@
       if (event.key.toLowerCase() === 'a') {
         event.preventDefault();
         openPicker('audio');
-      } else if (event.key.toLowerCase() === 'p') {
-        event.preventDefault();
-        openPicker('image');
       }
     });
   }
@@ -3169,6 +3484,7 @@
         state.canApprove = permissions.canApprove !== false;
         state.canDeleteComments = permissions.canDeleteComments === true;
         state.canReorder = permissions.canReorder === true;
+        state.viewerUserId = Math.max(0, Number(permissions.viewerUserId) || 0);
         state.characters = Array.isArray(snapshot.characters) ? snapshot.characters : [];
         applyCollaborationProject(snapshot.project);
         setStatus('Mostrando a última versão salva enquanto a conexão volta.');

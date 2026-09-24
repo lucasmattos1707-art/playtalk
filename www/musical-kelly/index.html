@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=27">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=28">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -49,7 +49,6 @@
       <input id="titleInput" maxlength="120" autocomplete="off" aria-label="Nome da faixa">
       <div class="selection-actions">
         <button type="button" id="chooseAudioButton"><kbd>A</kbd> Música</button>
-        <button type="button" id="chooseImageButton"><kbd>P</kbd> Imagem</button>
         <button type="button" class="danger-action" id="removeCardButton" title="Remover container">Remover</button>
       </div>
       <button class="close-selection" id="closeSelectionButton" type="button" aria-label="Fechar edição" title="Fechar edição">
@@ -75,10 +74,6 @@
           <path d="M4 7c32 0 43 14 72 14 34 0 47-18 84-18 21 0 34 6 46 14M67 21c-11 0-20-4-27-10m120-8c12 0 20 3 27 9"/>
         </svg>
       </h2>
-      <div class="track-image-status" role="status" aria-live="polite" hidden>
-        <span class="track-image-spinner" aria-hidden="true"></span>
-        <span class="track-image-status-text">Carregando imagem…</span>
-      </div>
       <div class="track-center-controls">
         <button class="card-seek card-seek-back" type="button" aria-label="Voltar 5 segundos" title="Voltar 5 segundos">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
@@ -93,13 +88,10 @@
           <path d="M7 3h7l4 4v14H7zM14 3v5h5M10 12h5M10 16h5"/>
         </svg>
       </button>
-      <button class="comment-button" type="button" title="Informações e comentários" aria-label="Abrir informações e comentários">
-        <svg class="icon-info" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="9"/>
-          <path d="M12 10.5v6M12 7.5h.01"/>
-        </svg>
-        <svg class="icon-approved" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="m6.8 12.3 3.3 3.3 7.2-7.5"/>
+      <button class="comment-button" type="button" title="Comentários" aria-label="Abrir comentários">
+        <svg class="icon-comments" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 5.5h14v10H9l-4 3v-13Z"/>
+          <path d="M8.5 9h7M8.5 12h4.5"/>
         </svg>
         <span class="comment-count" hidden></span>
       </button>
@@ -125,7 +117,6 @@
   </template>
 
   <input id="audioInput" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.opus,.webm,.flac" hidden>
-  <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" hidden>
 
   <dialog class="musical-dialog" id="addCardDialog" aria-labelledby="addCardDialogTitle">
     <form class="dialog-card" id="addCardForm">
@@ -177,6 +168,7 @@
     <div class="lyrics-stage" id="lyricsStage">
       <article class="lyrics-track-label" id="lyricsTrackLabel" aria-label="Rótulo da faixa atual">
         <div class="lyrics-track-label__background" id="lyricsTrackLabelBackground" aria-hidden="true"></div>
+        <h2 class="lyrics-track-label__title" id="lyricsTrackLabelTitle"></h2>
       </article>
       <div class="lyrics-empty" id="lyricsEmpty" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7zM14 3v5h5M10 12h5M10 16h5"/></svg>
@@ -314,7 +306,7 @@
     <section class="dialog-card comments-card">
       <div class="dialog-heading">
         <div>
-          <span class="dialog-kicker">Informações e comentários</span>
+          <span class="dialog-kicker">Comentários da faixa</span>
           <h2 id="commentsDialogTitle">Container</h2>
         </div>
         <button class="dialog-close" id="closeCommentsDialog" type="button" aria-label="Fechar comentários">
@@ -322,6 +314,10 @@
         </button>
       </div>
       <div class="comments-list" id="commentsList"></div>
+      <button class="commenter-identity" id="commenterIdentity" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c.7-4.3 2.8-6.5 6.5-6.5s5.8 2.2 6.5 6.5"/></svg>
+        <span id="commenterIdentityText">Coloque seu nome para comentar</span>
+      </button>
       <form class="comment-form" id="commentForm" hidden>
         <label class="dialog-field" for="commentText">
           <span>Adicionar comentário</span>
@@ -339,7 +335,65 @@
     </section>
   </dialog>
 
+  <dialog class="musical-dialog comment-detail-dialog" id="commentDetailDialog" aria-labelledby="commentDetailTitle">
+    <section class="dialog-card comment-detail-card">
+      <div class="dialog-heading">
+        <div>
+          <span class="dialog-kicker">Comentário</span>
+          <h2 id="commentDetailTitle">Comentário da faixa</h2>
+        </div>
+        <button class="dialog-close" id="closeCommentDetailDialog" type="button" aria-label="Fechar comentário">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <div class="comment-detail-author" id="commentDetailAuthor"></div>
+      <p class="comment-detail-text" id="commentDetailText"></p>
+      <div class="comment-owner-actions" id="commentOwnerActions" hidden>
+        <button id="editCommentButton" type="button" aria-label="Editar comentário" title="Editar comentário">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4 4-.8L18 8.4 14.6 5 4 16ZM13.5 6.1l3.4 3.4"/></svg>
+          <span>Editar</span>
+        </button>
+        <button class="is-danger" id="deleteCommentButton" type="button" aria-label="Apagar comentário" title="Apagar comentário">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg>
+          <span>Apagar</span>
+        </button>
+      </div>
+      <div class="comment-replies" id="commentReplies"></div>
+      <form class="reply-form" id="replyForm">
+        <span class="reply-form-label">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9h8M8 13h5M5 5h14v11H9l-4 3V5Z"/></svg>
+          Comentar
+        </span>
+        <button class="commenter-identity" id="replyCommenterIdentity" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c.7-4.3 2.8-6.5 6.5-6.5s5.8 2.2 6.5 6.5"/></svg>
+          <span id="replyCommenterIdentityText">Coloque seu nome para comentar</span>
+        </button>
+        <textarea id="replyText" maxlength="800" rows="3" required placeholder="Escreva uma resposta..."></textarea>
+        <button class="dialog-primary" id="sendReplyButton" type="submit">Enviar resposta</button>
+      </form>
+    </section>
+  </dialog>
+
+  <dialog class="musical-dialog commenter-name-dialog" id="commenterNameDialog" aria-labelledby="commenterNameDialogTitle">
+    <form class="dialog-card" id="commenterNameForm">
+      <div class="dialog-heading">
+        <div>
+          <span class="dialog-kicker">Seu nome neste aparelho</span>
+          <h2 id="commenterNameDialogTitle">Coloque seu nome para comentar</h2>
+        </div>
+        <button class="dialog-close" id="closeCommenterNameDialog" type="button" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <label class="dialog-field" for="commenterNameInput">
+        <span>Como você quer aparecer?</span>
+        <input id="commenterNameInput" maxlength="64" autocomplete="name" required placeholder="Seu nome">
+      </label>
+      <button class="dialog-primary" type="submit">Continuar</button>
+    </form>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="/musical-kelly/app.js?v=29" defer></script>
+  <script src="/musical-kelly/app.js?v=30" defer></script>
 </body>
 </html>

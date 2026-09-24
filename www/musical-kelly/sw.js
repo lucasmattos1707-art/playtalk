@@ -1,12 +1,12 @@
 'use strict';
 
-const SHELL_CACHE = 'playtalk-musical-kelly-shell-v28';
+const SHELL_CACHE = 'playtalk-musical-kelly-shell-v29';
 const SHELL_CACHE_PREFIX = 'playtalk-musical-kelly-shell-';
 const MEDIA_CACHE = 'playtalk-musical-kelly-media-v1';
 const SHELL_URLS = [
   '/musical-kelly/',
-  '/musical-kelly/styles.css?v=27',
-  '/musical-kelly/app.js?v=29'
+  '/musical-kelly/styles.css?v=28',
+  '/musical-kelly/app.js?v=30'
 ];
 const COMMENT_OUTBOX_DB_NAME = 'playtalk-musical-kelly-offline-v1';
 const COMMENT_OUTBOX_STORE = 'comment-outbox';
@@ -68,10 +68,13 @@ async function flushPendingComments() {
       credentials: 'same-origin',
       headers: {
         Accept: 'application/json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Musical-Kelly-Commenter-Id': String(comment.ownerId || ''),
+        'X-Musical-Kelly-Commenter-Token': String(comment.ownerToken || '')
       },
       body: JSON.stringify({
         text: comment.text,
+        authorName: comment.authorName,
         clientMutationId: comment.clientMutationId
       })
     });
