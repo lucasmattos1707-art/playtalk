@@ -79,6 +79,7 @@ const OPENAI_API_KEY = env(process.env.OPENAI_API_KEY);
 const OPENAI_IMAGE_MODEL = env(process.env.OPENAI_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_AVATAR_IMAGE_MODEL = env(process.env.OPENAI_AVATAR_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_TEXT_MODEL = env(process.env.OPENAI_TEXT_MODEL) || 'gpt-5.4-nano';
+const DESAFIO_GYM_VISION_MODEL = env(process.env.DESAFIO_GYM_VISION_MODEL) || 'gpt-6-luna';
 const OPENAI_FLASHCARD_ADMIN_TEXT_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_TEXT_MODEL) || 'gpt-5-nano';
 const OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_STORY_MODEL = env(process.env.OPENAI_STORY_MODEL) || 'gpt-5.4-nano';
@@ -361,6 +362,7 @@ let flashcardSpeedCurveSettingsReadyPromise = null;
 let flashcardLevelDynamicsSettingsReadyPromise = null;
 let flashcardLevelWindowSettingsReadyPromise = null;
 let insonicIntakesTableReadyPromise = null;
+let desafioGymTableReadyPromise = null;
 let flashcardXpLevelCurveSettingsReadyPromise = null;
 let flashcardCardValueSettingsReadyPromise = null;
 let flashcardXpValueSettingsReadyPromise = null;
@@ -2919,6 +2921,41 @@ const ensureInsonicIntakesTable = async () => {
   }
 
   return insonicIntakesTableReadyPromise;
+};
+
+const ensureDesafioGymTable = async () => {
+  if (!pool) return false;
+
+  if (!desafioGymTableReadyPromise) {
+    desafioGymTableReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.desafio_gym_entries (
+          id bigserial PRIMARY KEY,
+          participant varchar(16) NOT NULL CHECK (participant IN ('lucas', 'kelly')),
+          training_date date NOT NULL,
+          week_start date NOT NULL,
+          verification_object_key text NOT NULL,
+          verification_content_type varchar(64) NOT NULL DEFAULT 'image/jpeg',
+          verification_sha256 char(64) NOT NULL,
+          ai_model varchar(120) NOT NULL,
+          ai_confidence integer NOT NULL CHECK (ai_confidence BETWEEN 0 AND 100),
+          ai_reason text NOT NULL DEFAULT '',
+          created_at timestamptz NOT NULL DEFAULT now(),
+          UNIQUE (participant, training_date)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS desafio_gym_entries_week_idx
+        ON public.desafio_gym_entries (week_start, participant, training_date DESC)
+      `);
+      return true;
+    })().catch((error) => {
+      desafioGymTableReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return desafioGymTableReadyPromise;
 };
 
 const ensureSpeakingRealtimeTables = async () => {
@@ -14316,11 +14353,13 @@ async function requestOpenAiJsonPayload(prompt, options = {}) {
     },
     body: JSON.stringify({
       model: options.model || OPENAI_CHAT_FAST_MODEL,
-      input: prompt,
+      input: options.input ?? prompt,
+      ...(options.store === false ? { store: false } : {}),
       ...(options.reasoningEffort ? { reasoning: { effort: options.reasoningEffort } } : {}),
       ...(options.maxOutputTokens ? { max_output_tokens: options.maxOutputTokens } : {}),
       ...(options.textFormat ? { text: { format: options.textFormat } } : {})
-    })
+    }),
+    ...(options.timeoutMs ? { signal: AbortSignal.timeout(options.timeoutMs) } : {})
   });
 
   const responseText = await upstreamResponse.text();
@@ -27861,7 +27900,10 @@ app.use(async (req, res, next) => {
     '/musical-kelly/index.html',
     '/insonic',
     '/insonic/',
-    '/insonic/index.html'
+    '/insonic/index.html',
+    '/desafiogym',
+    '/desafiogym/',
+    '/desafiogym/index.html'
   ]);
 
   if (
@@ -27878,6 +27920,7 @@ app.use(async (req, res, next) => {
     || pathName.startsWith('/medalhas/')
     || pathName.startsWith('/Avatar/')
     || pathName.startsWith('/insonic/')
+    || pathName.startsWith('/desafiogym/')
     || pathName.startsWith('/backgrounds/')
     || pathName.startsWith('/data/')
     || pathName === '/favicon.ico'
@@ -27954,6 +27997,283 @@ app.use('/insonic', express.static(insonicDir, {
     res.setHeader('Cache-Control', 'public, max-age=86400');
   }
 }));
+
+function getSaoPauloDateString(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function getDesafioGymWeekStart(dateString) {
+  const date = new Date(`${dateString}T12:00:00Z`);
+  const day = date.getUTCDay();
+  const daysFromMonday = day === 0 ? 6 : day - 1;
+  date.setUTCDate(date.getUTCDate() - daysFromMonday);
+  return date.toISOString().slice(0, 10);
+}
+
+function isDesafioGymSunday(dateString) {
+  return new Date(`${dateString}T12:00:00Z`).getUTCDay() === 0;
+}
+
+async function readDesafioGymState(today = getSaoPauloDateString()) {
+  await ensureDesafioGymTable();
+  const weekStart = getDesafioGymWeekStart(today);
+  const [scoreResult, weekResult, todayResult, recentResult] = await Promise.all([
+    pool.query(`
+      SELECT participant, COUNT(*)::integer AS points
+      FROM public.desafio_gym_entries
+      GROUP BY participant
+    `),
+    pool.query(`
+      SELECT participant, COUNT(*)::integer AS points
+      FROM public.desafio_gym_entries
+      WHERE week_start = $1::date
+      GROUP BY participant
+    `, [weekStart]),
+    pool.query(`
+      SELECT participant
+      FROM public.desafio_gym_entries
+      WHERE training_date = $1::date
+    `, [today]),
+    pool.query(`
+      SELECT participant, training_date::text AS training_date, created_at
+      FROM public.desafio_gym_entries
+      ORDER BY training_date DESC, created_at DESC
+      LIMIT 8
+    `)
+  ]);
+
+  const toPoints = (rows) => rows.reduce((result, row) => {
+    result[row.participant] = Number(row.points) || 0;
+    return result;
+  }, { lucas: 0, kelly: 0 });
+
+  return {
+    today,
+    weekStart,
+    isSunday: isDesafioGymSunday(today),
+    scores: toPoints(scoreResult.rows),
+    week: toPoints(weekResult.rows),
+    markedToday: {
+      lucas: todayResult.rows.some((row) => row.participant === 'lucas'),
+      kelly: todayResult.rows.some((row) => row.participant === 'kelly')
+    },
+    recent: recentResult.rows.map((row) => ({
+      participant: row.participant,
+      trainingDate: String(row.training_date || '').slice(0, 10),
+      createdAt: row.created_at
+    }))
+  };
+}
+
+const desafioGymAttemptWindows = new Map();
+
+function consumeDesafioGymAttempt(req) {
+  const now = Date.now();
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  const key = forwarded || req.ip || 'unknown';
+  const previous = desafioGymAttemptWindows.get(key);
+  const windowMs = 10 * 60 * 1000;
+  const next = !previous || now - previous.startedAt >= windowMs
+    ? { startedAt: now, count: 1 }
+    : { startedAt: previous.startedAt, count: previous.count + 1 };
+  desafioGymAttemptWindows.set(key, next);
+  return next.count <= 8;
+}
+
+async function verifyDesafioGymPhoto(imageBuffer) {
+  const base64Image = imageBuffer.toString('base64');
+  const { parsed } = await requestOpenAiJsonPayload('', {
+    model: DESAFIO_GYM_VISION_MODEL,
+    store: false,
+    timeoutMs: 30000,
+    maxOutputTokens: 180,
+    input: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'input_text',
+            text: [
+              'Verifique somente se esta foto mostra claramente um ambiente real de academia ou treino indoor.',
+              'Considere aparelhos de musculação, pesos, esteiras, bicicletas, área funcional ou estúdio fitness como evidência.',
+              'Rejeite casa, rua, carro, tela, foto de outra foto e imagens ambíguas.',
+              'Não identifique a pessoa e não descreva atributos pessoais.'
+            ].join(' ')
+          },
+          {
+            type: 'input_image',
+            image_url: `data:image/jpeg;base64,${base64Image}`,
+            detail: 'low'
+          }
+        ]
+      }
+    ],
+    textFormat: {
+      type: 'json_schema',
+      name: 'desafio_gym_verification',
+      strict: true,
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          is_gym: { type: 'boolean' },
+          confidence: { type: 'integer', minimum: 0, maximum: 100 },
+          reason: { type: 'string', minLength: 1, maxLength: 180 }
+        },
+        required: ['is_gym', 'confidence', 'reason']
+      }
+    }
+  });
+
+  return {
+    isGym: parsed?.is_gym === true,
+    confidence: Math.max(0, Math.min(100, Number(parsed?.confidence) || 0)),
+    reason: String(parsed?.reason || 'Não foi possível confirmar o ambiente.').slice(0, 180)
+  };
+}
+
+app.get(['/desafiogym', '/desafiogym/', '/desafiogym/index.html'], (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(staticDir, 'desafiogym', 'index.html'));
+});
+
+app.get('/api/desafiogym', async (_req, res) => {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, ...(await readDesafioGymState()) });
+  } catch (error) {
+    console.error('Erro ao carregar o Desafio Gym:', error);
+    res.status(500).json({ success: false, message: 'Não foi possível carregar o placar agora.' });
+  }
+});
+
+app.post(
+  '/api/desafiogym/entries',
+  express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '4mb' }),
+  async (req, res) => {
+    let storedObjectKey = '';
+    try {
+      const participant = String(req.query?.participant || '').trim().toLowerCase();
+      if (!['lucas', 'kelly'].includes(participant)) {
+        res.status(400).json({ success: false, message: 'Escolha Lucas ou Kelly.' });
+        return;
+      }
+      if (!Buffer.isBuffer(req.body) || req.body.length < 4_000) {
+        res.status(400).json({ success: false, message: 'Tire uma foto nítida pela câmera.' });
+        return;
+      }
+      if (!consumeDesafioGymAttempt(req)) {
+        res.status(429).json({ success: false, message: 'Muitas tentativas seguidas. Aguarde alguns minutos.' });
+        return;
+      }
+
+      const today = getSaoPauloDateString();
+      const weekStart = getDesafioGymWeekStart(today);
+      if (isDesafioGymSunday(today)) {
+        res.status(409).json({ success: false, message: 'Domingo é dia de descanso. Hoje não vale ponto.' });
+        return;
+      }
+
+      await ensureDesafioGymTable();
+      const eligibilityResult = await pool.query(`
+        SELECT
+          EXISTS (
+            SELECT 1 FROM public.desafio_gym_entries
+            WHERE participant = $1 AND training_date = $2::date
+          ) AS marked_today,
+          (
+            SELECT COUNT(*)::integer FROM public.desafio_gym_entries
+            WHERE participant = $1 AND week_start = $3::date
+          ) AS week_points
+      `, [participant, today, weekStart]);
+      const eligibility = eligibilityResult.rows[0] || {};
+      if (eligibility.marked_today) {
+        res.status(409).json({ success: false, message: 'O ponto de hoje já foi marcado.' });
+        return;
+      }
+      if (Number(eligibility.week_points) >= 5) {
+        res.status(409).json({ success: false, message: 'O limite de 5 pontos desta semana já foi atingido.' });
+        return;
+      }
+
+      const imageBuffer = await sharp(req.body, { failOn: 'error', limitInputPixels: 24_000_000 })
+        .rotate()
+        .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 82, mozjpeg: true })
+        .toBuffer();
+      const verification = await verifyDesafioGymPhoto(imageBuffer);
+      if (!verification.isGym || verification.confidence < 60) {
+        res.status(422).json({
+          success: false,
+          message: 'Não consegui confirmar que a foto foi tirada em uma academia. Tente mostrar os aparelhos ou pesos.',
+          reason: verification.reason
+        });
+        return;
+      }
+      if (!isR2FluencyConfigured()) {
+        res.status(503).json({ success: false, message: 'O armazenamento da foto está indisponível agora.' });
+        return;
+      }
+
+      storedObjectKey = `desafiogym/${weekStart}/${participant}-${today}-${crypto.randomUUID()}.jpg`;
+      await putR2Object(storedObjectKey, imageBuffer, 'image/jpeg', { timeoutMs: 15000, retries: 1 });
+      await pool.query(`
+        INSERT INTO public.desafio_gym_entries (
+          participant,
+          training_date,
+          week_start,
+          verification_object_key,
+          verification_content_type,
+          verification_sha256,
+          ai_model,
+          ai_confidence,
+          ai_reason
+        ) VALUES ($1, $2::date, $3::date, $4, 'image/jpeg', $5, $6, $7, $8)
+      `, [
+        participant,
+        today,
+        weekStart,
+        storedObjectKey,
+        sha256HexBuffer(imageBuffer),
+        DESAFIO_GYM_VISION_MODEL,
+        verification.confidence,
+        verification.reason
+      ]);
+
+      res.status(201).json({
+        success: true,
+        message: 'Treino confirmado! +1 ponto.',
+        ...(await readDesafioGymState(today))
+      });
+    } catch (error) {
+      if (storedObjectKey) {
+        getR2Client().send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storedObjectKey })).catch(() => {});
+      }
+      if (error?.code === '23505') {
+        res.status(409).json({ success: false, message: 'O ponto de hoje já foi marcado.' });
+        return;
+      }
+      if (/input buffer contains unsupported image format|Input buffer/i.test(String(error?.message || ''))) {
+        res.status(400).json({ success: false, message: 'A câmera não gerou uma foto válida. Tente novamente.' });
+        return;
+      }
+      console.error('Erro ao registrar treino no Desafio Gym:', error);
+      const status = Number.isInteger(error?.statusCode) && error.statusCode >= 400 && error.statusCode < 600
+        ? error.statusCode
+        : 500;
+      res.status(status).json({ success: false, message: status === 503
+        ? 'A verificação por IA está indisponível agora.'
+        : 'Não foi possível confirmar o treino. Tente novamente.' });
+    }
+  }
+);
 
 app.get('/', (req, res) => {
   res.redirect(302, '/entrar');
