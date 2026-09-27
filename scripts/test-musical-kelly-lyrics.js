@@ -5,6 +5,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const { JSDOM } = require('jsdom');
+const {
+  buildGroundedMusicalKellyLines,
+  filterMusicalKellyTranscriptionSegments
+} = require('../lib/musical-kelly-transcription');
 
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'www', 'musical-kelly', 'index.html'), 'utf8');
@@ -309,6 +313,9 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.doesNotMatch(serverSource, /generateMusicalKellyCardImage/);
   assert.match(serverSource, /v1\/audio\/transcriptions/);
   assert.match(serverSource, /timestamp_granularities\[\]/);
+  assert.match(serverSource, /filterMusicalKellyTranscriptionSegments/);
+  assert.match(serverSource, /Instrumental and silent gaps are intentionally absent/);
+  assert.match(serverSource, /buildGroundedMusicalKellyLines/);
   assert.match(serverSource, /app\.post\('\/api\/musical-kelly\/cards\/:cardId\/lyrics\/generate'/);
   assert.match(serverSource, /app\.put\('\/api\/musical-kelly\/cards\/:cardId\/lyrics'/);
   assert.match(serverSource, /app\.put\('\/api\/musical-kelly\/cards\/:cardId\/lyrics\/timesync'/);
@@ -385,4 +392,74 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(stylesSource, /body\.lyrics-open > [^{]*:not\(\.download-prompt-dialog\)/);
   assert.match(stylesSource, /\.container-upload-menu \{[\s\S]*position: fixed;[\s\S]*z-index: 180/);
   assert.doesNotMatch(stylesSource, /padding: 31vh 10px 37vh/);
+});
+
+test('filters Whisper hallucinations over instrumental gaps without deleting a real repeated chorus', () => {
+  const result = filterMusicalKellyTranscriptionSegments([
+    { start: 1, end: 5, text: 'Uau! Olha só! Um leão!', avg_logprob: -0.22, compression_ratio: 1.35, no_speech_prob: 0.15, temperature: 0 },
+    { start: 9, end: 13, text: 'Eu sou o rei da floresta', avg_logprob: -0.22, compression_ratio: 1.35, no_speech_prob: 0.15, temperature: 0 },
+    { start: 25, end: 28, text: 'Eu sou o rei da floresta', avg_logprob: -0.13, compression_ratio: 1.08, no_speech_prob: 0.01, temperature: 0 },
+    { start: 59, end: 63, text: 'Eu sou o rei da floresta', avg_logprob: -0.35, compression_ratio: 1.78, no_speech_prob: 0.92, temperature: 0.6 },
+    { start: 84, end: 90, text: 'Eu ando por tudo, correndo e caçando', avg_logprob: -0.23, compression_ratio: 2.31, no_speech_prob: 0.96, temperature: 0 },
+    { start: 109, end: 119, text: 'Música', avg_logprob: -0.71, compression_ratio: 1.21, no_speech_prob: 0.95, temperature: 0 },
+    { start: 285, end: 295, text: 'Música', avg_logprob: -0.06, compression_ratio: 0.79, no_speech_prob: 0.05, temperature: 0 }
+  ]);
+
+  assert.deepEqual(result.accepted.map((segment) => segment.text), [
+    'Uau! Olha só! Um leão!',
+    'Eu sou o rei da floresta',
+    'Eu sou o rei da floresta'
+  ]);
+  assert.deepEqual(result.discarded.map((segment) => segment.reason), [
+    'high-no-speech-probability',
+    'high-no-speech-probability',
+    'instrumental-placeholder',
+    'instrumental-placeholder'
+  ]);
+});
+
+test('grounds AI organization in exact source segments and cannot invent JoJo voices', () => {
+  const segments = [
+    { sourceId: 0, start: 1, end: 5, text: 'Tem tanto bicho que eu já vi' },
+    { sourceId: 1, start: 5, end: 8, text: 'Eu sou o rei da floresta' }
+  ];
+  const lines = buildGroundedMusicalKellyLines([
+    { speaker: 'Leão', text: 'JoJo voices', start: 1, end: 300, sourceSegmentIds: [0] },
+    { speaker: 'Leão', sourceSegmentIds: [0] }
+  ], segments);
+
+  assert.deepEqual(lines, [
+    {
+      id: 'line-1',
+      speaker: 'Leão',
+      characterId: '',
+      text: 'Tem tanto bicho que eu já vi',
+      start: 1,
+      end: 5
+    },
+    {
+      id: 'line-2',
+      speaker: '',
+      characterId: '',
+      text: 'Eu sou o rei da floresta',
+      start: 5,
+      end: 8
+    }
+  ]);
+  assert.equal(lines.some((line) => /JoJo voices/i.test(line.text)), false);
+});
+
+test('does not group voice segments across a long instrumental gap', () => {
+  const segments = [
+    { sourceId: 0, start: 1, end: 4, text: 'Primeira fala' },
+    { sourceId: 1, start: 80, end: 83, text: 'Segunda fala' }
+  ];
+  const lines = buildGroundedMusicalKellyLines([
+    { speaker: 'Dorothy', sourceSegmentIds: [0, 1] }
+  ], segments);
+
+  assert.deepEqual(lines.map(({ text, start, end }) => ({ text, start, end })), [
+    { text: 'Primeira fala', start: 1, end: 4 },
+    { text: 'Segunda fala', start: 80, end: 83 }
+  ]);
 });

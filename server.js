@@ -15,6 +15,10 @@ const {
   PutObjectCommand,
   DeleteObjectCommand
 } = require('@aws-sdk/client-s3');
+const {
+  buildGroundedMusicalKellyLines,
+  filterMusicalKellyTranscriptionSegments
+} = require('./lib/musical-kelly-transcription');
 const app = express();
 
 const PORT = process.env.PORT || 3000;
@@ -16624,17 +16628,34 @@ async function transcribeMusicalKellyAudio(card, audioBuffer) {
     error.statusCode = 422;
     throw error;
   }
-  return payload;
+  const filtered = filterMusicalKellyTranscriptionSegments(payload?.segments);
+  if (!filtered.accepted.length) {
+    const error = new Error('A faixa parece ter somente musica instrumental ou nenhum trecho de voz confiavel. Nenhuma letra foi criada.');
+    error.statusCode = 422;
+    throw error;
+  }
+  if (filtered.discarded.length) {
+    console.info(
+      `Musical Kelly: ${filtered.discarded.length} segmento(s) sem voz confiavel foram ignorados em ${card.id}.`
+    );
+  }
+  return {
+    ...payload,
+    text: filtered.accepted.map((segment) => segment.text).join(' '),
+    segments: filtered.accepted,
+    discardedSegmentCount: filtered.discarded.length
+  };
 }
 
 async function structureMusicalKellyLyrics(card, transcription, mode) {
   const segments = (Array.isArray(transcription?.segments) ? transcription.segments : [])
     .map((segment) => ({
+      sourceId: Number(segment?.sourceId),
       start: Math.max(0, Number(segment?.start) || 0),
       end: Math.max(0, Number(segment?.end) || 0),
       text: String(segment?.text || '').trim()
     }))
-    .filter((segment) => segment.text);
+    .filter((segment) => Number.isInteger(segment.sourceId) && segment.text && segment.end > segment.start);
   const schema = {
     type: 'object',
     additionalProperties: false,
@@ -16647,12 +16668,15 @@ async function structureMusicalKellyLyrics(card, transcription, mode) {
         items: {
           type: 'object',
           additionalProperties: false,
-          required: ['speaker', 'text', 'start', 'end'],
+          required: ['speaker', 'sourceSegmentIds'],
           properties: {
             speaker: { type: 'string' },
-            text: { type: 'string' },
-            start: { type: 'number' },
-            end: { type: 'number' }
+            sourceSegmentIds: {
+              type: 'array',
+              minItems: 1,
+              maxItems: 1,
+              items: { type: 'integer' }
+            }
           }
         }
       }
@@ -16662,13 +16686,12 @@ async function structureMusicalKellyLyrics(card, transcription, mode) {
     'Organize this musical transcription into accurate subtitle lines.',
     `Container title: ${JSON.stringify(card.title)}.`,
     `Requested result: ${mode === 'timesync' ? 'lyrics with precise time sync' : 'clean lyrics without visible time sync'}.`,
-    'Every returned item is exactly one subtitle line. Preserve the original language, words, repetitions, sung interjections, and dramatic meaning. Never translate, summarize, creatively correct, or invent missing words.',
-    'Create short, readable lines. Split intelligently at sentence, musical phrase, breath, and character-turn boundaries. Never combine different speakers in one line.',
+    'The supplied segments were already filtered for voice confidence. Instrumental and silent gaps are intentionally absent. Never create a line for a missing gap.',
+    'Every returned item must reference one or more supplied sourceId values. Use every sourceId exactly once, in chronological order. Never reuse, skip, or invent a sourceId.',
+    'Return exactly one subtitle line for each supplied segment and reference exactly one sourceId in it. Never split or group segments.',
+    'Do not return text or timestamps. The server will copy the exact transcript words and timings from the referenced source segments so no word can be invented or stretched over an instrumental.',
     'When a character can be inferred with reasonable confidence, put only the character name in speaker. Otherwise return an empty speaker.',
-    'Use the supplied segment timings to give each line monotonic, non-overlapping start and end seconds. A line must remain on screen throughout its spoken or sung words.',
-    'Do not omit transcript content. Do not add stage directions unless they were spoken.',
-    `Transcript: ${JSON.stringify(String(transcription.text || '').trim())}`,
-    `Timed segments: ${JSON.stringify(segments)}`
+    `Voice segments: ${JSON.stringify(segments)}`
   ].join('\n');
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
@@ -16700,24 +16723,9 @@ async function structureMusicalKellyLyrics(card, transcription, mode) {
     throw error;
   }
   const parsed = parseModelJsonResponse(extractResponseText(payload));
-  const duration = Math.max(0, Number(transcription?.duration) || Number(segments.at(-1)?.end) || 0);
-  const rawLines = Array.isArray(parsed?.lines) ? parsed.lines : [];
-  let previousEnd = 0;
-  const lines = rawLines.map((line, index) => {
-    const rawStart = Math.max(0, Number(line?.start) || previousEnd);
-    const start = Math.max(previousEnd, Math.min(rawStart, Math.max(0, duration - 0.12)));
-    const rawEnd = Math.max(start + 0.12, Number(line?.end) || start + 2);
-    const end = duration > 0 ? Math.max(start + 0.12, Math.min(duration, rawEnd)) : rawEnd;
-    previousEnd = end;
-    return {
-      id: `line-${index + 1}`,
-      speaker: String(line?.speaker || '').trim().slice(0, 80),
-      characterId: '',
-      text: String(line?.text || '').trim().slice(0, MUSICAL_KELLY_MAX_LYRIC_LINE_LENGTH),
-      start,
-      end
-    };
-  }).filter((line) => line.text);
+  const lines = buildGroundedMusicalKellyLines(parsed?.lines, segments, {
+    maxLineLength: MUSICAL_KELLY_MAX_LYRIC_LINE_LENGTH
+  });
   const now = new Date().toISOString();
   const lyrics = normalizeMusicalKellyLyrics({ mode, lines, source: 'ai', generatedAt: now, updatedAt: now });
   if (!lyrics) {
