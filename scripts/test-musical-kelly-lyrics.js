@@ -109,12 +109,18 @@ async function boot(canEdit, options = {}) {
   window.CSS.escape = (value) => String(value).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
   window.requestAnimationFrame = () => 1;
   window.cancelAnimationFrame = () => {};
-  window.fetch = async (input) => {
+  window.fetch = async (input, init = {}) => {
     if (Array.isArray(options.fetchUrls)) options.fetchUrls.push(String(input));
+    const customPayload = typeof options.fetchResponder === 'function'
+      ? await options.fetchResponder(String(input), init)
+      : undefined;
+    const responsePayload = customPayload === undefined
+      ? (options.payload || projectPayload(canEdit, options))
+      : customPayload;
     return ({
-    ok: true,
-    status: 200,
-    json: async () => options.payload || projectPayload(canEdit, options)
+      ok: responsePayload?.success !== false,
+      status: responsePayload?.success === false ? 400 : 200,
+      json: async () => responsePayload
     });
   };
   window.caches = {
@@ -145,6 +151,7 @@ test('viewer opens the fullscreen lyrics from the document icon', async () => {
     ['Não tenha medo.', 'Eu estou com você.']
   );
   assert.equal(document.getElementById('lyricsEditButton').hidden, true);
+  assert.equal(document.getElementById('lyricsLanguageToggle').hidden, true);
   assert.equal(document.querySelector('.comment-button').hidden, false);
   assert.match(document.querySelector('.lyric-character-avatar').style.backgroundImage, /char-dorothy/);
   dom.window.close();
@@ -329,6 +336,10 @@ test('viewer does not receive the admin upload menu on right click', async () =>
 
 test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(serverSource, /MUSICAL_KELLY_LYRICS_MODEL[\s\S]*gpt-5\.6-luna/);
+  assert.match(serverSource, /const ENGLISH_TRAINING_TRANSLATION_MODEL = 'gpt-5\.6-luna'/);
+  assert.match(serverSource, /app\.post\('\/api\/englishtraining\/cards\/:cardId\/lyrics\/portuguese'/);
+  assert.match(serverSource, /name: 'english_training_portuguese_lyrics'/);
+  assert.match(serverSource, /textPt: String\(entry\?\.textPt/);
   assert.match(serverSource, /musical_kelly_comment_title/);
   assert.match(serverSource, /app\.post\(musicalKellyApiPaths\('\/cards\/:cardId\/comments\/:commentId\/replies'\)/);
   assert.match(serverSource, /app\.patch\(musicalKellyApiPaths\('\/cards\/:cardId\/comments\/:commentId'\)/);
@@ -408,6 +419,9 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(html, /id="containerDownloadAudio"/);
   assert.match(html, /id="characterDeleteButton"/);
   assert.match(html, /id="characterCancelButton"/);
+  assert.match(html, /id="lyricsLanguageToggle"[^>]*hidden/);
+  assert.match(html, /id="lyricsLanguageEnglish"/);
+  assert.match(html, /id="lyricsLanguagePortuguese"/);
   assert.match(html, /id="imageInput"[^>]*accept="image\/jpeg,image\/png,image\/webp/);
   assert.match(html, /class="icon-comments"/);
   assert.doesNotMatch(html, /id="playerBar"/);
@@ -448,6 +462,47 @@ test('englishtraining boots the shared page against its isolated API and caches'
   assert.match(serverSource, /englishtraining:[\s\S]*r2Prefix: 'englishtraining'/);
   assert.match(serverSource, /characterTable: 'englishtraining_characters'/);
   assert.match(serverSource, /app\.get\(\['\/englishtraining\/', '\/englishtraining\/index\.html'\]/);
+  dom.window.close();
+});
+
+test('englishtraining translates once and toggles the shared Portuguese lyrics', async () => {
+  const fetchUrls = [];
+  const payload = projectPayload(false);
+  payload.project.cards[0].lyrics.lines[0].text = 'Do not be afraid.';
+  payload.project.cards[0].lyrics.lines[1].text = 'I am with you.';
+  const translatedProject = JSON.parse(JSON.stringify(payload.project));
+  translatedProject.cards[0].lyrics.lines[0].textPt = 'Não tenha medo.';
+  translatedProject.cards[0].lyrics.lines[1].textPt = 'Eu estou com você.';
+  const dom = await boot(false, {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: {
+      appSlug: 'englishtraining',
+      appPath: '/englishtraining',
+      apiRoot: '/api/englishtraining'
+    },
+    fetchUrls,
+    fetchResponder: (url, init) => {
+      if (url.endsWith('/lyrics/portuguese') && init.method === 'POST') {
+        return { success: true, generated: true, project: translatedProject };
+      }
+      return payload;
+    }
+  });
+  const { document } = dom.window;
+  document.querySelector('.lyrics-button').click();
+  assert.equal(document.getElementById('lyricsLanguageToggle').hidden, false);
+  assert.equal(document.getElementById('lyricsLanguageEnglish').classList.contains('is-active'), true);
+  assert.equal(document.querySelector('[data-line-index="1"] .lyric-copy > span:last-child').textContent, 'I am with you.');
+  document.getElementById('lyricsLanguagePortuguese').click();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.ok(fetchUrls.some((url) => url.endsWith('/api/englishtraining/cards/cue-test/lyrics/portuguese')));
+  assert.equal(document.getElementById('lyricsLanguagePortuguese').classList.contains('is-active'), true);
+  assert.equal(document.querySelector('[data-line-index="0"] .lyric-copy > span:last-child').textContent, 'Não tenha medo.');
+  assert.equal(dom.window.localStorage.getItem('playtalk-englishtraining-lyrics-language-v1'), 'pt');
+  document.getElementById('lyricsLanguageEnglish').click();
+  document.getElementById('lyricsLanguagePortuguese').click();
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(fetchUrls.filter((url) => url.endsWith('/lyrics/portuguese')).length, 1);
   dom.window.close();
 });
 

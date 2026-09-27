@@ -91,6 +91,7 @@ const OPENAI_STORY_MODEL = env(process.env.OPENAI_STORY_MODEL) || 'gpt-5.4-nano'
 const OPENAI_TTS_MODEL = env(process.env.OPENAI_TTS_MODEL) || 'gpt-4o-mini-tts';
 const OPENAI_STT_MODEL = env(process.env.OPENAI_STT_MODEL) || 'gpt-4o-mini-transcribe';
 const MUSICAL_KELLY_LYRICS_MODEL = env(process.env.MUSICAL_KELLY_LYRICS_MODEL) || 'gpt-5.6-luna';
+const ENGLISH_TRAINING_TRANSLATION_MODEL = 'gpt-5.6-luna';
 const MUSICAL_KELLY_TRANSCRIPTION_MODEL = env(process.env.MUSICAL_KELLY_TRANSCRIPTION_MODEL) || 'whisper-1';
 const OPENAI_CHAT_FAST_MODEL = env(process.env.OPENAI_CHAT_FAST_MODEL) || 'gpt-5-mini';
 const INSONIC_TEXT_MODEL = env(process.env.INSONIC_TEXT_MODEL) || OPENAI_CHAT_FAST_MODEL;
@@ -16207,6 +16208,7 @@ function normalizeMusicalKellyLyrics(source) {
       speaker: String(entry?.speaker || '').trim().slice(0, 80),
       characterId: normalizeMusicalKellyCardId(entry?.characterId),
       text,
+      textPt: String(entry?.textPt || '').trim().slice(0, MUSICAL_KELLY_MAX_LYRIC_LINE_LENGTH),
       start: hasTiming ? Math.round(rawStart * 1000) / 1000 : null,
       end: hasTiming ? Math.round(rawEnd * 1000) / 1000 : null
     });
@@ -16219,6 +16221,12 @@ function normalizeMusicalKellyLyrics(source) {
     lines: lines.map((line) => hasCompleteTiming ? line : { ...line, start: null, end: null }),
     source: source.source === 'ai' ? 'ai' : 'admin',
     generatedAt: String(source.generatedAt || '').trim().slice(0, 40),
+    portugueseGeneratedAt: lines.every((line) => line.textPt)
+      ? String(source.portugueseGeneratedAt || '').trim().slice(0, 40)
+      : '',
+    portugueseModel: lines.every((line) => line.textPt)
+      ? String(source.portugueseModel || '').trim().slice(0, 80)
+      : '',
     updatedAt: String(source.updatedAt || '').trim().slice(0, 40) || new Date().toISOString()
   };
 }
@@ -16272,6 +16280,7 @@ const musicalKellyProjectMutationQueues = new Map();
 const musicalKellyNotificationMutationQueues = new Map();
 const musicalKellyProjectCaches = new Map();
 const musicalKellyCharacterSchemaReadyPromises = new Map();
+const englishTrainingPortugueseTranslationLocks = new Map();
 
 async function ensureMusicalKellyCharacterSchema() {
   if (!pool) {
@@ -16613,7 +16622,8 @@ function reconcileMusicalKellyEditedLyrics(existingLyrics, editedLines, requeste
   const copyIdentity = (line, index) => ({
     ...line,
     characterId: existingLines[index]?.characterId || '',
-    speaker: line.speaker || existingLines[index]?.speaker || ''
+    speaker: line.speaker || existingLines[index]?.speaker || '',
+    textPt: line.text === existingLines[index]?.text ? existingLines[index]?.textPt || '' : ''
   });
   if (requestedMode !== 'timesync' || existingLyrics?.mode !== 'timesync') {
     return normalizeMusicalKellyLyrics({
@@ -16791,6 +16801,178 @@ async function structureMusicalKellyLyrics(card, transcription, mode) {
     throw error;
   }
   return lyrics;
+}
+
+function hasCompleteEnglishTrainingPortugueseLyrics(card) {
+  const lines = Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
+  return lines.length > 0 && lines.every((line) => String(line?.textPt || '').trim());
+}
+
+async function translateEnglishTrainingLyricsToPortuguese(lines) {
+  const sourceLines = (Array.isArray(lines) ? lines : [])
+    .map((line, index) => ({
+      index,
+      lineId: normalizeMusicalKellyCardId(line?.id),
+      text: String(line?.text || '').trim()
+    }))
+    .filter((line) => line.lineId && line.text);
+  if (!sourceLines.length) {
+    const error = new Error('Esta faixa ainda nao tem letra em ingles para traduzir.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const translatedByLineId = new Map();
+  for (let offset = 0; offset < sourceLines.length; offset += 100) {
+    const batch = sourceLines.slice(offset, offset + 100);
+    const schema = {
+      type: 'object',
+      additionalProperties: false,
+      required: ['translations'],
+      properties: {
+        translations: {
+          type: 'array',
+          minItems: batch.length,
+          maxItems: batch.length,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['lineId', 'textPt'],
+            properties: {
+              lineId: { type: 'string' },
+              textPt: { type: 'string', minLength: 1, maxLength: MUSICAL_KELLY_MAX_LYRIC_LINE_LENGTH }
+            }
+          }
+        }
+      }
+    };
+    const prompt = [
+      'Translate each English musical subtitle line into natural Brazilian Portuguese.',
+      'Translate faithfully and preserve the meaning, tone, repetition, punctuation, and order of every line.',
+      'Do not merge, split, omit, summarize, censor, explain, or add any line.',
+      'Keep proper names as proper names. Return exactly one translation for every supplied lineId.',
+      `Lines: ${JSON.stringify(batch.map(({ lineId, text }) => ({ lineId, text })))}`
+    ].join('\n');
+    const response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: ENGLISH_TRAINING_TRANSLATION_MODEL,
+        input: prompt,
+        reasoning: { effort: 'low' },
+        max_output_tokens: Math.min(16000, Math.max(1200, batch.length * 120)),
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'english_training_portuguese_lyrics',
+            strict: true,
+            schema
+          }
+        }
+      })
+    });
+    const responseText = await response.text();
+    let payload = null;
+    try { payload = responseText ? JSON.parse(responseText) : null; } catch (_error) {}
+    if (!response.ok) {
+      const error = new Error(payload?.error?.message || responseText.slice(0, 500) || 'Falha ao traduzir a letra com a OpenAI.');
+      error.statusCode = response.status || 502;
+      throw error;
+    }
+    const parsed = parseModelJsonResponse(extractResponseText(payload));
+    const translations = Array.isArray(parsed?.translations) ? parsed.translations : [];
+    const expectedIds = new Set(batch.map((line) => line.lineId));
+    translations.forEach((translation) => {
+      const lineId = normalizeMusicalKellyCardId(translation?.lineId);
+      const textPt = String(translation?.textPt || '').trim().slice(0, MUSICAL_KELLY_MAX_LYRIC_LINE_LENGTH);
+      if (expectedIds.has(lineId) && textPt && !translatedByLineId.has(lineId)) {
+        translatedByLineId.set(lineId, textPt);
+      }
+    });
+    if (batch.some((line) => !translatedByLineId.has(line.lineId))) {
+      const error = new Error('A OpenAI nao retornou uma traducao valida para cada linha. Tente novamente.');
+      error.statusCode = 502;
+      throw error;
+    }
+  }
+  return translatedByLineId;
+}
+
+async function ensureEnglishTrainingPortugueseForCard(cardId) {
+  const lockKey = `englishtraining:${cardId}`;
+  const existing = englishTrainingPortugueseTranslationLocks.get(lockKey);
+  if (existing) return existing;
+  const operation = (async () => {
+    const initialProject = await readMusicalKellyGlobalProject();
+    const initialCard = initialProject.cards.find((card) => card.id === cardId);
+    if (!initialCard) {
+      const error = new Error('Este container nao existe mais.');
+      error.statusCode = 404;
+      throw error;
+    }
+    const initialLines = Array.isArray(initialCard.lyrics?.lines) ? initialCard.lyrics.lines : [];
+    if (!initialLines.length) {
+      const error = new Error('Esta faixa ainda nao tem letra em ingles para traduzir.');
+      error.statusCode = 409;
+      throw error;
+    }
+    if (hasCompleteEnglishTrainingPortugueseLyrics(initialCard)) {
+      return { project: initialProject, generated: false };
+    }
+    if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
+      const error = new Error('A OpenAI ainda nao esta configurada no servidor.');
+      error.statusCode = 503;
+      throw error;
+    }
+    const sourceLines = initialLines
+      .filter((line) => !String(line?.textPt || '').trim())
+      .map((line) => ({ id: line.id, text: line.text }));
+    const translatedByLineId = await translateEnglishTrainingLyricsToPortuguese(sourceLines);
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      const currentCard = currentProject.cards.find((card) => card.id === cardId);
+      if (!currentCard) {
+        const error = new Error('Este container nao existe mais.');
+        error.statusCode = 404;
+        throw error;
+      }
+      if (hasCompleteEnglishTrainingPortugueseLyrics(currentCard)) return currentProject;
+      const currentLines = Array.isArray(currentCard.lyrics?.lines) ? currentCard.lyrics.lines : [];
+      const currentById = new Map(currentLines.map((line) => [line.id, line]));
+      for (const sourceLine of sourceLines) {
+        const currentLine = currentById.get(sourceLine.id);
+        if (!currentLine || currentLine.text !== sourceLine.text) {
+          const error = new Error('A letra mudou durante a traducao. Ative o portugues novamente.');
+          error.statusCode = 409;
+          throw error;
+        }
+        if (!String(currentLine.textPt || '').trim()) {
+          currentLine.textPt = translatedByLineId.get(sourceLine.id) || '';
+        }
+      }
+      if (!currentLines.length || currentLines.some((line) => !String(line?.textPt || '').trim())) {
+        const error = new Error('A letra mudou durante a traducao. Ative o portugues novamente.');
+        error.statusCode = 409;
+        throw error;
+      }
+      currentCard.lyrics.portugueseGeneratedAt = new Date().toISOString();
+      currentCard.lyrics.portugueseModel = ENGLISH_TRAINING_TRANSLATION_MODEL;
+      currentCard.lyrics.updatedAt = new Date().toISOString();
+      return writeMusicalKellyGlobalProject(currentProject);
+    });
+    return { project, generated: true };
+  })();
+  englishTrainingPortugueseTranslationLocks.set(lockKey, operation);
+  try {
+    return await operation;
+  } finally {
+    if (englishTrainingPortugueseTranslationLocks.get(lockKey) === operation) {
+      englishTrainingPortugueseTranslationLocks.delete(lockKey);
+    }
+  }
 }
 
 async function migrateMusicalKellyAdminProjectToGlobal(authUser) {
@@ -27341,6 +27523,29 @@ app.post(musicalKellyApiPaths('/cards/:cardId/lyrics/generate'), async (req, res
   }
 });
 
+app.post('/api/englishtraining/cards/:cardId/lyrics/portuguese', async (req, res) => {
+  try {
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    if (!cardId) {
+      res.status(400).json({ success: false, message: 'Container invalido.' });
+      return;
+    }
+    const result = await ensureEnglishTrainingPortugueseForCard(cardId);
+    res.json({
+      success: true,
+      generated: result.generated,
+      model: ENGLISH_TRAINING_TRANSLATION_MODEL,
+      project: hydrateMusicalKellyProject(result.project)
+    });
+  } catch (error) {
+    console.error('Erro ao gerar traducao em portugues do English Training:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel traduzir a letra agora.'
+    });
+  }
+});
+
 app.get(musicalKellyApiPaths('/cards/:cardId/audio'), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -28518,8 +28723,8 @@ app.get(['/englishtraining/', '/englishtraining/index.html'], (_req, res) => {
   const html = fs.readFileSync(sourcePath, 'utf8')
     .replace('<title>Musical Kelly | Fluent LevelUp</title>', '<title>English Training | Fluent LevelUp</title>')
     .replace(
-      '<script src="/musical-kelly/app.js?v=35" defer></script>',
-      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=35" defer></script>`
+      '<script src="/musical-kelly/app.js?v=36" defer></script>',
+      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=36" defer></script>`
     );
   res.setHeader('Cache-Control', 'no-store');
   res.type('html').send(html);

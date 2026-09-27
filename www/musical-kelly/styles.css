@@ -2145,6 +2145,58 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   justify-self: end;
 }
 
+.lyrics-language-toggle {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid rgba(117, 189, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(117, 189, 255, 0.07);
+}
+
+.lyrics-language-toggle[hidden] {
+  display: none;
+}
+
+.lyrics-language-toggle button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.62);
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.lyrics-language-toggle button.is-active {
+  color: #061728;
+  background: #75bdff;
+  box-shadow: 0 5px 18px rgba(52, 146, 232, 0.24);
+}
+
+.lyrics-language-toggle button:disabled {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.lyrics-language-toggle button[aria-busy="true"]::after {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-left: 5px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  content: '';
+  animation: imageGenerationSpin 700ms linear infinite;
+}
+
+.language-short {
+  display: none;
+}
+
 .lyrics-edit-button {
   padding: 0 17px;
   color: #a9d4ff;
@@ -3042,6 +3094,30 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
     font-size: 0.58rem;
   }
 
+  .lyrics-header-actions {
+    gap: 4px;
+  }
+
+  .lyrics-language-toggle {
+    gap: 2px;
+    padding: 2px;
+  }
+
+  .lyrics-language-toggle button {
+    width: 31px;
+    min-height: 36px;
+    padding: 0;
+    font-size: 0.66rem;
+  }
+
+  .language-full {
+    display: none;
+  }
+
+  .language-short {
+    display: inline;
+  }
+
   .lyrics-track-label {
     width: calc(100% - 20px);
     min-height: 72px;
@@ -3074,6 +3150,8 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
 
   .lyrics-edit-button {
     min-height: 42px;
+    padding-inline: 9px;
+    font-size: 0.68rem;
     padding: 0 12px;
   }
 

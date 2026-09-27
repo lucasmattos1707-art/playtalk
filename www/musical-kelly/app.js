@@ -12,6 +12,7 @@
   const COMMENT_OUTBOX_DB_NAME = `playtalk-${APP_SLUG}-offline-v1`;
   const COMMENT_OUTBOX_STORE = 'comment-outbox';
   const COMMENT_SYNC_TAG = `${APP_SLUG}-comments`;
+  const LYRICS_LANGUAGE_KEY = `playtalk-${APP_SLUG}-lyrics-language-v1`;
   const LONG_PRESS_MS = 500;
   const LYRIC_DISPLAY_LEAD_SECONDS = 1;
   const USE_NATIVE_AUDIO_ON_APPLE = isAppleTouchDevice();
@@ -89,6 +90,9 @@
     lyricsEmpty: document.getElementById('lyricsEmpty'),
     lyricsBackButton: document.getElementById('lyricsBackButton'),
     lyricsEditButton: document.getElementById('lyricsEditButton'),
+    lyricsLanguageToggle: document.getElementById('lyricsLanguageToggle'),
+    lyricsLanguageEnglish: document.getElementById('lyricsLanguageEnglish'),
+    lyricsLanguagePortuguese: document.getElementById('lyricsLanguagePortuguese'),
     lyricsAdminPanel: document.getElementById('lyricsAdminPanel'),
     lyricsAdminTitle: document.getElementById('lyricsAdminTitle'),
     lyricsCloseEditor: document.getElementById('lyricsCloseEditor'),
@@ -185,6 +189,8 @@
     lyricsActiveLineIndex: -1,
     lyricsScrubbing: false,
     lyricsBusy: false,
+    lyricsLanguage: readLyricsLanguagePreference(),
+    lyricsTranslationBusyCardId: '',
     characterDialogMode: 'pov',
     editingCharacterId: '',
     characterMenuLineId: '',
@@ -195,6 +201,16 @@
     manualSync: null,
     progressFrame: 0
   };
+
+  function readLyricsLanguagePreference() {
+    if (APP_SLUG !== 'englishtraining') return 'en';
+    try { return localStorage.getItem(LYRICS_LANGUAGE_KEY) === 'pt' ? 'pt' : 'en'; } catch (_error) { return 'en'; }
+  }
+
+  function saveLyricsLanguagePreference(language) {
+    if (APP_SLUG !== 'englishtraining') return;
+    try { localStorage.setItem(LYRICS_LANGUAGE_KEY, language === 'pt' ? 'pt' : 'en'); } catch (_error) {}
+  }
 
   function randomLocalId(prefix) {
     const value = window.crypto?.randomUUID
@@ -1052,6 +1068,15 @@
       || playableIndex < 0
       || playableIndex >= playableCards.length - 1;
     elements.lyricsEditButton.hidden = !state.canEdit;
+    const showLanguageToggle = APP_SLUG === 'englishtraining';
+    const translatingPortuguese = state.lyricsTranslationBusyCardId === card.id;
+    elements.lyricsLanguageToggle.hidden = !showLanguageToggle;
+    elements.lyricsLanguageEnglish.classList.toggle('is-active', state.lyricsLanguage === 'en');
+    elements.lyricsLanguagePortuguese.classList.toggle('is-active', state.lyricsLanguage === 'pt');
+    elements.lyricsLanguageEnglish.setAttribute('aria-pressed', String(state.lyricsLanguage === 'en'));
+    elements.lyricsLanguagePortuguese.setAttribute('aria-pressed', String(state.lyricsLanguage === 'pt'));
+    elements.lyricsLanguagePortuguese.disabled = translatingPortuguese;
+    elements.lyricsLanguagePortuguese.setAttribute('aria-busy', String(translatingPortuguese));
     const selectedCharacter = characterById(state.selectedCharacterId);
     const characterControlLabel = selectedCharacter
       ? `Ponto de vista: ${selectedCharacter.name}`
@@ -1090,7 +1115,9 @@
         copy.appendChild(speaker);
       }
       const text = document.createElement('span');
-      text.textContent = line.text;
+      text.textContent = state.lyricsLanguage === 'pt' && String(line.textPt || '').trim()
+        ? line.textPt
+        : line.text;
       copy.appendChild(text);
       button.append(avatar, copy);
       let characterPressTimer = null;
@@ -1136,6 +1163,52 @@
     if (state.canEdit && !elements.lyricsAdminPanel.hidden) openLyricsEditor();
     updateManualSyncPanel();
     updateLyricsPlayer();
+    if (
+      showLanguageToggle
+      && state.lyricsLanguage === 'pt'
+      && lines.length
+      && !lines.every((line) => String(line?.textPt || '').trim())
+      && !translatingPortuguese
+    ) {
+      ensurePortugueseLyrics(card.id).catch((error) => {
+        if (state.lyricsCardId === card.id) {
+          state.lyricsLanguage = 'en';
+          saveLyricsLanguagePreference('en');
+          renderLyricsScreen();
+        }
+        showToast(error.message || 'Não foi possível traduzir a letra agora.', true);
+      });
+    }
+  }
+
+  function setLyricsLanguage(language) {
+    if (APP_SLUG !== 'englishtraining') return;
+    state.lyricsLanguage = language === 'pt' ? 'pt' : 'en';
+    saveLyricsLanguagePreference(state.lyricsLanguage);
+    renderLyricsScreen();
+  }
+
+  async function ensurePortugueseLyrics(cardId) {
+    if (APP_SLUG !== 'englishtraining' || state.lyricsTranslationBusyCardId) return;
+    const card = getCard(cardId);
+    const lines = Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
+    if (!card || !lines.length || lines.every((line) => String(line?.textPt || '').trim())) return;
+    state.lyricsTranslationBusyCardId = cardId;
+    renderLyricsScreen();
+    try {
+      const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(cardId)}/lyrics/portuguese`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      });
+      applyCollaborationProject(payload.project);
+      showToast(payload.generated
+        ? 'Português gerado e salvo para todos.'
+        : 'Tradução em português carregada.');
+    } finally {
+      state.lyricsTranslationBusyCardId = '';
+      if (state.lyricsCardId && !elements.lyricsScreen.hidden) renderLyricsScreen();
+    }
   }
 
   function setActiveLyricLine(index) {
@@ -3482,6 +3555,8 @@
     elements.lyricsClearTimesyncButton.addEventListener('click', () => {
       clearLyricsTimesync().catch((error) => showToast(error.message, true));
     });
+    elements.lyricsLanguageEnglish.addEventListener('click', () => setLyricsLanguage('en'));
+    elements.lyricsLanguagePortuguese.addEventListener('click', () => setLyricsLanguage('pt'));
     let manualSyncPointerHandled = false;
     elements.manualSyncAdvanceButton.addEventListener('pointerdown', (event) => {
       if (event.button != null && event.button !== 0) return;
