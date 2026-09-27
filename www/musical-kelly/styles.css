@@ -2897,6 +2897,41 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   background: rgba(117, 189, 255, 0.14);
 }
 
+.character-card {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.character-card .character-option {
+  width: 100%;
+}
+
+.character-edit-button {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid rgba(117, 189, 255, 0.28);
+  border-radius: 10px;
+  color: #cfe9ff;
+  background: rgba(117, 189, 255, 0.08);
+  font-size: 0.72rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.character-edit-button svg {
+  width: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .character-add-toggle {
   margin-top: 16px;
   color: #fff;
@@ -2928,6 +2963,35 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
 
 .character-add-form button {
   margin-top: 16px;
+}
+
+.character-form-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.character-add-form .character-form-actions button {
+  min-height: 42px;
+  margin-top: 0;
+  padding: 8px 10px;
+  color: #fff;
+  font-size: 0.72rem;
+}
+
+.character-add-form .character-cancel-button {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.character-add-form .character-delete-button {
+  border: 1px solid rgba(255, 112, 125, 0.4);
+  background: rgba(189, 38, 55, 0.22);
+}
+
+.character-add-form .character-delete-button[hidden] {
+  display: none;
 }
 
 @media (max-width: 560px) {

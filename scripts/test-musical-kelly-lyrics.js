@@ -243,6 +243,24 @@ test('admin can open editor and character context menu', async () => {
   dom.window.close();
 });
 
+test('admin manages characters directly from the header dialog', async () => {
+  const dom = await boot(true);
+  const { document } = dom.window;
+  document.querySelector('.lyrics-button').click();
+  document.getElementById('lyricsCharacterSwitch').click();
+  assert.equal(document.getElementById('characterDialog').hasAttribute('open'), true);
+  assert.equal(document.getElementById('characterAddToggle').hidden, false);
+  assert.match(document.getElementById('characterGrid').textContent, /Dorothy/);
+  const editButton = document.querySelector('.character-edit-button');
+  assert.ok(editButton);
+  editButton.click();
+  assert.equal(document.getElementById('characterNameInput').value, 'Dorothy');
+  assert.equal(document.getElementById('characterImageLabel').textContent, 'Manter foto atual');
+  assert.equal(document.getElementById('characterDeleteButton').hidden, false);
+  assert.equal(document.getElementById('characterSaveButton').textContent, 'Salvar alterações');
+  dom.window.close();
+});
+
 test('admin opens audio and image upload menu with right click on a container', async () => {
   const dom = await boot(true, { withAudio: true });
   const { document, MouseEvent } = dom.window;
@@ -328,10 +346,16 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(serverSource, /Otherwise return an empty speaker/);
   assert.match(serverSource, /requireAdminUserFromRequest\(req\)/);
   assert.match(serverSource, /CREATE TABLE IF NOT EXISTS public\.\$\{workspace\.characterTable\}/);
+  assert.match(serverSource, /INSERT INTO public\.\$\{workspace\.characterTable\}/);
+  assert.doesNotMatch(serverSource, /INSERT INTO public\.musical_kelly_characters/);
+  assert.match(serverSource, /app\.patch\([\s\S]*musicalKellyApiPaths\('\/characters\/:characterId'\)/);
+  assert.match(serverSource, /app\.delete\(musicalKellyApiPaths\('\/characters\/:characterId'\)/);
   assert.match(serverSource, /\$\{musicalKellyGlobalRoot\(\)\}\/characters/);
   assert.match(appSource, /fadeCurrentVoice\(1, 1500\)/);
   assert.match(appSource, /Number\(line\.start\) - 3/);
   assert.match(appSource, /Number\(line\.end\) \+ 3/);
+  assert.match(appSource, /position \+ LYRIC_DISPLAY_LEAD_SECONDS >= Number\(lines\[index\]\.start\)/);
+  assert.match(appSource, /const LYRIC_DISPLAY_LEAD_SECONDS = 1/);
   assert.match(appSource, /event\.key === 'ArrowDown'/);
   assert.match(appSource, /function advanceManualSync\(\)/);
   assert.match(appSource, /index === state\.manualSync\.lineIndex - 1/);
@@ -382,6 +406,8 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(html, /id="containerUploadAudio"/);
   assert.match(html, /id="containerUploadImage"/);
   assert.match(html, /id="containerDownloadAudio"/);
+  assert.match(html, /id="characterDeleteButton"/);
+  assert.match(html, /id="characterCancelButton"/);
   assert.match(html, /id="imageInput"[^>]*accept="image\/jpeg,image\/png,image\/webp/);
   assert.match(html, /class="icon-comments"/);
   assert.doesNotMatch(html, /id="playerBar"/);

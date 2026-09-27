@@ -13,6 +13,7 @@
   const COMMENT_OUTBOX_STORE = 'comment-outbox';
   const COMMENT_SYNC_TAG = `${APP_SLUG}-comments`;
   const LONG_PRESS_MS = 500;
+  const LYRIC_DISPLAY_LEAD_SECONDS = 1;
   const USE_NATIVE_AUDIO_ON_APPLE = isAppleTouchDevice();
   let commentOutboxDbPromise = null;
 
@@ -114,6 +115,7 @@
     lyricsForwardButton: document.getElementById('lyricsForwardButton'),
     characterMenu: document.getElementById('characterMenu'),
     characterDialog: document.getElementById('characterDialog'),
+    characterDialogKicker: document.getElementById('characterDialogKicker'),
     characterDialogTitle: document.getElementById('characterDialogTitle'),
     closeCharacterDialog: document.getElementById('closeCharacterDialog'),
     characterGrid: document.getElementById('characterGrid'),
@@ -123,6 +125,8 @@
     characterImageInput: document.getElementById('characterImageInput'),
     characterImageLabel: document.getElementById('characterImageLabel'),
     characterSaveButton: document.getElementById('characterSaveButton'),
+    characterCancelButton: document.getElementById('characterCancelButton'),
+    characterDeleteButton: document.getElementById('characterDeleteButton'),
     downloadPromptDialog: document.getElementById('downloadPromptDialog'),
     downloadPromptCopy: document.getElementById('downloadPromptCopy'),
     closeDownloadPrompt: document.getElementById('closeDownloadPrompt'),
@@ -182,6 +186,7 @@
     lyricsScrubbing: false,
     lyricsBusy: false,
     characterDialogMode: 'pov',
+    editingCharacterId: '',
     characterMenuLineId: '',
     selectedCharacterId: '',
     downloadPromptCardId: '',
@@ -1176,7 +1181,7 @@
     } else if (card.lyrics?.mode === 'timesync' && isCurrent) {
       let activeIndex = -1;
       for (let index = 0; index < lines.length; index += 1) {
-        if (position >= Number(lines[index].start)) activeIndex = index;
+        if (position + LYRIC_DISPLAY_LEAD_SECONDS >= Number(lines[index].start)) activeIndex = index;
         else break;
       }
       setActiveLyricLine(activeIndex);
@@ -1429,26 +1434,78 @@
 
   function openCharacterDialog(mode = 'pov') {
     if (mode === 'pov') state.characterMenuLineId = '';
-    state.characterDialogMode = mode;
-    elements.characterDialogTitle.textContent = mode === 'add' ? 'Adicionar personagem' : 'Escolha um personagem';
-    elements.characterAddToggle.hidden = !state.canEdit || mode === 'add';
-    elements.characterAddForm.hidden = !(state.canEdit && mode === 'add');
-    renderCharacterGrid();
+    if (mode === 'add' && state.canEdit) beginAddCharacter();
+    else showCharacterList();
     showDialog(elements.characterDialog);
     if (mode === 'add') window.setTimeout(() => elements.characterNameInput.focus(), 40);
   }
 
+  function resetCharacterForm() {
+    elements.characterNameInput.value = '';
+    elements.characterImageInput.value = '';
+    elements.characterImageLabel.textContent = 'Escolher PNG';
+  }
+
+  function showCharacterList({ clearPendingLine = false } = {}) {
+    if (clearPendingLine) state.characterMenuLineId = '';
+    state.characterDialogMode = 'pov';
+    state.editingCharacterId = '';
+    resetCharacterForm();
+    elements.characterDialogKicker.textContent = state.canEdit ? 'Gerenciar personagens' : 'Ponto de vista';
+    elements.characterDialogTitle.textContent = 'Escolha um personagem';
+    elements.characterAddToggle.hidden = !state.canEdit;
+    elements.characterAddForm.hidden = true;
+    elements.characterDeleteButton.hidden = true;
+    renderCharacterGrid();
+  }
+
+  function beginAddCharacter() {
+    state.characterDialogMode = 'add';
+    state.editingCharacterId = '';
+    resetCharacterForm();
+    elements.characterDialogKicker.textContent = 'Gerenciar personagens';
+    elements.characterDialogTitle.textContent = 'Adicionar personagem';
+    elements.characterAddToggle.hidden = true;
+    elements.characterAddForm.hidden = false;
+    elements.characterDeleteButton.hidden = true;
+    elements.characterSaveButton.textContent = 'Salvar personagem';
+    renderCharacterGrid();
+  }
+
+  function beginEditCharacter(characterId) {
+    if (!state.canEdit) return;
+    const character = characterById(characterId);
+    if (!character) return;
+    state.characterDialogMode = 'edit';
+    state.editingCharacterId = character.id;
+    resetCharacterForm();
+    elements.characterNameInput.value = character.name;
+    elements.characterImageLabel.textContent = 'Manter foto atual';
+    elements.characterDialogKicker.textContent = 'Gerenciar personagens';
+    elements.characterDialogTitle.textContent = `Editar ${character.name}`;
+    elements.characterAddToggle.hidden = true;
+    elements.characterAddForm.hidden = false;
+    elements.characterDeleteButton.hidden = false;
+    elements.characterSaveButton.textContent = 'Salvar alterações';
+    renderCharacterGrid();
+    elements.characterNameInput.focus();
+  }
+
   function renderCharacterGrid() {
     elements.characterGrid.replaceChildren();
-    if (state.characterDialogMode === 'pov') {
-      const allButton = document.createElement('button');
-      allButton.type = 'button';
-      allButton.className = `character-option${state.selectedCharacterId ? '' : ' is-selected'}`;
-      allButton.textContent = 'Todas as falas';
-      allButton.addEventListener('click', () => selectPovCharacter(''));
-      elements.characterGrid.appendChild(allButton);
+    if (state.characterDialogMode !== 'pov') {
+      elements.characterGrid.hidden = true;
+      return;
     }
+    const allButton = document.createElement('button');
+    allButton.type = 'button';
+    allButton.className = `character-option character-all-option${state.selectedCharacterId ? '' : ' is-selected'}`;
+    allButton.textContent = 'Todas as falas';
+    allButton.addEventListener('click', () => selectPovCharacter(''));
+    elements.characterGrid.appendChild(allButton);
     state.characters.forEach((character) => {
+      const card = document.createElement('article');
+      card.className = 'character-card';
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `character-option${state.selectedCharacterId === character.id ? ' is-selected' : ''}`;
@@ -1458,11 +1515,20 @@
       const label = document.createElement('span');
       label.textContent = character.name;
       button.append(image, label);
-      if (state.characterDialogMode === 'pov') button.addEventListener('click', () => selectPovCharacter(character.id));
-      elements.characterGrid.appendChild(button);
+      button.addEventListener('click', () => selectPovCharacter(character.id));
+      card.appendChild(button);
+      if (state.canEdit) {
+        const editButton = document.createElement('button');
+        editButton.type = 'button';
+        editButton.className = 'character-edit-button';
+        editButton.setAttribute('aria-label', `Editar ${character.name}`);
+        editButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4 4-.8L18 8.4 14.6 5 4 16ZM13.5 6.1l3.4 3.4"/></svg><span>Editar</span>';
+        editButton.addEventListener('click', () => beginEditCharacter(character.id));
+        card.appendChild(editButton);
+      }
+      elements.characterGrid.appendChild(card);
     });
-    if (!state.characters.length && state.characterDialogMode !== 'pov') elements.characterGrid.hidden = true;
-    else elements.characterGrid.hidden = false;
+    elements.characterGrid.hidden = false;
   }
 
   function selectPovCharacter(characterId) {
@@ -1481,47 +1547,73 @@
     else showToast(`Ponto de vista: ${character?.name}. Toque no play.`);
   }
 
-  async function createCharacter(event) {
+  async function saveCharacter(event) {
     event.preventDefault();
     if (!state.canEdit || state.lyricsBusy) return;
     const name = elements.characterNameInput.value.trim().slice(0, 80);
     const file = elements.characterImageInput.files?.[0];
-    if (!name || !file) throw new Error('Digite o nome e escolha uma imagem PNG.');
-    if (file.type !== 'image/png' && !/\.png$/i.test(file.name)) throw new Error('A imagem precisa ser PNG.');
+    const editingCharacter = characterById(state.editingCharacterId);
+    if (!name || (!editingCharacter && !file)) throw new Error('Digite o nome e escolha uma imagem PNG.');
+    if (file && file.type !== 'image/png' && !/\.png$/i.test(file.name)) throw new Error('A imagem precisa ser PNG.');
     state.lyricsBusy = true;
     elements.characterSaveButton.disabled = true;
     try {
       const query = new URLSearchParams({ name });
-      const payload = await apiJson(`${API_ROOT}/characters?${query}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'image/png' },
-        body: file
+      const endpoint = editingCharacter
+        ? `${API_ROOT}/characters/${encodeURIComponent(editingCharacter.id)}?${query}`
+        : `${API_ROOT}/characters?${query}`;
+      const payload = await apiJson(endpoint, {
+        method: editingCharacter ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': file ? 'image/png' : 'application/octet-stream' },
+        body: file || new Uint8Array(0)
       });
       state.characters = Array.isArray(payload.characters) ? payload.characters : state.characters;
       cacheCharacterImages().catch(() => {});
       const createdCharacter = state.characters.find((character) => character.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'));
       const pendingLineId = state.characterMenuLineId;
       saveProjectSnapshot(state.project);
-      elements.characterNameInput.value = '';
-      elements.characterImageInput.value = '';
-      elements.characterImageLabel.textContent = 'Escolher PNG';
-      if (pendingLineId && createdCharacter) {
+      resetCharacterForm();
+      if (!editingCharacter && pendingLineId && createdCharacter) {
         state.characterMenuLineId = '';
         closeDialog(elements.characterDialog);
         await assignCharacterToLine(pendingLineId, createdCharacter.id);
         showToast(`“${name}” foi criado e atribuído ao trecho.`);
       } else {
-        elements.characterAddForm.hidden = true;
-        state.characterDialogMode = 'pov';
-        elements.characterDialogTitle.textContent = 'Escolha um personagem';
-        elements.characterAddToggle.hidden = false;
-        renderCharacterGrid();
+        showCharacterList();
         renderLyricsScreen();
-        showToast(`Personagem “${name}” adicionado.`);
+        showToast(editingCharacter
+          ? `Personagem “${name}” atualizado.`
+          : `Personagem “${name}” adicionado.`);
       }
     } finally {
       state.lyricsBusy = false;
       elements.characterSaveButton.disabled = false;
+    }
+  }
+
+  async function deleteCharacter() {
+    if (!state.canEdit || state.lyricsBusy) return;
+    const character = characterById(state.editingCharacterId);
+    if (!character) return;
+    if (!window.confirm(`Excluir o personagem “${character.name}”? Ele também será removido das falas em que foi marcado.`)) return;
+    state.lyricsBusy = true;
+    elements.characterSaveButton.disabled = true;
+    elements.characterDeleteButton.disabled = true;
+    try {
+      const payload = await apiJson(`${API_ROOT}/characters/${encodeURIComponent(character.id)}`, {
+        method: 'DELETE'
+      });
+      state.characters = Array.isArray(payload.characters) ? payload.characters : state.characters;
+      if (state.selectedCharacterId === character.id) state.selectedCharacterId = '';
+      if (payload.project) applyCollaborationProject(payload.project);
+      saveProjectSnapshot(state.project);
+      showCharacterList();
+      renderLyricsScreen();
+      showToast(`Personagem “${character.name}” excluído.`);
+    } finally {
+      state.lyricsBusy = false;
+      elements.characterSaveButton.disabled = false;
+      elements.characterDeleteButton.disabled = false;
     }
   }
 
@@ -3412,15 +3504,15 @@
     elements.lyricsCharacterSwitch.addEventListener('click', () => openCharacterDialog('pov'));
     elements.closeCharacterDialog.addEventListener('click', () => closeDialog(elements.characterDialog));
     elements.characterAddToggle.addEventListener('click', () => {
-      state.characterDialogMode = 'add';
-      elements.characterDialogTitle.textContent = 'Adicionar personagem';
-      elements.characterAddToggle.hidden = true;
-      elements.characterAddForm.hidden = false;
-      renderCharacterGrid();
+      beginAddCharacter();
       elements.characterNameInput.focus();
     });
     elements.characterAddForm.addEventListener('submit', (event) => {
-      createCharacter(event).catch((error) => showToast(error.message, true));
+      saveCharacter(event).catch((error) => showToast(error.message, true));
+    });
+    elements.characterCancelButton.addEventListener('click', () => showCharacterList({ clearPendingLine: true }));
+    elements.characterDeleteButton.addEventListener('click', () => {
+      deleteCharacter().catch((error) => showToast(error.message, true));
     });
     elements.characterImageInput.addEventListener('change', () => {
       elements.characterImageLabel.textContent = elements.characterImageInput.files?.[0]?.name || 'Escolher PNG';

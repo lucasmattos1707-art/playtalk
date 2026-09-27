@@ -16295,6 +16295,10 @@ async function ensureMusicalKellyCharacterSchema() {
         )
       `);
       await pool.query(`
+        ALTER TABLE public.${workspace.characterTable}
+        ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()
+      `);
+      await pool.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS ${workspace.characterNameIndex}
         ON public.${workspace.characterTable} (lower(name))
       `);
@@ -16311,13 +16315,17 @@ function musicalKellyCharacterFromRow(row) {
   const id = normalizeMusicalKellyCardId(row?.id);
   const fileName = normalizeMusicalKellyAssetFileName(row?.image_file_name);
   if (!id || !fileName) return null;
+  const updatedAt = row?.updated_at instanceof Date
+    ? row.updated_at.toISOString()
+    : String(row?.updated_at || row?.created_at || '').slice(0, 40);
   return {
     id,
     name: String(row?.name || '').trim().slice(0, 80),
-    imageUrl: `${musicalKellyApiRoot()}/characters/${encodeURIComponent(id)}/image`,
+    imageUrl: `${musicalKellyApiRoot()}/characters/${encodeURIComponent(id)}/image?v=${encodeURIComponent(updatedAt || id)}`,
     createdAt: row?.created_at instanceof Date
       ? row.created_at.toISOString()
-      : String(row?.created_at || '').slice(0, 40)
+      : String(row?.created_at || '').slice(0, 40),
+    updatedAt
   };
 }
 
@@ -16325,7 +16333,7 @@ async function readMusicalKellyCharacters() {
   await ensureMusicalKellyCharacterSchema();
   const workspace = currentMusicalKellyWorkspace();
   const result = await pool.query(`
-    SELECT id, name, image_file_name, image_content_type, created_at
+    SELECT id, name, image_file_name, image_content_type, created_at, updated_at
     FROM public.${workspace.characterTable}
     ORDER BY lower(name), created_at
   `);
@@ -27762,8 +27770,9 @@ app.post(
         .png({ compressionLevel: 9, palette: true, quality: 90 })
         .toBuffer();
       await putR2Object(objectKey, optimizedBuffer, 'image/png');
+      const workspace = currentMusicalKellyWorkspace();
       await pool.query(`
-        INSERT INTO public.musical_kelly_characters
+        INSERT INTO public.${workspace.characterTable}
           (id, name, image_file_name, image_content_type, created_by_user_id)
         VALUES ($1, $2, $3, 'image/png', $4)
       `, [id, name, fileName, Number(authUser?.id) || null]);
@@ -27781,6 +27790,127 @@ app.post(
     }
   }
 );
+
+app.patch(
+  musicalKellyApiPaths('/characters/:characterId'),
+  express.raw({ type: () => true, limit: `${MUSICAL_KELLY_MAX_CHARACTER_IMAGE_BYTES}b` }),
+  async (req, res) => {
+    let newObjectKey = '';
+    try {
+      await requireAdminUserFromRequest(req);
+      await ensureMusicalKellyCharacterSchema();
+      const workspace = currentMusicalKellyWorkspace();
+      const characterId = normalizeMusicalKellyCardId(req.params.characterId);
+      const name = String(req.query?.name || '').trim().replace(/\s+/g, ' ').slice(0, 80);
+      if (!characterId || !name) {
+        res.status(400).json({ success: false, message: 'Digite o nome do personagem.' });
+        return;
+      }
+      const currentResult = await pool.query(`
+        SELECT image_file_name
+        FROM public.${workspace.characterTable}
+        WHERE id = $1
+      `, [characterId]);
+      if (!currentResult.rowCount) {
+        res.status(404).json({ success: false, message: 'Este personagem nao existe mais.' });
+        return;
+      }
+      const currentFileName = normalizeMusicalKellyAssetFileName(currentResult.rows[0]?.image_file_name);
+      const hasNewImage = Buffer.isBuffer(req.body) && req.body.length > 0;
+      let nextFileName = currentFileName;
+      if (hasNewImage) {
+        if (req.body.length > MUSICAL_KELLY_MAX_CHARACTER_IMAGE_BYTES) {
+          res.status(413).json({ success: false, message: 'O PNG pode ter no maximo 5 MB.' });
+          return;
+        }
+        const metadata = await sharp(req.body, { limitInputPixels: 30000000 }).metadata();
+        if (metadata.format !== 'png') {
+          res.status(415).json({ success: false, message: 'A imagem do personagem precisa ser PNG.' });
+          return;
+        }
+        nextFileName = `${characterId}-${Date.now().toString(36)}.png`;
+        newObjectKey = `${musicalKellyGlobalRoot()}/characters/${nextFileName}`;
+        const optimizedBuffer = await sharp(req.body, { limitInputPixels: 30000000 })
+          .rotate()
+          .resize(384, 384, { fit: 'cover', position: 'attention' })
+          .png({ compressionLevel: 9, palette: true, quality: 90 })
+          .toBuffer();
+        await putR2Object(newObjectKey, optimizedBuffer, 'image/png');
+      }
+      await pool.query(`
+        UPDATE public.${workspace.characterTable}
+        SET name = $2, image_file_name = $3, updated_at = now()
+        WHERE id = $1
+      `, [characterId, name, nextFileName]);
+      if (hasNewImage && currentFileName && currentFileName !== nextFileName) {
+        await deleteR2Object(`${musicalKellyGlobalRoot()}/characters/${currentFileName}`).catch(() => {});
+      }
+      newObjectKey = '';
+      const characters = await readMusicalKellyCharacters();
+      res.json({ success: true, characters });
+    } catch (error) {
+      if (newObjectKey) await deleteR2Object(newObjectKey).catch(() => {});
+      console.error('Erro ao editar personagem do musical Kelly:', error);
+      res.status(error?.code === '23505' ? 409 : (Number(error?.statusCode) || 500)).json({
+        success: false,
+        message: error?.code === '23505'
+          ? 'Ja existe um personagem com esse nome.'
+          : (error?.message || 'Nao foi possivel editar o personagem.')
+      });
+    }
+  }
+);
+
+app.delete(musicalKellyApiPaths('/characters/:characterId'), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    await ensureMusicalKellyCharacterSchema();
+    const workspace = currentMusicalKellyWorkspace();
+    const characterId = normalizeMusicalKellyCardId(req.params.characterId);
+    if (!characterId) {
+      res.status(400).json({ success: false, message: 'Personagem invalido.' });
+      return;
+    }
+    const result = await queueMusicalKellyProjectMutation(async () => {
+      const characterResult = await pool.query(`
+        SELECT image_file_name
+        FROM public.${workspace.characterTable}
+        WHERE id = $1
+      `, [characterId]);
+      if (!characterResult.rowCount) {
+        const error = new Error('Este personagem nao existe mais.');
+        error.statusCode = 404;
+        throw error;
+      }
+      const project = await readMusicalKellyGlobalProject();
+      let projectChanged = false;
+      project.cards.forEach((card) => {
+        const lines = Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
+        lines.forEach((line) => {
+          if (line.characterId === characterId) {
+            line.characterId = '';
+            projectChanged = true;
+          }
+        });
+      });
+      const savedProject = projectChanged ? await writeMusicalKellyGlobalProject(project) : project;
+      await pool.query(`DELETE FROM public.${workspace.characterTable} WHERE id = $1`, [characterId]);
+      const fileName = normalizeMusicalKellyAssetFileName(characterResult.rows[0]?.image_file_name);
+      if (fileName) {
+        await deleteR2Object(`${musicalKellyGlobalRoot()}/characters/${fileName}`).catch(() => {});
+      }
+      return savedProject;
+    });
+    const characters = await readMusicalKellyCharacters();
+    res.json({ success: true, characters, project: result });
+  } catch (error) {
+    console.error('Erro ao excluir personagem do musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel excluir o personagem.'
+    });
+  }
+});
 
 app.get(musicalKellyApiPaths('/characters/:characterId/image'), async (req, res) => {
   try {
@@ -28388,8 +28518,8 @@ app.get(['/englishtraining/', '/englishtraining/index.html'], (_req, res) => {
   const html = fs.readFileSync(sourcePath, 'utf8')
     .replace('<title>Musical Kelly | Fluent LevelUp</title>', '<title>English Training | Fluent LevelUp</title>')
     .replace(
-      '<script src="/musical-kelly/app.js?v=34" defer></script>',
-      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=34" defer></script>`
+      '<script src="/musical-kelly/app.js?v=35" defer></script>',
+      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=35" defer></script>`
     );
   res.setHeader('Cache-Control', 'no-store');
   res.type('html').send(html);

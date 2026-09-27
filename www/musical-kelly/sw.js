@@ -3,13 +3,13 @@
 const APP_PATH = new URL(self.registration.scope).pathname.replace(/\/+$/g, '') || '/musical-kelly';
 const APP_SLUG = APP_PATH.split('/').filter(Boolean).at(-1) || 'musical-kelly';
 const API_ROOT = `/api/${APP_SLUG}`;
-const SHELL_CACHE = `playtalk-${APP_SLUG}-shell-v33`;
+const SHELL_CACHE = `playtalk-${APP_SLUG}-shell-v34`;
 const SHELL_CACHE_PREFIX = `playtalk-${APP_SLUG}-shell-`;
 const MEDIA_CACHE = `playtalk-${APP_SLUG}-media-v1`;
 const SHELL_URLS = [
   `${APP_PATH}/`,
-  '/musical-kelly/styles.css?v=31',
-  '/musical-kelly/app.js?v=34'
+  '/musical-kelly/styles.css?v=32',
+  '/musical-kelly/app.js?v=35'
 ];
 const COMMENT_OUTBOX_DB_NAME = `playtalk-${APP_SLUG}-offline-v1`;
 const COMMENT_OUTBOX_STORE = 'comment-outbox';
