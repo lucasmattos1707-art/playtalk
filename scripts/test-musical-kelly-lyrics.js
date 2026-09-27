@@ -101,18 +101,22 @@ function projectPayload(canEdit, { withAudio = false, withSecondTrack = false, w
 async function boot(canEdit, options = {}) {
   const dom = new JSDOM(html, {
     runScripts: 'outside-only',
-    url: 'https://fluentlevelup.com/musical-kelly/'
+    url: options.pageUrl || 'https://fluentlevelup.com/musical-kelly/'
   });
   const { window } = dom;
+  if (options.appConfig) window.MUSICAL_KELLY_CONFIG = options.appConfig;
   window.CSS = window.CSS || {};
   window.CSS.escape = (value) => String(value).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
   window.requestAnimationFrame = () => 1;
   window.cancelAnimationFrame = () => {};
-  window.fetch = async () => ({
+  window.fetch = async (input) => {
+    if (Array.isArray(options.fetchUrls)) options.fetchUrls.push(String(input));
+    return ({
     ok: true,
     status: 200,
-    json: async () => projectPayload(canEdit, options)
-  });
+    json: async () => options.payload || projectPayload(canEdit, options)
+    });
+  };
   window.caches = {
     open: async () => ({
       match: async () => null,
@@ -308,22 +312,22 @@ test('viewer does not receive the admin upload menu on right click', async () =>
 test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(serverSource, /MUSICAL_KELLY_LYRICS_MODEL[\s\S]*gpt-5\.6-luna/);
   assert.match(serverSource, /musical_kelly_comment_title/);
-  assert.match(serverSource, /app\.post\('\/api\/musical-kelly\/cards\/:cardId\/comments\/:commentId\/replies'/);
-  assert.match(serverSource, /app\.patch\('\/api\/musical-kelly\/cards\/:cardId\/comments\/:commentId'/);
+  assert.match(serverSource, /app\.post\(musicalKellyApiPaths\('\/cards\/:cardId\/comments\/:commentId\/replies'\)/);
+  assert.match(serverSource, /app\.patch\(musicalKellyApiPaths\('\/cards\/:cardId\/comments\/:commentId'\)/);
   assert.doesNotMatch(serverSource, /generateMusicalKellyCardImage/);
   assert.match(serverSource, /v1\/audio\/transcriptions/);
   assert.match(serverSource, /timestamp_granularities\[\]/);
   assert.match(serverSource, /filterMusicalKellyTranscriptionSegments/);
   assert.match(serverSource, /Instrumental and silent gaps are intentionally absent/);
   assert.match(serverSource, /buildGroundedMusicalKellyLines/);
-  assert.match(serverSource, /app\.post\('\/api\/musical-kelly\/cards\/:cardId\/lyrics\/generate'/);
-  assert.match(serverSource, /app\.put\('\/api\/musical-kelly\/cards\/:cardId\/lyrics'/);
-  assert.match(serverSource, /app\.put\('\/api\/musical-kelly\/cards\/:cardId\/lyrics\/timesync'/);
-  assert.match(serverSource, /app\.delete\('\/api\/musical-kelly\/cards\/:cardId\/lyrics\/timesync'/);
-  assert.match(serverSource, /app\.get\('\/api\/musical-kelly\/cards\/:cardId\/audio'/);
+  assert.match(serverSource, /app\.post\(musicalKellyApiPaths\('\/cards\/:cardId\/lyrics\/generate'\)/);
+  assert.match(serverSource, /app\.put\(musicalKellyApiPaths\('\/cards\/:cardId\/lyrics'\)/);
+  assert.match(serverSource, /app\.put\(musicalKellyApiPaths\('\/cards\/:cardId\/lyrics\/timesync'\)/);
+  assert.match(serverSource, /app\.delete\(musicalKellyApiPaths\('\/cards\/:cardId\/lyrics\/timesync'\)/);
+  assert.match(serverSource, /app\.get\(musicalKellyApiPaths\('\/cards\/:cardId\/audio'\)/);
   assert.match(serverSource, /Otherwise return an empty speaker/);
   assert.match(serverSource, /requireAdminUserFromRequest\(req\)/);
-  assert.match(serverSource, /CREATE TABLE IF NOT EXISTS public\.musical_kelly_characters/);
+  assert.match(serverSource, /CREATE TABLE IF NOT EXISTS public\.\$\{workspace\.characterTable\}/);
   assert.match(serverSource, /\$\{musicalKellyGlobalRoot\(\)\}\/characters/);
   assert.match(appSource, /fadeCurrentVoice\(1, 1500\)/);
   assert.match(appSource, /Number\(line\.start\) - 3/);
@@ -363,7 +367,7 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(appSource, /state\.characters\.map\(cacheCharacterImage\)/);
   assert.match(appSource, /cache\.put\(request, response\.clone\(\)\)/);
   assert.match(appSource, /window\.addEventListener\('online'[\s\S]*cacheCharacterImages\(\)/);
-  assert.match(serviceWorkerSource, /url\.pathname\.startsWith\('\/api\/musical-kelly\/characters\/'\)/);
+  assert.match(serviceWorkerSource, /url\.pathname\.startsWith\(`\$\{API_ROOT\}\/characters\/`\)/);
   assert.match(serviceWorkerSource, /serveCharacterImage\(request\)/);
   assert.doesNotMatch(html, /id="lyricsCharacterLabel"/);
   assert.match(html, /aria-label="Faixa anterior"/);
@@ -392,6 +396,33 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(stylesSource, /body\.lyrics-open > [^{]*:not\(\.download-prompt-dialog\)/);
   assert.match(stylesSource, /\.container-upload-menu \{[\s\S]*position: fixed;[\s\S]*z-index: 180/);
   assert.doesNotMatch(stylesSource, /padding: 31vh 10px 37vh/);
+});
+
+test('englishtraining boots the shared page against its isolated API and caches', async () => {
+  const fetchUrls = [];
+  const payload = projectPayload(false);
+  payload.characters = [];
+  payload.project.cards = [];
+  const dom = await boot(false, {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: {
+      appSlug: 'englishtraining',
+      appPath: '/englishtraining',
+      apiRoot: '/api/englishtraining'
+    },
+    fetchUrls,
+    payload
+  });
+
+  assert.ok(fetchUrls.some((url) => url === '/api/englishtraining/project'));
+  assert.equal(fetchUrls.some((url) => url.startsWith('/api/musical-kelly')), false);
+  assert.equal(dom.window.document.querySelectorAll('.track-card').length, 0);
+  assert.match(appSource, /`playtalk-\$\{APP_SLUG\}-media-v1`/);
+  assert.match(appSource, /`playtalk-\$\{APP_SLUG\}-offline-v1`/);
+  assert.match(serverSource, /englishtraining:[\s\S]*r2Prefix: 'englishtraining'/);
+  assert.match(serverSource, /characterTable: 'englishtraining_characters'/);
+  assert.match(serverSource, /app\.get\(\['\/englishtraining\/', '\/englishtraining\/index\.html'\]/);
+  dom.window.close();
 });
 
 test('filters Whisper hallucinations over instrumental gaps without deleting a real repeated chorus', () => {

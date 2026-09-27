@@ -1,16 +1,19 @@
 'use strict';
 
-const SHELL_CACHE = 'playtalk-musical-kelly-shell-v32';
-const SHELL_CACHE_PREFIX = 'playtalk-musical-kelly-shell-';
-const MEDIA_CACHE = 'playtalk-musical-kelly-media-v1';
+const APP_PATH = new URL(self.registration.scope).pathname.replace(/\/+$/g, '') || '/musical-kelly';
+const APP_SLUG = APP_PATH.split('/').filter(Boolean).at(-1) || 'musical-kelly';
+const API_ROOT = `/api/${APP_SLUG}`;
+const SHELL_CACHE = `playtalk-${APP_SLUG}-shell-v33`;
+const SHELL_CACHE_PREFIX = `playtalk-${APP_SLUG}-shell-`;
+const MEDIA_CACHE = `playtalk-${APP_SLUG}-media-v1`;
 const SHELL_URLS = [
-  '/musical-kelly/',
+  `${APP_PATH}/`,
   '/musical-kelly/styles.css?v=31',
-  '/musical-kelly/app.js?v=33'
+  '/musical-kelly/app.js?v=34'
 ];
-const COMMENT_OUTBOX_DB_NAME = 'playtalk-musical-kelly-offline-v1';
+const COMMENT_OUTBOX_DB_NAME = `playtalk-${APP_SLUG}-offline-v1`;
 const COMMENT_OUTBOX_STORE = 'comment-outbox';
-const COMMENT_SYNC_TAG = 'musical-kelly-comments';
+const COMMENT_SYNC_TAG = `${APP_SLUG}-comments`;
 
 function openCommentOutboxDb() {
   return new Promise((resolve, reject) => {
@@ -63,7 +66,7 @@ async function flushPendingComments() {
   const comments = await readPendingComments();
   let sentCount = 0;
   for (const comment of comments) {
-    const response = await fetch(`/api/musical-kelly/cards/${encodeURIComponent(comment.cardId)}/comments`, {
+    const response = await fetch(`${API_ROOT}/cards/${encodeURIComponent(comment.cardId)}/comments`, {
       method: 'POST',
       credentials: 'same-origin',
       headers: {
@@ -173,15 +176,15 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/api/musical-kelly/assets/')) {
+  if (url.pathname.startsWith(`${API_ROOT}/assets/`)) {
     event.respondWith(serveMusicalMedia(request));
     return;
   }
-  if (url.pathname.startsWith('/api/musical-kelly/characters/')) {
+  if (url.pathname.startsWith(`${API_ROOT}/characters/`)) {
     event.respondWith(serveCharacterImage(request));
     return;
   }
-  if (!url.pathname.startsWith('/musical-kelly')) return;
+  if (!url.pathname.startsWith(APP_PATH)) return;
 
   if (request.mode === 'navigate') {
     event.respondWith((async () => {
@@ -189,11 +192,11 @@ self.addEventListener('fetch', (event) => {
         const response = await fetch(request);
         if (response.ok) {
           const cache = await caches.open(SHELL_CACHE);
-          await cache.put('/musical-kelly/', response.clone());
+          await cache.put(`${APP_PATH}/`, response.clone());
         }
         return response;
       } catch (_error) {
-        return (await caches.match('/musical-kelly/')) || Response.error();
+        return (await caches.match(`${APP_PATH}/`)) || Response.error();
       }
     })());
     return;

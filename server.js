@@ -7,6 +7,7 @@ const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const sharp = require('sharp');
+const { AsyncLocalStorage } = require('node:async_hooks');
 const {
   S3Client,
   ListObjectsV2Command,
@@ -8415,7 +8416,40 @@ const FLASHCARDS_R2_PUBLIC_ROOT = (() => {
   return DEFAULT_FLASHCARDS_R2_PUBLIC_ROOT;
 })();
 const FLASHCARDS_R2_PREFIX = 'Star';
-const MUSICAL_KELLY_R2_PREFIX = 'musical-kelly';
+const MUSICAL_KELLY_WORKSPACES = Object.freeze({
+  'musical-kelly': Object.freeze({
+    slug: 'musical-kelly',
+    pagePath: '/musical-kelly',
+    r2Prefix: 'musical-kelly',
+    characterTable: 'musical_kelly_characters',
+    characterNameIndex: 'musical_kelly_characters_name_unique_idx'
+  }),
+  englishtraining: Object.freeze({
+    slug: 'englishtraining',
+    pagePath: '/englishtraining',
+    r2Prefix: 'englishtraining',
+    characterTable: 'englishtraining_characters',
+    characterNameIndex: 'englishtraining_characters_name_unique_idx'
+  })
+});
+const musicalKellyWorkspaceStorage = new AsyncLocalStorage();
+
+function currentMusicalKellyWorkspaceSlug() {
+  const slug = musicalKellyWorkspaceStorage.getStore();
+  return MUSICAL_KELLY_WORKSPACES[slug] ? slug : 'musical-kelly';
+}
+
+function currentMusicalKellyWorkspace() {
+  return MUSICAL_KELLY_WORKSPACES[currentMusicalKellyWorkspaceSlug()];
+}
+
+function musicalKellyApiRoot() {
+  return `/api/${currentMusicalKellyWorkspace().slug}`;
+}
+
+function musicalKellyApiPaths(suffix = '') {
+  return Object.values(MUSICAL_KELLY_WORKSPACES).map((workspace) => `/api/${workspace.slug}${suffix}`);
+}
 const MUSICAL_KELLY_MAX_CARDS = 80;
 const MUSICAL_KELLY_MAX_COMMENTS_PER_CARD = 200;
 const MUSICAL_KELLY_MAX_COMMENT_LENGTH = 800;
@@ -16067,11 +16101,11 @@ function musicalKellyLegacyUserRoot(user) {
     error.statusCode = 401;
     throw error;
   }
-  return `${MUSICAL_KELLY_R2_PREFIX}/users/${userId}`;
+  return `${currentMusicalKellyWorkspace().r2Prefix}/users/${userId}`;
 }
 
 function musicalKellyGlobalRoot() {
-  return `${MUSICAL_KELLY_R2_PREFIX}/global`;
+  return `${currentMusicalKellyWorkspace().r2Prefix}/global`;
 }
 
 function musicalKellyUserNotificationsObjectKey(user) {
@@ -16234,10 +16268,10 @@ function normalizeMusicalKellyProject(payload) {
   };
 }
 
-let musicalKellyProjectMutationQueue = Promise.resolve();
+const musicalKellyProjectMutationQueues = new Map();
 const musicalKellyNotificationMutationQueues = new Map();
-let musicalKellyProjectCache = null;
-let musicalKellyCharacterSchemaReadyPromise = null;
+const musicalKellyProjectCaches = new Map();
+const musicalKellyCharacterSchemaReadyPromises = new Map();
 
 async function ensureMusicalKellyCharacterSchema() {
   if (!pool) {
@@ -16245,10 +16279,12 @@ async function ensureMusicalKellyCharacterSchema() {
     error.statusCode = 503;
     throw error;
   }
-  if (!musicalKellyCharacterSchemaReadyPromise) {
-    musicalKellyCharacterSchemaReadyPromise = (async () => {
+  const workspace = currentMusicalKellyWorkspace();
+  const workspaceSlug = workspace.slug;
+  if (!musicalKellyCharacterSchemaReadyPromises.has(workspaceSlug)) {
+    const readyPromise = (async () => {
       await pool.query(`
-        CREATE TABLE IF NOT EXISTS public.musical_kelly_characters (
+        CREATE TABLE IF NOT EXISTS public.${workspace.characterTable} (
           id text PRIMARY KEY,
           name text NOT NULL,
           image_file_name text NOT NULL,
@@ -16259,15 +16295,16 @@ async function ensureMusicalKellyCharacterSchema() {
         )
       `);
       await pool.query(`
-        CREATE UNIQUE INDEX IF NOT EXISTS musical_kelly_characters_name_unique_idx
-        ON public.musical_kelly_characters (lower(name))
+        CREATE UNIQUE INDEX IF NOT EXISTS ${workspace.characterNameIndex}
+        ON public.${workspace.characterTable} (lower(name))
       `);
     })().catch((error) => {
-      musicalKellyCharacterSchemaReadyPromise = null;
+      musicalKellyCharacterSchemaReadyPromises.delete(workspaceSlug);
       throw error;
     });
+    musicalKellyCharacterSchemaReadyPromises.set(workspaceSlug, readyPromise);
   }
-  await musicalKellyCharacterSchemaReadyPromise;
+  await musicalKellyCharacterSchemaReadyPromises.get(workspaceSlug);
 }
 
 function musicalKellyCharacterFromRow(row) {
@@ -16277,7 +16314,7 @@ function musicalKellyCharacterFromRow(row) {
   return {
     id,
     name: String(row?.name || '').trim().slice(0, 80),
-    imageUrl: `/api/musical-kelly/characters/${encodeURIComponent(id)}/image`,
+    imageUrl: `${musicalKellyApiRoot()}/characters/${encodeURIComponent(id)}/image`,
     createdAt: row?.created_at instanceof Date
       ? row.created_at.toISOString()
       : String(row?.created_at || '').slice(0, 40)
@@ -16286,22 +16323,31 @@ function musicalKellyCharacterFromRow(row) {
 
 async function readMusicalKellyCharacters() {
   await ensureMusicalKellyCharacterSchema();
+  const workspace = currentMusicalKellyWorkspace();
   const result = await pool.query(`
     SELECT id, name, image_file_name, image_content_type, created_at
-    FROM public.musical_kelly_characters
+    FROM public.${workspace.characterTable}
     ORDER BY lower(name), created_at
   `);
   return result.rows.map(musicalKellyCharacterFromRow).filter(Boolean);
 }
 
 function queueMusicalKellyProjectMutation(callback) {
-  const operation = musicalKellyProjectMutationQueue.then(callback, callback);
-  musicalKellyProjectMutationQueue = operation.catch(() => {});
+  const workspaceSlug = currentMusicalKellyWorkspaceSlug();
+  const previous = musicalKellyProjectMutationQueues.get(workspaceSlug) || Promise.resolve();
+  const operation = previous.then(callback, callback);
+  const settled = operation.catch(() => {});
+  musicalKellyProjectMutationQueues.set(workspaceSlug, settled);
+  settled.finally(() => {
+    if (musicalKellyProjectMutationQueues.get(workspaceSlug) === settled) {
+      musicalKellyProjectMutationQueues.delete(workspaceSlug);
+    }
+  });
   return operation;
 }
 
 function queueMusicalKellyNotificationMutation(userId, callback) {
-  const key = String(Number.parseInt(userId, 10) || 0);
+  const key = `${currentMusicalKellyWorkspaceSlug()}:${Number.parseInt(userId, 10) || 0}`;
   const previous = musicalKellyNotificationMutationQueues.get(key) || Promise.resolve();
   const operation = previous.then(callback, callback);
   const settled = operation.catch(() => {});
@@ -16355,25 +16401,28 @@ function musicalKellyUnreadCardIds(project, notificationState) {
 }
 
 async function readMusicalKellyGlobalProject() {
+  const workspaceSlug = currentMusicalKellyWorkspaceSlug();
   try {
     const project = normalizeMusicalKellyProject(await fetchR2JsonObject(
       `${musicalKellyGlobalRoot()}/project.json`,
       { timeoutMs: 12000, retries: 1 }
     ));
-    musicalKellyProjectCache = project;
+    musicalKellyProjectCaches.set(workspaceSlug, project);
     return normalizeMusicalKellyProject(project);
   } catch (error) {
     if (Number(error?.status || error?.statusCode || 0) === 404) {
       const emptyProject = normalizeMusicalKellyProject({ cards: [] });
-      musicalKellyProjectCache = emptyProject;
+      musicalKellyProjectCaches.set(workspaceSlug, emptyProject);
       return normalizeMusicalKellyProject(emptyProject);
     }
-    if (musicalKellyProjectCache) return normalizeMusicalKellyProject(musicalKellyProjectCache);
+    const cachedProject = musicalKellyProjectCaches.get(workspaceSlug);
+    if (cachedProject) return normalizeMusicalKellyProject(cachedProject);
     throw error;
   }
 }
 
 async function writeMusicalKellyGlobalProject(project) {
+  const workspaceSlug = currentMusicalKellyWorkspaceSlug();
   const normalized = normalizeMusicalKellyProject({
     ...project,
     updatedAt: new Date().toISOString()
@@ -16384,7 +16433,7 @@ async function writeMusicalKellyGlobalProject(project) {
     'application/json; charset=utf-8',
     { timeoutMs: 15000, retries: 1 }
   );
-  musicalKellyProjectCache = normalized;
+  musicalKellyProjectCaches.set(workspaceSlug, normalized);
   return normalizeMusicalKellyProject(normalized);
 }
 
@@ -16399,7 +16448,7 @@ async function requireMusicalKellyUserFromRequest(req) {
 }
 
 function musicalKellyAssetUrl(kind, fileName) {
-  return `/api/musical-kelly/assets/${encodeURIComponent(kind)}/${encodeURIComponent(fileName)}`;
+  return `${musicalKellyApiRoot()}/assets/${encodeURIComponent(kind)}/${encodeURIComponent(fileName)}`;
 }
 
 function publicMusicalKellyCommentEntry(comment) {
@@ -26694,7 +26743,16 @@ app.get('/voices/:filePath(*)', async (req, res, next) => {
   }
 });
 
-app.get('/api/musical-kelly/project', async (req, res) => {
+app.use((req, _res, next) => {
+  const match = /^\/api\/(musical-kelly|englishtraining)(?:\/|$)/.exec(req.path);
+  if (!match || !MUSICAL_KELLY_WORKSPACES[match[1]]) {
+    next();
+    return;
+  }
+  musicalKellyWorkspaceStorage.run(match[1], next);
+});
+
+app.get(musicalKellyApiPaths('/project'), async (req, res) => {
   try {
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     if (!isR2FluencyConfigured()) {
@@ -26706,14 +26764,16 @@ app.get('/api/musical-kelly/project', async (req, res) => {
     let project;
     try {
       project = normalizeMusicalKellyProject(await fetchR2JsonObject(objectKey, { timeoutMs: 12000, retries: 1 }));
-      musicalKellyProjectCache = project;
+      musicalKellyProjectCaches.set(currentMusicalKellyWorkspaceSlug(), project);
     } catch (error) {
       if (Number(error?.status || error?.statusCode || 0) === 404) {
         project = await migrateMusicalKellyAdminProjectToGlobal(authUser)
           || normalizeMusicalKellyProject({ cards: [] });
-        musicalKellyProjectCache = project;
-      } else if (musicalKellyProjectCache) {
-        project = normalizeMusicalKellyProject(musicalKellyProjectCache);
+        musicalKellyProjectCaches.set(currentMusicalKellyWorkspaceSlug(), project);
+      } else if (musicalKellyProjectCaches.has(currentMusicalKellyWorkspaceSlug())) {
+        project = normalizeMusicalKellyProject(
+          musicalKellyProjectCaches.get(currentMusicalKellyWorkspaceSlug())
+        );
       } else {
         throw error;
       }
@@ -26760,7 +26820,7 @@ app.get('/api/musical-kelly/project', async (req, res) => {
   }
 });
 
-app.put('/api/musical-kelly/project', async (req, res) => {
+app.put(musicalKellyApiPaths('/project'), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
     if (!isR2FluencyConfigured()) {
@@ -26814,7 +26874,7 @@ app.put('/api/musical-kelly/project', async (req, res) => {
   }
 });
 
-app.post('/api/musical-kelly/cards', async (req, res) => {
+app.post(musicalKellyApiPaths('/cards'), async (req, res) => {
   try {
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     if (!isR2FluencyConfigured()) {
@@ -26864,7 +26924,7 @@ app.post('/api/musical-kelly/cards', async (req, res) => {
   }
 });
 
-app.post('/api/musical-kelly/notifications/seen', async (req, res) => {
+app.post(musicalKellyApiPaths('/notifications/seen'), async (req, res) => {
   try {
     const authUser = await requireMusicalKellyUserFromRequest(req);
     const cardId = normalizeMusicalKellyCardId(req.body?.cardId);
@@ -26910,7 +26970,7 @@ app.post('/api/musical-kelly/notifications/seen', async (req, res) => {
   }
 });
 
-app.post('/api/musical-kelly/cards/:cardId/comments', async (req, res) => {
+app.post(musicalKellyApiPaths('/cards/:cardId/comments'), async (req, res) => {
   try {
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     if (!isR2FluencyConfigured()) {
@@ -27002,7 +27062,7 @@ app.post('/api/musical-kelly/cards/:cardId/comments', async (req, res) => {
   }
 });
 
-app.post('/api/musical-kelly/cards/:cardId/comments/:commentId/replies', async (req, res) => {
+app.post(musicalKellyApiPaths('/cards/:cardId/comments/:commentId/replies'), async (req, res) => {
   try {
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     const cardId = normalizeMusicalKellyCardId(req.params.cardId);
@@ -27089,7 +27149,7 @@ app.post('/api/musical-kelly/cards/:cardId/comments/:commentId/replies', async (
   }
 });
 
-app.patch('/api/musical-kelly/cards/:cardId/comments/:commentId', async (req, res) => {
+app.patch(musicalKellyApiPaths('/cards/:cardId/comments/:commentId'), async (req, res) => {
   try {
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     const commenter = musicalKellyCommenterFromRequest(req);
@@ -27130,7 +27190,7 @@ app.patch('/api/musical-kelly/cards/:cardId/comments/:commentId', async (req, re
   }
 });
 
-app.patch('/api/musical-kelly/cards/:cardId/comments/:commentId/replies/:replyId', async (req, res) => {
+app.patch(musicalKellyApiPaths('/cards/:cardId/comments/:commentId/replies/:replyId'), async (req, res) => {
   try {
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     const commenter = musicalKellyCommenterFromRequest(req);
@@ -27173,7 +27233,7 @@ app.patch('/api/musical-kelly/cards/:cardId/comments/:commentId/replies/:replyId
   }
 });
 
-app.post('/api/musical-kelly/cards/:cardId/approve', async (req, res) => {
+app.post(musicalKellyApiPaths('/cards/:cardId/approve'), async (req, res) => {
   try {
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     if (!isR2FluencyConfigured()) {
@@ -27213,7 +27273,7 @@ app.post('/api/musical-kelly/cards/:cardId/approve', async (req, res) => {
   }
 });
 
-app.post('/api/musical-kelly/cards/:cardId/lyrics/generate', async (req, res) => {
+app.post(musicalKellyApiPaths('/cards/:cardId/lyrics/generate'), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
     if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) {
@@ -27273,7 +27333,7 @@ app.post('/api/musical-kelly/cards/:cardId/lyrics/generate', async (req, res) =>
   }
 });
 
-app.get('/api/musical-kelly/cards/:cardId/audio', async (req, res) => {
+app.get(musicalKellyApiPaths('/cards/:cardId/audio'), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
     const cardId = normalizeMusicalKellyCardId(req.params.cardId);
@@ -27325,7 +27385,7 @@ app.get('/api/musical-kelly/cards/:cardId/audio', async (req, res) => {
   }
 });
 
-app.put('/api/musical-kelly/cards/:cardId/lyrics', async (req, res) => {
+app.put(musicalKellyApiPaths('/cards/:cardId/lyrics'), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
     const cardId = normalizeMusicalKellyCardId(req.params.cardId);
@@ -27361,7 +27421,7 @@ app.put('/api/musical-kelly/cards/:cardId/lyrics', async (req, res) => {
   }
 });
 
-app.put('/api/musical-kelly/cards/:cardId/lyrics/timesync', async (req, res) => {
+app.put(musicalKellyApiPaths('/cards/:cardId/lyrics/timesync'), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
     const cardId = normalizeMusicalKellyCardId(req.params.cardId);
@@ -27431,7 +27491,7 @@ app.put('/api/musical-kelly/cards/:cardId/lyrics/timesync', async (req, res) => 
   }
 });
 
-app.delete('/api/musical-kelly/cards/:cardId/lyrics/timesync', async (req, res) => {
+app.delete(musicalKellyApiPaths('/cards/:cardId/lyrics/timesync'), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
     const cardId = normalizeMusicalKellyCardId(req.params.cardId);
@@ -27463,7 +27523,7 @@ app.delete('/api/musical-kelly/cards/:cardId/lyrics/timesync', async (req, res) 
   }
 });
 
-app.put('/api/musical-kelly/cards/:cardId/lyrics/:lineId/character', async (req, res) => {
+app.put(musicalKellyApiPaths('/cards/:cardId/lyrics/:lineId/character'), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
     const cardId = normalizeMusicalKellyCardId(req.params.cardId);
@@ -27475,7 +27535,8 @@ app.put('/api/musical-kelly/cards/:cardId/lyrics/:lineId/character', async (req,
     }
     if (characterId) {
       await ensureMusicalKellyCharacterSchema();
-      const result = await pool.query('SELECT 1 FROM public.musical_kelly_characters WHERE id = $1', [characterId]);
+      const workspace = currentMusicalKellyWorkspace();
+      const result = await pool.query(`SELECT 1 FROM public.${workspace.characterTable} WHERE id = $1`, [characterId]);
       if (!result.rowCount) {
         res.status(404).json({ success: false, message: 'Este personagem nao existe mais.' });
         return;
@@ -27504,7 +27565,7 @@ app.put('/api/musical-kelly/cards/:cardId/lyrics/:lineId/character', async (req,
   }
 });
 
-app.delete('/api/musical-kelly/cards/:cardId', async (req, res) => {
+app.delete(musicalKellyApiPaths('/cards/:cardId'), async (req, res) => {
   try {
     if (!isR2FluencyConfigured()) {
       res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
@@ -27541,7 +27602,7 @@ app.delete('/api/musical-kelly/cards/:cardId', async (req, res) => {
   }
 });
 
-app.delete('/api/musical-kelly/cards/:cardId/comments/:commentId', async (req, res) => {
+app.delete(musicalKellyApiPaths('/cards/:cardId/comments/:commentId'), async (req, res) => {
   try {
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     const commenter = musicalKellyCommenterFromRequest(req);
@@ -27589,7 +27650,7 @@ app.delete('/api/musical-kelly/cards/:cardId/comments/:commentId', async (req, r
   }
 });
 
-app.delete('/api/musical-kelly/cards/:cardId/comments/:commentId/replies/:replyId', async (req, res) => {
+app.delete(musicalKellyApiPaths('/cards/:cardId/comments/:commentId/replies/:replyId'), async (req, res) => {
   try {
     const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
     const commenter = musicalKellyCommenterFromRequest(req);
@@ -27630,7 +27691,7 @@ app.delete('/api/musical-kelly/cards/:cardId/comments/:commentId/replies/:replyI
   }
 });
 
-app.put('/api/musical-kelly/order', async (req, res) => {
+app.put(musicalKellyApiPaths('/order'), async (req, res) => {
   try {
     await requireMusicalKellyUserFromRequest(req);
     if (!isR2FluencyConfigured()) {
@@ -27667,7 +27728,7 @@ app.put('/api/musical-kelly/order', async (req, res) => {
 });
 
 app.post(
-  '/api/musical-kelly/characters',
+  musicalKellyApiPaths('/characters'),
   express.raw({ type: () => true, limit: `${MUSICAL_KELLY_MAX_CHARACTER_IMAGE_BYTES}b` }),
   async (req, res) => {
     let objectKey = '';
@@ -27721,13 +27782,14 @@ app.post(
   }
 );
 
-app.get('/api/musical-kelly/characters/:characterId/image', async (req, res) => {
+app.get(musicalKellyApiPaths('/characters/:characterId/image'), async (req, res) => {
   try {
     await ensureMusicalKellyCharacterSchema();
     const characterId = normalizeMusicalKellyCardId(req.params.characterId);
+    const workspace = currentMusicalKellyWorkspace();
     const result = await pool.query(`
       SELECT image_file_name, image_content_type
-      FROM public.musical_kelly_characters
+      FROM public.${workspace.characterTable}
       WHERE id = $1
     `, [characterId]);
     const row = result.rows[0];
@@ -27752,7 +27814,7 @@ app.get('/api/musical-kelly/characters/:characterId/image', async (req, res) => 
 });
 
 app.post(
-  '/api/musical-kelly/assets/:kind',
+  musicalKellyApiPaths('/assets/:kind'),
   express.raw({ type: () => true, limit: `${Math.ceil(MUSICAL_KELLY_MAX_AUDIO_BYTES / (1024 * 1024))}mb` }),
   async (req, res) => {
     try {
@@ -27829,7 +27891,7 @@ app.post(
   }
 );
 
-app.get('/api/musical-kelly/assets/:kind/:fileName', async (req, res) => {
+app.get(musicalKellyApiPaths('/assets/:kind/:fileName'), async (req, res) => {
   try {
     const kind = String(req.params.kind || '').trim().toLowerCase();
     const fileName = normalizeMusicalKellyAssetFileName(req.params.fileName);
@@ -27906,6 +27968,9 @@ app.use(async (req, res, next) => {
     '/musical-kelly',
     '/musical-kelly/',
     '/musical-kelly/index.html',
+    '/englishtraining',
+    '/englishtraining/',
+    '/englishtraining/index.html',
     '/insonic',
     '/insonic/',
     '/insonic/index.html',
@@ -27929,6 +27994,7 @@ app.use(async (req, res, next) => {
     || pathName.startsWith('/Avatar/')
     || pathName.startsWith('/insonic/')
     || pathName.startsWith('/desafiogym/')
+    || pathName.startsWith('/englishtraining/')
     || pathName.startsWith('/backgrounds/')
     || pathName.startsWith('/data/')
     || pathName === '/favicon.ico'
@@ -28300,6 +28366,33 @@ app.get(/^\/musical-kelly$/, (_req, res) => {
 app.get('/musical-kelly/', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(staticDir, 'musical-kelly', 'index.html'));
+});
+
+app.get('/englishtraining/sw.js', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+  res.setHeader('Service-Worker-Allowed', '/englishtraining');
+  res.sendFile(path.join(staticDir, 'musical-kelly', 'sw.js'));
+});
+
+app.get(/^\/englishtraining$/, (_req, res) => {
+  res.redirect(302, '/englishtraining/');
+});
+
+app.get(['/englishtraining/', '/englishtraining/index.html'], (_req, res) => {
+  const sourcePath = path.join(staticDir, 'musical-kelly', 'index.html');
+  const config = JSON.stringify({
+    appSlug: 'englishtraining',
+    appPath: '/englishtraining',
+    apiRoot: '/api/englishtraining'
+  }).replace(/</g, '\\u003c');
+  const html = fs.readFileSync(sourcePath, 'utf8')
+    .replace('<title>Musical Kelly | Fluent LevelUp</title>', '<title>English Training | Fluent LevelUp</title>')
+    .replace(
+      '<script src="/musical-kelly/app.js?v=34" defer></script>',
+      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=34" defer></script>`
+    );
+  res.setHeader('Cache-Control', 'no-store');
+  res.type('html').send(html);
 });
 
 app.get(['/play', '/play/'], (req, res) => {

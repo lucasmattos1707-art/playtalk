@@ -1,14 +1,17 @@
 (() => {
   'use strict';
 
-  const API_ROOT = '/api/musical-kelly';
-  const CACHE_NAME = 'playtalk-musical-kelly-media-v1';
-  const PROJECT_SNAPSHOT_KEY = 'playtalk-musical-kelly-project-snapshot-v1';
-  const COMMENTER_IDENTITY_KEY = 'playtalk-musical-kelly-commenter-v1';
-  const COMMENT_SEEN_KEY = 'playtalk-musical-kelly-comment-seen-v1';
-  const COMMENT_OUTBOX_DB_NAME = 'playtalk-musical-kelly-offline-v1';
+  const APP_CONFIG = window.MUSICAL_KELLY_CONFIG || {};
+  const APP_SLUG = String(APP_CONFIG.appSlug || 'musical-kelly').trim() || 'musical-kelly';
+  const APP_PATH = String(APP_CONFIG.appPath || `/${APP_SLUG}`).replace(/\/+$/g, '') || '/musical-kelly';
+  const API_ROOT = String(APP_CONFIG.apiRoot || `/api/${APP_SLUG}`).replace(/\/+$/g, '');
+  const CACHE_NAME = `playtalk-${APP_SLUG}-media-v1`;
+  const PROJECT_SNAPSHOT_KEY = `playtalk-${APP_SLUG}-project-snapshot-v1`;
+  const COMMENTER_IDENTITY_KEY = `playtalk-${APP_SLUG}-commenter-v1`;
+  const COMMENT_SEEN_KEY = `playtalk-${APP_SLUG}-comment-seen-v1`;
+  const COMMENT_OUTBOX_DB_NAME = `playtalk-${APP_SLUG}-offline-v1`;
   const COMMENT_OUTBOX_STORE = 'comment-outbox';
-  const COMMENT_SYNC_TAG = 'musical-kelly-comments';
+  const COMMENT_SYNC_TAG = `${APP_SLUG}-comments`;
   const LONG_PRESS_MS = 500;
   const USE_NATIVE_AUDIO_ON_APPLE = isAppleTouchDevice();
   let commentOutboxDbPromise = null;
@@ -470,7 +473,7 @@
     });
     const payload = await response.json().catch(() => ({}));
     if (response.status === 401) {
-      window.location.href = `/entrar?return=${encodeURIComponent('/musical-kelly')}`;
+      window.location.href = `/entrar?return=${encodeURIComponent(APP_PATH)}`;
       throw new Error('Sessão expirada.');
     }
     if (!response.ok || payload.success === false) {
@@ -3567,7 +3570,7 @@
 
   function registerOfflineSupport() {
     if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register('/musical-kelly/sw.js', { scope: '/musical-kelly' })
+    navigator.serviceWorker.register(`${APP_PATH}/sw.js`, { scope: APP_PATH })
       .then(() => {
         if (state.pendingComments.length) registerCommentBackgroundSync();
       })
