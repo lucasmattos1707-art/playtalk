@@ -129,6 +129,7 @@ async function boot(canEdit, options = {}) {
       put: async () => {}
     })
   };
+  if (typeof options.beforeEval === 'function') options.beforeEval(window);
   window.eval(appSource);
   await new Promise((resolve) => setTimeout(resolve, 30));
   return dom;
@@ -427,8 +428,8 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(appSource, /fadeCurrentVoice\(1, 1500\)/);
   assert.match(appSource, /Number\(line\.start\) - 3/);
   assert.match(appSource, /Number\(line\.end\) \+ 3/);
-  assert.match(appSource, /position \+ LYRIC_DISPLAY_LEAD_SECONDS >= Number\(lines\[index\]\.start\)/);
-  assert.match(appSource, /const LYRIC_DISPLAY_LEAD_SECONDS = 1/);
+  assert.match(appSource, /position >= Number\(lines\[index\]\.start\)/);
+  assert.doesNotMatch(appSource, /LYRIC_DISPLAY_LEAD_SECONDS/);
   assert.match(appSource, /event\.key === 'ArrowDown'/);
   assert.match(appSource, /function advanceManualSync\(\)/);
   assert.match(appSource, /index === state\.manualSync\.lineIndex - 1/);
@@ -611,8 +612,43 @@ test('englishtraining translates once and toggles the shared Portuguese lyrics',
   dom.window.close();
 });
 
+test('Portuguese lyrics use Brazilian Portuguese speech recognition and scoring', async () => {
+  const payload = projectPayload(false);
+  payload.project.cards[0].lyrics.lines[0].text = 'Do not be afraid.';
+  payload.project.cards[0].lyrics.lines[0].textPt = 'Não tenha medo.';
+  payload.project.cards[0].lyrics.lines[1].text = 'I am with you.';
+  payload.project.cards[0].lyrics.lines[1].textPt = 'Eu estou com você.';
+  let activeRecognition = null;
+  const dom = await boot(false, {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: { appSlug: 'englishtraining', appPath: '/englishtraining', apiRoot: '/api/englishtraining' },
+    payload,
+    beforeEval: (window) => {
+      window.SpeechRecognition = class {
+        constructor() { activeRecognition = this; }
+        start() {}
+        abort() {}
+      };
+    }
+  });
+  const { document } = dom.window;
+  document.querySelector('.lyrics-button').click();
+  document.getElementById('lyricsLanguageToggle').click();
+  const line = document.querySelector('[data-line-index="0"]');
+  assert.equal(line.querySelector('.lyric-copy > span:last-child').textContent, 'Não tenha medo.');
+  line.dispatchEvent(new dom.window.Event('pointerdown', { bubbles: true }));
+  await new Promise((resolve) => setTimeout(resolve, 220));
+  assert.equal(activeRecognition.lang, 'pt-BR');
+  activeRecognition.onresult({ results: [[{ transcript: 'não tenha medo' }]] });
+  activeRecognition.onend();
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  const scores = JSON.parse(dom.window.localStorage.getItem('playtalk-englishtraining-pronunciation-v1'));
+  assert.equal(scores['cue-test']['line-1'].score, 100);
+  dom.window.close();
+});
+
 test('pronunciation score counts valid matching sequences and ignores extra spoken letters', () => {
-  const scoreSource = appSource.match(/function calculatePronunciationScore\(expectedText, spokenText\) \{[\s\S]*?\n  \}/)?.[0];
+  const scoreSource = appSource.match(/function calculatePronunciationScore\([^)]*\) \{[\s\S]*?\n  \}/)?.[0];
   assert.ok(scoreSource, 'pronunciation scoring function should be available in the app');
   const calculateScore = new Function('state', `${scoreSource}; return calculatePronunciationScore;`)({ lyricsLanguage: 'en' });
 

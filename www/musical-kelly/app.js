@@ -16,7 +16,6 @@
   const LYRICS_TIMING_KEY = 'playtalk-englishtraining-lyrics-timing-v1';
   const PRONUNCIATION_SCORES_KEY = 'playtalk-englishtraining-pronunciation-v1';
   const LONG_PRESS_MS = 500;
-  const LYRIC_DISPLAY_LEAD_SECONDS = 1;
   const USE_NATIVE_AUDIO_ON_APPLE = isAppleTouchDevice();
   let commentOutboxDbPromise = null;
 
@@ -238,9 +237,17 @@
     return Number.isFinite(Number(score?.score)) ? Number(score.score) : null;
   }
 
-  function calculatePronunciationScore(expectedText, spokenText) {
+  function lyricLineLanguage(line) {
+    return state.lyricsLanguage === 'pt' && String(line?.textPt || '').trim() ? 'pt' : 'en';
+  }
+
+  function lyricLineText(line, language = state.lyricsLanguage) {
+    return language === 'pt' && String(line?.textPt || '').trim() ? line.textPt : String(line?.text || '');
+  }
+
+  function calculatePronunciationScore(expectedText, spokenText, language = state.lyricsLanguage) {
     const toCharacters = (value) => String(value || '')
-      .toLocaleLowerCase(state.lyricsLanguage === 'pt' ? 'pt-BR' : 'en-US')
+      .toLocaleLowerCase(language === 'pt' ? 'pt-BR' : 'en-US')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^\p{L}\p{N}]/gu, '');
@@ -347,10 +354,9 @@
     }
   }
 
-  function finishPronunciation(cardId, line, spokenText, badge, recordingBlob = null) {
+  function finishPronunciation(cardId, line, spokenText, badge, recordingBlob = null, language = lyricLineLanguage(line)) {
     if (APP_SLUG !== 'englishtraining') return;
-    const expectedText = state.lyricsLanguage === 'pt' && String(line.textPt || '').trim() ? line.textPt : line.text;
-    const score = calculatePronunciationScore(expectedText, spokenText);
+    const score = calculatePronunciationScore(lyricLineText(line, language), spokenText, language);
     if (!pronunciationState.scores[cardId]) pronunciationState.scores[cardId] = {};
     pronunciationState.scores[cardId][line.id] = { score, updatedAt: new Date().toISOString() };
     savePronunciationScores();
@@ -510,11 +516,12 @@
       previousRecognition.abort();
     }
     const recognition = new SpeechRecognition();
+    const recognitionLanguage = lyricLineLanguage(line);
     pronunciationState.recognition = recognition;
     pronunciationState.activeLineId = line.id;
     pronunciationState.activeCardId = card.id;
     pronunciationState.resumeAfterSourceReplay = state.current?.cardId === card.id && !state.current.paused;
-    recognition.lang = state.lyricsLanguage === 'pt' ? 'pt-BR' : 'en-US';
+    recognition.lang = recognitionLanguage === 'pt' ? 'pt-BR' : 'en-US';
     recognition.continuous = false;
     recognition.interimResults = false;
     renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id), true);
@@ -539,7 +546,7 @@
       pronunciationState.activeLineId = '';
       pronunciationState.activeCardId = '';
       stopPronunciationCapture(recognition).then((recordingBlob) => {
-        if (spokenText) finishPronunciation(card.id, line, spokenText, badge, recordingBlob);
+        if (spokenText) finishPronunciation(card.id, line, spokenText, badge, recordingBlob, recognitionLanguage);
         else {
           restoreMusicAfterPronunciation();
           if (badge.isConnected) renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id));
@@ -1613,9 +1620,7 @@
         copy.appendChild(speaker);
       }
       const text = document.createElement('span');
-      text.textContent = state.lyricsLanguage === 'pt' && String(line.textPt || '').trim()
-        ? line.textPt
-        : line.text;
+      text.textContent = lyricLineText(line);
       copy.appendChild(text);
       const pronunciationBadge = document.createElement('span');
       pronunciationBadge.className = 'pronunciation-score';
@@ -1800,7 +1805,7 @@
     } else if (card.lyrics?.mode === 'timesync' && isCurrent) {
       let activeIndex = -1;
       for (let index = 0; index < lines.length; index += 1) {
-        if (position + LYRIC_DISPLAY_LEAD_SECONDS >= Number(lines[index].start)) activeIndex = index;
+        if (position >= Number(lines[index].start)) activeIndex = index;
         else break;
       }
       setActiveLyricLine(activeIndex);
