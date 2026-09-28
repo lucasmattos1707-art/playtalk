@@ -197,6 +197,7 @@
     lyricsTranslationBusyCardId: '',
     characterDialogMode: 'pov',
     editingCharacterId: '',
+    editingSpeakerName: '',
     characterMenuLineId: '',
     selectedCharacterId: '',
     downloadPromptCardId: '',
@@ -246,44 +247,41 @@
     const expected = Array.from(toCharacters(expectedText));
     const spoken = Array.from(toCharacters(spokenText));
     if (!expected.length || !spoken.length) return 0;
-    const lcs = Array.from({ length: expected.length + 1 }, () => Array(spoken.length + 1).fill(0));
-    for (let row = 1; row <= expected.length; row += 1) {
-      for (let column = 1; column <= spoken.length; column += 1) {
-        lcs[row][column] = expected[row - 1] === spoken[column - 1]
-          ? lcs[row - 1][column - 1] + 1
-          : Math.max(lcs[row - 1][column], lcs[row][column - 1]);
+    const impossible = -1_000_000;
+    const best = Array.from({ length: expected.length + 1 }, () =>
+      Array.from({ length: spoken.length + 1 }, () => [impossible, impossible, impossible]));
+    best[0][0][0] = 0;
+    for (let expectedIndex = 0; expectedIndex <= expected.length; expectedIndex += 1) {
+      for (let spokenIndex = 0; spokenIndex <= spoken.length; spokenIndex += 1) {
+        const states = best[expectedIndex][spokenIndex];
+        for (let runState = 0; runState <= 2; runState += 1) {
+          const points = states[runState];
+          if (points < 0) continue;
+          // Excesso falado é ignorado e não interrompe o trecho correspondente.
+          if (spokenIndex < spoken.length) {
+            best[expectedIndex][spokenIndex + 1][runState] = Math.max(
+              best[expectedIndex][spokenIndex + 1][runState], points
+            );
+          }
+          if (expectedIndex < expected.length) {
+            best[expectedIndex + 1][spokenIndex][0] = Math.max(
+              best[expectedIndex + 1][spokenIndex][0], points
+            );
+          }
+          if (expectedIndex < expected.length && spokenIndex < spoken.length
+            && expected[expectedIndex] === spoken[spokenIndex]) {
+            const nextState = runState === 0 ? 1 : 2;
+            const nextPoints = points + (runState === 1 ? 2 : (runState === 2 ? 1 : 0));
+            best[expectedIndex + 1][spokenIndex + 1][nextState] = Math.max(
+              best[expectedIndex + 1][spokenIndex + 1][nextState], nextPoints
+            );
+          }
+        }
       }
     }
-    const matches = [];
-    let row = expected.length;
-    let column = spoken.length;
-    while (row > 0 && column > 0) {
-      if (expected[row - 1] === spoken[column - 1]) {
-        matches.push([row - 1, column - 1]);
-        row -= 1;
-        column -= 1;
-      } else if (lcs[row - 1][column] >= lcs[row][column - 1]) row -= 1;
-      else column -= 1;
-    }
-    matches.reverse();
-    let matchedCharacters = 0;
-    let sequenceLength = 0;
-    let previousMatch = null;
-    const finishSequence = () => {
-      if (sequenceLength >= 2) matchedCharacters += sequenceLength;
-      sequenceLength = 0;
-    };
-    matches.forEach(([expectedIndex, spokenIndex]) => {
-      if (previousMatch && expectedIndex === previousMatch[0] + 1 && spokenIndex === previousMatch[1] + 1) {
-        sequenceLength += 1;
-      } else {
-        finishSequence();
-        sequenceLength = 1;
-      }
-      previousMatch = [expectedIndex, spokenIndex];
-    });
-    finishSequence();
-    return Math.max(0, Math.min(100, Math.round(matchedCharacters / Math.max(expected.length, spoken.length) * 100)));
+    const matchedCharacters = Math.max(...best[expected.length][spoken.length]);
+    // Falas extras não descontam pontos: só medimos quanto do texto esperado foi coberto.
+    return Math.max(0, Math.min(100, Math.round(matchedCharacters / expected.length * 100)));
   }
 
   function pronunciationColor(score) {
@@ -367,7 +365,6 @@
       const end = Number(line.end);
       if (
         APP_SLUG === 'englishtraining'
-        && !hasSpecificPovCharacter()
         && card?.lyrics?.mode === 'timesync'
         && Number.isFinite(start)
         && Number.isFinite(end)
@@ -1404,15 +1401,65 @@
 
   function characterById(characterId) {
     if (characterId == null || characterId === '') return null;
-    return state.characters.find((character) => String(character.id) === String(characterId)) || null;
+    const existing = state.characters.find((character) => String(character.id) === String(characterId));
+    if (existing) return existing;
+    const syntheticPrefix = 'speaker:';
+    if (!String(characterId).startsWith(syntheticPrefix)) return null;
+    const speakerKey = normalizeCharacterName(String(characterId).slice(syntheticPrefix.length));
+    const card = getCard(state.lyricsCardId);
+    const speaker = (Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [])
+      .map((line) => String(line?.speaker || '').trim())
+      .find((name) => normalizeCharacterName(name) === speakerKey);
+    return speaker ? {
+      id: `${syntheticPrefix}${speakerKey}`,
+      name: speaker,
+      imageUrl: '',
+      isAiGenerated: true,
+      isUnregisteredSpeaker: true
+    } : null;
+  }
+
+  function normalizeCharacterName(value) {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR');
   }
 
   function characterForLyricLine(line) {
     const byId = characterById(line?.characterId);
     if (byId) return byId;
-    const speaker = String(line?.speaker || '').trim().toLocaleLowerCase();
+    const speakerName = String(line?.speaker || '').trim();
+    const speaker = normalizeCharacterName(speakerName);
     if (!speaker) return null;
-    return state.characters.find((character) => String(character.name || '').trim().toLocaleLowerCase() === speaker) || null;
+    return state.characters.find((character) => normalizeCharacterName(character.name) === speaker) || {
+      id: `speaker:${speaker}`,
+      name: speakerName,
+      imageUrl: '',
+      isAiGenerated: true,
+      isUnregisteredSpeaker: true
+    };
+  }
+
+  function charactersForCurrentCard() {
+    const card = getCard(state.lyricsCardId);
+    const lines = Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
+    const roster = [];
+    const seen = new Set();
+    lines.forEach((line) => {
+      const character = characterForLyricLine(line);
+      if (!character) return;
+      const key = String(character.id);
+      if (seen.has(key)) return;
+      seen.add(key);
+      roster.push(character);
+    });
+    return roster;
+  }
+
+  function lineMatchesCharacter(line, characterId) {
+    if (!line || !characterId) return false;
+    if (String(line.characterId || '') === String(characterId)) return true;
+    if (line.characterId) return false;
+    const character = characterById(characterId);
+    return Boolean(character && normalizeCharacterName(character.name) === normalizeCharacterName(line.speaker));
   }
 
   function hasSpecificPovCharacter() {
@@ -1421,7 +1468,7 @@
   }
 
   function lyricLineLabel(line) {
-    const speaker = String(line?.speaker || '').trim();
+    const speaker = String(characterForLyricLine(line)?.name || line?.speaker || '').trim();
     return speaker ? `${speaker}: ${line.text}` : String(line?.text || '').trim();
   }
 
@@ -1520,8 +1567,8 @@
       : 'Escolher ponto de vista';
     elements.lyricsCharacterSwitch.setAttribute('aria-label', characterControlLabel);
     elements.lyricsCharacterSwitch.title = characterControlLabel;
-    elements.lyricsCharacterAvatar.classList.toggle('has-image', Boolean(selectedCharacter));
-    elements.lyricsCharacterAvatar.style.backgroundImage = selectedCharacter
+    elements.lyricsCharacterAvatar.classList.toggle('has-image', Boolean(selectedCharacter?.imageUrl));
+    elements.lyricsCharacterAvatar.style.backgroundImage = selectedCharacter?.imageUrl
       ? `url("${String(selectedCharacter.imageUrl).replace(/["\\]/g, '')}")`
       : '';
     const lines = Array.isArray(card.lyrics?.lines) ? card.lyrics.lines : [];
@@ -1535,7 +1582,7 @@
       button.className = 'lyric-line';
       button.dataset.lineId = line.id;
       button.dataset.lineIndex = String(index);
-      button.classList.toggle('is-pov-muted', Boolean(state.selectedCharacterId && line.characterId !== state.selectedCharacterId));
+      button.classList.toggle('is-pov-muted', Boolean(state.selectedCharacterId && !lineMatchesCharacter(line, state.selectedCharacterId)));
       button.classList.toggle('is-sync-past', Boolean(state.manualSync && index < state.manualSync.lineIndex - 1));
       button.classList.toggle('is-sync-recorded', Boolean(state.manualSync && index === state.manualSync.lineIndex - 1));
       button.classList.toggle('is-sync-target', Boolean(state.manualSync && index === state.manualSync.lineIndex));
@@ -1550,6 +1597,12 @@
         portrait.decoding = 'async';
         portrait.setAttribute('aria-hidden', 'true');
         avatar.appendChild(portrait);
+      } else if (character?.name) {
+        const initial = document.createElement('span');
+        initial.className = 'lyric-character-avatar__initial';
+        initial.textContent = character.name.charAt(0).toLocaleUpperCase('pt-BR');
+        initial.setAttribute('aria-hidden', 'true');
+        avatar.appendChild(initial);
       }
       const copy = document.createElement('span');
       copy.className = 'lyric-copy';
@@ -1701,7 +1754,7 @@
     if (changed && index >= 0 && APP_SLUG === 'englishtraining' && hasSpecificPovCharacter()) {
       const card = getCard(state.lyricsCardId);
       const line = card?.lyrics?.lines?.[index];
-      if (line?.characterId != null && String(line.characterId) === String(state.selectedCharacterId)) {
+      if (lineMatchesCharacter(line, state.selectedCharacterId)) {
         const button = elements.lyricsLines.querySelector(`[data-line-id="${CSS.escape(line.id)}"]`);
         const badge = button?.querySelector('.pronunciation-score');
         const alreadyListening = pronunciationState.recognition
@@ -1934,7 +1987,7 @@
       return;
     }
     if (state.selectedCharacterId) {
-      if (line.characterId !== state.selectedCharacterId) {
+      if (!lineMatchesCharacter(line, state.selectedCharacterId)) {
         showToast('Este trecho pertence a outro personagem.');
         return;
       }
@@ -2016,6 +2069,7 @@
     if (clearPendingLine) state.characterMenuLineId = '';
     state.characterDialogMode = 'pov';
     state.editingCharacterId = '';
+    state.editingSpeakerName = '';
     resetCharacterForm();
     elements.characterDialogKicker.textContent = state.canEdit ? 'Gerenciar personagens' : 'Ponto de vista';
     elements.characterDialogTitle.textContent = 'Escolha um personagem';
@@ -2028,6 +2082,7 @@
   function beginAddCharacter() {
     state.characterDialogMode = 'add';
     state.editingCharacterId = '';
+    state.editingSpeakerName = '';
     resetCharacterForm();
     elements.characterDialogKicker.textContent = 'Gerenciar personagens';
     elements.characterDialogTitle.textContent = 'Adicionar personagem';
@@ -2039,20 +2094,21 @@
   }
 
   function beginEditCharacter(characterId) {
-    if (!state.canEdit) return;
     const character = characterById(characterId);
-    if (!character) return;
+    const canManage = state.canEdit || (state.canContribute && character?.isAiGenerated);
+    if (!canManage || !character) return;
     state.characterDialogMode = 'edit';
-    state.editingCharacterId = character.id;
+    state.editingCharacterId = character.isUnregisteredSpeaker ? '' : character.id;
+    state.editingSpeakerName = character.isUnregisteredSpeaker ? character.name : '';
     resetCharacterForm();
     elements.characterNameInput.value = character.name;
-    elements.characterImageLabel.textContent = 'Manter foto atual';
-    elements.characterDialogKicker.textContent = 'Gerenciar personagens';
-    elements.characterDialogTitle.textContent = `Editar ${character.name}`;
+    elements.characterImageLabel.textContent = character.imageUrl ? 'Manter foto atual' : 'Adicionar foto PNG';
+    elements.characterDialogKicker.textContent = character.isAiGenerated ? 'Personagem criado pela IA' : 'Gerenciar personagens';
+    elements.characterDialogTitle.textContent = `Foto ou nome de ${character.name}`;
     elements.characterAddToggle.hidden = true;
     elements.characterAddForm.hidden = false;
-    elements.characterDeleteButton.hidden = false;
-    elements.characterSaveButton.textContent = 'Salvar alterações';
+    elements.characterDeleteButton.hidden = !state.canEdit || character.isUnregisteredSpeaker;
+    elements.characterSaveButton.textContent = character.isAiGenerated ? 'Salvar para todos' : 'Salvar alterações';
     renderCharacterGrid();
     elements.characterNameInput.focus();
   }
@@ -2069,32 +2125,48 @@
     allButton.textContent = 'Todas as falas';
     allButton.addEventListener('click', () => selectPovCharacter(''));
     elements.characterGrid.appendChild(allButton);
-    state.characters.forEach((character) => {
+    charactersForCurrentCard().forEach((character) => {
       const card = document.createElement('article');
       card.className = 'character-card';
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `character-option${state.selectedCharacterId === character.id ? ' is-selected' : ''}`;
-      const image = document.createElement('img');
-      image.src = character.imageUrl;
-      image.alt = '';
+      if (character.imageUrl) {
+        const image = document.createElement('img');
+        image.src = character.imageUrl;
+        image.alt = '';
+        image.addEventListener('error', () => {
+          image.replaceWith(createCharacterPlaceholder(character.name));
+        }, { once: true });
+        button.appendChild(image);
+      } else {
+        button.appendChild(createCharacterPlaceholder(character.name));
+      }
       const label = document.createElement('span');
       label.textContent = character.name;
-      button.append(image, label);
+      button.appendChild(label);
       button.addEventListener('click', () => selectPovCharacter(character.id));
       card.appendChild(button);
-      if (state.canEdit) {
+      if (state.canEdit || (state.canContribute && character.isAiGenerated)) {
         const editButton = document.createElement('button');
         editButton.type = 'button';
-        editButton.className = 'character-edit-button';
-        editButton.setAttribute('aria-label', `Editar ${character.name}`);
-        editButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4 4-.8L18 8.4 14.6 5 4 16ZM13.5 6.1l3.4 3.4"/></svg><span>Editar</span>';
+        editButton.className = `character-edit-button${character.isAiGenerated ? ' is-ai-profile-action' : ''}`;
+        editButton.setAttribute('aria-label', `Adicionar foto ou mudar o nome de ${character.name}`);
+        editButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4 4-.8L18 8.4 14.6 5 4 16ZM13.5 6.1l3.4 3.4"/></svg><span>Foto / nome</span>';
         editButton.addEventListener('click', () => beginEditCharacter(character.id));
         card.appendChild(editButton);
       }
       elements.characterGrid.appendChild(card);
     });
     elements.characterGrid.hidden = false;
+  }
+
+  function createCharacterPlaceholder(name) {
+    const placeholder = document.createElement('span');
+    placeholder.className = 'character-placeholder';
+    placeholder.setAttribute('aria-hidden', 'true');
+    placeholder.textContent = String(name || '?').trim().charAt(0).toLocaleUpperCase('pt-BR') || '?';
+    return placeholder;
   }
 
   function selectPovCharacter(characterId) {
@@ -2115,40 +2187,57 @@
 
   async function saveCharacter(event) {
     event.preventDefault();
-    if (!state.canEdit || state.lyricsBusy) return;
+    if (state.lyricsBusy) return;
     const name = elements.characterNameInput.value.trim().slice(0, 80);
     const file = elements.characterImageInput.files?.[0];
     const editingCharacter = characterById(state.editingCharacterId);
-    if (!name || (!editingCharacter && !file)) throw new Error('Digite o nome e escolha uma imagem PNG.');
+    const editingSpeakerName = state.editingSpeakerName;
+    const canManage = state.canEdit || (state.canContribute && editingCharacter?.isAiGenerated);
+    if (!canManage && !editingSpeakerName) return;
+    if (!name || (!editingCharacter && !editingSpeakerName && !file)) throw new Error('Digite o nome e escolha uma imagem PNG.');
     if (file && file.type !== 'image/png' && !/\.png$/i.test(file.name)) throw new Error('A imagem precisa ser PNG.');
     state.lyricsBusy = true;
     elements.characterSaveButton.disabled = true;
     try {
       const query = new URLSearchParams({ name });
-      const endpoint = editingCharacter
+      let endpoint = editingCharacter
         ? `${API_ROOT}/characters/${encodeURIComponent(editingCharacter.id)}?${query}`
         : `${API_ROOT}/characters?${query}`;
+      let method = editingCharacter ? 'PATCH' : 'POST';
+      if (editingSpeakerName) {
+        const card = getCard(state.lyricsCardId);
+        if (!card) throw new Error('Não encontrei a faixa desse personagem.');
+        query.set('speaker', editingSpeakerName);
+        endpoint = `${API_ROOT}/cards/${encodeURIComponent(card.id)}/ai-characters?${query}`;
+        method = 'POST';
+      }
       const payload = await apiJson(endpoint, {
-        method: editingCharacter ? 'PATCH' : 'POST',
+        method,
         headers: { 'Content-Type': file ? 'image/png' : 'application/octet-stream' },
         body: file || new Uint8Array(0)
       });
       state.characters = Array.isArray(payload.characters) ? payload.characters : state.characters;
+      if (payload.project) applyCollaborationProject(payload.project);
       cacheCharacterImages().catch(() => {});
-      const createdCharacter = state.characters.find((character) => character.name.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'));
       const pendingLineId = state.characterMenuLineId;
       saveProjectSnapshot(state.project);
       resetCharacterForm();
-      if (!editingCharacter && pendingLineId && createdCharacter) {
+      if (!editingCharacter && !editingSpeakerName && pendingLineId) {
+        const createdCharacter = state.characters.find((character) => normalizeCharacterName(character.name) === normalizeCharacterName(name));
         state.characterMenuLineId = '';
         closeDialog(elements.characterDialog);
-        await assignCharacterToLine(pendingLineId, createdCharacter.id);
-        showToast(`“${name}” foi criado e atribuído ao trecho.`);
+        if (createdCharacter) {
+          await assignCharacterToLine(pendingLineId, createdCharacter.id);
+          showToast(`“${name}” foi criado e atribuído ao trecho.`);
+        } else {
+          showCharacterList();
+          renderLyricsScreen();
+        }
       } else {
         showCharacterList();
         renderLyricsScreen();
-        showToast(editingCharacter
-          ? `Personagem “${name}” atualizado.`
+        showToast(editingCharacter || editingSpeakerName
+          ? `Foto/nome de “${name}” atualizado para todos.`
           : `Personagem “${name}” adicionado.`);
       }
     } finally {
@@ -2198,7 +2287,9 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode })
       });
+      if (Array.isArray(payload.characters)) state.characters = payload.characters;
       applyCollaborationProject(payload.project);
+      cacheCharacterImages().catch(() => {});
       openLyricsEditor();
       showToast(mode === 'timesync' ? 'Letra sincronizada criada.' : 'Letra criada.');
     } finally {
@@ -2237,7 +2328,7 @@
     if (card?.lyrics?.mode !== 'timesync') return [];
     const duration = Math.max(0, Number(state.durations.get(card.audio?.fileName)) || 0);
     const clips = card.lyrics.lines
-      .filter((line) => line.characterId === characterId && Number.isFinite(Number(line.start)) && Number.isFinite(Number(line.end)))
+      .filter((line) => lineMatchesCharacter(line, characterId) && Number.isFinite(Number(line.start)) && Number.isFinite(Number(line.end)))
       .map((line) => ({
         start: Math.max(0, Number(line.start) - 3),
         end: duration > 0 ? Math.min(duration, Number(line.end) + 3) : Number(line.end) + 3

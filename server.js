@@ -16281,6 +16281,11 @@ const musicalKellyNotificationMutationQueues = new Map();
 const musicalKellyProjectCaches = new Map();
 const musicalKellyCharacterSchemaReadyPromises = new Map();
 const englishTrainingPortugueseTranslationLocks = new Map();
+const MUSICAL_KELLY_AI_NO_IMAGE_FILE = 'ai-generated-no-photo.png';
+
+function normalizeMusicalKellyCharacterName(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR');
+}
 
 async function ensureMusicalKellyCharacterSchema() {
   if (!pool) {
@@ -16298,6 +16303,7 @@ async function ensureMusicalKellyCharacterSchema() {
           name text NOT NULL,
           image_file_name text NOT NULL,
           image_content_type text NOT NULL DEFAULT 'image/png',
+          is_ai_generated boolean NOT NULL DEFAULT false,
           created_by_user_id integer,
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now()
@@ -16306,6 +16312,10 @@ async function ensureMusicalKellyCharacterSchema() {
       await pool.query(`
         ALTER TABLE public.${workspace.characterTable}
         ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()
+      `);
+      await pool.query(`
+        ALTER TABLE public.${workspace.characterTable}
+        ADD COLUMN IF NOT EXISTS is_ai_generated boolean NOT NULL DEFAULT false
       `);
       await pool.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS ${workspace.characterNameIndex}
@@ -16330,7 +16340,10 @@ function musicalKellyCharacterFromRow(row) {
   return {
     id,
     name: String(row?.name || '').trim().slice(0, 80),
-    imageUrl: `${musicalKellyApiRoot()}/characters/${encodeURIComponent(id)}/image?v=${encodeURIComponent(updatedAt || id)}`,
+    imageUrl: fileName === MUSICAL_KELLY_AI_NO_IMAGE_FILE
+      ? ''
+      : `${musicalKellyApiRoot()}/characters/${encodeURIComponent(id)}/image?v=${encodeURIComponent(updatedAt || id)}`,
+    isAiGenerated: row?.is_ai_generated === true,
     createdAt: row?.created_at instanceof Date
       ? row.created_at.toISOString()
       : String(row?.created_at || '').slice(0, 40),
@@ -16342,11 +16355,35 @@ async function readMusicalKellyCharacters() {
   await ensureMusicalKellyCharacterSchema();
   const workspace = currentMusicalKellyWorkspace();
   const result = await pool.query(`
-    SELECT id, name, image_file_name, image_content_type, created_at, updated_at
+    SELECT id, name, image_file_name, image_content_type, is_ai_generated, created_at, updated_at
     FROM public.${workspace.characterTable}
     ORDER BY lower(name), created_at
   `);
   return result.rows.map(musicalKellyCharacterFromRow).filter(Boolean);
+}
+
+async function ensureAiGeneratedMusicalKellyCharacters(speakers) {
+  const names = [...new Set((Array.isArray(speakers) ? speakers : [])
+    .map((name) => String(name || '').trim().replace(/\s+/g, ' ').slice(0, 80))
+    .filter(Boolean))];
+  if (!names.length) return readMusicalKellyCharacters();
+  await ensureMusicalKellyCharacterSchema();
+  const workspace = currentMusicalKellyWorkspace();
+  const existingCharacters = await readMusicalKellyCharacters();
+  const existingNames = new Set(existingCharacters.map((character) => normalizeMusicalKellyCharacterName(character.name)));
+  for (const name of names) {
+    const normalizedName = normalizeMusicalKellyCharacterName(name);
+    if (!normalizedName || existingNames.has(normalizedName)) continue;
+    const id = `char-ai-${Date.now().toString(36)}-${crypto.randomBytes(5).toString('hex')}`;
+    await pool.query(`
+      INSERT INTO public.${workspace.characterTable}
+        (id, name, image_file_name, image_content_type, is_ai_generated)
+      VALUES ($1, $2, $3, 'image/png', true)
+      ON CONFLICT DO NOTHING
+    `, [id, name, MUSICAL_KELLY_AI_NO_IMAGE_FILE]);
+    existingNames.add(normalizedName);
+  }
+  return readMusicalKellyCharacters();
 }
 
 function queueMusicalKellyProjectMutation(callback) {
@@ -27494,15 +27531,17 @@ app.post(musicalKellyApiPaths('/cards/:cardId/lyrics/generate'), async (req, res
       res.status(413).json({ success: false, message: 'Para gerar a letra, use um audio de ate 24 MB.' });
       return;
     }
-    const characters = await readMusicalKellyCharacters().catch(() => []);
+    let characters = await readMusicalKellyCharacters().catch(() => []);
     const transcription = await transcribeMusicalKellyAudio(initialCard, audioBuffer);
     const lyrics = await structureMusicalKellyLyrics(initialCard, transcription, mode, characters);
+    const aiSpeakers = [...new Set(lyrics.lines.map((line) => String(line.speaker || '').trim()).filter(Boolean))];
+    if (aiSpeakers.length) characters = await ensureAiGeneratedMusicalKellyCharacters(aiSpeakers);
     const characterByName = new Map(characters.map((character) => [
-      character.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase(),
+      normalizeMusicalKellyCharacterName(character.name),
       character.id
     ]));
     lyrics.lines.forEach((line) => {
-      const key = line.speaker.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+      const key = normalizeMusicalKellyCharacterName(line.speaker);
       line.characterId = characterByName.get(key) || '';
     });
     const project = await queueMusicalKellyProjectMutation(async () => {
@@ -27516,7 +27555,7 @@ app.post(musicalKellyApiPaths('/cards/:cardId/lyrics/generate'), async (req, res
       currentCard.lyrics = lyrics;
       return writeMusicalKellyGlobalProject(currentProject);
     });
-    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+    res.json({ success: true, characters, project: hydrateMusicalKellyProject(project) });
   } catch (error) {
     console.error('Erro ao gerar letra do musical Kelly:', error);
     res.status(Number(error?.statusCode) || 500).json({
@@ -28005,7 +28044,7 @@ app.patch(
   async (req, res) => {
     let newObjectKey = '';
     try {
-      await requireAdminUserFromRequest(req);
+      const authUser = await requireMusicalKellyUserFromRequest(req);
       await ensureMusicalKellyCharacterSchema();
       const workspace = currentMusicalKellyWorkspace();
       const characterId = normalizeMusicalKellyCardId(req.params.characterId);
@@ -28015,12 +28054,16 @@ app.patch(
         return;
       }
       const currentResult = await pool.query(`
-        SELECT image_file_name
+        SELECT image_file_name, is_ai_generated
         FROM public.${workspace.characterTable}
         WHERE id = $1
       `, [characterId]);
       if (!currentResult.rowCount) {
         res.status(404).json({ success: false, message: 'Este personagem nao existe mais.' });
+        return;
+      }
+      if (!isAdminUserRecord(authUser) && currentResult.rows[0]?.is_ai_generated !== true) {
+        res.status(403).json({ success: false, message: 'Somente personagens identificados pela IA podem receber contribuições públicas.' });
         return;
       }
       const currentFileName = normalizeMusicalKellyAssetFileName(currentResult.rows[0]?.image_file_name);
@@ -28064,6 +28107,111 @@ app.patch(
         message: error?.code === '23505'
           ? 'Ja existe um personagem com esse nome.'
           : (error?.message || 'Nao foi possivel editar o personagem.')
+      });
+    }
+  }
+);
+
+app.post(
+  musicalKellyApiPaths('/cards/:cardId/ai-characters'),
+  express.raw({ type: () => true, limit: `${MUSICAL_KELLY_MAX_CHARACTER_IMAGE_BYTES}b` }),
+  async (req, res) => {
+    let uploadedObjectKey = '';
+    try {
+      await requireMusicalKellyUserFromRequest(req);
+      await ensureMusicalKellyCharacterSchema();
+      const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+      const speaker = String(req.query?.speaker || '').trim().replace(/\s+/g, ' ').slice(0, 80);
+      const name = String(req.query?.name || '').trim().replace(/\s+/g, ' ').slice(0, 80);
+      if (!cardId || !speaker || !name) {
+        res.status(400).json({ success: false, message: 'A faixa, o personagem da IA e o novo nome sao obrigatorios.' });
+        return;
+      }
+      const hasNewImage = Buffer.isBuffer(req.body) && req.body.length > 0;
+      if (hasNewImage) {
+        if (req.body.length > MUSICAL_KELLY_MAX_CHARACTER_IMAGE_BYTES) {
+          res.status(413).json({ success: false, message: 'O PNG pode ter no maximo 5 MB.' });
+          return;
+        }
+        const metadata = await sharp(req.body, { limitInputPixels: 30000000 }).metadata();
+        if (metadata.format !== 'png') {
+          res.status(415).json({ success: false, message: 'A imagem do personagem precisa ser PNG.' });
+          return;
+        }
+      }
+      const originalSpeakerKey = normalizeMusicalKellyCharacterName(speaker);
+      const project = await queueMusicalKellyProjectMutation(async () => {
+        const currentProject = await readMusicalKellyGlobalProject();
+        const card = currentProject.cards.find((entry) => entry.id === cardId);
+        const cardLines = Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
+        const speakerLines = cardLines.filter((line) => normalizeMusicalKellyCharacterName(line?.speaker) === originalSpeakerKey);
+        if (!card || !speakerLines.length) {
+          const error = new Error('Esse nome nao aparece mais como personagem nesta faixa. Atualize o menu e tente novamente.');
+          error.statusCode = 404;
+          throw error;
+        }
+        const workspace = currentMusicalKellyWorkspace();
+        const characters = await readMusicalKellyCharacters();
+        const existing = characters.find((character) => normalizeMusicalKellyCharacterName(character.name) === originalSpeakerKey);
+        if (existing && !existing.isAiGenerated) {
+          const error = new Error('Este nome ja pertence a um personagem cadastrado; somente a administracao pode altera-lo.');
+          error.statusCode = 403;
+          throw error;
+        }
+        const characterId = existing?.id || `char-ai-${Date.now().toString(36)}-${crypto.randomBytes(5).toString('hex')}`;
+        const oldFileName = existing
+          ? (await pool.query(`SELECT image_file_name FROM public.${workspace.characterTable} WHERE id = $1`, [characterId])).rows[0]?.image_file_name
+          : '';
+        let nextFileName = normalizeMusicalKellyAssetFileName(oldFileName) || MUSICAL_KELLY_AI_NO_IMAGE_FILE;
+        if (hasNewImage) {
+          const optimizedBuffer = await sharp(req.body, { limitInputPixels: 30000000 })
+            .rotate()
+            .resize(384, 384, { fit: 'cover', position: 'attention' })
+            .png({ compressionLevel: 9, palette: true, quality: 90 })
+            .toBuffer();
+          nextFileName = `${characterId}-${Date.now().toString(36)}.png`;
+          uploadedObjectKey = `${musicalKellyGlobalRoot()}/characters/${nextFileName}`;
+          await putR2Object(uploadedObjectKey, optimizedBuffer, 'image/png');
+        }
+        if (existing) {
+          await pool.query(`
+            UPDATE public.${workspace.characterTable}
+            SET name = $2, image_file_name = $3, image_content_type = 'image/png', updated_at = now()
+            WHERE id = $1 AND is_ai_generated = true
+          `, [characterId, name, nextFileName]);
+        } else {
+          await pool.query(`
+            INSERT INTO public.${workspace.characterTable}
+              (id, name, image_file_name, image_content_type, is_ai_generated)
+            VALUES ($1, $2, $3, 'image/png', true)
+          `, [characterId, name, nextFileName]);
+        }
+        uploadedObjectKey = '';
+        currentProject.cards.forEach((entry) => {
+          (Array.isArray(entry?.lyrics?.lines) ? entry.lyrics.lines : []).forEach((line) => {
+            if (line.characterId === characterId || normalizeMusicalKellyCharacterName(line?.speaker) === originalSpeakerKey) {
+              line.characterId = characterId;
+              line.speaker = name;
+            }
+          });
+        });
+        const savedProject = await writeMusicalKellyGlobalProject(currentProject);
+        const normalizedOldFileName = normalizeMusicalKellyAssetFileName(oldFileName);
+        if (hasNewImage && normalizedOldFileName && normalizedOldFileName !== MUSICAL_KELLY_AI_NO_IMAGE_FILE && normalizedOldFileName !== nextFileName) {
+          await deleteR2Object(`${musicalKellyGlobalRoot()}/characters/${normalizedOldFileName}`).catch(() => {});
+        }
+        return savedProject;
+      });
+      const characters = await readMusicalKellyCharacters();
+      res.json({ success: true, characters, project: hydrateMusicalKellyProject(project) });
+    } catch (error) {
+      if (uploadedObjectKey) await deleteR2Object(uploadedObjectKey).catch(() => {});
+      console.error('Erro ao salvar contribuicao de personagem da IA:', error);
+      res.status(error?.code === '23505' ? 409 : (Number(error?.statusCode) || 500)).json({
+        success: false,
+        message: error?.code === '23505'
+          ? 'Ja existe um personagem com esse nome.'
+          : (error?.message || 'Nao foi possivel salvar a foto e o nome do personagem.')
       });
     }
   }
@@ -28727,8 +28875,8 @@ app.get(['/englishtraining/', '/englishtraining/index.html'], (_req, res) => {
     .replace('<title>Musical Kelly | Fluent LevelUp</title>', '<title>English Training | Fluent LevelUp</title>')
     .replace('<body>', '<body class="englishtraining-page">')
     .replace(
-      '<script src="/musical-kelly/app.js?v=42" defer></script>',
-      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=42" defer></script>`
+      '<script src="/musical-kelly/app.js?v=44" defer></script>',
+      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=44" defer></script>`
     );
   res.setHeader('Cache-Control', 'no-store');
   res.type('html').send(html);

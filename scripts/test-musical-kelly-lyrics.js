@@ -268,6 +268,52 @@ test('admin manages characters directly from the header dialog', async () => {
   dom.window.close();
 });
 
+test('public character menu is limited to the current track and exposes AI speaker profiles', async () => {
+  const payload = projectPayload(false, { withSecondTrack: true });
+  const fetchUrls = [];
+  payload.characters.push({ id: 'char-unused', name: 'Scarecrow', imageUrl: '/api/musical-kelly/characters/char-unused/image' });
+  payload.project.cards[0].lyrics.lines[1].speaker = 'Lion';
+  payload.project.cards[0].lyrics.lines[1].start = 3;
+  payload.project.cards[0].lyrics.lines[1].end = 5;
+  const dom = await boot(false, {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: { appSlug: 'englishtraining', appPath: '/englishtraining', apiRoot: '/api/englishtraining' },
+    payload,
+    fetchUrls,
+    fetchResponder: (url) => url.includes('/ai-characters?') ? ({
+      success: true,
+      characters: [...payload.characters, { id: 'char-ai-lion', name: 'Aslan', imageUrl: '', isAiGenerated: true }],
+      project: {
+        ...payload.project,
+        cards: payload.project.cards.map((card) => card.id === 'cue-test' ? {
+          ...card,
+          lyrics: { ...card.lyrics, lines: card.lyrics.lines.map((line) => line.id === 'line-2' ? { ...line, speaker: 'Aslan', characterId: 'char-ai-lion' } : line) }
+        } : card)
+      }
+    }) : undefined
+  });
+  const { document } = dom.window;
+  document.querySelector('.lyrics-button').click();
+  document.getElementById('lyricsCharacterSwitch').click();
+  const grid = document.getElementById('characterGrid');
+  assert.match(grid.textContent, /Dorothy/);
+  assert.match(grid.textContent, /Lion/);
+  assert.doesNotMatch(grid.textContent, /Scarecrow/);
+  const lionCard = [...grid.querySelectorAll('.character-card')].find((card) => /Lion/.test(card.textContent));
+  assert.ok(lionCard);
+  assert.ok(lionCard.querySelector('.is-ai-profile-action'));
+  lionCard.querySelector('.is-ai-profile-action').click();
+  assert.equal(document.getElementById('characterNameInput').value, 'Lion');
+  assert.equal(document.getElementById('characterImageLabel').textContent, 'Adicionar foto PNG');
+  assert.equal(document.getElementById('characterSaveButton').textContent, 'Salvar para todos');
+  document.getElementById('characterNameInput').value = 'Aslan';
+  document.getElementById('characterAddForm').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  assert.ok(fetchUrls.some((url) => url.includes('/api/englishtraining/cards/cue-test/ai-characters?name=Aslan&speaker=Lion')));
+  assert.equal(document.getElementById('characterDialog').textContent.includes('Escolha um personagem'), true);
+  dom.window.close();
+});
+
 test('admin opens audio and image upload menu with right click on a container', async () => {
   const dom = await boot(true, { withAudio: true });
   const { document, MouseEvent } = dom.window;
@@ -357,6 +403,10 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(serverSource, /every speaker must be an empty string/);
   assert.match(serverSource, /invent a short plausible name and reuse it consistently/);
   assert.match(serverSource, /Existing characters in this workspace/);
+  assert.match(serverSource, /ADD COLUMN IF NOT EXISTS is_ai_generated boolean NOT NULL DEFAULT false/);
+  assert.match(serverSource, /ensureAiGeneratedMusicalKellyCharacters\(aiSpeakers\)/);
+  assert.match(serverSource, /app\.post\(\s*musicalKellyApiPaths\('\/cards\/:cardId\/ai-characters'\)/);
+  assert.match(serverSource, /is_ai_generated !== true/);
   assert.match(appSource, /function hasSpecificPovCharacter\(\)/);
   assert.match(appSource, /hasSpecificPovCharacter\(\)/);
   assert.match(stylesSource, /body\.englishtraining-page \.lyrics-player\s*\{\s*display: none;/);
@@ -449,7 +499,22 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(stylesSource, /body\.englishtraining-page \.lyrics-track-heading \{[\s\S]*grid-column: 2/);
   assert.match(stylesSource, /body\.englishtraining-page \.lyrics-header-actions \{[\s\S]*grid-column: 3/);
   assert.match(stylesSource, /body\.englishtraining-page \.lyrics-language-toggle img \{[\s\S]*width: 27px;[\s\S]*height: 27px/);
-  assert.match(stylesSource, /\.lyrics-character-switch__avatar svg \{[\s\S]*fill: currentColor;[\s\S]*stroke: none/);
+  assert.match(html, /englishtraining-user-avatar\.svg/);
+  assert.match(stylesSource, /\.lyrics-character-switch__avatar \{[\s\S]*border-radius: 0/);
+  assert.match(html, /play-button-englishtraining\.svg/);
+  assert.match(html, /pause-button-englishtraining\.svg/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-header-play-button \{[\s\S]*border: 0 !important;[\s\S]*border-radius: 0/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-timing-button \{[\s\S]*border: 0;[\s\S]*color: #fff;[\s\S]*font-size: 0\.94rem/);
+  assert.match(stylesSource, /body\.englishtraining-page \.pronunciation-score__seal \{[\s\S]*width: 33px;[\s\S]*height: 33px/);
+  assert.match(html, /play-button-englishtraining\.svg/);
+  assert.match(html, /pause-button-englishtraining\.svg/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-header-play-button \{[\s\S]*border: 0 !important;[\s\S]*border-radius: 0/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-timing-button \{[\s\S]*border: 0;[\s\S]*color: #fff;[\s\S]*font-size: 0\.94rem/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyric-line \{[\s\S]*overflow: visible/);
+  assert.doesNotMatch(appSource, /APP_SLUG === 'englishtraining'\s*&&\s*!hasSpecificPovCharacter\(\)\s*&&\s*card\?\.lyrics\?\.mode === 'timesync'/);
+  assert.match(appSource, /replayOriginalLyricLine\(card, line, pronunciationState\.resumeAfterSourceReplay\)/);
+  assert.match(appSource, /charactersForCurrentCard\(\)\.forEach\(\(character\) =>/);
+  assert.match(appSource, /lineMatchesCharacter\(line, characterId\)/);
   assert.match(stylesSource, /body\.lyrics-open > [^{]*:not\(\.download-prompt-dialog\)/);
   assert.match(stylesSource, /\.container-upload-menu \{[\s\S]*position: fixed;[\s\S]*z-index: 180/);
   assert.doesNotMatch(stylesSource, /padding: 31vh 10px 37vh/);
@@ -544,6 +609,16 @@ test('englishtraining translates once and toggles the shared Portuguese lyrics',
   await new Promise((resolve) => setTimeout(resolve, 5));
   assert.equal(fetchUrls.filter((url) => url.endsWith('/lyrics/portuguese')).length, 1);
   dom.window.close();
+});
+
+test('pronunciation score counts valid matching sequences and ignores extra spoken letters', () => {
+  const scoreSource = appSource.match(/function calculatePronunciationScore\(expectedText, spokenText\) \{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(scoreSource, 'pronunciation scoring function should be available in the app');
+  const calculateScore = new Function('state', `${scoreSource}; return calculatePronunciationScore;`)({ lyricsLanguage: 'en' });
+
+  assert.equal(calculateScore('we are the world', 'we were the world'), 92);
+  assert.equal(calculateScore('we are the world', 'we are extra the world'), 100);
+  assert.equal(calculateScore('we are the world', 'we the world'), 77);
 });
 
 test('filters Whisper hallucinations over instrumental gaps without deleting a real repeated chorus', () => {

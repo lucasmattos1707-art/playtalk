@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=39">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=41">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -156,7 +156,7 @@
     <header class="lyrics-header">
       <button class="lyrics-character-switch" id="lyricsCharacterSwitch" type="button" aria-label="Trocar ponto de vista" title="Trocar personagem">
         <span class="lyrics-character-switch__avatar" id="lyricsCharacterAvatar" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M4.2 20c.55-4.8 3.25-7.2 7.8-7.2s7.25 2.4 7.8 7.2H4.2Z"/></svg>
+          <img class="lyrics-character-switch__default-avatar" src="/arquivos-codex/icones/englishtraining-user-avatar.svg" alt="">
         </span>
       </button>
       <div class="lyrics-track-heading">
@@ -173,8 +173,8 @@
       </div>
       <div class="lyrics-header-actions">
         <button class="lyrics-play-button lyrics-header-play-button" id="lyricsHeaderPlayButton" type="button" aria-label="Reproduzir" title="Reproduzir ou pausar" hidden>
-          <svg class="lyrics-icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5 18 12 8 18.5Z"/></svg>
-          <svg class="lyrics-icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 6v12M15.5 6v12"/></svg>
+          <img class="lyrics-icon-play" src="/arquivos-codex/icones/play-button-englishtraining.svg" alt="">
+          <img class="lyrics-icon-pause" src="/arquivos-codex/icones/pause-button-englishtraining.svg" alt="">
         </button>
         <button class="lyrics-language-toggle" id="lyricsLanguageToggle" type="button" aria-label="Trocar para português" title="Trocar idioma" aria-pressed="false" hidden>
           <img id="lyricsLanguageFlag" src="/arquivos-codex/icones/ingles.svg" alt="Bandeira dos Estados Unidos">
@@ -439,6 +439,6 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="/musical-kelly/app.js?v=42" defer></script>
+  <script src="/musical-kelly/app.js?v=44" defer></script>
 </body>
 </html>

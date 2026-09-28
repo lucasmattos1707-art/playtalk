@@ -2121,20 +2121,21 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   display: grid;
   width: 37px;
   height: 37px;
-  overflow: hidden;
+  overflow: visible;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  background: #101a25 center / cover no-repeat;
+  border: 0;
+  border-radius: 0;
+  background: transparent center / cover no-repeat;
 }
 
-.lyrics-character-switch__avatar svg {
-  width: 21px;
-  fill: currentColor;
-  stroke: none;
+.lyrics-character-switch__default-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
-.lyrics-character-switch__avatar.has-image svg {
+.lyrics-character-switch__avatar.has-image .lyrics-character-switch__default-avatar {
   display: none;
 }
 
@@ -2439,8 +2440,11 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   background: transparent !important;
 }
 
-.lyrics-play-button svg {
-  stroke-width: 2.2 !important;
+.lyrics-play-button img {
+  display: block;
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
 }
 
 .lyrics-play-button .lyrics-icon-play {
@@ -2944,12 +2948,26 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   height: 52px;
 }
 
+.character-placeholder {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border: 1px solid rgba(177, 221, 255, 0.32);
+  border-radius: 50%;
+  color: #e5f4ff;
+  background: linear-gradient(145deg, rgba(57, 137, 210, 0.9), rgba(15, 52, 91, 0.96));
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
 .character-option.is-selected {
   border-color: #75bdff;
   background: rgba(117, 189, 255, 0.14);
 }
 
 .character-card {
+  position: relative;
   display: grid;
   gap: 6px;
   align-content: start;
@@ -2973,6 +2991,27 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   font-size: 0.72rem;
   font-weight: 850;
   cursor: pointer;
+}
+
+.character-card .character-edit-button.is-ai-profile-action {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  left: 5px;
+  z-index: 2;
+  min-height: 27px;
+  padding: 4px 7px;
+  border-color: rgba(169, 222, 255, 0.54);
+  border-radius: 9px;
+  color: #fff;
+  background: rgba(3, 25, 49, 0.86);
+  font-size: 0.66rem;
+  backdrop-filter: blur(5px);
+}
+
+.character-card .character-edit-button.is-ai-profile-action svg {
+  width: 13px;
+  height: 13px;
 }
 
 .character-edit-button svg {
@@ -3096,8 +3135,8 @@ body.englishtraining-page .lyrics-character-switch {
 }
 
 body.englishtraining-page .lyrics-character-switch__avatar {
-  width: 28px;
-  height: 28px;
+  width: 31px;
+  height: 31px;
   color: #fff;
 }
 
@@ -3133,41 +3172,41 @@ body.englishtraining-page .lyrics-player {
 
 body.englishtraining-page .lyrics-header-play-button {
   display: grid;
-  flex: 0 0 36px;
-  width: 36px !important;
-  height: 36px !important;
-  border: 1px solid rgba(196, 230, 255, 0.62) !important;
-  border-radius: 50%;
-  color: #fff !important;
-  background: rgba(8, 61, 112, 0.76) !important;
-  box-shadow: 0 2px 10px rgba(0, 26, 61, 0.22);
+  flex: 0 0 32px;
+  width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
 }
 
 body.englishtraining-page .lyrics-header-play-button[hidden] {
   display: none;
 }
 
-body.englishtraining-page .lyrics-header-play-button svg {
-  width: 19px;
-  height: 19px;
+body.englishtraining-page .lyrics-header-play-button img {
+  width: 30px;
+  height: 30px;
 }
 
 body.englishtraining-page .lyrics-timing-button {
-  min-width: 42px;
+  min-width: 0;
   min-height: 29px;
-  padding: 0 8px;
-  border: 1px solid rgba(196, 230, 255, 0.36);
-  border-radius: 999px;
-  color: #e5f4ff;
-  background: rgba(8, 61, 112, 0.42);
-  font-size: 0.67rem;
+  padding: 0 3px;
+  border: 0;
+  border-radius: 0;
+  color: #fff;
+  background: transparent;
+  font-size: 0.94rem;
   font-weight: 850;
   cursor: pointer;
 }
 
 body.englishtraining-page .lyrics-timing-button:hover {
-  border-color: rgba(213, 239, 255, 0.8);
-  background: rgba(22, 105, 178, 0.62);
+  color: #fff;
+  background: transparent;
 }
 
 body.englishtraining-page .lyrics-timing-button[hidden] {
@@ -3231,9 +3270,10 @@ body.englishtraining-page .lyric-line {
   --portrait-width: clamp(108px, 16vw, 158px);
   --portrait-cut: 23px;
   position: relative;
+  z-index: 0;
   display: block;
   min-height: 118px;
-  overflow: hidden;
+  overflow: visible;
   padding: 14px 60px 26px calc(var(--portrait-width) + 13px);
   border: 1px solid rgba(166, 218, 255, 0.47);
   border-radius: 15px;
@@ -3243,6 +3283,10 @@ body.englishtraining-page .lyric-line {
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
+}
+
+body.englishtraining-page .lyric-line:has(.pronunciation-score__seal:not([hidden])) {
+  z-index: 2;
 }
 
 body.englishtraining-page .lyric-line::before {
@@ -3266,7 +3310,8 @@ body.englishtraining-page .lyric-character-avatar {
   width: var(--portrait-width);
   height: auto;
   border: 0;
-  border-radius: 0;
+  overflow: hidden;
+  border-radius: 14px 0 0 14px;
   background-color: rgba(5, 27, 53, 0.3);
   background-position: center 35%;
   clip-path: polygon(0 0, 100% 0, calc(100% - var(--portrait-cut)) 100%, 0 100%);
@@ -3279,6 +3324,17 @@ body.englishtraining-page .lyric-character-avatar img {
   height: 100%;
   object-fit: cover;
   object-position: center 35%;
+}
+
+body.englishtraining-page .lyric-character-avatar__initial {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: rgba(232, 245, 255, 0.9);
+  background: linear-gradient(145deg, rgba(70, 139, 196, 0.85), rgba(13, 49, 87, 0.96));
+  font-size: 1.7rem;
+  font-weight: 900;
 }
 
 body.englishtraining-page .lyric-copy {
@@ -3373,11 +3429,11 @@ body.englishtraining-page .pronunciation-score.is-listening .pronunciation-score
 body.englishtraining-page .pronunciation-score__seal {
   position: absolute;
   z-index: 5;
-  bottom: -5px;
-  left: calc(var(--portrait-width) - var(--portrait-cut) - 13px);
+  bottom: -7px;
+  left: calc(var(--portrait-width) - var(--portrait-cut) - 16.5px);
   display: block;
-  width: 26px;
-  height: 26px;
+  width: 33px;
+  height: 33px;
   object-fit: contain;
   pointer-events: none;
   animation: pronunciationSealReveal 360ms cubic-bezier(0.2, 0.85, 0.3, 1.15) both;
@@ -3429,8 +3485,8 @@ body.englishtraining-page .pronunciation-score__seal[hidden] {
   }
 
   body.englishtraining-page .lyrics-character-switch__avatar {
-    width: 26px;
-    height: 26px;
+    width: 30px;
+    height: 30px;
   }
 
   body.englishtraining-page .lyrics-track-navigation {
@@ -3442,14 +3498,14 @@ body.englishtraining-page .pronunciation-score__seal[hidden] {
   }
 
   body.englishtraining-page .lyrics-header-play-button {
-    flex-basis: 34px;
-    width: 34px !important;
-    height: 34px !important;
+    flex-basis: 30px;
+    width: 30px !important;
+    height: 30px !important;
   }
 
-  body.englishtraining-page .lyrics-header-play-button svg {
-    width: 16px;
-    height: 16px;
+  body.englishtraining-page .lyrics-header-play-button img {
+    width: 28px;
+    height: 28px;
   }
 
   body.englishtraining-page .lyrics-language-toggle {
@@ -3464,10 +3520,10 @@ body.englishtraining-page .pronunciation-score__seal[hidden] {
   }
 
   body.englishtraining-page .lyrics-timing-button {
-    min-width: 38px;
+    min-width: 0;
     min-height: 27px;
-    padding-inline: 6px;
-    font-size: 0.63rem;
+    padding-inline: 2px;
+    font-size: 0.88rem;
   }
 
   body.englishtraining-page .lyrics-edit-button,
@@ -3513,10 +3569,10 @@ body.englishtraining-page .pronunciation-score__seal[hidden] {
   }
 
   body.englishtraining-page .pronunciation-score__seal {
-    bottom: -4px;
-    left: calc(var(--portrait-width) - var(--portrait-cut) - 10px);
-    width: 20px;
-    height: 20px;
+    bottom: -6px;
+    left: calc(var(--portrait-width) - var(--portrait-cut) - 12.5px);
+    width: 25px;
+    height: 25px;
   }
 }
   .lyrics-button {
