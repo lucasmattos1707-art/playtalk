@@ -454,7 +454,7 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(appSource, /fadeCurrentVoice\(1, 1500\)/);
   assert.match(appSource, /Number\(line\.start\) - 3/);
   assert.match(appSource, /Number\(line\.end\) \+ 3/);
-  assert.match(appSource, /position >= Number\(lines\[index\]\.start\)/);
+  assert.match(appSource, /if \(position < start\) break;\s*if \(position < Number\(lines\[index\]\.end\)\) activeIndex = index/);
   assert.doesNotMatch(appSource, /LYRIC_DISPLAY_LEAD_SECONDS/);
   assert.match(appSource, /event\.key === 'ArrowDown'/);
   assert.match(appSource, /function advanceManualSync\(\)/);
@@ -697,7 +697,7 @@ test('bulk cutter scrolls, marks A and B at the player, shows orange selection, 
       if (url === '/api/englishtraining/cards/cue-created/lyrics' && init.method === 'PUT') {
         const project = JSON.parse(requests.find((entry) => entry.url === '/api/englishtraining/project' && entry.init.method === 'PUT').init.body);
         return { success: true, project: { ...project, cards: project.cards.map((card) => card.id === 'cue-created'
-          ? { ...card, lyrics: { mode: 'timesync', lines: JSON.parse(init.body).lines } } : card) } };
+          ? { ...card, lyrics: { mode: 'timesync', ...JSON.parse(init.body) } } : card) } };
       }
       return payload;
     },
@@ -726,7 +726,7 @@ test('bulk cutter scrolls, marks A and B at the player, shows orange selection, 
       slice: () => ({ arrayBuffer: async () => new Uint8Array([73, 68, 51]).buffer }),
       arrayBuffer: async () => new Uint8Array([73, 68, 51]).buffer
     };
-    const englishFile = { name: 'english.srt', size: 100, text: async () => '1\n00:00:01,000 --> 00:00:04,000\nHello there!\n' };
+    const englishFile = { name: 'english.srt', size: 100, text: async () => '1\n00:00:01,000 --> 00:00:02,000\nHello there!\n\n2\n00:00:02,000 --> 00:00:04,000\nHow are you?\n' };
     const portugueseFile = { name: 'portuguese.srt', size: 100, text: async () => '1\n00:00:01,000 --> 00:00:04,000\nOlá!\n' };
     for (const [slot, file] of [['audio', audioFile], ['englishSrt', englishFile], ['portugueseSrt', portugueseFile]]) {
       const drop = new Event('drop', { bubbles: true, cancelable: true });
@@ -759,9 +759,49 @@ test('bulk cutter scrolls, marks A and B at the player, shows orange selection, 
       'PUT /api/englishtraining/project',
       'PUT /api/englishtraining/cards/cue-created/lyrics'
     ]);
-    assert.equal(JSON.parse(requests.at(-1).init.body).lines[0].text, 'Hello there!');
-    assert.equal(JSON.parse(requests.at(-1).init.body).lines[0].textPt, 'Olá!');
+    assert.deepEqual(JSON.parse(requests.at(-1).init.body).lines.map((line) => line.text), ['Hello there!', 'How are you?']);
+    assert.deepEqual(JSON.parse(requests.at(-1).init.body).portugueseLines.map((line) => line.text), ['Olá!']);
     assert.match(document.getElementById('bulkAudioCutList').textContent, /Aula nova/);
+  } finally {
+    dom.window.close();
+  }
+});
+
+test('SRT cues belong to one cut and Portuguese displays its own exact cue list', async () => {
+  const parseSource = appSource.match(/function parseBulkSrt\(text\) \{[\s\S]*?\n  \}/)?.[0];
+  const clipSource = appSource.match(/function bulkSubtitleLines\(cues, start, end\) \{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(parseSource && clipSource);
+  const { parseBulkSrt, bulkSubtitleLines } = new Function(`${parseSource}; ${clipSource}; return { parseBulkSrt, bulkSubtitleLines };`)();
+  const cues = parseBulkSrt('1\n00:00:01,500 --> 00:00:02,500\nFirst cue\n\n2\n00:00:02,500 --> 00:00:03,500\nSecond cue');
+  assert.deepEqual(bulkSubtitleLines(cues, 0, 2).map((line) => line.text), ['First cue']);
+  assert.deepEqual(bulkSubtitleLines(cues, 2, 4).map((line) => line.text), ['Second cue']);
+  const normalizeSource = serverSource.match(/function normalizeMusicalKellyLyrics\(source\) \{[\s\S]*?\n\}/)?.[0];
+  assert.ok(normalizeSource);
+  const normalizeLyrics = new Function('normalizeMusicalKellyCardId', 'MUSICAL_KELLY_MAX_LYRIC_LINES',
+    'MUSICAL_KELLY_MAX_LYRIC_LINE_LENGTH', `${normalizeSource}; return normalizeMusicalKellyLyrics;`)((value) => value ? String(value) : '', 500, 2000);
+  const stored = normalizeLyrics({ mode: 'timesync', lines: [
+    { text: 'First cue', start: 0, end: 1 }, { text: 'Second cue', start: 1, end: 3 }
+  ], portugueseLines: [{ text: 'Uma frase só.', start: 0, end: 3 }] });
+  assert.deepEqual(stored.portugueseLines.map((line) => line.text), ['Uma frase só.']);
+  const payload = projectPayload(false, { withAudio: true });
+  payload.project.cards[0].lyrics.portugueseLines = [
+    { id: 'pt-line-1', text: 'Uma frase só.', start: 1, end: 5, language: 'pt' }
+  ];
+  const fetched = [];
+  const dom = await boot(false, {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: { appSlug: 'englishtraining', appPath: '/englishtraining', apiRoot: '/api/englishtraining' },
+    payload,
+    fetchUrls: fetched
+  });
+  try {
+    const { document } = dom.window;
+    document.querySelector('.lyrics-button').click();
+    assert.deepEqual([...document.querySelectorAll('.lyric-line .lyric-copy > span')].map((node) => node.textContent),
+      ['Não tenha medo.', 'Eu estou com você.']);
+    document.getElementById('lyricsLanguageToggle').click();
+    assert.deepEqual([...document.querySelectorAll('.lyric-line .lyric-copy > span')].map((node) => node.textContent), ['Uma frase só.']);
+    assert.equal(fetched.some((url) => url.endsWith('/lyrics/portuguese')), false);
   } finally {
     dom.window.close();
   }

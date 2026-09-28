@@ -268,11 +268,19 @@
   }
 
   function lyricLineLanguage(line) {
+    if (line?.language === 'pt') return 'pt';
     return state.lyricsLanguage === 'pt' && String(line?.textPt || '').trim() ? 'pt' : 'en';
   }
 
   function lyricLineText(line, language = state.lyricsLanguage) {
+    if (line?.language === 'pt') return String(line?.text || '');
     return language === 'pt' && String(line?.textPt || '').trim() ? line.textPt : String(line?.text || '');
+  }
+
+  function displayedLyricsLines(card) {
+    if (APP_SLUG === 'englishtraining' && state.lyricsLanguage === 'pt'
+      && Array.isArray(card?.lyrics?.portugueseLines)) return card.lyrics.portugueseLines;
+    return Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
   }
 
   function calculatePronunciationScore(expectedText, spokenText, language = state.lyricsLanguage) {
@@ -1681,7 +1689,7 @@
     elements.lyricsCharacterAvatar.style.backgroundImage = selectedCharacter?.imageUrl
       ? `url("${String(selectedCharacter.imageUrl).replace(/["\\]/g, '')}")`
       : '';
-    const lines = Array.isArray(card.lyrics?.lines) ? card.lyrics.lines : [];
+    const lines = displayedLyricsLines(card);
     elements.lyricsEmpty.hidden = lines.length > 0;
     elements.lyricsLines.hidden = lines.length === 0;
     elements.lyricsLines.replaceChildren();
@@ -1821,6 +1829,7 @@
       showLanguageToggle
       && state.lyricsLanguage === 'pt'
       && lines.length
+      && !Array.isArray(card.lyrics?.portugueseLines)
       && !lines.every((line) => String(line?.textPt || '').trim())
       && !translatingPortuguese
     ) {
@@ -1846,7 +1855,8 @@
     if (APP_SLUG !== 'englishtraining' || state.lyricsTranslationBusyCardId) return;
     const card = getCard(cardId);
     const lines = Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
-    if (!card || !lines.length || lines.every((line) => String(line?.textPt || '').trim())) return;
+    if (!card || !lines.length || Array.isArray(card.lyrics?.portugueseLines)
+      || lines.every((line) => String(line?.textPt || '').trim())) return;
     state.lyricsTranslationBusyCardId = cardId;
     renderLyricsScreen();
     try {
@@ -1877,7 +1887,7 @@
     }
     if (changed && index >= 0 && APP_SLUG === 'englishtraining' && hasSpecificPovCharacter()) {
       const card = getCard(state.lyricsCardId);
-      const line = card?.lyrics?.lines?.[index];
+      const line = displayedLyricsLines(card)[index];
       if (lineMatchesCharacter(line, state.selectedCharacterId)) {
         const button = elements.lyricsLines.querySelector(`[data-line-id="${CSS.escape(line.id)}"]`);
         const badge = button?.querySelector('.pronunciation-score');
@@ -1918,14 +1928,15 @@
     elements.lyricsRewindButton.disabled = Boolean(state.manualSync) || !isCurrent || duration <= 0;
     elements.lyricsForwardButton.disabled = Boolean(state.manualSync) || !isCurrent || duration <= 0;
     elements.lyricsSeekSlider.disabled = Boolean(state.manualSync) || !card.audio || duration <= 0;
-    const lines = Array.isArray(card.lyrics?.lines) ? card.lyrics.lines : [];
+    const lines = displayedLyricsLines(card);
     if (state.manualSync) {
       setActiveLyricLine(-1);
     } else if (card.lyrics?.mode === 'timesync' && isCurrent) {
       let activeIndex = -1;
       for (let index = 0; index < lines.length; index += 1) {
-        if (position >= Number(lines[index].start)) activeIndex = index;
-        else break;
+        const start = Number(lines[index].start);
+        if (position < start) break;
+        if (position < Number(lines[index].end)) activeIndex = index;
       }
       setActiveLyricLine(activeIndex);
     } else if (!isCurrent) {
@@ -2104,7 +2115,7 @@
 
   async function seekToLyricLine(index) {
     const card = getCard(state.lyricsCardId);
-    const line = card?.lyrics?.lines?.[index];
+    const line = displayedLyricsLines(card)[index];
     if (!card || !line) return;
     if (card.lyrics.mode !== 'timesync' || !Number.isFinite(Number(line.start))) {
       showToast('Esta letra foi criada sem timesync. O admin pode gerar a versão sincronizada.');
@@ -4245,9 +4256,9 @@
       return match ? Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]) + Number(match[4]) / 1000 : NaN;
     };
     return String(text || '').replace(/^\uFEFF/, '').replace(/\r/g, '').trim().split(/\n\s*\n/).flatMap((block) => {
-      const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+      const lines = block.split('\n');
       const index = lines.findIndex((line) => line.includes('-->'));
-      const timing = index < 0 ? null : /^([\d:,]+)\s*-->\s*([\d:,]+)/.exec(lines[index]);
+      const timing = index < 0 ? null : /^\s*([\d:,]+)\s*-->\s*([\d:,]+)/.exec(lines[index]);
       if (!timing) return [];
       const start = toSeconds(timing[1]); const end = toSeconds(timing[2]);
       const cueText = lines.slice(index + 1).join('\n').replace(/<[^>]*>/g, '').trim();
@@ -4480,13 +4491,12 @@
     setBulkAudioStatus('Seleção A–B cancelada. Clique na waveform para marcar um novo ponto A.');
   }
 
-  function bulkSubtitleLines(start, end) {
-    const english = state.bulkAudio.cues.english.filter((cue) => cue.end > start && cue.start < end);
-    const pt = state.bulkAudio.cues.portuguese;
-    return english.map((cue, index) => {
-      const match = pt.find((line) => line.end > cue.start && line.start < cue.end) || (pt.length === english.length ? pt[index] : null);
-      return { text: cue.text.slice(0, 2000), textPt: match?.text?.slice(0, 2000) || '', start: Math.max(0, cue.start - start), end: Math.max(.08, Math.min(end, cue.end) - start) };
-    });
+  function bulkSubtitleLines(cues, start, end) {
+    return cues.filter((cue) => cue.start >= start && cue.start < end).map((cue) => ({
+      text: cue.text.slice(0, 2000),
+      start: cue.start - start,
+      end: Math.min(end, cue.end) - start
+    }));
   }
 
   async function encodeBulkClip(start, end) {
@@ -4515,7 +4525,8 @@
     if (bulk.saving) return;
     if (!state.canEdit || !cut) { setBulkAudioStatus('Marque os pontos A e B antes de enviar áudio e legendas.', false, true); return; }
     if (!title) { setBulkAudioStatus('Digite o nome da faixa antes de enviar.', false, true); elements.bulkAudioEpisodeName.focus(); return; }
-    const lines = bulkSubtitleLines(cut.start, cut.end);
+    const lines = bulkSubtitleLines(bulk.cues.english, cut.start, cut.end);
+    const portugueseLines = bulkSubtitleLines(bulk.cues.portuguese, cut.start, cut.end);
     if (!lines.length) { setBulkAudioStatus('Esse trecho não inclui falas em inglês; ajuste o corte.', false, true); return; }
     bulk.saving = true; elements.bulkAudioSaveEpisode.disabled = true; let cardId = '';
     try {
@@ -4526,7 +4537,7 @@
       const uploaded = await apiJson(`${API_ROOT}/assets/audio?${query}`, { method: 'POST', headers: { 'Content-Type': 'audio/mpeg' }, body: mp3 });
       const cards = created.project.cards.map((card) => card.id === cardId ? { ...card, audio: uploaded.asset } : card);
       const projectSaved = await apiJson(`${API_ROOT}/project`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...created.project, cards }) });
-      const lyrics = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(cardId)}/lyrics`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lines }) });
+      const lyrics = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(cardId)}/lyrics`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lines, portugueseLines }) });
       applyCollaborationProject(lyrics.project || projectSaved.project);
       bulk.cuts.push({ start: cut.start, end: cut.end, title });
       bulk.selectionPointA = null; bulk.selectionPointB = null; bulk.activePoint = 'a'; bulk.pendingCut = null;

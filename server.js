@@ -16216,9 +16216,20 @@ function normalizeMusicalKellyLyrics(source) {
   if (!lines.length) return null;
   const hasCompleteTiming = requestedMode === 'timesync'
     && lines.every((line) => line.start !== null && line.end !== null);
+  const portugueseLines = Array.isArray(source.portugueseLines) && hasCompleteTiming
+    ? source.portugueseLines.slice(0, MUSICAL_KELLY_MAX_LYRIC_LINES).map((entry, index) => ({
+      id: normalizeMusicalKellyCardId(entry?.id) || `pt-line-${index + 1}`,
+      text: String(entry?.text || '').trim().slice(0, MUSICAL_KELLY_MAX_LYRIC_LINE_LENGTH),
+      start: Math.round(Number(entry?.start) * 1000) / 1000,
+      end: Math.round(Number(entry?.end) * 1000) / 1000,
+      language: 'pt'
+    })).filter((line) => line.text && Number.isFinite(line.start) && Number.isFinite(line.end)
+      && line.start >= 0 && line.end > line.start)
+    : null;
   return {
     mode: hasCompleteTiming ? 'timesync' : 'plain',
     lines: lines.map((line) => hasCompleteTiming ? line : { ...line, start: null, end: null }),
+    ...(portugueseLines !== null ? { portugueseLines } : {}),
     source: source.source === 'ai' ? 'ai' : 'admin',
     generatedAt: String(source.generatedAt || '').trim().slice(0, 40),
     portugueseGeneratedAt: lines.every((line) => line.textPt)
@@ -16679,6 +16690,7 @@ function reconcileMusicalKellyEditedLyrics(existingLyrics, editedLines, requeste
       source: 'admin',
       generatedAt: existingLyrics.generatedAt,
       updatedAt: now,
+      portugueseLines: existingLyrics.portugueseLines,
       lines: editedLines.map((line, index) => ({
         ...copyIdentity(line, index),
         start: existingLines[index].start,
@@ -16702,6 +16714,7 @@ function reconcileMusicalKellyEditedLyrics(existingLyrics, editedLines, requeste
     source: 'admin',
     generatedAt: existingLyrics.generatedAt,
     updatedAt: now,
+    portugueseLines: existingLyrics.portugueseLines,
     lines: timedLines
   });
 }
@@ -16844,6 +16857,7 @@ async function structureMusicalKellyLyrics(card, transcription, mode, knownChara
 }
 
 function hasCompleteEnglishTrainingPortugueseLyrics(card) {
+  if (Array.isArray(card?.lyrics?.portugueseLines)) return true;
   const lines = Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
   return lines.length > 0 && lines.every((line) => String(line?.textPt || '').trim());
 }
@@ -27660,10 +27674,21 @@ app.put(musicalKellyApiPaths('/cards/:cardId/lyrics'), async (req, res) => {
         characterId: ''
       };
     }) || [];
-    const importedLinesAreValid = importedLines.length <= 500 && normalizedImportedLines.length > 0
+    const importedPortugueseLines = Array.isArray(req.body?.portugueseLines) ? req.body.portugueseLines : null;
+    const normalizedPortugueseLines = importedPortugueseLines?.slice(0, 500).map((line, index) => ({
+      id: `pt-line-${index + 1}`,
+      text: String(line?.text || '').trim().slice(0, 2000),
+      start: Number(line?.start),
+      end: Number(line?.end),
+      language: 'pt'
+    })) || [];
+    const importedLinesAreValid = importedLines && importedLines.length <= 500 && normalizedImportedLines.length > 0
       && normalizedImportedLines.every((line) => line.text && Number.isFinite(line.start) && Number.isFinite(line.end)
         && line.start >= 0 && line.end > line.start && line.end <= 43200);
-    if (!cardId || !(importedLines ? importedLinesAreValid : editedLines.length)) {
+    const portugueseLinesAreValid = !importedPortugueseLines || (importedPortugueseLines.length <= 500
+      && normalizedPortugueseLines.every((line) => line.text && Number.isFinite(line.start) && Number.isFinite(line.end)
+        && line.start >= 0 && line.end > line.start && line.end <= 43200));
+    if (!cardId || !portugueseLinesAreValid || !(importedLines ? importedLinesAreValid : editedLines.length)) {
       res.status(400).json({ success: false, message: 'Escreva ao menos uma linha da letra.' });
       return;
     }
@@ -27681,7 +27706,8 @@ app.put(musicalKellyApiPaths('/cards/:cardId/lyrics'), async (req, res) => {
           error.statusCode = 409;
           throw error;
         }
-        card.lyrics = { mode: 'timesync', source: 'admin', lines: normalizedImportedLines };
+        card.lyrics = { mode: 'timesync', source: 'admin', lines: normalizedImportedLines,
+          ...(importedPortugueseLines ? { portugueseLines: normalizedPortugueseLines } : {}) };
       } else {
         card.lyrics = reconcileMusicalKellyEditedLyrics(card.lyrics, editedLines, requestedMode);
       }
@@ -28901,8 +28927,8 @@ app.get(['/englishtraining/', '/englishtraining/index.html'], (_req, res) => {
     .replace('<title>Musical Kelly | Fluent LevelUp</title>', '<title>English Training | Fluent LevelUp</title>')
     .replace('<body>', '<body class="englishtraining-page">')
     .replace(
-      '<script src="/musical-kelly/app.js?v=51" defer></script>',
-      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=51" defer></script>`
+      '<script src="/musical-kelly/app.js?v=52" defer></script>',
+      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=52" defer></script>`
     );
   res.setHeader('Cache-Control', 'no-store');
   res.type('html').send(html);
