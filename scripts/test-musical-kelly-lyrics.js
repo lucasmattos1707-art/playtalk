@@ -523,8 +523,12 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(stylesSource, /grid-template-columns: 52px minmax\(0, 1fr\)/);
   assert.match(stylesSource, /\.lyric-character-avatar \{[\s\S]*width: 52px;[\s\S]*height: 52px/);
   assert.match(stylesSource, /\.lyrics-character-switch__avatar \{[\s\S]*width: 38px;[\s\S]*height: 38px/);
-  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-track-heading \{[\s\S]*grid-column: 2/);
-  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-header-actions \{[\s\S]*grid-column: 3/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-header \{[\s\S]*grid-row: 2;[\s\S]*grid-template-columns: repeat\(7, minmax\(0, 1fr\)\)/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-header-actions \{\s*display: contents;/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-microphone-button \{ grid-column: 4; \}/);
+  assert.match(html, /id="lyricsMicrophoneButton"/);
+  assert.doesNotMatch(stylesSource, /englishtraining\/background-(?:desktop|mobile)/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-screen \{[\s\S]*?background: linear-gradient\(145deg, #d4f4d7/);
   assert.match(stylesSource, /body\.englishtraining-page \.lyrics-language-toggle img \{[\s\S]*width: 27px;[\s\S]*height: 27px/);
   assert.match(html, /englishtraining-user-avatar\.svg/);
   assert.match(stylesSource, /\.lyrics-character-switch__avatar \{[\s\S]*border-radius: 0/);
@@ -582,7 +586,7 @@ test('englishtraining boots the shared page against its isolated API and caches'
   dom.window.close();
 });
 
-test('englishtraining keeps play and pause in the header and hides track navigation', async () => {
+test('englishtraining keeps playback in the bottom controls and hides track navigation', async () => {
   const payload = projectPayload(false, { withAudio: true, withSecondTrack: true });
   const dom = await boot(false, {
     pageUrl: 'https://fluentlevelup.com/englishtraining/',
@@ -906,11 +910,12 @@ test('Portuguese lyrics use Brazilian Portuguese speech recognition and scoring'
   document.getElementById('lyricsLanguageToggle').click();
   const line = document.querySelector('[data-line-index="0"]');
   assert.equal(line.querySelector('.lyric-copy > span:last-child').textContent, 'Não tenha medo.');
-  line.dispatchEvent(new dom.window.Event('pointerdown', { bubbles: true }));
-  await new Promise((resolve) => setTimeout(resolve, 220));
+  line.click();
+  document.getElementById('lyricsMicrophoneButton').click();
   assert.equal(activeRecognition.lang, 'pt-BR');
   activeRecognition.onresult({ results: [[{ transcript: 'não tenha medo' }]] });
   activeRecognition.onend();
+  document.getElementById('lyricsMicrophoneButton').click();
   await new Promise((resolve) => setTimeout(resolve, 25));
   const scores = JSON.parse(dom.window.localStorage.getItem('playtalk-englishtraining-pronunciation-v1'));
   assert.equal(scores['cue-test']['line-1'].score, 100);
@@ -961,13 +966,13 @@ test('mobile recording re-scores with or without a browser speech result', async
   try {
     document.querySelector('.lyrics-button').click();
     const line = document.querySelector('[data-line-index="0"]');
+    const microphone = document.getElementById('lyricsMicrophoneButton');
     for (const expectedScore of [100, 0]) {
-      line.dispatchEvent(new Event('pointerdown', { bubbles: true }));
-      await new Promise((resolve) => setTimeout(resolve, 220));
-      line.dispatchEvent(new Event('pointerup', { bubbles: true }));
+      line.click();
+      microphone.click();
       assert.equal(line.querySelector('.pronunciation-score').classList.contains('is-listening'), true);
-      line.click(); // Click emitted after the long press must only clear its click guard.
-      line.click(); // A regular tap after speaking stops the recording.
+      assert.equal(microphone.classList.contains('is-recording'), true);
+      microphone.click();
       await new Promise((resolve) => setTimeout(resolve, 90));
       const scores = JSON.parse(dom.window.localStorage.getItem('playtalk-englishtraining-pronunciation-v1'));
       assert.equal(scores['cue-test']['line-1'].score, expectedScore);
@@ -982,16 +987,76 @@ test('mobile recording re-scores with or without a browser speech result', async
     dom.window.matchMedia = () => ({ matches: false });
     document.getElementById('lyricsLanguageToggle').click();
     const portugueseLine = document.querySelector('[data-line-index="0"]');
-    portugueseLine.dispatchEvent(new Event('pointerdown', { bubbles: true }));
-    await new Promise((resolve) => setTimeout(resolve, 220));
-    portugueseLine.dispatchEvent(new Event('pointerup', { bubbles: true }));
+    portugueseLine.click();
+    microphone.click();
     assert.equal(recognition.lang, 'pt-BR');
-    recognition.onend(); // Mobile browsers can end the recognition without a transcript.
+    recognition.onend(); // Recognition can end, but only the orange send button submits the recording.
+    microphone.click();
     await new Promise((resolve) => setTimeout(resolve, 90));
     const recoveredScores = JSON.parse(dom.window.localStorage.getItem('playtalk-englishtraining-pronunciation-v1'));
     assert.equal(recoveredScores['cue-test']['line-1'].score, 100);
     assert.deepEqual(sentLanguages, ['en', 'en', 'pt']);
     assert.equal(stoppedTracks, 3);
+  } finally {
+    dom.window.close();
+  }
+});
+
+test('a selected character waits for manual recording and consecutive turns resume without scoring', () => {
+  const activeSource = appSource.match(/function setActiveLyricLine\(index\) \{[\s\S]*?\n  \}/)?.[0];
+  const queueSource = appSource.match(/function queuePovTurn\(card, line, index\) \{[\s\S]*?\n  \}/)?.[0];
+  const continueSource = appSource.match(/function continuePovAfterPronunciation\(attempt, line\) \{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(activeSource && queueSource && continueSource);
+  assert.doesNotMatch(activeSource, /startPronunciationRecognition/);
+  const played = [];
+  const playback = { cardId: 'cue-test', characterId: 'char-dorothy', completedLineIds: new Set(),
+    clips: [{ start: 0, end: 9 }], index: 0, generation: 7 };
+  const state = { povPlayback: playback, povTurn: null, selectedCharacterId: 'char-dorothy',
+    lyricsCardId: 'cue-test', current: { cardId: 'cue-test', paused: false } };
+  const classes = { add() {}, remove() {} };
+  const elements = { lyricsLines: { querySelector: () => ({ classList: classes }) } };
+  const queueTurn = new Function('state', 'clearPovTimers', 'pauseCurrent', 'elements', 'CSS', 'updateLyricsMicrophone',
+    `${queueSource}; return queuePovTurn;`)(state, () => {}, () => { state.current.paused = true; },
+    elements, { escape: String }, () => {});
+  const continueTurn = new Function('state', 'elements', 'CSS', 'updateLyricsMicrophone', 'playPovClip',
+    'cancelPovPlayback', 'showToast', `${continueSource}; return continuePovAfterPronunciation;`)(
+    state, elements, { escape: String }, () => {}, (...args) => { played.push(args); return Promise.resolve(); },
+    () => {}, () => {});
+  queueTurn({ id: 'cue-test' }, { id: 'line-1' }, 0);
+  assert.equal(state.povTurn.lineId, 'line-1');
+  assert.equal(state.current.paused, true);
+  continueTurn({ povTurn: state.povTurn }, { end: 3 });
+  assert.deepEqual(played[0].slice(0, 2), [0, 3.02]);
+  assert.equal(playback.completedLineIds.has('line-1'), true);
+  state.current.paused = false;
+  queueTurn({ id: 'cue-test' }, { id: 'line-2' }, 1);
+  assert.equal(state.povTurn.lineId, 'line-2');
+  assert.equal(state.current.paused, true);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyric-line\.is-pov-muted \{ opacity: 1; \}/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyric-line\.is-pov-line \{[\s\S]*?border-color: rgba\(113, 239, 146/);
+});
+
+test('holding a lyric never starts the microphone automatically', async () => {
+  let starts = 0;
+  const dom = await boot(false, {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: { appSlug: 'englishtraining', appPath: '/englishtraining', apiRoot: '/api/englishtraining' },
+    beforeEval: (window) => {
+      window.SpeechRecognition = class { start() { starts += 1; } abort() {} };
+    }
+  });
+  try {
+    const { document, Event } = dom.window;
+    document.querySelector('.lyrics-button').click();
+    const line = document.querySelector('[data-line-index="0"]');
+    line.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 240));
+    line.dispatchEvent(new Event('pointerup', { bubbles: true }));
+    assert.equal(starts, 0);
+    line.click();
+    document.getElementById('lyricsMicrophoneButton').click();
+    assert.equal(starts, 1);
+    assert.equal(document.getElementById('lyricsMicrophoneButton').getAttribute('aria-label'), 'Enviar gravação para avaliação');
   } finally {
     dom.window.close();
   }

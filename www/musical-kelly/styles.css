@@ -3140,13 +3140,13 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   display: none;
 }
 
-/* English Training study view: responsive sky, compact controls and portrait-led lyric cards. */
+/* English Training study view: light green-blue gradient and portrait-led lyric cards. */
 html:has(body.englishtraining-page) {
-  background: #1684df;
+  background: #b9eac7;
 }
 
 body.englishtraining-page {
-  background: url('/englishtraining/background-desktop.png') center / cover fixed no-repeat;
+  background: linear-gradient(145deg, #d4f4d7 0%, #afe9d1 42%, #91cbed 100%) fixed;
   font-family: "Google Sans Flex", "Google Sans", "Product Sans", Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -3155,19 +3155,18 @@ body.englishtraining-page .ambient {
 }
 
 body.englishtraining-page .lyrics-screen {
-  background-color: #1684df;
-  background-image: url('/englishtraining/background-desktop.png');
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
+  grid-template-rows: minmax(0, 1fr) auto;
+  background: linear-gradient(145deg, #d4f4d7 0%, #afe9d1 42%, #91cbed 100%);
 }
 
 body.englishtraining-page .lyrics-header {
-  grid-template-columns: 38px minmax(0, 1fr) auto;
-  gap: 8px;
-  min-height: 58px;
-  padding: max(7px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 7px max(14px, env(safe-area-inset-left));
-  border-bottom-color: rgba(172, 220, 255, 0.34);
+  grid-row: 2;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  min-height: 74px;
+  padding: 8px max(14px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  border-bottom: 0;
+  border-top: 1px solid rgba(172, 220, 255, 0.34);
   background: rgba(5, 36, 78, 0.42);
   backdrop-filter: blur(12px);
 }
@@ -3179,7 +3178,7 @@ body.englishtraining-page .lyrics-track-heading small {
 
 body.englishtraining-page .lyrics-character-switch {
   display: grid;
-  grid-column: 1;
+  grid-column: 2;
   grid-row: 1;
   width: 36px;
   height: 36px;
@@ -3197,11 +3196,7 @@ body.englishtraining-page .lyrics-character-switch__avatar {
 }
 
 body.englishtraining-page .lyrics-track-heading {
-  grid-column: 2;
-  grid-row: 1;
-  min-width: 0;
-  justify-items: start;
-  text-align: left;
+  display: none;
 }
 
 body.englishtraining-page .lyrics-track-navigation {
@@ -3214,12 +3209,27 @@ body.englishtraining-page .lyrics-track-navigation button {
 }
 
 body.englishtraining-page .lyrics-header-actions {
-  grid-column: 3;
+  display: contents;
+}
+
+body.englishtraining-page .lyrics-header-actions > button {
   grid-row: 1;
-  gap: 5px;
-  min-width: 0;
-  justify-self: end;
-  flex-wrap: nowrap;
+  justify-self: center;
+}
+
+body.englishtraining-page .lyrics-back-button { grid-column: 1; }
+body.englishtraining-page .lyrics-language-toggle { grid-column: 3; }
+body.englishtraining-page .lyrics-microphone-button { grid-column: 4; }
+body.englishtraining-page .lyrics-header-play-button { grid-column: 5; }
+body.englishtraining-page .lyrics-repeat-toggle { grid-column: 6; }
+body.englishtraining-page .lyrics-timing-button { grid-column: 7; }
+
+body.englishtraining-page .lyrics-edit-button {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: calc(100% + 8px);
+  min-height: 30px;
+  background: rgba(5, 36, 78, 0.75);
 }
 
 body.englishtraining-page .lyrics-player {
@@ -3246,6 +3256,45 @@ body.englishtraining-page .lyrics-header-play-button img {
   width: 30px;
   height: 30px;
 }
+
+body.englishtraining-page .lyrics-microphone-button {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  padding: 9px;
+  border: 1px solid rgba(221, 244, 255, 0.72);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(11, 82, 134, 0.78);
+  box-shadow: 0 0 0 4px rgba(96, 182, 255, 0.12);
+  cursor: pointer;
+}
+
+body.englishtraining-page .lyrics-microphone-button[hidden] { display: none; }
+body.englishtraining-page .lyrics-microphone-button:disabled { opacity: 0.48; cursor: default; }
+body.englishtraining-page .lyrics-microphone-button.is-turn-ready {
+  border-color: #9bf2ae;
+  box-shadow: 0 0 0 4px rgba(67, 214, 117, 0.18), 0 0 22px rgba(67, 214, 117, 0.45);
+}
+body.englishtraining-page .lyrics-microphone-button.is-recording {
+  border-color: #ffbe7b;
+  color: #ff9f43;
+  background: rgba(66, 35, 8, 0.88);
+  box-shadow: 0 0 0 4px rgba(255, 159, 67, 0.16);
+}
+body.englishtraining-page .lyrics-microphone-button svg {
+  width: 32px;
+  height: 32px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+body.englishtraining-page .lyrics-microphone-button .lyrics-send-icon { display: none; }
+body.englishtraining-page .lyrics-microphone-button.is-recording .lyrics-microphone-icon { display: none; }
+body.englishtraining-page .lyrics-microphone-button.is-recording .lyrics-send-icon { display: block; }
 
 body.englishtraining-page .lyrics-repeat-toggle {
   display: grid;
@@ -3385,11 +3434,20 @@ body.englishtraining-page .lyrics-language-toggle[aria-busy="true"]::after {
 
 body.englishtraining-page .lyrics-edit-button,
 body.englishtraining-page .lyrics-back-button {
-  min-height: 33px;
-  padding-inline: 10px;
+  width: 36px;
+  min-height: 36px;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+body.englishtraining-page .lyrics-back-button span {
+  display: none;
 }
 
 body.englishtraining-page .lyrics-stage {
+  grid-row: 1;
   background: linear-gradient(180deg, rgba(6, 34, 69, 0.03), rgba(4, 34, 69, 0.08));
 }
 
@@ -3410,6 +3468,7 @@ body.englishtraining-page .lyric-line {
   z-index: 0;
   display: block;
   min-height: 118px;
+  opacity: 1;
   overflow: visible;
   padding: 14px 60px 26px calc(var(--portrait-width) + 13px);
   border: 1px solid rgba(166, 218, 255, 0.47);
@@ -3421,6 +3480,28 @@ body.englishtraining-page .lyric-line {
   user-select: none;
   -webkit-user-select: none;
 }
+
+body.englishtraining-page .lyric-line.is-pov-line {
+  opacity: 1;
+  border-color: rgba(113, 239, 146, 0.82);
+  background: linear-gradient(115deg, rgba(24, 101, 69, 0.83), rgba(7, 73, 61, 0.85));
+}
+
+body.englishtraining-page .lyric-line.is-pov-line.is-active,
+body.englishtraining-page .lyric-line.is-pov-line.is-turn-waiting {
+  opacity: 1;
+  border-color: #85f2a3;
+  background: linear-gradient(115deg, rgba(33, 133, 75, 0.95), rgba(11, 94, 73, 0.94));
+  box-shadow: 0 0 0 2px rgba(115, 242, 153, 0.24), 0 10px 28px rgba(0, 68, 42, 0.24);
+}
+
+body.englishtraining-page .lyric-line.is-pov-line::before {
+  border-right-color: rgba(192, 255, 207, 0.92);
+  background: linear-gradient(180deg, #89f4a4, #36bf83);
+  box-shadow: 0 0 14px rgba(94, 230, 136, 0.54);
+}
+
+body.englishtraining-page .lyric-line.is-pov-muted { opacity: 1; }
 
 body.englishtraining-page .lyric-line:has(.pronunciation-score__seal:not([hidden])) {
   z-index: 2;
@@ -3605,22 +3686,18 @@ body.englishtraining-page .pronunciation-score__seal[hidden] {
 
 @media (max-width: 560px) {
   body.englishtraining-page {
-    background-image: url('/englishtraining/background-mobile.jpg');
-    background-position: center center;
-    background-size: cover;
+    background: linear-gradient(165deg, #d4f4d7 0%, #afe9d1 43%, #91cbed 100%) fixed;
   }
 
   body.englishtraining-page .lyrics-screen {
-    background-image: url('/englishtraining/background-mobile.jpg');
-    background-position: center;
-    background-size: cover;
+    background: linear-gradient(165deg, #d4f4d7 0%, #afe9d1 43%, #91cbed 100%);
   }
 
   body.englishtraining-page .lyrics-header {
-    grid-template-columns: 34px minmax(0, 1fr) auto;
-    min-height: 48px;
-    gap: 5px;
-    padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 4px max(8px, env(safe-area-inset-left));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    min-height: 60px;
+    gap: 2px;
+    padding: 5px max(8px, env(safe-area-inset-right)) max(5px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   }
 
   body.englishtraining-page .lyrics-character-switch {
@@ -3653,6 +3730,17 @@ body.englishtraining-page .pronunciation-score__seal[hidden] {
     height: 28px;
   }
 
+  body.englishtraining-page .lyrics-microphone-button {
+    width: 46px;
+    height: 46px;
+    padding: 8px;
+  }
+
+  body.englishtraining-page .lyrics-microphone-button svg {
+    width: 29px;
+    height: 29px;
+  }
+
   body.englishtraining-page .lyrics-repeat-toggle {
     flex-basis: 30px;
     width: 30px;
@@ -3682,11 +3770,15 @@ body.englishtraining-page .pronunciation-score__seal[hidden] {
     font-size: 0.88rem;
   }
 
-  body.englishtraining-page .lyrics-edit-button,
-  body.englishtraining-page .lyrics-back-button {
+  body.englishtraining-page .lyrics-edit-button {
     min-height: 29px;
     padding-inline: 7px;
     font-size: 0.65rem;
+  }
+
+  body.englishtraining-page .lyrics-back-button {
+    width: 31px;
+    min-height: 31px;
   }
 
   body.englishtraining-page .lyrics-lines {
