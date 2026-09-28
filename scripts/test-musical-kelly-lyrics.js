@@ -360,7 +360,13 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(appSource, /function hasSpecificPovCharacter\(\)/);
   assert.match(appSource, /hasSpecificPovCharacter\(\)/);
   assert.match(stylesSource, /body\.englishtraining-page \.lyrics-player\s*\{\s*display: none;/);
-  assert.match(stylesSource, /left: calc\(var\(--portrait-width\) - var\(--portrait-cut\)\)/);
+  assert.match(appSource, /Math\.min\(100, realScore \+ 10\)/);
+  assert.match(appSource, /realScore > 95[\s\S]*'diamante'[\s\S]*'ouro'[\s\S]*'platina'[\s\S]*'white'/);
+  assert.match(stylesSource, /pronunciation-score__fill \{[\s\S]*z-index: 1;[\s\S]*background-color: var\(--score-color/);
+  assert.match(stylesSource, /lyric-character-avatar \{[\s\S]*z-index: 2;/);
+  for (const seal of ['platina', 'ouro', 'diamante', 'white']) {
+    assert.equal(fs.existsSync(path.join(root, 'www', 'medalhas', `${seal}.png`)), true);
+  }
   assert.match(serverSource, /requireAdminUserFromRequest\(req\)/);
   assert.match(serverSource, /CREATE TABLE IF NOT EXISTS public\.\$\{workspace\.characterTable\}/);
   assert.match(serverSource, /INSERT INTO public\.\$\{workspace\.characterTable\}/);
@@ -426,8 +432,9 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(html, /id="characterDeleteButton"/);
   assert.match(html, /id="characterCancelButton"/);
   assert.match(html, /id="lyricsLanguageToggle"[^>]*hidden/);
-  assert.match(html, /id="lyricsLanguageEnglish"/);
-  assert.match(html, /id="lyricsLanguagePortuguese"/);
+  assert.match(html, /id="lyricsLanguageFlag" src="\/arquivos-codex\/icones\/ingles\.svg"/);
+  assert.doesNotMatch(html, /id="lyricsLanguageEnglish"|id="lyricsLanguagePortuguese"/);
+  assert.ok(appSource.includes('/arquivos-codex/icones/portugues.svg'));
   assert.match(html, /id="imageInput"[^>]*accept="image\/jpeg,image\/png,image\/webp/);
   assert.match(html, /class="icon-comments"/);
   assert.doesNotMatch(html, /id="playerBar"/);
@@ -439,6 +446,10 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(stylesSource, /grid-template-columns: 52px minmax\(0, 1fr\)/);
   assert.match(stylesSource, /\.lyric-character-avatar \{[\s\S]*width: 52px;[\s\S]*height: 52px/);
   assert.match(stylesSource, /\.lyrics-character-switch__avatar \{[\s\S]*width: 38px;[\s\S]*height: 38px/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-track-heading \{[\s\S]*grid-column: 2/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-header-actions \{[\s\S]*grid-column: 3/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-language-toggle img \{[\s\S]*width: 27px;[\s\S]*height: 27px/);
+  assert.match(stylesSource, /\.lyrics-character-switch__avatar svg \{[\s\S]*fill: currentColor;[\s\S]*stroke: none/);
   assert.match(stylesSource, /body\.lyrics-open > [^{]*:not\(\.download-prompt-dialog\)/);
   assert.match(stylesSource, /\.container-upload-menu \{[\s\S]*position: fixed;[\s\S]*z-index: 180/);
   assert.doesNotMatch(stylesSource, /padding: 31vh 10px 37vh/);
@@ -519,16 +530,17 @@ test('englishtraining translates once and toggles the shared Portuguese lyrics',
   const { document } = dom.window;
   document.querySelector('.lyrics-button').click();
   assert.equal(document.getElementById('lyricsLanguageToggle').hidden, false);
-  assert.equal(document.getElementById('lyricsLanguageEnglish').classList.contains('is-active'), true);
+  assert.equal(document.getElementById('lyricsLanguageFlag').alt, 'Bandeira dos Estados Unidos');
+  assert.equal(document.getElementById('lyricsHeaderPlayButton').hidden, false);
   assert.equal(document.querySelector('[data-line-index="1"] .lyric-copy > span:last-child').textContent, 'I am with you.');
-  document.getElementById('lyricsLanguagePortuguese').click();
+  document.getElementById('lyricsLanguageToggle').click();
   await new Promise((resolve) => setTimeout(resolve, 20));
   assert.ok(fetchUrls.some((url) => url.endsWith('/api/englishtraining/cards/cue-test/lyrics/portuguese')));
-  assert.equal(document.getElementById('lyricsLanguagePortuguese').classList.contains('is-active'), true);
+  assert.equal(document.getElementById('lyricsLanguageFlag').alt, 'Bandeira do Brasil');
   assert.equal(document.querySelector('[data-line-index="0"] .lyric-copy > span:last-child').textContent, 'Não tenha medo.');
   assert.equal(dom.window.localStorage.getItem('playtalk-englishtraining-lyrics-language-v1'), 'pt');
-  document.getElementById('lyricsLanguageEnglish').click();
-  document.getElementById('lyricsLanguagePortuguese').click();
+  document.getElementById('lyricsLanguageToggle').click();
+  document.getElementById('lyricsLanguageToggle').click();
   await new Promise((resolve) => setTimeout(resolve, 5));
   assert.equal(fetchUrls.filter((url) => url.endsWith('/lyrics/portuguese')).length, 1);
   dom.window.close();

@@ -93,8 +93,7 @@
     lyricsBackButton: document.getElementById('lyricsBackButton'),
     lyricsEditButton: document.getElementById('lyricsEditButton'),
     lyricsLanguageToggle: document.getElementById('lyricsLanguageToggle'),
-    lyricsLanguageEnglish: document.getElementById('lyricsLanguageEnglish'),
-    lyricsLanguagePortuguese: document.getElementById('lyricsLanguagePortuguese'),
+    lyricsLanguageFlag: document.getElementById('lyricsLanguageFlag'),
     lyricsTimingButton: document.getElementById('lyricsTimingButton'),
     lyricsAdminPanel: document.getElementById('lyricsAdminPanel'),
     lyricsAdminTitle: document.getElementById('lyricsAdminTitle'),
@@ -216,7 +215,8 @@
     capturePromise: null,
     replayAudio: null,
     duckedVoice: null,
-    previousVoiceVolume: null
+    previousVoiceVolume: null,
+    resumeAfterSourceReplay: false
   };
 
   function readPronunciationScores() {
@@ -306,21 +306,47 @@
     return `rgb(${rgb.join(', ')})`;
   }
 
-  function renderPronunciationBadge(badge, score, listening = false, replaying = false) {
+  function renderPronunciationBadge(badge, score, listening = false, replaying = false, animateScore = false) {
     if (!badge) return;
     const fill = badge.querySelector('.pronunciation-score__fill');
     const label = badge.querySelector('.pronunciation-score__label');
+    const seal = badge.querySelector('.pronunciation-score__seal');
     badge.classList.toggle('is-listening', listening);
     badge.classList.toggle('is-replaying', replaying);
     badge.classList.toggle('is-unscored', score == null && !listening && !replaying);
     badge.hidden = false;
-    if (label) label.textContent = listening ? 'Ouvindo…' : (replaying ? 'Reouvindo…' : (score == null ? '' : `${score}%`));
+    if (label) label.textContent = listening ? 'Ouvindo…' : (replaying === 'source' ? 'Fala original…' : (replaying ? 'Reouvindo…' : (score == null ? '' : `${score}%`)));
     badge.style.setProperty('--score-color', score == null ? '#929eaa' : pronunciationColor(score));
-    const progress = listening ? 100 : (replaying ? 0 : (score == null ? 100 : Math.max(0, Math.min(100, Number(score) || 0))));
+    const realScore = score == null ? null : Math.max(0, Math.min(100, Number(score) || 0));
+    const progress = listening ? 100 : (replaying || animateScore ? 0 : (realScore == null ? 100 : Math.min(100, realScore + 10)));
     badge.style.setProperty('--score-progress', `${progress}%`);
-    badge.style.setProperty('--score-gradient-size', `${progress > 0 ? 10000 / progress : 100}%`);
     if (fill) fill.style.width = 'var(--score-progress)';
-    badge.setAttribute('aria-label', listening ? 'Microfone ativado' : (replaying ? 'Reproduzindo sua gravação' : (score == null ? 'Sem áudio enviado, sem nota' : `Pronúncia: ${score}%`)));
+    badge.setAttribute('aria-label', listening ? 'Microfone ativado' : (replaying === 'source' ? 'Reproduzindo fala original' : (replaying ? 'Reproduzindo sua gravação' : (score == null ? 'Sem áudio enviado, sem nota' : `Pronúncia: ${score}%`))));
+    const sealKind = realScore == null ? '' : (realScore > 95 ? 'diamante' : (realScore >= 90 ? 'ouro' : (realScore >= 75 ? 'platina' : 'white')));
+    if (seal) {
+      if (sealKind) {
+        seal.src = absoluteUrl(`/medalhas/${sealKind}.png`);
+        seal.alt = '';
+        seal.title = sealKind[0].toLocaleUpperCase('pt-BR') + sealKind.slice(1);
+        seal.setAttribute('aria-hidden', 'true');
+      }
+      seal.hidden = listening || replaying || animateScore;
+    }
+    if (badge._pronunciationSealTimer) window.clearTimeout(badge._pronunciationSealTimer);
+    badge._pronunciationSealTimer = 0;
+    if (animateScore) {
+      const targetProgress = Math.min(100, realScore + 10);
+      badge._pronunciationSealTimer = window.setTimeout(() => {
+        if (badge.isConnected && badge.dataset.scoreValue === String(realScore) && seal) seal.hidden = false;
+      }, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : 950);
+      badge.dataset.scoreValue = String(realScore);
+      window.requestAnimationFrame(() => {
+        if (!badge.isConnected || badge.dataset.scoreValue !== String(realScore)) return;
+        badge.style.setProperty('--score-progress', `${targetProgress}%`);
+      });
+    } else {
+      badge.dataset.scoreValue = String(realScore);
+    }
   }
 
   function finishPronunciation(cardId, line, spokenText, badge, recordingBlob = null) {
@@ -330,13 +356,37 @@
     if (!pronunciationState.scores[cardId]) pronunciationState.scores[cardId] = {};
     pronunciationState.scores[cardId][line.id] = { score, updatedAt: new Date().toISOString() };
     savePronunciationScores();
-    if (recordingBlob?.size && window.URL?.createObjectURL) {
-      playPronunciationRecording(recordingBlob, score, badge, restoreMusicAfterPronunciation);
-    } else {
-      renderPronunciationBadge(badge, score);
+    const finishScore = () => {
       restoreMusicAfterPronunciation();
+      renderPronunciationBadge(badge, score, false, false, true);
+      if (navigator.vibrate) navigator.vibrate(score >= 85 ? [20, 35, 25] : 20);
+    };
+    const repeatOriginalLine = () => {
+      const card = getCard(cardId);
+      const start = Number(line.start);
+      const end = Number(line.end);
+      if (
+        APP_SLUG === 'englishtraining'
+        && !hasSpecificPovCharacter()
+        && card?.lyrics?.mode === 'timesync'
+        && Number.isFinite(start)
+        && Number.isFinite(end)
+        && end > start
+      ) {
+        restoreMusicAfterPronunciation();
+        renderPronunciationBadge(badge, score, false, 'source');
+        replayOriginalLyricLine(card, line, pronunciationState.resumeAfterSourceReplay)
+          .catch(() => {})
+          .finally(finishScore);
+      } else {
+        finishScore();
+      }
+    };
+    if (recordingBlob?.size && window.URL?.createObjectURL) {
+      playPronunciationRecording(recordingBlob, score, badge, repeatOriginalLine);
+    } else {
+      repeatOriginalLine();
     }
-    if (navigator.vibrate) navigator.vibrate(score >= 85 ? [20, 35, 25] : 20);
   }
 
   function startPronunciationCapture(recognition) {
@@ -396,7 +446,6 @@
       finished = true;
       if (pronunciationState.replayAudio === audio) pronunciationState.replayAudio = null;
       URL.revokeObjectURL(url);
-      if (badge.isConnected) renderPronunciationBadge(badge, score);
       onFinished();
     };
     audio.addEventListener('ended', finish, { once: true });
@@ -422,6 +471,34 @@
     if (voice && state.current === voice && Number.isFinite(volume)) setCurrentVoiceVolume(volume);
   }
 
+  async function replayOriginalLyricLine(card, line, resumeAfter = true) {
+    const start = Number(line?.start);
+    const end = Number(line?.end);
+    if (!card?.audio || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+    if (!await ensureLyricsCardAt(card, start)) return;
+    const voice = state.current;
+    if (!voice || voice.cardId !== card.id) return;
+    const rate = voice.native ? Math.max(0.25, Number(voice.media?.playbackRate) || 1) : 1;
+    await new Promise((resolve) => {
+      let timer = 0;
+      const checkEnd = () => {
+        if (state.current !== voice || voice.paused) {
+          window.clearTimeout(timer);
+          resolve();
+          return;
+        }
+        const remaining = end - currentPosition(voice);
+        if (remaining <= 0.035) {
+          if (!resumeAfter) pauseCurrent();
+          resolve();
+          return;
+        }
+        timer = window.setTimeout(checkEnd, Math.max(35, Math.min(120, (remaining * 1000) / rate)));
+      };
+      checkEnd();
+    });
+  }
+
   function startPronunciationRecognition(card, line, badge) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -439,6 +516,7 @@
     pronunciationState.recognition = recognition;
     pronunciationState.activeLineId = line.id;
     pronunciationState.activeCardId = card.id;
+    pronunciationState.resumeAfterSourceReplay = state.current?.cardId === card.id && !state.current.paused;
     recognition.lang = state.lyricsLanguage === 'pt' ? 'pt-BR' : 'en-US';
     recognition.continuous = false;
     recognition.interimResults = false;
@@ -1425,13 +1503,17 @@
     const translatingPortuguese = state.lyricsTranslationBusyCardId === card.id;
     elements.lyricsLanguageToggle.hidden = !showLanguageToggle;
     elements.lyricsTimingButton.hidden = !showLanguageToggle;
+    elements.lyricsHeaderPlayButton.hidden = !showLanguageToggle;
     updateLyricsTimingControl();
-    elements.lyricsLanguageEnglish.classList.toggle('is-active', state.lyricsLanguage === 'en');
-    elements.lyricsLanguagePortuguese.classList.toggle('is-active', state.lyricsLanguage === 'pt');
-    elements.lyricsLanguageEnglish.setAttribute('aria-pressed', String(state.lyricsLanguage === 'en'));
-    elements.lyricsLanguagePortuguese.setAttribute('aria-pressed', String(state.lyricsLanguage === 'pt'));
-    elements.lyricsLanguagePortuguese.disabled = translatingPortuguese;
-    elements.lyricsLanguagePortuguese.setAttribute('aria-busy', String(translatingPortuguese));
+    const portugueseSelected = state.lyricsLanguage === 'pt';
+    elements.lyricsLanguageFlag.src = portugueseSelected
+      ? '/arquivos-codex/icones/portugues.svg'
+      : '/arquivos-codex/icones/ingles.svg';
+    elements.lyricsLanguageFlag.alt = portugueseSelected ? 'Bandeira do Brasil' : 'Bandeira dos Estados Unidos';
+    elements.lyricsLanguageToggle.setAttribute('aria-pressed', String(portugueseSelected));
+    elements.lyricsLanguageToggle.setAttribute('aria-label', `Idioma atual: ${portugueseSelected ? 'português' : 'inglês'}. Toque para trocar.`);
+    elements.lyricsLanguageToggle.title = `Trocar para ${portugueseSelected ? 'inglês' : 'português'}`;
+    elements.lyricsLanguageToggle.setAttribute('aria-busy', String(translatingPortuguese));
     const selectedCharacter = characterById(state.selectedCharacterId);
     const characterControlLabel = selectedCharacter
       ? `Ponto de vista: ${selectedCharacter.name}`
@@ -1488,7 +1570,12 @@
       pronunciationLabel.className = 'pronunciation-score__label';
       const pronunciationFill = document.createElement('span');
       pronunciationFill.className = 'pronunciation-score__fill';
-      pronunciationBadge.append(pronunciationLabel, pronunciationFill);
+      const pronunciationSeal = document.createElement('img');
+      pronunciationSeal.className = 'pronunciation-score__seal';
+      pronunciationSeal.hidden = true;
+      pronunciationSeal.alt = '';
+      pronunciationSeal.setAttribute('aria-hidden', 'true');
+      pronunciationBadge.append(pronunciationLabel, pronunciationFill, pronunciationSeal);
       const existingScore = pronunciationScoreFor(card.id, line.id);
       const isListening = pronunciationState.activeCardId === card.id && pronunciationState.activeLineId === line.id;
       renderPronunciationBadge(pronunciationBadge, existingScore, isListening);
@@ -1648,6 +1735,7 @@
     elements.lyricsPlayButton.classList.toggle('is-playing', isPlaying);
     elements.lyricsPlayButton.setAttribute('aria-label', isPlaying ? 'Pausar' : 'Reproduzir');
     elements.lyricsHeaderPlayButton.hidden = APP_SLUG !== 'englishtraining';
+    elements.lyricsHeaderPlayButton.disabled = !card.audio;
     elements.lyricsHeaderPlayButton.classList.toggle('is-playing', isPlaying);
     elements.lyricsHeaderPlayButton.setAttribute('aria-label', isPlaying ? 'Pausar' : 'Reproduzir');
     elements.lyricsRewindButton.disabled = Boolean(state.manualSync) || !isCurrent || duration <= 0;
@@ -3975,8 +4063,9 @@
     elements.lyricsClearTimesyncButton.addEventListener('click', () => {
       clearLyricsTimesync().catch((error) => showToast(error.message, true));
     });
-    elements.lyricsLanguageEnglish.addEventListener('click', () => setLyricsLanguage('en'));
-    elements.lyricsLanguagePortuguese.addEventListener('click', () => setLyricsLanguage('pt'));
+    elements.lyricsLanguageToggle.addEventListener('click', () => {
+      setLyricsLanguage(state.lyricsLanguage === 'pt' ? 'en' : 'pt');
+    });
     elements.lyricsTimingButton.addEventListener('click', () => {
       cycleLyricsTimingRate().catch((error) => showToast(error.message, true));
     });

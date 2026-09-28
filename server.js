@@ -28727,8 +28727,8 @@ app.get(['/englishtraining/', '/englishtraining/index.html'], (_req, res) => {
     .replace('<title>Musical Kelly | Fluent LevelUp</title>', '<title>English Training | Fluent LevelUp</title>')
     .replace('<body>', '<body class="englishtraining-page">')
     .replace(
-      '<script src="/musical-kelly/app.js?v=40" defer></script>',
-      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=40" defer></script>`
+      '<script src="/musical-kelly/app.js?v=42" defer></script>',
+      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=42" defer></script>`
     );
   res.setHeader('Cache-Control', 'no-store');
   res.type('html').send(html);
