@@ -116,6 +116,7 @@
     lyricsPlayer: document.getElementById('lyricsPlayer'),
     lyricsRewindButton: document.getElementById('lyricsRewindButton'),
     lyricsPlayButton: document.getElementById('lyricsPlayButton'),
+    lyricsHeaderPlayButton: document.getElementById('lyricsHeaderPlayButton'),
     lyricsSeekSlider: document.getElementById('lyricsSeekSlider'),
     lyricsCurrentTime: document.getElementById('lyricsCurrentTime'),
     lyricsDuration: document.getElementById('lyricsDuration'),
@@ -210,7 +211,12 @@
     scores: readPronunciationScores(),
     recognition: null,
     activeLineId: '',
-    activeCardId: ''
+    activeCardId: '',
+    capture: null,
+    capturePromise: null,
+    replayAudio: null,
+    duckedVoice: null,
+    previousVoiceVolume: null
   };
 
   function readPronunciationScores() {
@@ -300,28 +306,120 @@
     return `rgb(${rgb.join(', ')})`;
   }
 
-  function renderPronunciationBadge(badge, score, listening = false) {
+  function renderPronunciationBadge(badge, score, listening = false, replaying = false) {
     if (!badge) return;
     const fill = badge.querySelector('.pronunciation-score__fill');
     const label = badge.querySelector('.pronunciation-score__label');
     badge.classList.toggle('is-listening', listening);
+    badge.classList.toggle('is-replaying', replaying);
+    badge.classList.toggle('is-unscored', score == null && !listening && !replaying);
     badge.hidden = false;
-    if (label) label.textContent = listening ? 'Ouvindo…' : (score == null ? '' : `${score}%`);
+    if (label) label.textContent = listening ? 'Ouvindo…' : (replaying ? 'Reouvindo…' : (score == null ? '' : `${score}%`));
     badge.style.setProperty('--score-color', score == null ? '#929eaa' : pronunciationColor(score));
-    badge.style.setProperty('--score-progress', `${listening ? 100 : Math.max(0, Math.min(100, Number(score) || 0))}%`);
+    const progress = listening ? 100 : (replaying ? 0 : (score == null ? 100 : Math.max(0, Math.min(100, Number(score) || 0))));
+    badge.style.setProperty('--score-progress', `${progress}%`);
+    badge.style.setProperty('--score-gradient-size', `${progress > 0 ? 10000 / progress : 100}%`);
     if (fill) fill.style.width = 'var(--score-progress)';
-    badge.setAttribute('aria-label', listening ? 'Microfone ativado' : (score == null ? 'Sem áudio enviado, sem nota' : `Pronúncia: ${score}%`));
+    badge.setAttribute('aria-label', listening ? 'Microfone ativado' : (replaying ? 'Reproduzindo sua gravação' : (score == null ? 'Sem áudio enviado, sem nota' : `Pronúncia: ${score}%`)));
   }
 
-  function finishPronunciation(cardId, line, spokenText, badge) {
+  function finishPronunciation(cardId, line, spokenText, badge, recordingBlob = null) {
     if (APP_SLUG !== 'englishtraining') return;
     const expectedText = state.lyricsLanguage === 'pt' && String(line.textPt || '').trim() ? line.textPt : line.text;
     const score = calculatePronunciationScore(expectedText, spokenText);
     if (!pronunciationState.scores[cardId]) pronunciationState.scores[cardId] = {};
     pronunciationState.scores[cardId][line.id] = { score, updatedAt: new Date().toISOString() };
     savePronunciationScores();
-    renderPronunciationBadge(badge, score);
+    if (recordingBlob?.size && window.URL?.createObjectURL) {
+      playPronunciationRecording(recordingBlob, score, badge, restoreMusicAfterPronunciation);
+    } else {
+      renderPronunciationBadge(badge, score);
+      restoreMusicAfterPronunciation();
+    }
     if (navigator.vibrate) navigator.vibrate(score >= 85 ? [20, 35, 25] : 20);
+  }
+
+  function startPronunciationCapture(recognition) {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return Promise.resolve(null);
+    return navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      if (pronunciationState.recognition !== recognition) {
+        stream.getTracks().forEach((track) => track.stop());
+        return null;
+      }
+      const mimeType = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4']
+        .find((type) => MediaRecorder.isTypeSupported?.(type));
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const capture = { stream, recorder, chunks: [] };
+      recorder.addEventListener('dataavailable', (event) => {
+        if (event.data?.size) capture.chunks.push(event.data);
+      });
+      recorder.start(150);
+      pronunciationState.capture = capture;
+      return capture;
+    }).catch(() => null);
+  }
+
+  function stopPronunciationCapture(recognition) {
+    const capturePromise = pronunciationState.capturePromise;
+    return Promise.resolve(capturePromise).then((pendingCapture) => {
+      const capture = pendingCapture || pronunciationState.capture;
+      if (!capture) return null;
+      if (pronunciationState.capture === capture) pronunciationState.capture = null;
+      const { recorder, stream, chunks } = capture;
+      const finish = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const blob = chunks.length ? new Blob(chunks, { type: recorder.mimeType || chunks[0].type || 'audio/webm' }) : null;
+        return blob?.size ? blob : null;
+      };
+      if (recorder.state === 'inactive') return finish();
+      return new Promise((resolve) => {
+        recorder.addEventListener('stop', () => resolve(finish()), { once: true });
+        try { recorder.stop(); } catch (_error) { resolve(finish()); }
+      });
+    }).finally(() => {
+      if (pronunciationState.recognition === recognition) pronunciationState.capturePromise = null;
+    });
+  }
+
+  function playPronunciationRecording(blob, score, badge, onFinished = () => {}) {
+    if (pronunciationState.replayAudio) {
+      pronunciationState.replayAudio.pause();
+      pronunciationState.replayAudio = null;
+    }
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    pronunciationState.replayAudio = audio;
+    renderPronunciationBadge(badge, score, false, true);
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      if (pronunciationState.replayAudio === audio) pronunciationState.replayAudio = null;
+      URL.revokeObjectURL(url);
+      if (badge.isConnected) renderPronunciationBadge(badge, score);
+      onFinished();
+    };
+    audio.addEventListener('ended', finish, { once: true });
+    audio.addEventListener('error', finish, { once: true });
+    audio.play().catch(finish);
+  }
+
+  function duckMusicForPronunciation() {
+    const voice = state.current;
+    if (!voice) return;
+    pronunciationState.duckedVoice = voice;
+    pronunciationState.previousVoiceVolume = voice.native
+      ? Number(voice.media?.volume ?? 1)
+      : Number(voice.gain?.gain?.value ?? 1);
+    setCurrentVoiceVolume(pronunciationState.previousVoiceVolume * 0.1);
+  }
+
+  function restoreMusicAfterPronunciation() {
+    const voice = pronunciationState.duckedVoice;
+    const volume = pronunciationState.previousVoiceVolume;
+    pronunciationState.duckedVoice = null;
+    pronunciationState.previousVoiceVolume = null;
+    if (voice && state.current === voice && Number.isFinite(volume)) setCurrentVoiceVolume(volume);
   }
 
   function startPronunciationRecognition(card, line, badge) {
@@ -330,7 +428,13 @@
       showToast('O reconhecimento de voz não está disponível neste navegador.', true);
       return;
     }
-    if (pronunciationState.recognition) pronunciationState.recognition.abort();
+    if (pronunciationState.recognition) {
+      const previousRecognition = pronunciationState.recognition;
+      pronunciationState.recognition = null;
+      stopPronunciationCapture(previousRecognition);
+      restoreMusicAfterPronunciation();
+      previousRecognition.abort();
+    }
     const recognition = new SpeechRecognition();
     pronunciationState.recognition = recognition;
     pronunciationState.activeLineId = line.id;
@@ -339,9 +443,11 @@
     recognition.continuous = false;
     recognition.interimResults = false;
     renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id), true);
+    duckMusicForPronunciation();
+    pronunciationState.capturePromise = startPronunciationCapture(recognition);
+    let spokenText = '';
     recognition.onresult = (event) => {
-      const spokenText = Array.from(event.results || []).map((result) => result?.[0]?.transcript || '').join(' ').trim();
-      if (spokenText && pronunciationState.recognition === recognition) finishPronunciation(card.id, line, spokenText, badge);
+      spokenText = Array.from(event.results || []).map((result) => result?.[0]?.transcript || '').join(' ').trim();
     };
     recognition.onerror = (event) => {
       if (pronunciationState.recognition !== recognition) return;
@@ -357,12 +463,19 @@
       pronunciationState.recognition = null;
       pronunciationState.activeLineId = '';
       pronunciationState.activeCardId = '';
-      if (badge.isConnected) renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id));
+      stopPronunciationCapture(recognition).then((recordingBlob) => {
+        if (spokenText) finishPronunciation(card.id, line, spokenText, badge, recordingBlob);
+        else {
+          restoreMusicAfterPronunciation();
+          if (badge.isConnected) renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id));
+        }
+      });
     };
     try {
       recognition.start();
     } catch (_error) {
       pronunciationState.recognition = null;
+      restoreMusicAfterPronunciation();
       renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id));
       showToast('Não consegui ativar o microfone. Tente segurar o container novamente.', true);
     }
@@ -1224,6 +1337,11 @@
     return state.characters.find((character) => String(character.name || '').trim().toLocaleLowerCase() === speaker) || null;
   }
 
+  function hasSpecificPovCharacter() {
+    const selected = String(state.selectedCharacterId || '').trim().toLocaleLowerCase();
+    return Boolean(selected) && selected !== 'all' && selected !== '*';
+  }
+
   function lyricLineLabel(line) {
     const speaker = String(line?.speaker || '').trim();
     return speaker ? `${speaker}: ${line.text}` : String(line?.text || '').trim();
@@ -1493,7 +1611,7 @@
       elements.lyricsLines.querySelector(`[data-line-index="${index}"]`)
         ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
-    if (changed && index >= 0 && APP_SLUG === 'englishtraining' && state.selectedCharacterId) {
+    if (changed && index >= 0 && APP_SLUG === 'englishtraining' && hasSpecificPovCharacter()) {
       const card = getCard(state.lyricsCardId);
       const line = card?.lyrics?.lines?.[index];
       if (line?.characterId != null && String(line.characterId) === String(state.selectedCharacterId)) {
@@ -1529,6 +1647,9 @@
     const isPlaying = isCurrent && !state.current.paused;
     elements.lyricsPlayButton.classList.toggle('is-playing', isPlaying);
     elements.lyricsPlayButton.setAttribute('aria-label', isPlaying ? 'Pausar' : 'Reproduzir');
+    elements.lyricsHeaderPlayButton.hidden = APP_SLUG !== 'englishtraining';
+    elements.lyricsHeaderPlayButton.classList.toggle('is-playing', isPlaying);
+    elements.lyricsHeaderPlayButton.setAttribute('aria-label', isPlaying ? 'Pausar' : 'Reproduzir');
     elements.lyricsRewindButton.disabled = Boolean(state.manualSync) || !isCurrent || duration <= 0;
     elements.lyricsForwardButton.disabled = Boolean(state.manualSync) || !isCurrent || duration <= 0;
     elements.lyricsSeekSlider.disabled = Boolean(state.manualSync) || !card.audio || duration <= 0;
@@ -2052,7 +2173,8 @@
 
   function setCurrentVoiceVolume(value) {
     const voice = state.current;
-    const volume = Math.max(0, Math.min(1, Number(value) || 0));
+    const baseVolume = Math.max(0, Math.min(1, Number(value) || 0));
+    const volume = baseVolume * (pronunciationState.duckedVoice === voice ? 0.1 : 1);
     if (!voice) return;
     if (voice.native) {
       try { voice.media.volume = volume; } catch (_error) {}
@@ -2068,12 +2190,13 @@
   function fadeCurrentVoice(target, durationMs) {
     const voice = state.current;
     if (!voice) return;
+    const duckMultiplier = pronunciationState.duckedVoice === voice ? 0.1 : 1;
     if (!voice.native && voice.gain && state.audioContext) {
       const now = state.audioContext.currentTime;
       const parameter = voice.gain.gain;
       parameter.cancelScheduledValues(now);
       parameter.setValueAtTime(Math.max(0.0001, parameter.value), now);
-      parameter.linearRampToValueAtTime(Math.max(0.0001, target), now + durationMs / 1000);
+      parameter.linearRampToValueAtTime(Math.max(0.0001, target * duckMultiplier), now + durationMs / 1000);
       return;
     }
     const playback = state.povPlayback;
@@ -2084,7 +2207,7 @@
     const step = (now) => {
       if (state.current !== voice || state.povPlayback !== playback) return;
       const progress = Math.min(1, (now - startAt) / Math.max(1, durationMs));
-      try { voice.media.volume = initial + ((target - initial) * progress); } catch (_error) {}
+      try { voice.media.volume = initial + ((target * duckMultiplier - initial) * progress); } catch (_error) {}
       if (progress < 1) playback.fadeFrame = window.requestAnimationFrame(step);
     };
     playback.fadeFrame = window.requestAnimationFrame(step);
@@ -3893,6 +4016,9 @@
       elements.characterImageLabel.textContent = elements.characterImageInput.files?.[0]?.name || 'Escolher PNG';
     });
     elements.lyricsPlayButton.addEventListener('click', () => {
+      toggleLyricsPlayback().catch((error) => showToast(error.message, true));
+    });
+    elements.lyricsHeaderPlayButton.addEventListener('click', () => {
       toggleLyricsPlayback().catch((error) => showToast(error.message, true));
     });
     elements.lyricsPreviousTrackButton.addEventListener('click', () => {

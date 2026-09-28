@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=36">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=37">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -172,6 +172,10 @@
         <small>Toque no texto que quiser</small>
       </div>
       <div class="lyrics-header-actions">
+        <button class="lyrics-play-button lyrics-header-play-button" id="lyricsHeaderPlayButton" type="button" aria-label="Reproduzir" title="Reproduzir ou pausar" hidden>
+          <svg class="lyrics-icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5 18 12 8 18.5Z"/></svg>
+          <svg class="lyrics-icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 6v12M15.5 6v12"/></svg>
+        </button>
         <div class="lyrics-language-toggle" id="lyricsLanguageToggle" role="group" aria-label="Idioma da letra" hidden>
           <button id="lyricsLanguageEnglish" type="button" aria-pressed="true"><span class="language-full">Inglês</span><span class="language-short">EN</span></button>
           <button id="lyricsLanguagePortuguese" type="button" aria-pressed="false"><span class="language-full">Português</span><span class="language-short">PT</span></button>
@@ -436,6 +440,6 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="/musical-kelly/app.js?v=39" defer></script>
+  <script src="/musical-kelly/app.js?v=40" defer></script>
 </body>
 </html>

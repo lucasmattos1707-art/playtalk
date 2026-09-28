@@ -16714,7 +16714,7 @@ async function transcribeMusicalKellyAudio(card, audioBuffer) {
   };
 }
 
-async function structureMusicalKellyLyrics(card, transcription, mode) {
+async function structureMusicalKellyLyrics(card, transcription, mode, knownCharacters = []) {
   const segments = (Array.isArray(transcription?.segments) ? transcription.segments : [])
     .map((segment) => ({
       sourceId: Number(segment?.sourceId),
@@ -16750,14 +16750,17 @@ async function structureMusicalKellyLyrics(card, transcription, mode) {
     }
   };
   const prompt = [
-    'Organize this musical transcription into accurate subtitle lines.',
+    'Organize this audio transcription into accurate subtitle lines.',
     `Container title: ${JSON.stringify(card.title)}.`,
     `Requested result: ${mode === 'timesync' ? 'lyrics with precise time sync' : 'clean lyrics without visible time sync'}.`,
     'The supplied segments were already filtered for voice confidence. Instrumental and silent gaps are intentionally absent. Never create a line for a missing gap.',
     'Every returned item must reference one or more supplied sourceId values. Use every sourceId exactly once, in chronological order. Never reuse, skip, or invent a sourceId.',
     'Return exactly one subtitle line for each supplied segment and reference exactly one sourceId in it. Never split or group segments.',
     'Do not return text or timestamps. The server will copy the exact transcript words and timings from the referenced source segments so no word can be invented or stretched over an instrumental.',
-    'When a character can be inferred with reasonable confidence, put only the character name in speaker. Otherwise return an empty speaker.',
+    `Existing characters in this workspace: ${JSON.stringify((Array.isArray(knownCharacters) ? knownCharacters : []).map((character) => String(character?.name || '').trim()).filter(Boolean))}. When one of these characters is clearly speaking, use that exact name.`,
+    'Identify and label speakers only when the audio is character-to-character dialogue. The speaker is the person saying the line, not the person being addressed.',
+    'If the audio is a song or lyrics, a narrated story, a monologue, voice-over, announcement, or other single-voice narration, every speaker must be an empty string; do not assign or invent characters.',
+    'For clear dialogue between distinct characters, use names supported by the transcript or existing character list. If a dialogue character has no name, invent a short plausible name and reuse it consistently for that same character. Never invent a character merely because a line mentions a person, or because consecutive lines have different wording.',
     `Voice segments: ${JSON.stringify(segments)}`
   ].join('\n');
   const response = await fetch('https://api.openai.com/v1/responses', {
@@ -27491,9 +27494,9 @@ app.post(musicalKellyApiPaths('/cards/:cardId/lyrics/generate'), async (req, res
       res.status(413).json({ success: false, message: 'Para gerar a letra, use um audio de ate 24 MB.' });
       return;
     }
-    const transcription = await transcribeMusicalKellyAudio(initialCard, audioBuffer);
-    const lyrics = await structureMusicalKellyLyrics(initialCard, transcription, mode);
     const characters = await readMusicalKellyCharacters().catch(() => []);
+    const transcription = await transcribeMusicalKellyAudio(initialCard, audioBuffer);
+    const lyrics = await structureMusicalKellyLyrics(initialCard, transcription, mode, characters);
     const characterByName = new Map(characters.map((character) => [
       character.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase(),
       character.id
@@ -28724,8 +28727,8 @@ app.get(['/englishtraining/', '/englishtraining/index.html'], (_req, res) => {
     .replace('<title>Musical Kelly | Fluent LevelUp</title>', '<title>English Training | Fluent LevelUp</title>')
     .replace('<body>', '<body class="englishtraining-page">')
     .replace(
-      '<script src="/musical-kelly/app.js?v=39" defer></script>',
-      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=39" defer></script>`
+      '<script src="/musical-kelly/app.js?v=40" defer></script>',
+      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=40" defer></script>`
     );
   res.setHeader('Cache-Control', 'no-store');
   res.type('html').send(html);

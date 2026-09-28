@@ -153,7 +153,7 @@ test('viewer opens the fullscreen lyrics from the document icon', async () => {
   assert.equal(document.getElementById('lyricsEditButton').hidden, true);
   assert.equal(document.getElementById('lyricsLanguageToggle').hidden, true);
   assert.equal(document.querySelector('.comment-button').hidden, false);
-  assert.match(document.querySelector('.lyric-character-avatar').style.backgroundImage, /char-dorothy/);
+  assert.match(document.querySelector('.lyric-character-avatar img').src, /char-dorothy/);
   dom.window.close();
 });
 
@@ -354,7 +354,13 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(serverSource, /app\.put\(musicalKellyApiPaths\('\/cards\/:cardId\/lyrics\/timesync'\)/);
   assert.match(serverSource, /app\.delete\(musicalKellyApiPaths\('\/cards\/:cardId\/lyrics\/timesync'\)/);
   assert.match(serverSource, /app\.get\(musicalKellyApiPaths\('\/cards\/:cardId\/audio'\)/);
-  assert.match(serverSource, /Otherwise return an empty speaker/);
+  assert.match(serverSource, /every speaker must be an empty string/);
+  assert.match(serverSource, /invent a short plausible name and reuse it consistently/);
+  assert.match(serverSource, /Existing characters in this workspace/);
+  assert.match(appSource, /function hasSpecificPovCharacter\(\)/);
+  assert.match(appSource, /hasSpecificPovCharacter\(\)/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-player\s*\{\s*display: none;/);
+  assert.match(stylesSource, /left: calc\(var\(--portrait-width\) - var\(--portrait-cut\)\)/);
   assert.match(serverSource, /requireAdminUserFromRequest\(req\)/);
   assert.match(serverSource, /CREATE TABLE IF NOT EXISTS public\.\$\{workspace\.characterTable\}/);
   assert.match(serverSource, /INSERT INTO public\.\$\{workspace\.characterTable\}/);
@@ -462,6 +468,28 @@ test('englishtraining boots the shared page against its isolated API and caches'
   assert.match(serverSource, /englishtraining:[\s\S]*r2Prefix: 'englishtraining'/);
   assert.match(serverSource, /characterTable: 'englishtraining_characters'/);
   assert.match(serverSource, /app\.get\(\['\/englishtraining\/', '\/englishtraining\/index\.html'\]/);
+  dom.window.close();
+});
+
+test('englishtraining keeps play and pause in the header and hides track navigation', async () => {
+  const payload = projectPayload(false, { withAudio: true, withSecondTrack: true });
+  const dom = await boot(false, {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: {
+      appSlug: 'englishtraining',
+      appPath: '/englishtraining',
+      apiRoot: '/api/englishtraining'
+    },
+    payload
+  });
+  const { document } = dom.window;
+  document.querySelector('.lyrics-button').click();
+  assert.equal(document.getElementById('lyricsHeaderPlayButton').hidden, false);
+  assert.ok(document.getElementById('lyricsBackButton'));
+  assert.equal(document.querySelector('.pronunciation-score').style.getPropertyValue('--score-progress'), '100%');
+  assert.equal(document.querySelector('.pronunciation-score').classList.contains('is-unscored'), true);
+  assert.match(document.querySelector('.pronunciation-score').getAttribute('aria-label'), /Sem áudio enviado, sem nota/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-track-navigation button\s*\{\s*display: none;/);
   dom.window.close();
 });
 
