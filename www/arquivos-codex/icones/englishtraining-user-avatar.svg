@@ -1,13 +1,10 @@
 <?xml version="1.0" ?>
 <!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
-<svg width="800px" height="800px" viewBox="0 0 2050 2050" xmlns="http://www.w3.org/2000/svg">
+<svg width="800px" height="800px" viewBox="350 350 1350 1350" xmlns="http://www.w3.org/2000/svg">
 <defs>
 <style>.cls-1{fill:#ffffff;}.cls-2{fill:#ffc500;}.cls-3{fill:#ff9f1e;}.cls-4{fill:#ffe059;}.cls-5{fill:#00305f;}</style>
 </defs>
 <title/>
-<g data-name="Layer 1" id="Layer_1">
-<rect class="cls-1" height="2040" width="2040" x="5" y="5"/>
-</g>
 <g data-name="Layer 3" id="Layer_3">
 <circle class="cls-2" cx="1025" cy="1025" r="613.7"/>
 <path class="cls-3" d="M1068.5,1551.8c-339,0-613.7-274.8-613.7-613.7a613.5,613.5,0,0,1,44.4-229.8A610.7,610.7,0,0,0,411.3,1025c0,338.9,274.8,613.7,613.7,613.7,257.7,0,478.3-158.8,569.2-383.9C1486.8,1432.8,1291.5,1551.8,1068.5,1551.8Z"/>

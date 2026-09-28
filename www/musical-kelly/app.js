@@ -134,6 +134,7 @@
     manualSyncCancelButton: document.getElementById('manualSyncCancelButton'),
     lyricsCharacterSwitch: document.getElementById('lyricsCharacterSwitch'),
     lyricsCharacterAvatar: document.getElementById('lyricsCharacterAvatar'),
+    lyricsRepeatToggle: document.getElementById('lyricsRepeatToggle'),
     lyricsPlayer: document.getElementById('lyricsPlayer'),
     lyricsRewindButton: document.getElementById('lyricsRewindButton'),
     lyricsPlayButton: document.getElementById('lyricsPlayButton'),
@@ -216,6 +217,7 @@
     lyricsBusy: false,
     lyricsLanguage: readLyricsLanguagePreference(),
     lyricsTimingRate: readLyricsTimingPreference(),
+    repeatOriginalLine: true,
     lyricsTranslationBusyCardId: '',
     characterDialogMode: 'pov',
     editingCharacterId: '',
@@ -241,10 +243,8 @@
     latestAttempt: null,
     activeLineId: '',
     activeCardId: '',
-    replayAudio: null,
     duckedVoice: null,
-    previousVoiceVolume: null,
-    resumeAfterSourceReplay: false
+    previousVoiceVolume: null
   };
 
   function readPronunciationScores() {
@@ -347,6 +347,7 @@
     badge.classList.toggle('is-listening', listening);
     badge.classList.toggle('is-replaying', replaying);
     badge.classList.toggle('is-unscored', score == null && !listening && !replaying);
+    badge.classList.remove('is-evaluating');
     badge.hidden = score == null && !listening && !replaying;
     if (label) label.textContent = listening ? 'Ouvindo…' : (replaying === 'source' ? 'Fala original…' : (replaying ? 'Reouvindo…' : (score == null ? '' : `${score}%`)));
     badge.style.setProperty('--score-color', score == null ? '#929eaa' : pronunciationColor(score));
@@ -382,42 +383,41 @@
     }
   }
 
-  function finishPronunciation(cardId, line, spokenText, badge, recordingBlob = null, language = lyricLineLanguage(line)) {
+  function finishPronunciation(cardId, line, spokenText, badge, language = lyricLineLanguage(line)) {
     if (APP_SLUG !== 'englishtraining') return;
     const score = calculatePronunciationScore(lyricLineText(line, language), spokenText, language);
     if (!pronunciationState.scores[cardId]) pronunciationState.scores[cardId] = {};
     pronunciationState.scores[cardId][line.id] = { score, updatedAt: new Date().toISOString() };
     savePronunciationScores();
-    const finishScore = () => {
-      restoreMusicAfterPronunciation();
-      renderPronunciationBadge(badge, score, false, false, true);
-      if (navigator.vibrate) navigator.vibrate(score >= 85 ? [20, 35, 25] : 20);
-    };
-    const repeatOriginalLine = () => {
-      const card = getCard(cardId);
-      const start = Number(line.start);
-      const end = Number(line.end);
-      if (
-        APP_SLUG === 'englishtraining'
-        && card?.lyrics?.mode === 'timesync'
-        && Number.isFinite(start)
-        && Number.isFinite(end)
-        && end > start
-      ) {
-        restoreMusicAfterPronunciation();
-        renderPronunciationBadge(badge, score, false, 'source');
-        replayOriginalLyricLine(card, line, pronunciationState.resumeAfterSourceReplay)
-          .catch(() => {})
-          .finally(finishScore);
-      } else {
-        finishScore();
-      }
-    };
-    if (recordingBlob?.size && window.URL?.createObjectURL) {
-      playPronunciationRecording(recordingBlob, score, badge, repeatOriginalLine);
-    } else {
-      repeatOriginalLine();
-    }
+    if (badge.isConnected) renderPronunciationBadge(badge, score, false, false, true);
+    if (navigator.vibrate) navigator.vibrate(score >= 85 ? [20, 35, 25] : 20);
+  }
+
+  function showPronunciationEvaluating(badge) {
+    if (!badge?.isConnected) return;
+    badge.hidden = false;
+    badge.classList.remove('is-listening', 'is-replaying', 'is-unscored');
+    badge.classList.add('is-evaluating');
+    const label = badge.querySelector('.pronunciation-score__label');
+    if (label) label.textContent = 'Avaliando…';
+    const seal = badge.querySelector('.pronunciation-score__seal');
+    if (seal) seal.hidden = true;
+    badge.setAttribute('aria-label', 'Avaliando sua pronúncia');
+  }
+
+  function replayPronunciationSource(card, line, badge, attempt) {
+    restoreMusicAfterPronunciation();
+    const start = Number(line.start);
+    const end = Number(line.end);
+    if (!state.repeatOriginalLine || !card?.audio || card.lyrics?.mode !== 'timesync'
+      || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+    renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id), false, 'source');
+    replayOriginalLyricLine(card, line, attempt.resumeAfterSourceReplay,
+      () => pronunciationState.latestAttempt === attempt)
+      .catch(() => {})
+      .finally(() => {
+        if (pronunciationState.latestAttempt === attempt && !attempt.scored) showPronunciationEvaluating(badge);
+      });
   }
 
   function startPronunciationCapture(attempt) {
@@ -498,28 +498,6 @@
     return String(payload.text).trim();
   }
 
-  function playPronunciationRecording(blob, score, badge, onFinished = () => {}) {
-    if (pronunciationState.replayAudio) {
-      pronunciationState.replayAudio.pause();
-      pronunciationState.replayAudio = null;
-    }
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    pronunciationState.replayAudio = audio;
-    renderPronunciationBadge(badge, score, false, true);
-    let finished = false;
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      if (pronunciationState.replayAudio === audio) pronunciationState.replayAudio = null;
-      URL.revokeObjectURL(url);
-      onFinished();
-    };
-    audio.addEventListener('ended', finish, { once: true });
-    audio.addEventListener('error', finish, { once: true });
-    audio.play().catch(finish);
-  }
-
   function duckMusicForPronunciation() {
     const voice = state.current;
     if (!voice) return;
@@ -538,18 +516,19 @@
     if (voice && state.current === voice && Number.isFinite(volume)) setCurrentVoiceVolume(volume);
   }
 
-  async function replayOriginalLyricLine(card, line, resumeAfter = true) {
+  async function replayOriginalLyricLine(card, line, resumeAfter = true, isCurrent = () => true) {
     const start = Number(line?.start);
     const end = Number(line?.end);
-    if (!card?.audio || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+    if (!isCurrent() || !card?.audio || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
     if (!await ensureLyricsCardAt(card, start)) return;
+    if (!isCurrent()) return;
     const voice = state.current;
     if (!voice || voice.cardId !== card.id) return;
     const rate = voice.native ? Math.max(0.25, Number(voice.media?.playbackRate) || 1) : 1;
     await new Promise((resolve) => {
       let timer = 0;
       const checkEnd = () => {
-        if (state.current !== voice || voice.paused) {
+        if (!isCurrent() || state.current !== voice || voice.paused) {
           window.clearTimeout(timer);
           resolve();
           return;
@@ -602,7 +581,7 @@
     pronunciationState.latestAttempt = attempt;
     pronunciationState.activeLineId = line.id;
     pronunciationState.activeCardId = card.id;
-    pronunciationState.resumeAfterSourceReplay = state.current?.cardId === card.id && !state.current.paused;
+    attempt.resumeAfterSourceReplay = state.current?.cardId === card.id && !state.current.paused;
     renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id), true);
     restoreMusicAfterPronunciation();
     duckMusicForPronunciation();
@@ -617,11 +596,8 @@
       pronunciationState.recognition = null;
       pronunciationState.activeLineId = '';
       pronunciationState.activeCardId = '';
-      if (badge.isConnected) {
-        renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id), true);
-        const label = badge.querySelector('.pronunciation-score__label');
-        if (label) label.textContent = 'Avaliando…';
-      }
+      showPronunciationEvaluating(badge);
+      replayPronunciationSource(card, line, badge, attempt);
       let spokenText = attempt.spokenText;
       if (recordingBlob?.size && (!spokenText || navigator.maxTouchPoints > 0 || window.matchMedia?.('(pointer: coarse)').matches)) {
         try { spokenText = await transcribePronunciationRecording(recordingBlob, recognitionLanguage); }
@@ -630,9 +606,12 @@
         }
       }
       if (pronunciationState.latestAttempt !== attempt) return;
-      if (spokenText) finishPronunciation(card.id, line, spokenText, badge, recordingBlob, recognitionLanguage);
+      if (spokenText) {
+        attempt.scored = true;
+        finishPronunciation(card.id, line, spokenText, badge, recognitionLanguage);
+      }
       else {
-        restoreMusicAfterPronunciation();
+        attempt.scored = true;
         if (badge.isConnected) renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id));
         if (!recordingBlob?.size) showToast('Não captei a fala. Verifique a permissão do microfone e tente novamente.', true);
       }
@@ -1673,6 +1652,13 @@
     elements.lyricsLanguageToggle.hidden = !showLanguageToggle;
     elements.lyricsTimingButton.hidden = !showLanguageToggle;
     elements.lyricsHeaderPlayButton.hidden = !showLanguageToggle;
+    elements.lyricsRepeatToggle.hidden = !showLanguageToggle;
+    elements.lyricsRepeatToggle.classList.toggle('is-disabled', !state.repeatOriginalLine);
+    elements.lyricsRepeatToggle.setAttribute('aria-pressed', String(state.repeatOriginalLine));
+    elements.lyricsRepeatToggle.setAttribute('aria-label', state.repeatOriginalLine
+      ? 'Repetir a fala original após a sua vez'
+      : 'Repetição desligada. Somente avaliar a fala');
+    elements.lyricsRepeatToggle.title = state.repeatOriginalLine ? 'Repetir a fala original' : 'Ativar repetição da fala original';
     updateLyricsTimingControl();
     const portugueseSelected = state.lyricsLanguage === 'pt';
     elements.lyricsLanguageFlag.src = portugueseSelected
@@ -1780,6 +1766,7 @@
       });
       if (APP_SLUG === 'englishtraining' && !state.manualSync) {
         button.addEventListener('pointerdown', (event) => {
+          if (event.button != null && event.button !== 0) return;
           longPressActivated = false;
           pressX = event.clientX;
           pressY = event.clientY;
@@ -1815,6 +1802,8 @@
         ['pointerup', 'pointercancel', 'pointerleave'].forEach((eventName) => {
           button.addEventListener(eventName, () => window.clearTimeout(longPressTimer));
         });
+      }
+      if (state.canEdit && !state.manualSync) {
         button.addEventListener('contextmenu', (event) => {
           event.preventDefault();
           window.clearTimeout(longPressTimer);
@@ -2258,7 +2247,18 @@
     allButton.textContent = 'Todas as falas';
     allButton.addEventListener('click', () => selectPovCharacter(''));
     elements.characterGrid.appendChild(allButton);
-    charactersForCurrentCard().forEach((character) => {
+    const sceneCharacters = charactersForCurrentCard();
+    const sceneIds = new Set(sceneCharacters.map((character) => String(character.id)));
+    const otherCharacters = APP_SLUG === 'englishtraining'
+      ? state.characters.filter((character) => !sceneIds.has(String(character.id)))
+      : [];
+    const appendHeading = (label) => {
+      const heading = document.createElement('h3');
+      heading.className = 'character-grid__heading';
+      heading.textContent = label;
+      elements.characterGrid.appendChild(heading);
+    };
+    const appendCharacter = (character) => {
       const card = document.createElement('article');
       card.className = 'character-card';
       const button = document.createElement('button');
@@ -2290,7 +2290,11 @@
         card.appendChild(editButton);
       }
       elements.characterGrid.appendChild(card);
-    });
+    };
+    if (APP_SLUG === 'englishtraining' && sceneCharacters.length) appendHeading('Nesta faixa');
+    sceneCharacters.forEach(appendCharacter);
+    if (otherCharacters.length) appendHeading('Outros personagens');
+    otherCharacters.forEach(appendCharacter);
     elements.characterGrid.hidden = false;
   }
 
@@ -4652,6 +4656,16 @@
       showToast('Sync manual cancelado; nenhuma marcação foi salva.');
     });
     elements.lyricsCharacterSwitch.addEventListener('click', () => openCharacterDialog('pov'));
+    elements.lyricsRepeatToggle.addEventListener('click', () => {
+      if (APP_SLUG !== 'englishtraining') return;
+      state.repeatOriginalLine = !state.repeatOriginalLine;
+      elements.lyricsRepeatToggle.classList.toggle('is-disabled', !state.repeatOriginalLine);
+      elements.lyricsRepeatToggle.setAttribute('aria-pressed', String(state.repeatOriginalLine));
+      elements.lyricsRepeatToggle.setAttribute('aria-label', state.repeatOriginalLine
+        ? 'Repetir a fala original após a sua vez'
+        : 'Repetição desligada. Somente avaliar a fala');
+      elements.lyricsRepeatToggle.title = state.repeatOriginalLine ? 'Repetir a fala original' : 'Ativar repetição da fala original';
+    });
     elements.closeCharacterDialog.addEventListener('click', () => closeDialog(elements.characterDialog));
     elements.characterAddToggle.addEventListener('click', () => {
       beginAddCharacter();

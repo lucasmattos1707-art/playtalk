@@ -269,7 +269,7 @@ test('admin manages characters directly from the header dialog', async () => {
   dom.window.close();
 });
 
-test('public character menu is limited to the current track and exposes AI speaker profiles', async () => {
+test('public character menu lists the current scene first and then remaining profiles', async () => {
   const payload = projectPayload(false, { withSecondTrack: true });
   const fetchUrls = [];
   payload.characters.push({ id: 'char-unused', name: 'Scarecrow', imageUrl: '/api/musical-kelly/characters/char-unused/image' });
@@ -299,7 +299,14 @@ test('public character menu is limited to the current track and exposes AI speak
   const grid = document.getElementById('characterGrid');
   assert.match(grid.textContent, /Dorothy/);
   assert.match(grid.textContent, /Lion/);
-  assert.doesNotMatch(grid.textContent, /Scarecrow/);
+  assert.deepEqual(
+    [...grid.querySelectorAll('.character-grid__heading')].map((heading) => heading.textContent),
+    ['Nesta faixa', 'Outros personagens']
+  );
+  assert.deepEqual(
+    [...grid.querySelectorAll('.character-card .character-option > span:last-child')].map((label) => label.textContent),
+    ['Dorothy', 'Lion', 'Scarecrow']
+  );
   const lionCard = [...grid.querySelectorAll('.character-card')].find((card) => /Lion/.test(card.textContent));
   assert.ok(lionCard);
   assert.ok(lionCard.querySelector('.is-ai-profile-action'));
@@ -312,6 +319,25 @@ test('public character menu is limited to the current track and exposes AI speak
   await new Promise((resolve) => setTimeout(resolve, 25));
   assert.ok(fetchUrls.some((url) => url.includes('/api/englishtraining/cards/cue-test/ai-characters?name=Aslan&speaker=Lion')));
   assert.equal(document.getElementById('characterDialog').textContent.includes('Escolha um personagem'), true);
+  dom.window.close();
+});
+
+test('englishtraining admin right-click opens character assignment without activating the mic', async () => {
+  const dom = await boot(true, {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: { appSlug: 'englishtraining', appPath: '/englishtraining', apiRoot: '/api/englishtraining' }
+  });
+  const { document, MouseEvent } = dom.window;
+  document.querySelector('.lyrics-button').click();
+  const line = document.querySelector('.lyric-line');
+  line.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 2 }));
+  const context = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 120, clientY: 160 });
+  line.dispatchEvent(context);
+  assert.equal(context.defaultPrevented, true);
+  assert.equal(document.getElementById('characterMenu').hidden, false);
+  assert.match(document.getElementById('characterMenu').textContent, /Dorothy/);
+  await new Promise((resolve) => setTimeout(resolve, 230));
+  assert.equal(line.querySelector('.pronunciation-score').classList.contains('is-listening'), false);
   dom.window.close();
 });
 
@@ -515,8 +541,14 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(stylesSource, /body\.englishtraining-page \.lyrics-timing-button \{[\s\S]*border: 0;[\s\S]*color: #fff;[\s\S]*font-size: 0\.94rem/);
   assert.match(stylesSource, /body\.englishtraining-page \.lyric-line \{[\s\S]*overflow: visible/);
   assert.doesNotMatch(appSource, /APP_SLUG === 'englishtraining'\s*&&\s*!hasSpecificPovCharacter\(\)\s*&&\s*card\?\.lyrics\?\.mode === 'timesync'/);
-  assert.match(appSource, /replayOriginalLyricLine\(card, line, pronunciationState\.resumeAfterSourceReplay\)/);
-  assert.match(appSource, /charactersForCurrentCard\(\)\.forEach\(\(character\) =>/);
+  assert.match(appSource, /replayOriginalLyricLine\(card, line, attempt\.resumeAfterSourceReplay/);
+  assert.doesNotMatch(appSource, /playPronunciationRecording\(/);
+  const pronunciationFinishStart = appSource.indexOf('attempt.finish = async () => {');
+  const pronunciationFlow = appSource.slice(pronunciationFinishStart,
+    appSource.indexOf('if (!attempt.speechRecognition)', pronunciationFinishStart));
+  assert.ok(pronunciationFlow.indexOf('replayPronunciationSource(card, line, badge, attempt)') < pronunciationFlow.indexOf('transcribePronunciationRecording(recordingBlob, recognitionLanguage)'));
+  assert.match(appSource, /const sceneCharacters = charactersForCurrentCard\(\)/);
+  assert.match(appSource, /sceneCharacters\.forEach\(appendCharacter\)/);
   assert.match(appSource, /lineMatchesCharacter\(line, characterId\)/);
   assert.match(stylesSource, /body\.lyrics-open > [^{]*:not\(\.download-prompt-dialog\)/);
   assert.match(stylesSource, /\.container-upload-menu \{[\s\S]*position: fixed;[\s\S]*z-index: 180/);
@@ -564,6 +596,18 @@ test('englishtraining keeps play and pause in the header and hides track navigat
   const { document } = dom.window;
   document.querySelector('.lyrics-button').click();
   assert.equal(document.getElementById('lyricsHeaderPlayButton').hidden, false);
+  const repeatToggle = document.getElementById('lyricsRepeatToggle');
+  assert.equal(repeatToggle.hidden, false);
+  assert.equal(repeatToggle.getAttribute('aria-pressed'), 'true');
+  repeatToggle.click();
+  assert.equal(repeatToggle.getAttribute('aria-pressed'), 'false');
+  assert.equal(repeatToggle.classList.contains('is-disabled'), true);
+  repeatToggle.click();
+  assert.equal(repeatToggle.getAttribute('aria-pressed'), 'true');
+  assert.match(stylesSource, /body\.englishtraining-page \.lyrics-repeat-toggle\.is-disabled \{\s*opacity: 0\.5;/);
+  assert.match(stylesSource, /body\.englishtraining-page \.character-grid \{\s*grid-template-columns: minmax\(0, 1fr\);/);
+  const avatarSvg = fs.readFileSync(path.join(root, 'www', 'arquivos-codex', 'icones', 'englishtraining-user-avatar.svg'), 'utf8');
+  assert.doesNotMatch(avatarSvg, /<rect class="cls-1"/);
   assert.ok(document.getElementById('lyricsBackButton'));
   assert.match(document.querySelector('[data-line-index="1"] .lyric-character-avatar__play').src, /play-button-englishtraining\.svg/);
   assert.equal(document.querySelector('.pronunciation-score').hidden, true);
@@ -807,6 +851,51 @@ test('mobile recording re-scores with or without a browser speech result', async
   } finally {
     dom.window.close();
   }
+});
+
+test('original line starts before scoring finishes and loop-off skips its replay', async () => {
+  const scoreStart = appSource.indexOf('function finishPronunciation(');
+  const replayStart = appSource.indexOf('function replayPronunciationSource(');
+  assert.ok(scoreStart >= 0 && replayStart > scoreStart);
+  const scoreSource = appSource.slice(scoreStart, appSource.indexOf('function showPronunciationEvaluating(', scoreStart));
+  const replaySource = appSource.slice(replayStart, appSource.indexOf('function startPronunciationCapture(', replayStart));
+  const calls = [];
+  const state = { repeatOriginalLine: true };
+  const attempt = { resumeAfterSourceReplay: false, scored: false };
+  const pronunciationState = { scores: {}, latestAttempt: attempt };
+  let releasePlayback;
+  const playback = new Promise((resolve) => { releasePlayback = resolve; });
+  const { replayPronunciationSource, finishPronunciation } = new Function(
+    'APP_SLUG', 'state', 'pronunciationState', 'restoreMusicAfterPronunciation',
+    'renderPronunciationBadge', 'pronunciationScoreFor', 'replayOriginalLyricLine',
+    'showPronunciationEvaluating', 'calculatePronunciationScore', 'lyricLineText',
+    'savePronunciationScores', 'navigator',
+    `${scoreSource}\n${replaySource}\nreturn { replayPronunciationSource, finishPronunciation };`
+  )(
+    'englishtraining', state, pronunciationState,
+    () => calls.push('restore'),
+    (_badge, score, _listening, replaying, animate) => calls.push(animate ? `score:${score}` : `replay:${replaying}`),
+    () => null,
+    () => { calls.push('original'); return playback; },
+    () => calls.push('evaluating'),
+    () => 87,
+    () => 'expected',
+    () => calls.push('saved'),
+    { vibrate: null }
+  );
+  const card = { id: 'card-1', audio: {}, lyrics: { mode: 'timesync' } };
+  const line = { id: 'line-1', start: 1, end: 3 };
+  const badge = { isConnected: true };
+  replayPronunciationSource(card, line, badge, attempt);
+  assert.deepEqual(calls.slice(0, 3), ['restore', 'replay:source', 'original']);
+  attempt.scored = true;
+  finishPronunciation(card.id, line, 'spoken', badge, 'en');
+  assert.ok(calls.includes('score:87'), 'score appears while original playback is still pending');
+  state.repeatOriginalLine = false;
+  replayPronunciationSource(card, line, badge, attempt);
+  assert.equal(calls.filter((call) => call === 'original').length, 1);
+  releasePlayback();
+  await playback;
 });
 
 test('pronunciation score counts valid matching sequences and ignores extra spoken letters', () => {

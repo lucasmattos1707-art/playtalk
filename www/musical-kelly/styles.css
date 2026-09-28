@@ -3182,8 +3182,9 @@ body.englishtraining-page .lyrics-character-switch {
   height: 36px;
   justify-self: start;
   padding: 3px;
-  border-color: rgba(205, 236, 255, 0.46);
-  background: rgba(8, 61, 112, 0.46);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 body.englishtraining-page .lyrics-character-switch__avatar {
@@ -3241,6 +3242,87 @@ body.englishtraining-page .lyrics-header-play-button[hidden] {
 body.englishtraining-page .lyrics-header-play-button img {
   width: 30px;
   height: 30px;
+}
+
+body.englishtraining-page .lyrics-repeat-toggle {
+  display: grid;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+  transition: opacity 180ms ease;
+}
+
+body.englishtraining-page .lyrics-repeat-toggle[hidden] {
+  display: none;
+}
+
+body.englishtraining-page .lyrics-repeat-toggle.is-disabled {
+  opacity: 0.5;
+}
+
+body.englishtraining-page .lyrics-repeat-toggle svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body.englishtraining-page .lyrics-repeat-toggle:focus-visible,
+body.englishtraining-page .lyrics-character-switch:focus-visible {
+  outline: 2px solid #bce5ff;
+  outline-offset: 3px;
+}
+
+body.englishtraining-page .character-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+body.englishtraining-page .character-grid__heading {
+  margin: 8px 4px 0;
+  color: #9fd5ff;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+body.englishtraining-page .character-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+body.englishtraining-page .character-option {
+  display: flex;
+  gap: 12px;
+  min-height: 60px;
+  justify-content: flex-start;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+body.englishtraining-page .character-option img,
+body.englishtraining-page .character-placeholder {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+}
+
+body.englishtraining-page .character-all-option {
+  min-height: 48px;
+}
+
+body.englishtraining-page .character-card .character-edit-button.is-ai-profile-action {
+  position: static;
+  min-height: 36px;
 }
 
 body.englishtraining-page .lyrics-timing-button {
@@ -3481,6 +3563,11 @@ body.englishtraining-page .pronunciation-score.is-listening .pronunciation-score
   animation: pronunciationListening 750ms ease-in-out infinite alternate;
 }
 
+body.englishtraining-page .pronunciation-score.is-evaluating .pronunciation-score__fill,
+body.englishtraining-page .pronunciation-score.is-evaluating .pronunciation-score__seal {
+  display: none;
+}
+
 body.englishtraining-page .pronunciation-score__seal {
   position: absolute;
   z-index: 5;
@@ -3561,6 +3648,17 @@ body.englishtraining-page .pronunciation-score__seal[hidden] {
   body.englishtraining-page .lyrics-header-play-button img {
     width: 28px;
     height: 28px;
+  }
+
+  body.englishtraining-page .lyrics-repeat-toggle {
+    flex-basis: 30px;
+    width: 30px;
+    height: 30px;
+  }
+
+  body.englishtraining-page .lyrics-repeat-toggle svg {
+    width: 24px;
+    height: 24px;
   }
 
   body.englishtraining-page .lyrics-language-toggle {
