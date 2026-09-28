@@ -663,6 +663,110 @@ test('admin bulk audio cutter is desktop-only with ten zoom scales ending at 15 
   assert.equal(points.selectionPointA, 24);
 });
 
+test('bulk cutter scrolls, marks A and B at the player, shows orange selection, and saves voice with subtitles', async () => {
+  assert.match(stylesSource, /\.musical-dialog\.bulk-audio-dialog \.bulk-audio-card \{[^}]*overflow-y: auto/);
+  assert.match(stylesSource, /\.bulk-audio-workbench\[hidden\], \.bulk-audio-cut-review\[hidden\], \.bulk-audio-name-form\[hidden\] \{ display: none; \}/);
+  const payload = projectPayload(true);
+  const requests = [];
+  const painted = [];
+  const sampleRate = 12000;
+  const buffer = {
+    duration: 10,
+    length: sampleRate * 10,
+    sampleRate,
+    numberOfChannels: 1,
+    getChannelData: () => new Float32Array(sampleRate * 10).fill(0.3)
+  };
+  const dom = await boot(true, {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: { appSlug: 'englishtraining', appPath: '/englishtraining', apiRoot: '/api/englishtraining' },
+    payload,
+    fetchResponder: (url, init) => {
+      if (init.method) requests.push({ url, init });
+      if (url === '/api/englishtraining/cards' && init.method === 'POST') {
+        return { success: true, card: { id: 'cue-created' }, project: {
+          ...payload.project, updatedAt: 'created', cards: [...payload.project.cards, { id: 'cue-created', title: 'Aula nova', audio: null, comments: [] }]
+        } };
+      }
+      if (url.startsWith('/api/englishtraining/assets/audio?')) {
+        return { success: true, asset: { fileName: 'new-clip.mp3', name: 'new-clip.mp3', url: '/api/englishtraining/assets/audio/new-clip.mp3' } };
+      }
+      if (url === '/api/englishtraining/project' && init.method === 'PUT') {
+        return { success: true, project: JSON.parse(init.body) };
+      }
+      if (url === '/api/englishtraining/cards/cue-created/lyrics' && init.method === 'PUT') {
+        const project = JSON.parse(requests.find((entry) => entry.url === '/api/englishtraining/project' && entry.init.method === 'PUT').init.body);
+        return { success: true, project: { ...project, cards: project.cards.map((card) => card.id === 'cue-created'
+          ? { ...card, lyrics: { mode: 'timesync', lines: JSON.parse(init.body).lines } } : card) } };
+      }
+      return payload;
+    },
+    beforeEval: (window) => {
+      window.matchMedia = () => ({ matches: true });
+      window.AudioContext = class { decodeAudioData = async () => buffer; };
+      window.URL.createObjectURL = () => 'blob:bulk-audio-test';
+      window.URL.revokeObjectURL = () => {};
+      window.HTMLMediaElement.prototype.pause = function pause() {};
+      window.HTMLMediaElement.prototype.play = async function play() {};
+      window.HTMLCanvasElement.prototype.getContext = () => ({
+        setTransform() {}, clearRect() {}, fillRect() { painted.push(this.fillStyle); },
+        beginPath() {}, moveTo() {}, lineTo() {}, stroke() { painted.push(this.strokeStyle); }
+      });
+      window.lamejs = { Mp3Encoder: class {
+        encodeBuffer() { return new Uint8Array([1, 2, 3]); }
+        flush() { return new Uint8Array([4]); }
+      } };
+    }
+  });
+  try {
+    const { document, Event } = dom.window;
+    document.getElementById('bulkAudioOpenButton').click();
+    const audioFile = {
+      name: 'episode.mp3', size: 1024,
+      slice: () => ({ arrayBuffer: async () => new Uint8Array([73, 68, 51]).buffer }),
+      arrayBuffer: async () => new Uint8Array([73, 68, 51]).buffer
+    };
+    const englishFile = { name: 'english.srt', size: 100, text: async () => '1\n00:00:01,000 --> 00:00:04,000\nHello there!\n' };
+    const portugueseFile = { name: 'portuguese.srt', size: 100, text: async () => '1\n00:00:01,000 --> 00:00:04,000\nOlá!\n' };
+    for (const [slot, file] of [['audio', audioFile], ['englishSrt', englishFile], ['portugueseSrt', portugueseFile]]) {
+      const drop = new Event('drop', { bubbles: true, cancelable: true });
+      Object.defineProperty(drop, 'dataTransfer', { value: { files: [file] } });
+      document.querySelector(`[data-bulk-slot="${slot}"]`).dispatchEvent(drop);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    assert.equal(document.getElementById('bulkAudioWorkbench').hidden, false);
+    assert.equal(document.getElementById('bulkAudioCutReview').hidden, true);
+    const preview = document.getElementById('bulkAudioPreview');
+    preview.currentTime = 1;
+    document.getElementById('bulkAudioSelectPointOne').click();
+    assert.equal(document.getElementById('bulkAudioCutReview').hidden, true);
+    preview.currentTime = 4;
+    document.getElementById('bulkAudioSelectPointTwo').click();
+    assert.equal(document.getElementById('bulkAudioCutReview').hidden, false);
+    assert.match(document.getElementById('bulkAudioCutSummary').textContent, /1 seg.*4 seg/);
+    assert.ok(painted.includes('#ff9f43'), 'waveform bars inside the selection are orange');
+    assert.ok(parseFloat(document.getElementById('bulkAudioPlayhead').style.left) > 0);
+    document.getElementById('bulkAudioConfirmCut').click();
+    assert.equal(document.getElementById('bulkAudioNameForm').hidden, false);
+    document.getElementById('bulkAudioEpisodeName').value = 'Aula nova';
+    document.getElementById('bulkAudioNameForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    for (let attempt = 0; attempt < 30 && !requests.some((entry) => entry.url.endsWith('/cue-created/lyrics')); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.deepEqual(requests.map((entry) => `${entry.init.method} ${entry.url.split('?')[0]}`), [
+      'POST /api/englishtraining/cards',
+      'POST /api/englishtraining/assets/audio',
+      'PUT /api/englishtraining/project',
+      'PUT /api/englishtraining/cards/cue-created/lyrics'
+    ]);
+    assert.equal(JSON.parse(requests.at(-1).init.body).lines[0].text, 'Hello there!');
+    assert.equal(JSON.parse(requests.at(-1).init.body).lines[0].textPt, 'Olá!');
+    assert.match(document.getElementById('bulkAudioCutList').textContent, /Aula nova/);
+  } finally {
+    dom.window.close();
+  }
+});
+
 test('W opens the bulk cutter from EnglishTraining home for admins on desktop only', async () => {
   const pageOptions = {
     pageUrl: 'https://fluentlevelup.com/englishtraining/',

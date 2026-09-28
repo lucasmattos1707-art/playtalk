@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=45">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=46">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -167,7 +167,7 @@
         </button>
       </div>
 
-      <p class="bulk-audio-intro">Solte os três arquivos aqui. Clique para posicionar o áudio. Selecione 1 ou 2 e use Ctrl+clique para mover somente aquele ponto; Esc limpa a seleção.</p>
+      <p class="bulk-audio-intro">Solte os três arquivos aqui. Clique na waveform para posicionar o áudio; toque em A ou B para marcar o tempo atual. Ctrl+clique move o ponto selecionado; Esc limpa a seleção.</p>
       <div class="bulk-audio-drop-grid" aria-label="Arquivos necessários para criar faixas">
         <div class="bulk-audio-dropzone" data-bulk-slot="audio" role="group" aria-label="Solte o áudio em MP3 em inglês">
           <span class="bulk-audio-drop-icon"><img src="/arquivos-codex/icones/play-button-englishtraining.svg" alt=""></span>
@@ -200,8 +200,11 @@
           <button id="bulkAudioSelectPointOne" type="button" aria-pressed="true" title="Selecionar ponto 1 (tecla 1)">1 · Ponto A</button>
           <button id="bulkAudioSelectPointTwo" type="button" aria-pressed="false" title="Selecionar ponto 2 (tecla 2)">2 · Ponto B</button>
         </div>
-        <div class="bulk-audio-waveform-scroll" id="bulkAudioWaveformScroll" tabindex="0" aria-label="Waveform completa; clique para posicionar; Ctrl+clique move o ponto selecionado; Escape limpa a seleção">
-          <canvas class="bulk-audio-waveform" id="bulkAudioWaveform" height="150"></canvas>
+        <div class="bulk-audio-waveform-scroll" id="bulkAudioWaveformScroll" tabindex="0" aria-label="Waveform completa; clique para posicionar; marque A ou B no tempo atual; Ctrl+clique move o ponto selecionado; Escape limpa a seleção">
+          <div class="bulk-audio-waveform-track" id="bulkAudioWaveformTrack">
+            <canvas class="bulk-audio-waveform" id="bulkAudioWaveform" height="150"></canvas>
+            <span class="bulk-audio-playhead" id="bulkAudioPlayhead" aria-hidden="true"></span>
+          </div>
         </div>
         <div class="bulk-audio-cut-list" id="bulkAudioCutList" aria-live="polite"></div>
         <section class="bulk-audio-cut-review" id="bulkAudioCutReview" hidden aria-label="Confirmar corte atual">
@@ -513,6 +516,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <script src="/arquivos-codex/vendor/lamejs/lame.min.js" defer></script>
-  <script src="/musical-kelly/app.js?v=50" defer></script>
+  <script src="/musical-kelly/app.js?v=51" defer></script>
 </body>
 </html>

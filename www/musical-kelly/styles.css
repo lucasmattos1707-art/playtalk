@@ -746,8 +746,8 @@ body.has-playing-track .track-card:not(.is-playing):not(.is-cued) {
 
 /* Desktop-only admin bulk episode cutter. */
 .bulk-audio-open-button svg { width: 20px; height: 20px; }
-.bulk-audio-dialog { width: min(1120px, calc(100vw - 40px)); max-height: min(900px, calc(100dvh - 32px)); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
-.bulk-audio-card { gap: 16px; overflow: visible; }
+.musical-dialog.bulk-audio-dialog { width: min(1120px, calc(100vw - 40px)); max-height: min(900px, calc(100dvh - 32px)); overflow: hidden; }
+.musical-dialog.bulk-audio-dialog .bulk-audio-card { gap: 16px; min-width: 0; max-height: min(900px, calc(100dvh - 32px)); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 html.is-bulk-audio-modal-open, body.is-bulk-audio-modal-open { overflow: hidden; }
 .bulk-audio-intro, .bulk-audio-status { margin: 0; color: rgba(255,255,255,.72); }
 .bulk-audio-status.is-busy { color: #85caff; }
@@ -768,6 +768,7 @@ html.is-bulk-audio-modal-open, body.is-bulk-audio-modal-open { overflow: hidden;
 .bulk-audio-dropzone small, .bulk-audio-slot-status { max-width: 90%; color: rgba(255,255,255,.65); overflow-wrap: anywhere; }
 .bulk-audio-slot-status { font-size: .74rem; }
 .bulk-audio-workbench { display: grid; gap: 12px; }
+.bulk-audio-workbench[hidden], .bulk-audio-cut-review[hidden], .bulk-audio-name-form[hidden] { display: none; }
 .bulk-audio-toolbar, .bulk-audio-zoom, .bulk-audio-review-actions { display: flex; align-items: center; gap: 10px; }
 .bulk-audio-toolbar { flex-wrap: wrap; }
 .bulk-audio-transport, .bulk-audio-zoom button, .bulk-audio-secondary { min-height: 38px; padding: 7px 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 10px; color: #fff; background: rgba(255,255,255,.07); }
@@ -779,8 +780,10 @@ html.is-bulk-audio-modal-open, body.is-bulk-audio-modal-open { overflow: hidden;
 .bulk-audio-point-selectors { display: flex; flex-wrap: wrap; gap: 8px; }
 .bulk-audio-point-selectors button { min-height: 36px; padding: 6px 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 9px; color: rgba(255,255,255,.75); background: rgba(255,255,255,.05); }
 .bulk-audio-point-selectors button.is-active { border-color: rgba(91,178,255,.8); color: #fff; background: rgba(35,129,207,.3); box-shadow: inset 0 0 0 1px rgba(91,178,255,.24); }
-.bulk-audio-waveform-scroll { max-width: 100%; overflow: auto; border: 1px solid rgba(95,174,238,.28); border-radius: 12px; background: rgba(0,0,0,.24); cursor: crosshair; }
-.bulk-audio-waveform { display: block; height: 150px; }
+.bulk-audio-waveform-scroll { min-width: 0; max-width: 100%; overflow-x: auto; overflow-y: hidden; border: 1px solid rgba(95,174,238,.28); border-radius: 12px; background: rgba(0,0,0,.24); cursor: crosshair; }
+.bulk-audio-waveform-track { position: relative; width: 100%; height: 150px; }
+.bulk-audio-waveform { position: sticky; left: 0; display: block; height: 150px; }
+.bulk-audio-playhead { position: absolute; z-index: 2; top: 0; bottom: 0; left: 0; width: 1px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.52), 0 0 8px rgba(255,255,255,.9); pointer-events: none; }
 .bulk-audio-cut-list { display: grid; gap: 5px; max-height: 120px; overflow: auto; }
 .bulk-audio-cut-row { padding: 7px 10px; border-radius: 8px; color: rgba(255,255,255,.8); background: rgba(255,255,255,.05); font-size: .83rem; }
 .bulk-audio-cut-review { display: grid; gap: 12px; padding: 14px; border: 1px solid rgba(91,178,255,.4); border-radius: 14px; background: rgba(20,94,151,.14); }

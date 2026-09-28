@@ -48,7 +48,9 @@
     bulkAudioSelectPointOne: document.getElementById('bulkAudioSelectPointOne'),
     bulkAudioSelectPointTwo: document.getElementById('bulkAudioSelectPointTwo'),
     bulkAudioWaveformScroll: document.getElementById('bulkAudioWaveformScroll'),
+    bulkAudioWaveformTrack: document.getElementById('bulkAudioWaveformTrack'),
     bulkAudioWaveform: document.getElementById('bulkAudioWaveform'),
+    bulkAudioPlayhead: document.getElementById('bulkAudioPlayhead'),
     bulkAudioCutList: document.getElementById('bulkAudioCutList'),
     bulkAudioCutReview: document.getElementById('bulkAudioCutReview'),
     bulkAudioCutSummary: document.getElementById('bulkAudioCutSummary'),
@@ -4220,6 +4222,9 @@
 
   function resetBulkAudio() {
     const bulk = state.bulkAudio;
+    if (bulk.animationFrame) window.cancelAnimationFrame(bulk.animationFrame);
+    bulk.animationFrame = 0;
+    if (bulk.audioUrl) elements.bulkAudioPreview.pause();
     if (bulk.audioUrl) URL.revokeObjectURL(bulk.audioUrl);
     Object.assign(bulk, { files: { audio: null, englishSrt: null, portugueseSrt: null }, cues: { english: [], portuguese: [] }, buffer: null, peaks: [], duration: 0, audioUrl: '', cuts: [], selectionPointA: null, selectionPointB: null, activePoint: 'a', pendingCut: null, zoomLevel: 1, processing: false, saving: false });
     elements.bulkAudioPreview.removeAttribute('src'); elements.bulkAudioWorkbench.hidden = true;
@@ -4313,35 +4318,75 @@
     return duration ? Math.min(duration, duration * Math.pow(Math.min(15, duration) / duration, (state.bulkAudio.zoomLevel - 1) / 9)) : 0;
   }
 
+  function bulkWaveformWidth() {
+    const viewportWidth = Math.max(320, elements.bulkAudioWaveformScroll.clientWidth - 2);
+    const visibleDuration = bulkVisibleDuration();
+    return visibleDuration ? Math.max(viewportWidth, Math.ceil(viewportWidth * state.bulkAudio.duration / visibleDuration)) : viewportWidth;
+  }
+
+  function updateBulkAudioPlayhead() {
+    const duration = state.bulkAudio.duration;
+    const currentTime = Math.max(0, Math.min(duration, Number(elements.bulkAudioPreview.currentTime) || 0));
+    elements.bulkAudioClock.textContent = `${formatDuration(currentTime)} / ${formatDuration(duration)}`;
+    elements.bulkAudioPlayhead.style.left = `${duration ? currentTime / duration * bulkWaveformWidth() : 0}px`;
+  }
+
+  function runBulkAudioPlayheadLoop() {
+    updateBulkAudioPlayhead();
+    state.bulkAudio.animationFrame = !elements.bulkAudioPreview.paused && elements.bulkAudioDialog.open
+      ? window.requestAnimationFrame(runBulkAudioPlayheadLoop) : 0;
+  }
+
+  function stopBulkAudioPlayheadLoop() {
+    if (state.bulkAudio.animationFrame) window.cancelAnimationFrame(state.bulkAudio.animationFrame);
+    state.bulkAudio.animationFrame = 0;
+    updateBulkAudioPlayhead();
+  }
+
   function drawBulkWaveform() {
     const bulk = state.bulkAudio; const canvas = elements.bulkAudioWaveform;
     if (!canvas || !bulk.duration) return;
-    const viewportWidth = Math.max(320, elements.bulkAudioWaveformScroll.clientWidth - 2);
-    const width = Math.max(viewportWidth, Math.ceil(viewportWidth * bulk.duration / bulkVisibleDuration()));
+    const scroller = elements.bulkAudioWaveformScroll;
+    const viewportWidth = Math.max(320, scroller.clientWidth - 2);
+    const width = bulkWaveformWidth();
+    const viewStart = scroller.scrollLeft;
     const ratio = Math.max(1, window.devicePixelRatio || 1);
-    canvas.style.width = `${width}px`; canvas.width = Math.ceil(width * ratio); canvas.height = 150 * ratio;
-    const ctx = canvas.getContext('2d'); ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, width, 150);
-    ctx.strokeStyle = '#59b9ff'; ctx.lineWidth = 1;
-    for (let x = 0; x < width; x += 1) { const peak = bulk.peaks[Math.min(bulk.peaks.length - 1, Math.floor(x * bulk.peaks.length / width))] || 0; const h = Math.max(1, peak * 68); ctx.beginPath(); ctx.moveTo(x + .5, 75 - h); ctx.lineTo(x + .5, 75 + h); ctx.stroke(); }
+    elements.bulkAudioWaveformTrack.style.width = `${width}px`;
+    canvas.style.width = `${viewportWidth}px`; canvas.width = Math.ceil(viewportWidth * ratio); canvas.height = 150 * ratio;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, viewportWidth, 150);
+    const selectedStart = bulk.pendingCut ? bulk.pendingCut.start / bulk.duration * width : -1;
+    const selectedEnd = bulk.pendingCut ? bulk.pendingCut.end / bulk.duration * width : -1;
     bulk.cuts.forEach((cut) => {
       ctx.fillStyle = 'rgba(255,255,255,.08)';
-      ctx.fillRect(cut.start / bulk.duration * width, 0, (cut.end - cut.start) / bulk.duration * width, 150);
+      ctx.fillRect(cut.start / bulk.duration * width - viewStart, 0, (cut.end - cut.start) / bulk.duration * width, 150);
       ctx.fillStyle = 'rgba(255,255,255,.9)';
-      ctx.fillRect(cut.start / bulk.duration * width - 1, 0, 2, 150);
-      ctx.fillRect(cut.end / bulk.duration * width - 1, 0, 2, 150);
+      ctx.fillRect(cut.start / bulk.duration * width - viewStart - 1, 0, 2, 150);
+      ctx.fillRect(cut.end / bulk.duration * width - viewStart - 1, 0, 2, 150);
     });
     if (bulk.pendingCut) {
-      ctx.fillStyle = 'rgba(58,171,255,.22)';
-      ctx.fillRect(bulk.pendingCut.start / bulk.duration * width, 0, (bulk.pendingCut.end - bulk.pendingCut.start) / bulk.duration * width, 150);
+      ctx.fillStyle = 'rgba(255,153,50,.25)';
+      ctx.fillRect(selectedStart - viewStart, 0, selectedEnd - selectedStart, 150);
+    }
+    ctx.lineWidth = 1;
+    for (let x = 0; x < viewportWidth; x += 1) {
+      const globalX = viewStart + x;
+      if (globalX > width) break;
+      const peak = bulk.peaks[Math.min(bulk.peaks.length - 1, Math.floor(globalX * bulk.peaks.length / width))] || 0;
+      const height = Math.max(1, peak * 68);
+      ctx.strokeStyle = bulk.pendingCut && globalX >= selectedStart && globalX <= selectedEnd ? '#ff9f43' : '#59b9ff';
+      ctx.beginPath(); ctx.moveTo(x + .5, 75 - height); ctx.lineTo(x + .5, 75 + height); ctx.stroke();
     }
     if (bulk.selectionPointA !== null) {
-      ctx.fillStyle = '#8bd0ff';
-      ctx.fillRect(bulk.selectionPointA / bulk.duration * width - 2, 0, 4, 150);
+      ctx.fillStyle = '#ffca7a';
+      ctx.fillRect(bulk.selectionPointA / bulk.duration * width - viewStart - 2, 0, 4, 150);
     }
     if (bulk.selectionPointB !== null) {
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(bulk.selectionPointB / bulk.duration * width - 2, 0, 4, 150);
+      ctx.fillStyle = '#ff8b2b';
+      ctx.fillRect(bulk.selectionPointB / bulk.duration * width - viewStart - 2, 0, 4, 150);
     }
+    updateBulkAudioPlayhead();
     elements.bulkAudioZoomLabel.textContent = `Escala ${bulk.zoomLevel} / 10`;
   }
 
@@ -4372,10 +4417,15 @@
     elements.bulkAudioSelectPointTwo.classList.toggle('is-active', activePoint === 'b');
   }
 
-  function selectBulkAudioPoint(point) {
+  function selectBulkAudioPoint(point, markCurrent = false) {
     state.bulkAudio.activePoint = point === 'b' ? 'b' : 'a';
     updateBulkAudioPointSelector();
-    setBulkAudioStatus(`Ponto ${state.bulkAudio.activePoint.toUpperCase()} selecionado. Ctrl+clique na waveform para marcar ou mover só esse ponto.`);
+    if (markCurrent && state.bulkAudio.buffer) {
+      updateBulkAudioSelection(Math.max(0, Math.min(state.bulkAudio.duration, Number(elements.bulkAudioPreview.currentTime) || 0)));
+      drawBulkWaveform();
+      return;
+    }
+    setBulkAudioStatus(`Ponto ${state.bulkAudio.activePoint.toUpperCase()} selecionado. Posicione o player e toque aqui novamente para marcar.`);
   }
 
   function updateBulkAudioSelection(value) {
@@ -4392,25 +4442,27 @@
       }
       return;
     }
-    elements.bulkAudioPreview.pause();
-    elements.bulkAudioPreview.currentTime = bulk.pendingCut.end;
-    setBulkAudioTransport(true);
     elements.bulkAudioCutSummary.textContent = `Seleção A–B · ${formatDuration(bulk.pendingCut.start)} — ${formatDuration(bulk.pendingCut.end)} · ${formatDuration(bulk.pendingCut.end - bulk.pendingCut.start)}`;
     elements.bulkAudioCutReview.hidden = false;
     elements.bulkAudioNameForm.hidden = true;
+    setBulkAudioStatus(`Trecho laranja selecionado: ${formatDuration(bulk.pendingCut.start)} até ${formatDuration(bulk.pendingCut.end)}. Confirme para enviar áudio e legendas.`);
   }
 
   function handleBulkWaveformClick(event) {
     const bulk = state.bulkAudio;
     if (!bulk.buffer || bulk.saving || elements.bulkAudioDialog.open === false) return;
-    const rect = elements.bulkAudioWaveform.getBoundingClientRect();
-    const point = Math.max(0, Math.min(bulk.duration, (event.clientX - rect.left) / rect.width * bulk.duration));
+    const scroller = elements.bulkAudioWaveformScroll;
+    const rect = scroller.getBoundingClientRect();
+    const position = scroller.scrollLeft + event.clientX - rect.left - scroller.clientLeft;
+    const point = Math.max(0, Math.min(bulk.duration, position / bulkWaveformWidth() * bulk.duration));
     if (!event.ctrlKey) {
       elements.bulkAudioPreview.currentTime = point;
+      updateBulkAudioPlayhead();
       return;
     }
     event.preventDefault();
     elements.bulkAudioPreview.currentTime = point;
+    updateBulkAudioPlayhead();
     updateBulkAudioSelection(point);
     drawBulkWaveform();
   }
@@ -4460,7 +4512,9 @@
   async function saveBulkEpisode(event) {
     event.preventDefault(); const bulk = state.bulkAudio; const cut = bulk.pendingCut;
     const title = elements.bulkAudioEpisodeName.value.trim().slice(0, 120);
-    if (!state.canEdit || !cut || !title || bulk.saving) return;
+    if (bulk.saving) return;
+    if (!state.canEdit || !cut) { setBulkAudioStatus('Marque os pontos A e B antes de enviar áudio e legendas.', false, true); return; }
+    if (!title) { setBulkAudioStatus('Digite o nome da faixa antes de enviar.', false, true); elements.bulkAudioEpisodeName.focus(); return; }
     const lines = bulkSubtitleLines(cut.start, cut.end);
     if (!lines.length) { setBulkAudioStatus('Esse trecho não inclui falas em inglês; ajuste o corte.', false, true); return; }
     bulk.saving = true; elements.bulkAudioSaveEpisode.disabled = true; let cardId = '';
@@ -4480,7 +4534,9 @@
       elements.bulkAudioEpisodeName.value = ''; elements.bulkAudioPreview.currentTime = cut.end; renderBulkCutList(); drawBulkWaveform();
       setBulkAudioStatus(`Faixa “${title}” criada com áudio e ${lines.length} legendas sincronizadas.`); showToast(`Faixa “${title}” salva.`);
     } catch (error) {
-      setBulkAudioStatus(cardId ? `Container ${cardId} pode ter sido criado parcialmente. ${error.message} Confira antes de repetir.` : error.message, false, true);
+      const message = cardId ? `Container ${cardId} pode ter sido criado parcialmente. ${error.message} Confira antes de repetir.` : error.message;
+      setBulkAudioStatus(message, false, true);
+      showToast(message, true);
     } finally { bulk.saving = false; elements.bulkAudioSaveEpisode.disabled = false; }
   }
 
@@ -4503,15 +4559,24 @@
       if (audio.paused) audio.play().then(() => setBulkAudioTransport(false)).catch((error) => setBulkAudioStatus(error.message, false, true));
       else { audio.pause(); setBulkAudioTransport(true); }
     });
-    elements.bulkAudioPreview.addEventListener('timeupdate', () => { elements.bulkAudioClock.textContent = `${formatDuration(elements.bulkAudioPreview.currentTime)} / ${formatDuration(state.bulkAudio.duration)}`; });
-    elements.bulkAudioPreview.addEventListener('ended', () => setBulkAudioTransport(true));
+    elements.bulkAudioPreview.addEventListener('timeupdate', updateBulkAudioPlayhead);
+    elements.bulkAudioPreview.addEventListener('seeked', updateBulkAudioPlayhead);
+    elements.bulkAudioPreview.addEventListener('play', runBulkAudioPlayheadLoop);
+    elements.bulkAudioPreview.addEventListener('pause', stopBulkAudioPlayheadLoop);
+    elements.bulkAudioPreview.addEventListener('ended', () => { setBulkAudioTransport(true); stopBulkAudioPlayheadLoop(); });
     elements.bulkAudioZoomOut.addEventListener('click', () => { state.bulkAudio.zoomLevel = Math.max(1, state.bulkAudio.zoomLevel - 1); drawBulkWaveform(); });
     elements.bulkAudioZoomIn.addEventListener('click', () => { state.bulkAudio.zoomLevel = Math.min(10, state.bulkAudio.zoomLevel + 1); drawBulkWaveform(); });
-    elements.bulkAudioSelectPointOne.addEventListener('click', () => selectBulkAudioPoint('a'));
-    elements.bulkAudioSelectPointTwo.addEventListener('click', () => selectBulkAudioPoint('b'));
+    elements.bulkAudioSelectPointOne.addEventListener('click', () => selectBulkAudioPoint('a', true));
+    elements.bulkAudioSelectPointTwo.addEventListener('click', () => selectBulkAudioPoint('b', true));
     elements.bulkAudioWaveformScroll.addEventListener('click', handleBulkWaveformClick);
+    elements.bulkAudioWaveformScroll.addEventListener('scroll', drawBulkWaveform);
     elements.bulkAudioUndoCut.addEventListener('click', clearBulkAudioSelection);
-    elements.bulkAudioConfirmCut.addEventListener('click', () => { elements.bulkAudioNameForm.hidden = false; elements.bulkAudioEpisodeName.focus(); });
+    elements.bulkAudioConfirmCut.addEventListener('click', () => {
+      if (!state.bulkAudio.pendingCut) { setBulkAudioStatus('Marque A e B antes de confirmar.', false, true); return; }
+      elements.bulkAudioNameForm.hidden = false;
+      elements.bulkAudioNameForm.scrollIntoView?.({ block: 'nearest' });
+      elements.bulkAudioEpisodeName.focus();
+    });
     elements.bulkAudioNameForm.addEventListener('submit', saveBulkEpisode);
     document.addEventListener('keydown', (event) => {
       if (!elements.bulkAudioDialog.open || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) return;
@@ -4519,7 +4584,7 @@
         event.preventDefault(); event.stopPropagation(); clearBulkAudioSelection(); return;
       }
       if (event.key === '1' || event.key === '2') {
-        event.preventDefault(); selectBulkAudioPoint(event.key === '1' ? 'a' : 'b'); return;
+        event.preventDefault(); selectBulkAudioPoint(event.key === '1' ? 'a' : 'b', true); return;
       }
     });
     window.addEventListener('resize', () => { if (elements.bulkAudioDialog.open && !elements.bulkAudioWorkbench.hidden) drawBulkWaveform(); });
