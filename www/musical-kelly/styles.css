@@ -3063,11 +3063,15 @@ body.englishtraining-page .ambient {
 }
 
 body.englishtraining-page .lyrics-screen {
-  background: linear-gradient(180deg, rgba(5, 30, 68, 0.14), rgba(3, 26, 58, 0.08));
+  background-color: #1684df;
+  background-image: url('/englishtraining/background-desktop.png');
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
 body.englishtraining-page .lyrics-header {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
   gap: 12px;
   min-height: 58px;
   padding: max(7px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 7px max(14px, env(safe-area-inset-left));
@@ -3076,16 +3080,32 @@ body.englishtraining-page .lyrics-header {
   backdrop-filter: blur(12px);
 }
 
-body.englishtraining-page .lyrics-character-switch,
 body.englishtraining-page .lyrics-track-heading h1,
 body.englishtraining-page .lyrics-track-heading small {
   display: none;
 }
 
-body.englishtraining-page .lyrics-track-heading {
+body.englishtraining-page .lyrics-character-switch {
+  display: grid;
   grid-column: 1;
   grid-row: 1;
-  justify-items: start;
+  width: 36px;
+  height: 36px;
+  justify-self: start;
+  padding: 3px;
+  border-color: rgba(205, 236, 255, 0.46);
+  background: rgba(8, 61, 112, 0.46);
+}
+
+body.englishtraining-page .lyrics-character-switch__avatar {
+  width: 28px;
+  height: 28px;
+}
+
+body.englishtraining-page .lyrics-track-heading {
+  grid-column: 2;
+  grid-row: 1;
+  justify-items: center;
 }
 
 body.englishtraining-page .lyrics-track-navigation {
@@ -3102,7 +3122,7 @@ body.englishtraining-page .lyrics-track-navigation button {
 }
 
 body.englishtraining-page .lyrics-header-actions {
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 1;
   gap: 6px;
 }
@@ -3174,7 +3194,7 @@ body.englishtraining-page .lyric-line {
   --portrait-width: clamp(108px, 16vw, 158px);
   position: relative;
   display: block;
-  min-height: 88px;
+  min-height: 118px;
   overflow: hidden;
   padding: 14px 60px 26px calc(var(--portrait-width) + 13px);
   border: 1px solid rgba(166, 218, 255, 0.47);
@@ -3214,11 +3234,25 @@ body.englishtraining-page .lyric-character-avatar {
   box-shadow: none;
 }
 
+body.englishtraining-page .lyric-character-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 35%;
+}
+
 body.englishtraining-page .lyric-copy {
   position: relative;
   z-index: 2;
   display: block;
   min-height: 100%;
+}
+
+body.englishtraining-page .lyric-copy > span:last-child {
+  display: block;
+  min-height: 2.6em;
+  line-height: 1.3;
 }
 
 body.englishtraining-page .lyric-copy small {
@@ -3284,11 +3318,28 @@ body.englishtraining-page .pronunciation-score.is-listening .pronunciation-score
     background-size: cover;
   }
 
+  body.englishtraining-page .lyrics-screen {
+    background-image: url('/englishtraining/background-mobile.jpg');
+    background-position: center;
+    background-size: cover;
+  }
+
   body.englishtraining-page .lyrics-header {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
     min-height: 48px;
     gap: 5px;
     padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 4px max(8px, env(safe-area-inset-left));
+  }
+
+  body.englishtraining-page .lyrics-character-switch {
+    width: 32px;
+    height: 32px;
+    padding: 2px;
+  }
+
+  body.englishtraining-page .lyrics-character-switch__avatar {
+    width: 26px;
+    height: 26px;
   }
 
   body.englishtraining-page .lyrics-track-navigation {
@@ -3329,7 +3380,7 @@ body.englishtraining-page .pronunciation-score.is-listening .pronunciation-score
 
   body.englishtraining-page .lyric-line {
     --portrait-width: clamp(83px, 24vw, 112px);
-    min-height: 67px;
+    min-height: 96px;
     padding: 9px 47px 23px calc(var(--portrait-width) + 9px);
     border-radius: 12px;
     font-size: clamp(0.93rem, 4.2vw, 1.13rem);
@@ -3345,6 +3396,7 @@ body.englishtraining-page .pronunciation-score.is-listening .pronunciation-score
   }
 
   body.englishtraining-page .pronunciation-score {
+    right: 25px;
     height: 17px;
     border-radius: 0 0 11px 11px;
   }

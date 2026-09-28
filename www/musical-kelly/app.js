@@ -231,34 +231,53 @@
     return Number.isFinite(Number(score?.score)) ? Number(score.score) : null;
   }
 
-  function normalizePronunciationWords(value) {
-    return String(value || '')
+  function calculatePronunciationScore(expectedText, spokenText) {
+    const toCharacters = (value) => String(value || '')
       .toLocaleLowerCase(state.lyricsLanguage === 'pt' ? 'pt-BR' : 'en-US')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
-  }
-
-  function calculatePronunciationScore(expectedText, spokenText) {
-    const expected = normalizePronunciationWords(expectedText);
-    const spoken = normalizePronunciationWords(spokenText);
+      .replace(/[^\p{L}\p{N}]/gu, '');
+    const expected = Array.from(toCharacters(expectedText));
+    const spoken = Array.from(toCharacters(spokenText));
     if (!expected.length || !spoken.length) return 0;
-    let previous = Array.from({ length: spoken.length + 1 }, (_unused, index) => index);
-    expected.forEach((word, row) => {
-      const current = [row + 1];
-      spoken.forEach((spokenWord, column) => {
-        current[column + 1] = Math.min(
-          current[column] + 1,
-          previous[column + 1] + 1,
-          previous[column] + (word === spokenWord ? 0 : 1)
-        );
-      });
-      previous = current;
+    const lcs = Array.from({ length: expected.length + 1 }, () => Array(spoken.length + 1).fill(0));
+    for (let row = 1; row <= expected.length; row += 1) {
+      for (let column = 1; column <= spoken.length; column += 1) {
+        lcs[row][column] = expected[row - 1] === spoken[column - 1]
+          ? lcs[row - 1][column - 1] + 1
+          : Math.max(lcs[row - 1][column], lcs[row][column - 1]);
+      }
+    }
+    const matches = [];
+    let row = expected.length;
+    let column = spoken.length;
+    while (row > 0 && column > 0) {
+      if (expected[row - 1] === spoken[column - 1]) {
+        matches.push([row - 1, column - 1]);
+        row -= 1;
+        column -= 1;
+      } else if (lcs[row - 1][column] >= lcs[row][column - 1]) row -= 1;
+      else column -= 1;
+    }
+    matches.reverse();
+    let matchedCharacters = 0;
+    let sequenceLength = 0;
+    let previousMatch = null;
+    const finishSequence = () => {
+      if (sequenceLength >= 2) matchedCharacters += sequenceLength;
+      sequenceLength = 0;
+    };
+    matches.forEach(([expectedIndex, spokenIndex]) => {
+      if (previousMatch && expectedIndex === previousMatch[0] + 1 && spokenIndex === previousMatch[1] + 1) {
+        sequenceLength += 1;
+      } else {
+        finishSequence();
+        sequenceLength = 1;
+      }
+      previousMatch = [expectedIndex, spokenIndex];
     });
-    return Math.max(0, Math.min(100, Math.round((1 - previous[spoken.length] / Math.max(expected.length, spoken.length)) * 100)));
+    finishSequence();
+    return Math.max(0, Math.min(100, Math.round(matchedCharacters / Math.max(expected.length, spoken.length) * 100)));
   }
 
   function pronunciationColor(score) {
@@ -381,13 +400,41 @@
     elements.lyricsTimingButton.title = `Ritmo do texto: ${label}. Toque para alterar.`;
   }
 
-  function cycleLyricsTimingRate() {
+  async function cycleLyricsTimingRate() {
     if (APP_SLUG !== 'englishtraining') return;
     const rates = [1, 0.5, 0.75, 1.5];
     const index = rates.indexOf(state.lyricsTimingRate);
     state.lyricsTimingRate = rates[(index + 1) % rates.length];
     try { localStorage.setItem(LYRICS_TIMING_KEY, String(state.lyricsTimingRate)); } catch (_error) {}
     updateLyricsTimingControl();
+    updateLyricsPlayer();
+    await applyLyricsTimingRateToCurrentAudio();
+  }
+
+  function applyNativePlaybackRate(media) {
+    if (!media) return;
+    try { media.preservesPitch = true; } catch (_error) {}
+    try { media.webkitPreservesPitch = true; } catch (_error) {}
+    try { media.mozPreservesPitch = true; } catch (_error) {}
+    const rate = Number(state.lyricsTimingRate) || 1;
+    try { media.defaultPlaybackRate = rate; } catch (_error) {}
+    try { media.playbackRate = rate; } catch (_error) {}
+  }
+
+  async function applyLyricsTimingRateToCurrentAudio() {
+    const voice = state.current;
+    if (!voice) return;
+    const position = currentPosition(voice);
+    const povPlayback = state.povPlayback;
+    if (voice.native) {
+      applyNativePlaybackRate(voice.media);
+    } else if (state.lyricsTimingRate !== 1 && !voice.paused) {
+      const card = getCard(voice.cardId);
+      if (card) await startNativeCard(card, position);
+    }
+    if (povPlayback && state.current && !state.current.paused && state.povPlayback === povPlayback) {
+      await playPovClip(povPlayback.index, position, povPlayback.generation);
+    }
     updateLyricsPlayer();
   }
 
@@ -1165,7 +1212,16 @@
   }
 
   function characterById(characterId) {
-    return state.characters.find((character) => character.id === characterId) || null;
+    if (characterId == null || characterId === '') return null;
+    return state.characters.find((character) => String(character.id) === String(characterId)) || null;
+  }
+
+  function characterForLyricLine(line) {
+    const byId = characterById(line?.characterId);
+    if (byId) return byId;
+    const speaker = String(line?.speaker || '').trim().toLocaleLowerCase();
+    if (!speaker) return null;
+    return state.characters.find((character) => String(character.name || '').trim().toLocaleLowerCase() === speaker) || null;
   }
 
   function lyricLineLabel(line) {
@@ -1273,7 +1329,7 @@
     elements.lyricsLines.hidden = lines.length === 0;
     elements.lyricsLines.replaceChildren();
     lines.forEach((line, index) => {
-      const character = characterById(line.characterId);
+      const character = characterForLyricLine(line);
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'lyric-line';
@@ -1285,8 +1341,16 @@
       button.classList.toggle('is-sync-target', Boolean(state.manualSync && index === state.manualSync.lineIndex));
 
       const avatar = document.createElement('span');
-      avatar.className = `lyric-character-avatar${character ? '' : ' is-empty'}`;
-      if (character) avatar.style.backgroundImage = `url("${String(character.imageUrl).replace(/["\\]/g, '')}")`;
+      avatar.className = `lyric-character-avatar${character?.imageUrl ? '' : ' is-empty'}`;
+      if (character?.imageUrl) {
+        const portrait = document.createElement('img');
+        portrait.src = absoluteUrl(String(character.imageUrl));
+        portrait.alt = '';
+        portrait.loading = 'lazy';
+        portrait.decoding = 'async';
+        portrait.setAttribute('aria-hidden', 'true');
+        avatar.appendChild(portrait);
+      }
       const copy = document.createElement('span');
       copy.className = 'lyric-copy';
       const visibleSpeaker = character?.name || line.speaker;
@@ -1432,7 +1496,7 @@
     if (changed && index >= 0 && APP_SLUG === 'englishtraining' && state.selectedCharacterId) {
       const card = getCard(state.lyricsCardId);
       const line = card?.lyrics?.lines?.[index];
-      if (line?.characterId === state.selectedCharacterId) {
+      if (line?.characterId != null && String(line.characterId) === String(state.selectedCharacterId)) {
         const button = elements.lyricsLines.querySelector(`[data-line-id="${CSS.escape(line.id)}"]`);
         const badge = button?.querySelector('.pronunciation-score');
         const alreadyListening = pronunciationState.recognition
@@ -1474,7 +1538,7 @@
     } else if (card.lyrics?.mode === 'timesync' && isCurrent) {
       let activeIndex = -1;
       for (let index = 0; index < lines.length; index += 1) {
-        if ((position + LYRIC_DISPLAY_LEAD_SECONDS) * state.lyricsTimingRate >= Number(lines[index].start)) activeIndex = index;
+        if (position + LYRIC_DISPLAY_LEAD_SECONDS >= Number(lines[index].start)) activeIndex = index;
         else break;
       }
       setActiveLyricLine(activeIndex);
@@ -2046,7 +2110,8 @@
     if (state.povPlayback !== playback || playback.generation !== generation) return;
     setCurrentVoiceVolume(0);
     fadeCurrentVoice(1, 1500);
-    const remainingMs = Math.max(80, (clip.end - start) * 1000);
+    const rate = state.current?.native ? Math.max(0.25, Number(state.current.media?.playbackRate) || 1) : 1;
+    const remainingMs = Math.max(80, ((clip.end - start) * 1000) / rate);
     const fadeOutDelay = Math.max(0, remainingMs - 1500);
     playback.timers.push(window.setTimeout(() => {
       if (state.povPlayback === playback) fadeCurrentVoice(0, Math.min(1500, remainingMs));
@@ -3082,6 +3147,7 @@
     media.preload = 'auto';
     media.playsInline = true;
     media.setAttribute('playsinline', '');
+    applyNativePlaybackRate(media);
     media.addEventListener('loadedmetadata', () => syncNativeDuration(state.current));
     media.addEventListener('durationchange', () => syncNativeDuration(state.current));
     media.addEventListener('ended', () => {
@@ -3117,8 +3183,12 @@
     cancelAutoAdvance();
     clearTransitionTimers();
     clearColorTimer();
-    if (previous) previous.replaced = true;
+    if (previous) {
+      previous.replaced = true;
+      if (!previous.native) stopVoice(previous);
+    }
     media.pause();
+    media.volume = 1;
     media.src = absoluteUrl(sourceUrl || card.audio.url);
     media.load();
 
@@ -3138,6 +3208,7 @@
       ended: false
     };
     state.current = voice;
+    applyNativePlaybackRate(media);
     state.transitionFromId = '';
     state.transitionTargetId = '';
     state.transitioning = false;
@@ -3145,13 +3216,13 @@
     media.addEventListener('loadedmetadata', () => applyNativeOffset(voice, offset), { once: true });
     applyNativeOffset(voice, offset);
     render();
-    setStatus(`${natural ? 'Abrindo' : 'Preparando'} “${cardPublicLabel(card)}” no áudio do iPhone…`, true);
+    setStatus(`${natural ? 'Abrindo' : 'Preparando'} “${cardPublicLabel(card)}” no áudio do navegador…`, true);
 
     let playback;
     try {
       playback = media.play();
     } catch (_error) {
-      throw new Error('O iPhone bloqueou o áudio. Toque novamente na faixa.');
+      throw new Error('O navegador bloqueou o áudio. Toque novamente na faixa.');
     }
     try {
       await playback;
@@ -3160,7 +3231,7 @@
         voice.paused = true;
         render();
       }
-      throw new Error('O iPhone não conseguiu abrir esta música. Use uma faixa MP3 ou M4A/AAC e toque novamente.');
+      throw new Error('O navegador não conseguiu abrir esta música. Use uma faixa MP3 ou M4A/AAC e tente novamente.');
     }
     if (generation !== state.nativeGeneration || state.current !== voice) return;
     syncNativeDuration(voice);
@@ -3220,7 +3291,7 @@
     const generation = ++state.playRequestGeneration;
     cancelAutoAdvance();
     clearTransitionTimers();
-    if (USE_NATIVE_AUDIO_ON_APPLE) {
+    if (USE_NATIVE_AUDIO_ON_APPLE || state.lyricsTimingRate !== 1 || state.current?.native) {
       await startNativeCard(card, 0, { sourceUrl: manualSyncAudioUrl(card) });
       if (generation !== state.playRequestGeneration) throw new Error('A faixa mudou enquanto o áudio era aberto.');
       cancelAutoAdvance();
@@ -3530,22 +3601,28 @@
     const paused = state.current;
     if (!paused?.paused) return;
     if (paused.native) {
+      applyNativePlaybackRate(paused.media);
       applyNativeOffset(paused, paused.offset);
       let playback;
       try {
         playback = paused.media.play();
       } catch (_error) {
-        throw new Error('O iPhone bloqueou o áudio. Toque novamente na faixa.');
+        throw new Error('O navegador bloqueou o áudio. Toque novamente na faixa.');
       }
       try {
         await playback;
       } catch (_error) {
-        throw new Error('O iPhone não conseguiu retomar esta música.');
+        throw new Error('O navegador não conseguiu retomar esta música.');
       }
       paused.paused = false;
       beginColorReveal(paused.cardId);
       render();
       setStatus(`No ar: “${getCard(paused.cardId)?.title || 'faixa'}”.`);
+      return;
+    }
+    if (state.lyricsTimingRate !== 1) {
+      const card = getCard(paused.cardId);
+      if (card) await startNativeCard(card, paused.offset);
       return;
     }
     const context = await getAudioContext();
@@ -3569,7 +3646,7 @@
       return;
     }
     if (!await ensureCardDownloadedForPlayback(card)) return;
-    if (USE_NATIVE_AUDIO_ON_APPLE) {
+    if (USE_NATIVE_AUDIO_ON_APPLE || state.lyricsTimingRate !== 1 || state.current?.native) {
       if (state.current?.cardId === cardId) {
         if (state.current.paused) await resumeCurrent();
         else pauseCurrent();
@@ -3777,7 +3854,9 @@
     });
     elements.lyricsLanguageEnglish.addEventListener('click', () => setLyricsLanguage('en'));
     elements.lyricsLanguagePortuguese.addEventListener('click', () => setLyricsLanguage('pt'));
-    elements.lyricsTimingButton.addEventListener('click', cycleLyricsTimingRate);
+    elements.lyricsTimingButton.addEventListener('click', () => {
+      cycleLyricsTimingRate().catch((error) => showToast(error.message, true));
+    });
     let manualSyncPointerHandled = false;
     elements.manualSyncAdvanceButton.addEventListener('pointerdown', (event) => {
       if (event.button != null && event.button !== 0) return;
