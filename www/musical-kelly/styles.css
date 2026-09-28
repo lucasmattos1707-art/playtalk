@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..72,400..700&display=swap');
+
 :root {
   color-scheme: dark;
   --bg: #06100c;
@@ -3046,7 +3048,313 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
   display: none;
 }
 
+/* English Training study view: responsive sky, compact controls and portrait-led lyric cards. */
+html:has(body.englishtraining-page) {
+  background: #1684df;
+}
+
+body.englishtraining-page {
+  background: url('/englishtraining/background-desktop.png') center / cover fixed no-repeat;
+  font-family: "Google Sans Flex", "Google Sans", "Product Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+body.englishtraining-page .ambient {
+  display: none;
+}
+
+body.englishtraining-page .lyrics-screen {
+  background: linear-gradient(180deg, rgba(5, 30, 68, 0.14), rgba(3, 26, 58, 0.08));
+}
+
+body.englishtraining-page .lyrics-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 58px;
+  padding: max(7px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 7px max(14px, env(safe-area-inset-left));
+  border-bottom-color: rgba(172, 220, 255, 0.34);
+  background: rgba(5, 36, 78, 0.42);
+  backdrop-filter: blur(12px);
+}
+
+body.englishtraining-page .lyrics-character-switch,
+body.englishtraining-page .lyrics-track-heading h1,
+body.englishtraining-page .lyrics-track-heading small {
+  display: none;
+}
+
+body.englishtraining-page .lyrics-track-heading {
+  grid-column: 1;
+  grid-row: 1;
+  justify-items: start;
+}
+
+body.englishtraining-page .lyrics-track-navigation {
+  grid-template-columns: 30px 30px;
+  gap: 5px;
+}
+
+body.englishtraining-page .lyrics-track-navigation button {
+  width: 30px;
+  height: 32px;
+  border: 1px solid rgba(201, 233, 255, 0.26);
+  border-radius: 10px;
+  background: rgba(10, 74, 135, 0.26);
+}
+
+body.englishtraining-page .lyrics-header-actions {
+  grid-column: 2;
+  grid-row: 1;
+  gap: 6px;
+}
+
+body.englishtraining-page .lyrics-timing-button {
+  min-width: 42px;
+  min-height: 29px;
+  padding: 0 8px;
+  border: 1px solid rgba(196, 230, 255, 0.36);
+  border-radius: 999px;
+  color: #e5f4ff;
+  background: rgba(8, 61, 112, 0.42);
+  font-size: 0.67rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+body.englishtraining-page .lyrics-timing-button:hover {
+  border-color: rgba(213, 239, 255, 0.8);
+  background: rgba(22, 105, 178, 0.62);
+}
+
+body.englishtraining-page .lyrics-timing-button[hidden] {
+  display: none;
+}
+
+body.englishtraining-page .lyrics-language-toggle {
+  gap: 2px;
+  padding: 2px;
+  border-color: rgba(196, 230, 255, 0.36);
+  background: rgba(8, 61, 112, 0.38);
+}
+
+body.englishtraining-page .lyrics-language-toggle button {
+  min-width: 34px;
+  min-height: 29px;
+  padding: 0 8px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.64rem;
+}
+
+body.englishtraining-page .lyrics-language-toggle button.is-active {
+  color: #07335e;
+  background: #d5efff;
+  box-shadow: 0 2px 10px rgba(91, 180, 255, 0.25);
+}
+
+body.englishtraining-page .lyrics-edit-button,
+body.englishtraining-page .lyrics-back-button {
+  min-height: 33px;
+  padding-inline: 10px;
+}
+
+body.englishtraining-page .lyrics-stage {
+  background: linear-gradient(180deg, rgba(6, 34, 69, 0.03), rgba(4, 34, 69, 0.08));
+}
+
+body.englishtraining-page .lyrics-track-label {
+  background: rgba(7, 45, 86, 0.68);
+}
+
+body.englishtraining-page .lyrics-lines {
+  width: min(100%, 1040px);
+  gap: 11px;
+  padding: 16px 22px 24px;
+}
+
+body.englishtraining-page .lyric-line {
+  --portrait-width: clamp(108px, 16vw, 158px);
+  position: relative;
+  display: block;
+  min-height: 88px;
+  overflow: hidden;
+  padding: 14px 60px 26px calc(var(--portrait-width) + 13px);
+  border: 1px solid rgba(166, 218, 255, 0.47);
+  border-radius: 15px;
+  background: linear-gradient(115deg, rgba(4, 43, 82, 0.74), rgba(4, 28, 56, 0.76));
+  font-family: "Google Sans Flex", "Google Sans", "Product Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+  box-shadow: 0 8px 24px rgba(0, 42, 97, 0.15);
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body.englishtraining-page .lyric-line::before {
+  position: absolute;
+  z-index: 1;
+  top: -8%;
+  bottom: -8%;
+  left: calc(var(--portrait-width) - 13px);
+  width: 6px;
+  border-right: 1px solid rgba(203, 235, 255, 0.82);
+  background: linear-gradient(180deg, rgba(113, 194, 255, 0.96), rgba(84, 159, 255, 0.48));
+  box-shadow: 0 0 14px rgba(89, 180, 255, 0.6);
+  content: '';
+  transform: skewX(-13deg);
+}
+
+body.englishtraining-page .lyric-character-avatar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--portrait-width);
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background-color: rgba(5, 27, 53, 0.3);
+  background-position: center 35%;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 23px) 100%, 0 100%);
+  box-shadow: none;
+}
+
+body.englishtraining-page .lyric-copy {
+  position: relative;
+  z-index: 2;
+  display: block;
+  min-height: 100%;
+}
+
+body.englishtraining-page .lyric-copy small {
+  margin-bottom: 3px;
+  color: rgba(222, 241, 255, 0.82);
+  font-size: 0.53em;
+}
+
+body.englishtraining-page .pronunciation-score {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: block;
+  height: 19px;
+  overflow: hidden;
+  border-radius: 0 0 14px 14px;
+  background: rgba(2, 20, 42, 0.4);
+}
+
+body.englishtraining-page .pronunciation-score[hidden] {
+  display: none;
+}
+
+body.englishtraining-page .pronunciation-score__label {
+  position: absolute;
+  right: 10px;
+  bottom: 5px;
+  z-index: 2;
+  color: #fff;
+  font: 850 0.57rem/1 system-ui, sans-serif;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+body.englishtraining-page .pronunciation-score__fill {
+  position: absolute;
+  inset: auto auto 0 0;
+  width: var(--score-progress, 0%);
+  height: 100%;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--score-color, #ef4444) 66%, transparent), var(--score-color, #ef4444));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--score-color, #ef4444) 70%, transparent);
+  transition: width 500ms cubic-bezier(0.2, 0.75, 0.25, 1), background-color 350ms ease;
+}
+
+body.englishtraining-page .pronunciation-score.is-listening {
+  background: rgba(52, 13, 25, 0.65);
+}
+
+@keyframes pronunciationListening {
+  to { box-shadow: 0 0 15px rgba(255, 75, 88, 0.9); }
+}
+
+body.englishtraining-page .pronunciation-score.is-listening .pronunciation-score__fill {
+  background: linear-gradient(90deg, #ff897d, #ff3f57);
+  animation: pronunciationListening 750ms ease-in-out infinite alternate;
+}
+
 @media (max-width: 560px) {
+  body.englishtraining-page {
+    background-image: url('/englishtraining/background-mobile.jpg');
+    background-position: center center;
+    background-size: cover;
+  }
+
+  body.englishtraining-page .lyrics-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 48px;
+    gap: 5px;
+    padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 4px max(8px, env(safe-area-inset-left));
+  }
+
+  body.englishtraining-page .lyrics-track-navigation {
+    grid-template-columns: 27px 27px;
+    gap: 3px;
+  }
+
+  body.englishtraining-page .lyrics-track-navigation button {
+    width: 27px;
+    height: 28px;
+  }
+
+  body.englishtraining-page .lyrics-language-toggle button {
+    min-width: 30px;
+    min-height: 27px;
+    padding-inline: 6px;
+    font-size: 0.59rem;
+  }
+
+  body.englishtraining-page .lyrics-timing-button {
+    min-width: 38px;
+    min-height: 27px;
+    padding-inline: 6px;
+    font-size: 0.63rem;
+  }
+
+  body.englishtraining-page .lyrics-edit-button,
+  body.englishtraining-page .lyrics-back-button {
+    min-height: 29px;
+    padding-inline: 7px;
+    font-size: 0.65rem;
+  }
+
+  body.englishtraining-page .lyrics-lines {
+    gap: 8px;
+    padding: 10px 9px 17px;
+  }
+
+  body.englishtraining-page .lyric-line {
+    --portrait-width: clamp(83px, 24vw, 112px);
+    min-height: 67px;
+    padding: 9px 47px 23px calc(var(--portrait-width) + 9px);
+    border-radius: 12px;
+    font-size: clamp(0.93rem, 4.2vw, 1.13rem);
+  }
+
+  body.englishtraining-page .lyric-line::before {
+    left: calc(var(--portrait-width) - 10px);
+    width: 5px;
+  }
+
+  body.englishtraining-page .lyric-character-avatar {
+    clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%);
+  }
+
+  body.englishtraining-page .pronunciation-score {
+    height: 17px;
+    border-radius: 0 0 11px 11px;
+  }
+
+  body.englishtraining-page .pronunciation-score__label {
+    right: 8px;
+    bottom: 4px;
+    font-size: 0.53rem;
+  }
+}
   .lyrics-button {
     right: 106px;
     width: 42px;
