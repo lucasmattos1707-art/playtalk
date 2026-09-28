@@ -4096,6 +4096,12 @@
       && window.matchMedia?.('(min-width: 1024px) and (hover: hover) and (pointer: fine)').matches === true;
   }
 
+  function openBulkAudioDialog() {
+    if (!state.canEdit || !bulkAudioIsDesktop() || !elements.lyricsScreen.hidden) return;
+    resetBulkAudio();
+    showDialog(elements.bulkAudioDialog);
+  }
+
   function updateBulkAudioAccess() {
     elements.bulkAudioOpenButton.hidden = !state.canEdit || !bulkAudioIsDesktop();
   }
@@ -4292,10 +4298,7 @@
 
   function bindBulkAudioControls() {
     updateBulkAudioAccess();
-    elements.bulkAudioOpenButton.addEventListener('click', () => {
-      if (!state.canEdit || !bulkAudioIsDesktop()) return;
-      resetBulkAudio(); showDialog(elements.bulkAudioDialog);
-    });
+    elements.bulkAudioOpenButton.addEventListener('click', openBulkAudioDialog);
     elements.bulkAudioCloseButton.addEventListener('click', () => closeDialog(elements.bulkAudioDialog));
     elements.bulkAudioDialog.addEventListener('close', resetBulkAudio);
     document.querySelectorAll('[data-bulk-slot]').forEach((zone) => {
@@ -4598,7 +4601,7 @@
         return;
       }
       const tagName = document.activeElement?.tagName;
-      const isTyping = tagName === 'INPUT' || tagName === 'TEXTAREA' || document.activeElement?.isContentEditable;
+      const isTyping = tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT' || document.activeElement?.isContentEditable;
       if (event.key === 'ArrowDown' && state.manualSync && !isTyping && !event.repeat) {
         event.preventDefault();
         advanceManualSync().catch((error) => showToast(error.message, true));
@@ -4606,6 +4609,12 @@
       }
       if (!state.canEdit || event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
       if (isTyping) return;
+      if (event.key.toLowerCase() === 'w' && APP_SLUG === 'englishtraining' && bulkAudioIsDesktop()
+        && elements.lyricsScreen.hidden && !elements.bulkAudioDialog.open) {
+        event.preventDefault();
+        openBulkAudioDialog();
+        return;
+      }
       if (event.key.toLowerCase() === 'a') {
         event.preventDefault();
         openPicker('audio');

@@ -602,6 +602,33 @@ test('admin bulk audio cutter is desktop-only with ten zoom scales ending at 15 
   assert.ok(scales.every((scale, index) => index === 0 || scale < scales[index - 1]));
 });
 
+test('W opens the bulk cutter from EnglishTraining home for admins on desktop only', async () => {
+  const pageOptions = {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: { appSlug: 'englishtraining', appPath: '/englishtraining', apiRoot: '/api/englishtraining' },
+    beforeEval: (window) => { window.matchMedia = () => ({ matches: true }); }
+  };
+  const adminDom = await boot(true, pageOptions);
+  const adminKey = new adminDom.window.KeyboardEvent('keydown', { key: 'w', bubbles: true, cancelable: true });
+  adminDom.window.document.dispatchEvent(adminKey);
+  assert.equal(adminDom.window.document.getElementById('bulkAudioDialog').hasAttribute('open'), true);
+  assert.equal(adminKey.defaultPrevented, true);
+  adminDom.window.close();
+
+  const viewerDom = await boot(false, pageOptions);
+  viewerDom.window.document.dispatchEvent(new viewerDom.window.KeyboardEvent('keydown', { key: 'w', bubbles: true, cancelable: true }));
+  assert.equal(viewerDom.window.document.getElementById('bulkAudioDialog').hasAttribute('open'), false);
+  viewerDom.window.close();
+
+  const mobileDom = await boot(true, {
+    ...pageOptions,
+    beforeEval: (window) => { window.matchMedia = () => ({ matches: false }); }
+  });
+  mobileDom.window.document.dispatchEvent(new mobileDom.window.KeyboardEvent('keydown', { key: 'w', bubbles: true, cancelable: true }));
+  assert.equal(mobileDom.window.document.getElementById('bulkAudioDialog').hasAttribute('open'), false);
+  mobileDom.window.close();
+});
+
 test('englishtraining translates once and toggles the shared Portuguese lyrics', async () => {
   const fetchUrls = [];
   const payload = projectPayload(false);
