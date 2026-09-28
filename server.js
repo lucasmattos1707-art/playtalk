@@ -27644,9 +27644,26 @@ app.put(musicalKellyApiPaths('/cards/:cardId/lyrics'), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
     const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const importedLines = Array.isArray(req.body?.lines) ? req.body.lines : null;
     const requestedMode = req.body?.mode === 'timesync' ? 'timesync' : 'plain';
     const editedLines = parseMusicalKellyLyricEditorLines(req.body?.text);
-    if (!cardId || !editedLines.length) {
+    const normalizedImportedLines = importedLines?.slice(0, 500).map((line, index) => {
+      const start = Number(line?.start);
+      const end = Number(line?.end);
+      return {
+        id: `line-${index + 1}`,
+        text: String(line?.text || '').trim().slice(0, 2000),
+        textPt: String(line?.textPt || '').trim().slice(0, 2000),
+        start,
+        end,
+        speaker: '',
+        characterId: ''
+      };
+    }) || [];
+    const importedLinesAreValid = importedLines.length <= 500 && normalizedImportedLines.length > 0
+      && normalizedImportedLines.every((line) => line.text && Number.isFinite(line.start) && Number.isFinite(line.end)
+        && line.start >= 0 && line.end > line.start && line.end <= 43200);
+    if (!cardId || !(importedLines ? importedLinesAreValid : editedLines.length)) {
       res.status(400).json({ success: false, message: 'Escreva ao menos uma linha da letra.' });
       return;
     }
@@ -27658,7 +27675,16 @@ app.put(musicalKellyApiPaths('/cards/:cardId/lyrics'), async (req, res) => {
         error.statusCode = 404;
         throw error;
       }
-      card.lyrics = reconcileMusicalKellyEditedLyrics(card.lyrics, editedLines, requestedMode);
+      if (importedLines) {
+        if (!card.audio?.fileName) {
+          const error = new Error('Adicione o audio antes de importar as legendas.');
+          error.statusCode = 409;
+          throw error;
+        }
+        card.lyrics = { mode: 'timesync', source: 'admin', lines: normalizedImportedLines };
+      } else {
+        card.lyrics = reconcileMusicalKellyEditedLyrics(card.lyrics, editedLines, requestedMode);
+      }
       return writeMusicalKellyGlobalProject(currentProject);
     });
     const savedCard = project.cards.find((entry) => entry.id === cardId);
@@ -28875,8 +28901,8 @@ app.get(['/englishtraining/', '/englishtraining/index.html'], (_req, res) => {
     .replace('<title>Musical Kelly | Fluent LevelUp</title>', '<title>English Training | Fluent LevelUp</title>')
     .replace('<body>', '<body class="englishtraining-page">')
     .replace(
-      '<script src="/musical-kelly/app.js?v=45" defer></script>',
-      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=45" defer></script>`
+      '<script src="/musical-kelly/app.js?v=46" defer></script>',
+      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=46" defer></script>`
     );
   res.setHeader('Cache-Control', 'no-store');
   res.type('html').send(html);

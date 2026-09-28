@@ -506,7 +506,9 @@ test('server keeps AI, admin and storage boundaries explicit', () => {
   assert.match(html, /pause-button-englishtraining\.svg/);
   assert.match(stylesSource, /body\.englishtraining-page \.lyrics-header-play-button \{[\s\S]*border: 0 !important;[\s\S]*border-radius: 0/);
   assert.match(stylesSource, /body\.englishtraining-page \.lyrics-timing-button \{[\s\S]*border: 0;[\s\S]*color: #fff;[\s\S]*font-size: 0\.94rem/);
-  assert.match(stylesSource, /body\.englishtraining-page \.pronunciation-score__seal \{[\s\S]*width: 33px;[\s\S]*height: 33px/);
+  assert.match(stylesSource, /body\.englishtraining-page \.pronunciation-score__seal \{[\s\S]*width: 66px;[\s\S]*height: 66px/);
+  assert.match(stylesSource, /body\.englishtraining-page \.lyric-line::before \{[\s\S]*top: 0;[\s\S]*bottom: 0;/);
+  assert.doesNotMatch(stylesSource, /body\.englishtraining-page \.pronunciation-score::before/);
   assert.match(html, /play-button-englishtraining\.svg/);
   assert.match(html, /pause-button-englishtraining\.svg/);
   assert.match(stylesSource, /body\.englishtraining-page \.lyrics-header-play-button \{[\s\S]*border: 0 !important;[\s\S]*border-radius: 0/);
@@ -563,11 +565,41 @@ test('englishtraining keeps play and pause in the header and hides track navigat
   document.querySelector('.lyrics-button').click();
   assert.equal(document.getElementById('lyricsHeaderPlayButton').hidden, false);
   assert.ok(document.getElementById('lyricsBackButton'));
+  assert.match(document.querySelector('[data-line-index="1"] .lyric-character-avatar__play').src, /play-button-englishtraining\.svg/);
+  assert.equal(document.querySelector('.pronunciation-score').hidden, true);
   assert.equal(document.querySelector('.pronunciation-score').style.getPropertyValue('--score-progress'), '100%');
   assert.equal(document.querySelector('.pronunciation-score').classList.contains('is-unscored'), true);
   assert.match(document.querySelector('.pronunciation-score').getAttribute('aria-label'), /Sem áudio enviado, sem nota/);
   assert.match(stylesSource, /body\.englishtraining-page \.lyrics-track-navigation button\s*\{\s*display: none;/);
   dom.window.close();
+});
+
+test('admin bulk audio cutter is desktop-only with ten zoom scales ending at 15 seconds', () => {
+  assert.match(html, /bulkAudioOpenButton[\s\S]*?hidden/);
+  assert.match(html, /bulkAudioZoomLabel">Escala 1 \/ 10/);
+  assert.match(appSource, /matchMedia\?\.\('\(min-width: 1024px\) and \(hover: hover\) and \(pointer: fine\)'\)/);
+  assert.match(appSource, /APP_SLUG === 'englishtraining'/);
+  assert.match(appSource, /Math\.min\(10, state\.bulkAudio\.zoomLevel \+ 1\)/);
+  assert.match(appSource, /\(state\.bulkAudio\.zoomLevel - 1\) \/ 9/);
+  assert.match(appSource, /Math\.min\(15, duration\)/);
+  assert.match(appSource, /dataTransfer\?\.files\?\.\[0\]/);
+  assert.match(appSource, /new window\.lamejs\.Mp3Encoder/);
+  assert.match(serverSource, /app\.put\(musicalKellyApiPaths\('\/cards\/:cardId\/lyrics'\)[\s\S]*?await requireAdminUserFromRequest\(req\)[\s\S]*?Array\.isArray\(req\.body\?\.lines\)/);
+  assert.match(stylesSource, /@media \(max-width: 1023px\), \(hover: none\), \(pointer: coarse\)[\s\S]*?\.bulk-audio-open-button, \.bulk-audio-dialog/);
+  assert.match(stylesSource, /\.lyric-character-avatar[\s\S]*?overflow: clip;[\s\S]*?contain: paint;/);
+  assert.match(stylesSource, /\.pronunciation-score__seal[\s\S]*?overflow: visible/);
+  const zoomSource = appSource.match(/function bulkVisibleDuration\(\) \{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(zoomSource, 'waveform zoom duration calculation should exist');
+  const bulkState = { bulkAudio: { duration: 300, zoomLevel: 1 } };
+  const visibleDuration = new Function('state', `${zoomSource}; return bulkVisibleDuration;`)(bulkState);
+  const scales = Array.from({ length: 10 }, (_, index) => {
+    bulkState.bulkAudio.zoomLevel = index + 1;
+    return visibleDuration();
+  });
+  assert.equal(scales.length, 10);
+  assert.equal(scales[0], 300);
+  assert.equal(scales[9], 15);
+  assert.ok(scales.every((scale, index) => index === 0 || scale < scales[index - 1]));
 });
 
 test('englishtraining translates once and toggles the shared Portuguese lyrics', async () => {

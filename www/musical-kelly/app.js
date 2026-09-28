@@ -35,6 +35,28 @@
     refreshButton: document.getElementById('refreshButton'),
     downloadAllButton: document.getElementById('downloadAllButton'),
     addCardDialog: document.getElementById('addCardDialog'),
+    bulkAudioOpenButton: document.getElementById('bulkAudioOpenButton'),
+    bulkAudioDialog: document.getElementById('bulkAudioDialog'),
+    bulkAudioCloseButton: document.getElementById('bulkAudioCloseButton'),
+    bulkAudioStatus: document.getElementById('bulkAudioStatus'),
+    bulkAudioWorkbench: document.getElementById('bulkAudioWorkbench'),
+    bulkAudioPlayButton: document.getElementById('bulkAudioPlayButton'),
+    bulkAudioClock: document.getElementById('bulkAudioClock'),
+    bulkAudioZoomOut: document.getElementById('bulkAudioZoomOut'),
+    bulkAudioZoomIn: document.getElementById('bulkAudioZoomIn'),
+    bulkAudioZoomLabel: document.getElementById('bulkAudioZoomLabel'),
+    bulkAudioCutButton: document.getElementById('bulkAudioCutButton'),
+    bulkAudioWaveformScroll: document.getElementById('bulkAudioWaveformScroll'),
+    bulkAudioWaveform: document.getElementById('bulkAudioWaveform'),
+    bulkAudioCutList: document.getElementById('bulkAudioCutList'),
+    bulkAudioCutReview: document.getElementById('bulkAudioCutReview'),
+    bulkAudioCutSummary: document.getElementById('bulkAudioCutSummary'),
+    bulkAudioUndoCut: document.getElementById('bulkAudioUndoCut'),
+    bulkAudioConfirmCut: document.getElementById('bulkAudioConfirmCut'),
+    bulkAudioNameForm: document.getElementById('bulkAudioNameForm'),
+    bulkAudioEpisodeName: document.getElementById('bulkAudioEpisodeName'),
+    bulkAudioSaveEpisode: document.getElementById('bulkAudioSaveEpisode'),
+    bulkAudioPreview: document.getElementById('bulkAudioPreview'),
     addCardForm: document.getElementById('addCardForm'),
     newCardTitle: document.getElementById('newCardTitle'),
     closeAddCardDialog: document.getElementById('closeAddCardDialog'),
@@ -203,7 +225,13 @@
     downloadPromptBusy: false,
     povPlayback: null,
     manualSync: null,
-    progressFrame: 0
+    progressFrame: 0,
+    bulkAudio: {
+      files: { audio: null, englishSrt: null, portugueseSrt: null },
+      cues: { english: [], portuguese: [] }, buffer: null, peaks: [], duration: 0,
+      audioUrl: '', marks: [0], pendingCut: null, zoomLevel: 1, processing: false,
+      saving: false, animationFrame: 0
+    }
   };
 
   const pronunciationState = {
@@ -319,7 +347,7 @@
     badge.classList.toggle('is-listening', listening);
     badge.classList.toggle('is-replaying', replaying);
     badge.classList.toggle('is-unscored', score == null && !listening && !replaying);
-    badge.hidden = false;
+    badge.hidden = score == null && !listening && !replaying;
     if (label) label.textContent = listening ? 'Ouvindo…' : (replaying === 'source' ? 'Fala original…' : (replaying ? 'Reouvindo…' : (score == null ? '' : `${score}%`)));
     badge.style.setProperty('--score-color', score == null ? '#929eaa' : pronunciationColor(score));
     const realScore = score == null ? null : Math.max(0, Math.min(100, Number(score) || 0));
@@ -1108,6 +1136,7 @@
   }
 
   function render() {
+    updateBulkAudioAccess();
     elements.trackList.replaceChildren();
     const fragment = document.createDocumentFragment();
     state.project.cards.forEach((card) => {
@@ -1610,6 +1639,13 @@
         initial.textContent = character.name.charAt(0).toLocaleUpperCase('pt-BR');
         initial.setAttribute('aria-hidden', 'true');
         avatar.appendChild(initial);
+      } else if (APP_SLUG === 'englishtraining') {
+        const playIcon = document.createElement('img');
+        playIcon.className = 'lyric-character-avatar__play';
+        playIcon.src = '/arquivos-codex/icones/play-button-englishtraining.svg';
+        playIcon.alt = '';
+        playIcon.setAttribute('aria-hidden', 'true');
+        avatar.appendChild(playIcon);
       }
       const copy = document.createElement('span');
       copy.className = 'lyric-copy';
@@ -4055,7 +4091,238 @@
     saveProject({ quiet: false }).catch(() => {});
   }
 
+  function bulkAudioIsDesktop() {
+    return APP_SLUG === 'englishtraining'
+      && window.matchMedia?.('(min-width: 1024px) and (hover: hover) and (pointer: fine)').matches === true;
+  }
+
+  function updateBulkAudioAccess() {
+    elements.bulkAudioOpenButton.hidden = !state.canEdit || !bulkAudioIsDesktop();
+  }
+
+  function setBulkAudioStatus(message, busy = false, error = false) {
+    elements.bulkAudioStatus.textContent = message;
+    elements.bulkAudioStatus.classList.toggle('is-busy', busy);
+    elements.bulkAudioStatus.classList.toggle('is-error', error);
+  }
+
+  function setBulkAudioTransport(paused) {
+    const image = elements.bulkAudioPlayButton.querySelector('img');
+    if (image) image.src = paused
+      ? '/arquivos-codex/icones/play-button-englishtraining.svg'
+      : '/arquivos-codex/icones/pause-button-englishtraining.svg';
+    elements.bulkAudioPlayButton.setAttribute('aria-label', paused ? 'Reproduzir áudio' : 'Pausar áudio');
+  }
+
+  function resetBulkAudio() {
+    const bulk = state.bulkAudio;
+    if (bulk.audioUrl) URL.revokeObjectURL(bulk.audioUrl);
+    Object.assign(bulk, { files: { audio: null, englishSrt: null, portugueseSrt: null }, cues: { english: [], portuguese: [] }, buffer: null, peaks: [], duration: 0, audioUrl: '', marks: [0], pendingCut: null, zoomLevel: 1, processing: false, saving: false });
+    elements.bulkAudioPreview.removeAttribute('src'); elements.bulkAudioWorkbench.hidden = true;
+    elements.bulkAudioCutReview.hidden = true; elements.bulkAudioNameForm.hidden = true;
+    elements.bulkAudioCutList.replaceChildren(); setBulkAudioTransport(true);
+    elements.bulkAudioZoomLabel.textContent = 'Escala 1 / 10';
+    document.querySelectorAll('[data-bulk-slot]').forEach((slot) => {
+      slot.classList.remove('is-received', 'is-recognized', 'is-processing', 'is-invalid');
+      slot.querySelector('.bulk-audio-slot-status').textContent = 'Aguardando arquivo';
+    });
+    setBulkAudioStatus('Arraste e solte os arquivos — não há seletor de arquivos nesta ferramenta.');
+  }
+
+  function parseBulkSrt(text) {
+    const toSeconds = (value) => {
+      const match = /^(\d{2}):(\d{2}):(\d{2})[,.](\d{3})$/.exec(value);
+      return match ? Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]) + Number(match[4]) / 1000 : NaN;
+    };
+    return String(text || '').replace(/^\uFEFF/, '').replace(/\r/g, '').trim().split(/\n\s*\n/).flatMap((block) => {
+      const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+      const index = lines.findIndex((line) => line.includes('-->'));
+      const timing = index < 0 ? null : /^([\d:,]+)\s*-->\s*([\d:,]+)/.exec(lines[index]);
+      if (!timing) return [];
+      const start = toSeconds(timing[1]); const end = toSeconds(timing[2]);
+      const cueText = lines.slice(index + 1).join('\n').replace(/<[^>]*>/g, '').trim();
+      return Number.isFinite(start) && Number.isFinite(end) && end > start && cueText ? [{ start, end, text: cueText }] : [];
+    }).sort((a, b) => a.start - b.start);
+  }
+
+  async function acceptBulkAudioFile(slot, file) {
+    if (!state.canEdit || !bulkAudioIsDesktop() || !file) return;
+    const zone = document.querySelector(`[data-bulk-slot="${slot}"]`);
+    try {
+      zone.classList.add('is-processing'); zone.querySelector('.bulk-audio-slot-status').textContent = 'Verificando…';
+      const isAudio = slot === 'audio';
+      if (!(isAudio ? /\.mp3$/i : /\.srt$/i).test(file.name)) throw new Error(isAudio ? 'Solte somente MP3.' : 'Solte somente SRT.');
+      if (!file.size || file.size > (isAudio ? 220 : 20) * 1024 * 1024) throw new Error('Arquivo vazio ou acima do limite permitido.');
+      let parsed = null;
+      if (isAudio) {
+        const head = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
+        const recognized = (head[0] === 73 && head[1] === 68 && head[2] === 51) || head.some((byte, index) => byte === 255 && (head[index + 1] & 224) === 224);
+        if (!recognized) throw new Error('O conteúdo não foi reconhecido como MP3.');
+      } else {
+        parsed = parseBulkSrt(await file.text());
+        if (!parsed.length) throw new Error('Não encontrei legendas SRT válidas.');
+      }
+      state.bulkAudio.files[slot] = file;
+      if (slot === 'englishSrt') state.bulkAudio.cues.english = parsed;
+      if (slot === 'portugueseSrt') state.bulkAudio.cues.portuguese = parsed;
+      zone.classList.remove('is-processing', 'is-invalid'); zone.classList.add('is-received', 'is-recognized');
+      zone.querySelector('.bulk-audio-slot-status').textContent = `${file.name} · ${parsed ? `${parsed.length} blocos` : 'MP3 reconhecido'}`;
+      if (Object.values(state.bulkAudio.files).every(Boolean)) await processBulkAudio();
+    } catch (error) {
+      zone.classList.remove('is-processing', 'is-received', 'is-recognized'); zone.classList.add('is-invalid');
+      zone.querySelector('.bulk-audio-slot-status').textContent = 'Arquivo inválido'; setBulkAudioStatus(error.message, false, true);
+    }
+  }
+
+  async function processBulkAudio() {
+    const bulk = state.bulkAudio;
+    if (bulk.processing || !Object.values(bulk.files).every(Boolean)) return;
+    bulk.processing = true;
+    document.querySelectorAll('[data-bulk-slot]').forEach((slot) => slot.classList.add('is-processing'));
+    setBulkAudioStatus('Preparando waveform…', true);
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) throw new Error('Navegador sem suporte a waveform.');
+      if (!state.audioContext) state.audioContext = new AudioContextClass();
+      bulk.buffer = await state.audioContext.decodeAudioData((await bulk.files.audio.arrayBuffer()).slice(0));
+      bulk.duration = bulk.buffer.duration;
+      if (!bulk.duration || bulk.duration > 43200) throw new Error('Duração do áudio inválida.');
+      const samples = bulk.buffer.getChannelData(0); const count = Math.min(12000, samples.length);
+      bulk.peaks = Array.from({ length: count }, (_, index) => {
+        const from = Math.floor(index * samples.length / count); const to = Math.max(from + 1, Math.floor((index + 1) * samples.length / count));
+        let peak = 0; for (let i = from; i < to; i += 1) peak = Math.max(peak, Math.abs(samples[i])); return peak;
+      });
+      bulk.audioUrl = URL.createObjectURL(bulk.files.audio); elements.bulkAudioPreview.src = bulk.audioUrl;
+      elements.bulkAudioWorkbench.hidden = false; drawBulkWaveform(); renderBulkCutList();
+      setBulkAudioStatus(`Pronto · áudio de ${formatDuration(bulk.duration)} · 10 escalas proporcionais.`);
+    } catch (error) { setBulkAudioStatus(error.message || 'Não foi possível preparar os arquivos.', false, true); }
+    finally { bulk.processing = false; document.querySelectorAll('[data-bulk-slot]').forEach((slot) => slot.classList.remove('is-processing')); }
+  }
+
+  function bulkVisibleDuration() {
+    const duration = state.bulkAudio.duration;
+    return duration ? Math.min(duration, duration * Math.pow(Math.min(15, duration) / duration, (state.bulkAudio.zoomLevel - 1) / 9)) : 0;
+  }
+
+  function drawBulkWaveform() {
+    const bulk = state.bulkAudio; const canvas = elements.bulkAudioWaveform;
+    if (!canvas || !bulk.duration) return;
+    const viewportWidth = Math.max(320, elements.bulkAudioWaveformScroll.clientWidth - 2);
+    const width = Math.max(viewportWidth, Math.ceil(viewportWidth * bulk.duration / bulkVisibleDuration()));
+    const ratio = Math.max(1, window.devicePixelRatio || 1);
+    canvas.style.width = `${width}px`; canvas.width = Math.ceil(width * ratio); canvas.height = 150 * ratio;
+    const ctx = canvas.getContext('2d'); ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, width, 150);
+    ctx.strokeStyle = '#59b9ff'; ctx.lineWidth = 1;
+    for (let x = 0; x < width; x += 1) { const peak = bulk.peaks[Math.min(bulk.peaks.length - 1, Math.floor(x * bulk.peaks.length / width))] || 0; const h = Math.max(1, peak * 68); ctx.beginPath(); ctx.moveTo(x + .5, 75 - h); ctx.lineTo(x + .5, 75 + h); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,.9)'; bulk.marks.forEach((mark) => ctx.fillRect(mark / bulk.duration * width - 1, 0, 2, 150));
+    if (bulk.pendingCut) { ctx.fillStyle = 'rgba(58,171,255,.2)'; ctx.fillRect(bulk.pendingCut.start / bulk.duration * width, 0, (bulk.pendingCut.end - bulk.pendingCut.start) / bulk.duration * width, 150); }
+    elements.bulkAudioZoomLabel.textContent = `Escala ${bulk.zoomLevel} / 10`;
+  }
+
+  function renderBulkCutList() {
+    elements.bulkAudioCutList.replaceChildren();
+    state.bulkAudio.marks.slice(1).forEach((end, index) => {
+      const row = document.createElement('div'); row.className = 'bulk-audio-cut-row';
+      row.textContent = `Corte ${index + 1} · ${formatDuration(state.bulkAudio.marks[index])} — ${formatDuration(end)}`; elements.bulkAudioCutList.append(row);
+    });
+  }
+
+  function markBulkAudioCut() {
+    const bulk = state.bulkAudio; const end = elements.bulkAudioPreview.currentTime; const start = bulk.marks.at(-1);
+    if (!bulk.buffer || bulk.saving) return;
+    if (end - start < .25) { setBulkAudioStatus('Marque o corte após pelo menos 250 ms de áudio.', false, true); return; }
+    elements.bulkAudioPreview.pause(); setBulkAudioTransport(true); bulk.pendingCut = { start, end };
+    elements.bulkAudioCutSummary.textContent = `Trecho ${formatDuration(start)} — ${formatDuration(end)} · ${formatDuration(end - start)}`;
+    elements.bulkAudioCutReview.hidden = false; elements.bulkAudioNameForm.hidden = true; drawBulkWaveform();
+  }
+
+  function bulkSubtitleLines(start, end) {
+    const english = state.bulkAudio.cues.english.filter((cue) => cue.end > start && cue.start < end);
+    const pt = state.bulkAudio.cues.portuguese;
+    return english.map((cue, index) => {
+      const match = pt.find((line) => line.end > cue.start && line.start < cue.end) || (pt.length === english.length ? pt[index] : null);
+      return { text: cue.text.slice(0, 2000), textPt: match?.text?.slice(0, 2000) || '', start: Math.max(0, cue.start - start), end: Math.max(.08, Math.min(end, cue.end) - start) };
+    });
+  }
+
+  async function encodeBulkClip(start, end) {
+    if (!window.lamejs?.Mp3Encoder) throw new Error('O codificador MP3 não carregou; atualize a página.');
+    const buffer = state.bulkAudio.buffer; const channels = Math.min(2, buffer.numberOfChannels);
+    const encoder = new window.lamejs.Mp3Encoder(channels, buffer.sampleRate, 128);
+    const first = Math.floor(start * buffer.sampleRate); const last = Math.min(buffer.length, Math.floor(end * buffer.sampleRate));
+    const sourceL = buffer.getChannelData(0).subarray(first, last); const sourceR = channels > 1 ? buffer.getChannelData(1).subarray(first, last) : null;
+    const left = Int16Array.from(sourceL, (value) => Math.max(-32768, Math.min(32767, value * 32767)));
+    const right = sourceR ? Int16Array.from(sourceR, (value) => Math.max(-32768, Math.min(32767, value * 32767))) : null;
+    const chunks = [];
+    for (let base = 0; base < left.length; base += 57600) {
+      const limit = Math.min(left.length, base + 57600);
+      for (let offset = base; offset < limit; offset += 1152) {
+        const data = channels > 1 ? encoder.encodeBuffer(left.subarray(offset, offset + 1152), right.subarray(offset, offset + 1152)) : encoder.encodeBuffer(left.subarray(offset, offset + 1152));
+        if (data.length) chunks.push(new Uint8Array(data));
+      }
+      setBulkAudioStatus(`Codificando trecho · ${Math.round(limit / left.length * 100)}%`, true); await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    const tail = encoder.flush(); if (tail.length) chunks.push(new Uint8Array(tail)); return new Blob(chunks, { type: 'audio/mpeg' });
+  }
+
+  async function saveBulkEpisode(event) {
+    event.preventDefault(); const bulk = state.bulkAudio; const cut = bulk.pendingCut;
+    const title = elements.bulkAudioEpisodeName.value.trim().slice(0, 120);
+    if (!state.canEdit || !cut || !title || bulk.saving) return;
+    const lines = bulkSubtitleLines(cut.start, cut.end);
+    if (!lines.length) { setBulkAudioStatus('Esse trecho não inclui falas em inglês; ajuste o corte.', false, true); return; }
+    bulk.saving = true; elements.bulkAudioSaveEpisode.disabled = true; let cardId = '';
+    try {
+      const mp3 = await encodeBulkClip(cut.start, cut.end);
+      const created = await apiJson(`${API_ROOT}/cards`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title }) });
+      cardId = created.card?.id; if (!cardId) throw new Error('O container não retornou identificador.');
+      const query = new URLSearchParams({ cardId, name: `${title}.mp3` });
+      const uploaded = await apiJson(`${API_ROOT}/assets/audio?${query}`, { method: 'POST', headers: { 'Content-Type': 'audio/mpeg' }, body: mp3 });
+      const cards = created.project.cards.map((card) => card.id === cardId ? { ...card, audio: uploaded.asset } : card);
+      const projectSaved = await apiJson(`${API_ROOT}/project`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...created.project, cards }) });
+      const lyrics = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(cardId)}/lyrics`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lines }) });
+      applyCollaborationProject(lyrics.project || projectSaved.project);
+      bulk.marks.push(cut.end); bulk.pendingCut = null; elements.bulkAudioCutReview.hidden = true; elements.bulkAudioNameForm.hidden = true;
+      elements.bulkAudioEpisodeName.value = ''; elements.bulkAudioPreview.currentTime = cut.end; renderBulkCutList(); drawBulkWaveform();
+      setBulkAudioStatus(`Faixa “${title}” criada com áudio e ${lines.length} legendas sincronizadas.`); showToast(`Faixa “${title}” salva.`);
+    } catch (error) {
+      setBulkAudioStatus(cardId ? `Container ${cardId} pode ter sido criado parcialmente. ${error.message} Confira antes de repetir.` : error.message, false, true);
+    } finally { bulk.saving = false; elements.bulkAudioSaveEpisode.disabled = false; }
+  }
+
+  function bindBulkAudioControls() {
+    updateBulkAudioAccess();
+    elements.bulkAudioOpenButton.addEventListener('click', () => {
+      if (!state.canEdit || !bulkAudioIsDesktop()) return;
+      resetBulkAudio(); showDialog(elements.bulkAudioDialog);
+    });
+    elements.bulkAudioCloseButton.addEventListener('click', () => closeDialog(elements.bulkAudioDialog));
+    elements.bulkAudioDialog.addEventListener('close', resetBulkAudio);
+    document.querySelectorAll('[data-bulk-slot]').forEach((zone) => {
+      zone.addEventListener('dragover', (event) => { event.preventDefault(); zone.classList.add('is-dragover'); });
+      zone.addEventListener('dragleave', (event) => { if (!zone.contains(event.relatedTarget)) zone.classList.remove('is-dragover'); });
+      zone.addEventListener('drop', (event) => { event.preventDefault(); zone.classList.remove('is-dragover'); acceptBulkAudioFile(zone.dataset.bulkSlot, event.dataTransfer?.files?.[0]); });
+    });
+    elements.bulkAudioPlayButton.addEventListener('click', () => {
+      const audio = elements.bulkAudioPreview;
+      if (audio.paused) audio.play().then(() => setBulkAudioTransport(false)).catch((error) => setBulkAudioStatus(error.message, false, true));
+      else { audio.pause(); setBulkAudioTransport(true); }
+    });
+    elements.bulkAudioPreview.addEventListener('timeupdate', () => { elements.bulkAudioClock.textContent = `${formatDuration(elements.bulkAudioPreview.currentTime)} / ${formatDuration(state.bulkAudio.duration)}`; });
+    elements.bulkAudioPreview.addEventListener('ended', () => setBulkAudioTransport(true));
+    elements.bulkAudioZoomOut.addEventListener('click', () => { state.bulkAudio.zoomLevel = Math.max(1, state.bulkAudio.zoomLevel - 1); drawBulkWaveform(); });
+    elements.bulkAudioZoomIn.addEventListener('click', () => { state.bulkAudio.zoomLevel = Math.min(10, state.bulkAudio.zoomLevel + 1); drawBulkWaveform(); });
+    elements.bulkAudioCutButton.addEventListener('click', markBulkAudioCut);
+    elements.bulkAudioWaveformScroll.addEventListener('click', (event) => { const rect = elements.bulkAudioWaveform.getBoundingClientRect(); elements.bulkAudioPreview.currentTime = Math.max(0, Math.min(state.bulkAudio.duration, (event.clientX - rect.left) / rect.width * state.bulkAudio.duration)); });
+    elements.bulkAudioUndoCut.addEventListener('click', () => { state.bulkAudio.pendingCut = null; elements.bulkAudioCutReview.hidden = true; drawBulkWaveform(); });
+    elements.bulkAudioConfirmCut.addEventListener('click', () => { elements.bulkAudioNameForm.hidden = false; elements.bulkAudioEpisodeName.focus(); });
+    elements.bulkAudioNameForm.addEventListener('submit', saveBulkEpisode);
+    document.addEventListener('keydown', (event) => { if (elements.bulkAudioDialog.open && event.key.toLowerCase() === 'c' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) { event.preventDefault(); markBulkAudioCut(); } });
+    window.addEventListener('resize', () => { if (elements.bulkAudioDialog.open && !elements.bulkAudioWorkbench.hidden) drawBulkWaveform(); });
+  }
+
   function bindControls() {
+    bindBulkAudioControls();
     elements.refreshButton.addEventListener('click', () => {
       refreshProject().catch((error) => {
         setStatus('Não foi possível atualizar o musical.');
