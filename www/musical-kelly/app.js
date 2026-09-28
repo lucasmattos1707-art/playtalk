@@ -238,10 +238,9 @@
   const pronunciationState = {
     scores: readPronunciationScores(),
     recognition: null,
+    latestAttempt: null,
     activeLineId: '',
     activeCardId: '',
-    capture: null,
-    capturePromise: null,
     replayAudio: null,
     duckedVoice: null,
     previousVoiceVolume: null,
@@ -421,32 +420,37 @@
     }
   }
 
-  function startPronunciationCapture(recognition) {
+  function startPronunciationCapture(attempt) {
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return Promise.resolve(null);
     return navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-      if (pronunciationState.recognition !== recognition) {
+      if (pronunciationState.recognition !== attempt) {
         stream.getTracks().forEach((track) => track.stop());
         return null;
       }
-      const mimeType = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4']
-        .find((type) => MediaRecorder.isTypeSupported?.(type));
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      const capture = { stream, recorder, chunks: [] };
-      recorder.addEventListener('dataavailable', (event) => {
-        if (event.data?.size) capture.chunks.push(event.data);
-      });
-      recorder.start(150);
-      pronunciationState.capture = capture;
-      return capture;
+      try {
+        const mimeType = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4']
+          .find((type) => MediaRecorder.isTypeSupported?.(type));
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+        const capture = { stream, recorder, chunks: [] };
+        recorder.addEventListener('dataavailable', (event) => {
+          if (event.data?.size) capture.chunks.push(event.data);
+        });
+        recorder.start(150);
+        attempt.capture = capture;
+        return capture;
+      } catch (_error) {
+        stream.getTracks().forEach((track) => track.stop());
+        return null;
+      }
     }).catch(() => null);
   }
 
-  function stopPronunciationCapture(recognition) {
-    const capturePromise = pronunciationState.capturePromise;
+  function stopPronunciationCapture(attempt) {
+    const capturePromise = attempt.capturePromise;
     return Promise.resolve(capturePromise).then((pendingCapture) => {
-      const capture = pendingCapture || pronunciationState.capture;
+      const capture = pendingCapture || attempt.capture;
       if (!capture) return null;
-      if (pronunciationState.capture === capture) pronunciationState.capture = null;
+      attempt.capture = null;
       const { recorder, stream, chunks } = capture;
       const finish = () => {
         stream.getTracks().forEach((track) => track.stop());
@@ -455,12 +459,43 @@
       };
       if (recorder.state === 'inactive') return finish();
       return new Promise((resolve) => {
-        recorder.addEventListener('stop', () => resolve(finish()), { once: true });
-        try { recorder.stop(); } catch (_error) { resolve(finish()); }
+        let settled = false;
+        const complete = () => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(stopTimer);
+          resolve(finish());
+        };
+        const stopTimer = window.setTimeout(complete, 1500);
+        recorder.addEventListener('stop', complete, { once: true });
+        try { recorder.stop(); } catch (_error) { complete(); }
       });
-    }).finally(() => {
-      if (pronunciationState.recognition === recognition) pronunciationState.capturePromise = null;
     });
+  }
+
+  function pronunciationBlobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('Falha ao ler a gravação.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function transcribePronunciationRecording(blob, language) {
+    const response = await fetch('/api/stt/openai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        audioDataUrl: await pronunciationBlobToDataUrl(blob),
+        language
+      })
+    });
+    const payload = await response.json();
+    if (!response.ok || !String(payload?.text || '').trim()) {
+      throw new Error(payload?.instructions || payload?.details || payload?.error || 'A transcrição não retornou uma fala.');
+    }
+    return String(payload.text).trim();
   }
 
   function playPronunciationRecording(blob, score, badge, onFinished = () => {}) {
@@ -533,62 +568,112 @@
 
   function startPronunciationRecognition(card, line, badge) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
+    const canRecord = Boolean(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+    const recordOnly = canRecord && (navigator.maxTouchPoints > 0 || window.matchMedia?.('(pointer: coarse)').matches);
+    if (!SpeechRecognition && !canRecord) {
       showToast('O reconhecimento de voz não está disponível neste navegador.', true);
       return;
     }
     if (pronunciationState.recognition) {
-      const previousRecognition = pronunciationState.recognition;
+      const previousAttempt = pronunciationState.recognition;
+      if (previousAttempt.cardId === card.id && previousAttempt.lineId === line.id) {
+        if (!previousAttempt.speechRecognition) previousAttempt.finish();
+        return;
+      }
       pronunciationState.recognition = null;
-      stopPronunciationCapture(previousRecognition);
+      window.clearTimeout(previousAttempt.stopTimer);
+      stopPronunciationCapture(previousAttempt);
       restoreMusicAfterPronunciation();
-      previousRecognition.abort();
+      previousAttempt.speechRecognition?.abort();
     }
-    const recognition = new SpeechRecognition();
     const recognitionLanguage = lyricLineLanguage(line);
-    pronunciationState.recognition = recognition;
+    const attempt = {
+      cardId: card.id,
+      lineId: line.id,
+      speechRecognition: SpeechRecognition && !recordOnly ? new SpeechRecognition() : null,
+      spokenText: '',
+      finished: false,
+      stopTimer: 0,
+      capture: null,
+      capturePromise: null,
+      finish: null
+    };
+    pronunciationState.recognition = attempt;
+    pronunciationState.latestAttempt = attempt;
     pronunciationState.activeLineId = line.id;
     pronunciationState.activeCardId = card.id;
     pronunciationState.resumeAfterSourceReplay = state.current?.cardId === card.id && !state.current.paused;
-    recognition.lang = recognitionLanguage === 'pt' ? 'pt-BR' : 'en-US';
-    recognition.continuous = false;
-    recognition.interimResults = false;
     renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id), true);
+    restoreMusicAfterPronunciation();
     duckMusicForPronunciation();
-    pronunciationState.capturePromise = startPronunciationCapture(recognition);
-    let spokenText = '';
-    recognition.onresult = (event) => {
-      spokenText = Array.from(event.results || []).map((result) => result?.[0]?.transcript || '').join(' ').trim();
-    };
-    recognition.onerror = (event) => {
-      if (pronunciationState.recognition !== recognition) return;
-      renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id));
-      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-        showToast('Permita o uso do microfone nas configurações do navegador.', true);
-      } else if (event.error === 'no-speech') {
-        showToast('Não captei a fala. Segure o container por 200 ms e tente de novo.', true);
-      }
-    };
-    recognition.onend = () => {
-      if (pronunciationState.recognition !== recognition) return;
+    attempt.capturePromise = startPronunciationCapture(attempt);
+    attempt.finish = async () => {
+      if (pronunciationState.recognition !== attempt || attempt.finished) return;
+      attempt.finished = true;
+      window.clearTimeout(attempt.stopTimer);
+      let recordingBlob = null;
+      try { recordingBlob = await stopPronunciationCapture(attempt); } catch (_error) {}
+      if (pronunciationState.recognition !== attempt) return;
       pronunciationState.recognition = null;
       pronunciationState.activeLineId = '';
       pronunciationState.activeCardId = '';
-      stopPronunciationCapture(recognition).then((recordingBlob) => {
-        if (spokenText) finishPronunciation(card.id, line, spokenText, badge, recordingBlob, recognitionLanguage);
-        else {
-          restoreMusicAfterPronunciation();
-          if (badge.isConnected) renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id));
+      if (badge.isConnected) {
+        renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id), true);
+        const label = badge.querySelector('.pronunciation-score__label');
+        if (label) label.textContent = 'Avaliando…';
+      }
+      let spokenText = attempt.spokenText;
+      if (recordingBlob?.size && (!spokenText || navigator.maxTouchPoints > 0 || window.matchMedia?.('(pointer: coarse)').matches)) {
+        try { spokenText = await transcribePronunciationRecording(recordingBlob, recognitionLanguage); }
+        catch (error) {
+          if (!spokenText) showToast(error.message || 'Não consegui avaliar a gravação. Tente novamente.', true);
         }
-      });
+      }
+      if (pronunciationState.latestAttempt !== attempt) return;
+      if (spokenText) finishPronunciation(card.id, line, spokenText, badge, recordingBlob, recognitionLanguage);
+      else {
+        restoreMusicAfterPronunciation();
+        if (badge.isConnected) renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id));
+        if (!recordingBlob?.size) showToast('Não captei a fala. Verifique a permissão do microfone e tente novamente.', true);
+      }
     };
+    if (!attempt.speechRecognition) {
+      const label = badge.querySelector('.pronunciation-score__label');
+      if (label) label.textContent = 'Gravando… toque para avaliar';
+      badge.setAttribute('aria-label', 'Gravando sua fala. Toque no trecho novamente para avaliar.');
+      attempt.capturePromise.then((capture) => {
+        if (!capture && pronunciationState.recognition === attempt) attempt.finish();
+      });
+      attempt.stopTimer = window.setTimeout(attempt.finish, 12000);
+      return;
+    }
+    const recognition = attempt.speechRecognition;
+    recognition.lang = recognitionLanguage === 'pt' ? 'pt-BR' : 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.onresult = (event) => {
+      attempt.spokenText = Array.from(event.results || []).map((result) => result?.[0]?.transcript || '').join(' ').trim();
+    };
+    recognition.onerror = (event) => {
+      if (pronunciationState.recognition !== attempt) return;
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        showToast('Permita o uso do microfone nas configurações do navegador.', true);
+      }
+    };
+    recognition.onend = attempt.finish;
     try {
       recognition.start();
+      attempt.stopTimer = window.setTimeout(() => {
+        if (pronunciationState.recognition !== attempt) return;
+        try { recognition.stop(); } catch (_error) {}
+        attempt.finish();
+      }, 12000);
     } catch (_error) {
-      pronunciationState.recognition = null;
-      restoreMusicAfterPronunciation();
-      renderPronunciationBadge(badge, pronunciationScoreFor(card.id, line.id));
-      showToast('Não consegui ativar o microfone. Tente segurar o container novamente.', true);
+      attempt.speechRecognition = null;
+      attempt.capturePromise.then((capture) => {
+        if (!capture && pronunciationState.recognition === attempt) attempt.finish();
+      });
+      attempt.stopTimer = window.setTimeout(attempt.finish, 12000);
     }
   }
 
@@ -1682,6 +1767,12 @@
       button.addEventListener('click', () => {
         if (longPressActivated) {
           longPressActivated = false;
+          return;
+        }
+        const activeAttempt = pronunciationState.recognition;
+        if (APP_SLUG === 'englishtraining' && activeAttempt?.cardId === card.id
+          && activeAttempt.lineId === line.id && !activeAttempt.speechRecognition) {
+          activeAttempt.finish();
           return;
         }
         if (state.manualSync) return;

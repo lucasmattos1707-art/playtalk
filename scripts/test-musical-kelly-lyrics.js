@@ -729,6 +729,86 @@ test('Portuguese lyrics use Brazilian Portuguese speech recognition and scoring'
   dom.window.close();
 });
 
+test('mobile recording re-scores with or without a browser speech result', async () => {
+  const payload = projectPayload(false);
+  payload.project.cards[0].lyrics.lines[0].text = 'Do not be afraid.';
+  payload.project.cards[0].lyrics.lines[0].textPt = 'Não tenha medo.';
+  payload.project.cards[0].lyrics.lines[1].textPt = 'Eu estou com você.';
+  const transcripts = ['Do not be afraid', 'zzz', 'Não tenha medo'];
+  const sentLanguages = [];
+  let stoppedTracks = 0;
+  const dom = await boot(false, {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: { appSlug: 'englishtraining', appPath: '/englishtraining', apiRoot: '/api/englishtraining' },
+    payload,
+    fetchResponder: (url, init) => {
+      if (url === '/api/stt/openai') {
+        const request = JSON.parse(init.body);
+        sentLanguages.push(request.language);
+        assert.match(request.audioDataUrl, /^data:audio\//);
+        return { success: true, text: transcripts.shift() };
+      }
+      return payload;
+    },
+    beforeEval: (window) => {
+      window.matchMedia = () => ({ matches: true });
+      Object.defineProperty(window.navigator, 'mediaDevices', {
+        configurable: true,
+        value: { getUserMedia: async () => ({ getTracks: () => [{ stop: () => { stoppedTracks += 1; } }] }) }
+      });
+      window.MediaRecorder = class {
+        constructor() { this.handlers = {}; this.state = 'inactive'; this.mimeType = 'audio/webm'; }
+        static isTypeSupported() { return true; }
+        addEventListener(name, handler) { this.handlers[name] = handler; }
+        start() { this.state = 'recording'; }
+        stop() {
+          this.state = 'inactive';
+          this.handlers.dataavailable({ data: new window.Blob(['spoken audio'], { type: this.mimeType }) });
+          this.handlers.stop();
+        }
+      };
+    }
+  });
+  const { document, Event } = dom.window;
+  try {
+    document.querySelector('.lyrics-button').click();
+    const line = document.querySelector('[data-line-index="0"]');
+    for (const expectedScore of [100, 0]) {
+      line.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 220));
+      line.dispatchEvent(new Event('pointerup', { bubbles: true }));
+      assert.equal(line.querySelector('.pronunciation-score').classList.contains('is-listening'), true);
+      line.click(); // Click emitted after the long press must only clear its click guard.
+      line.click(); // A regular tap after speaking stops the recording.
+      await new Promise((resolve) => setTimeout(resolve, 90));
+      const scores = JSON.parse(dom.window.localStorage.getItem('playtalk-englishtraining-pronunciation-v1'));
+      assert.equal(scores['cue-test']['line-1'].score, expectedScore);
+    }
+    let recognition = null;
+    dom.window.SpeechRecognition = class {
+      constructor() { recognition = this; }
+      start() {}
+      stop() {}
+      abort() {}
+    };
+    dom.window.matchMedia = () => ({ matches: false });
+    document.getElementById('lyricsLanguageToggle').click();
+    const portugueseLine = document.querySelector('[data-line-index="0"]');
+    portugueseLine.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    portugueseLine.dispatchEvent(new Event('pointerup', { bubbles: true }));
+    assert.equal(recognition.lang, 'pt-BR');
+    recognition.onend(); // Mobile browsers can end the recognition without a transcript.
+    await new Promise((resolve) => setTimeout(resolve, 90));
+    const recoveredScores = JSON.parse(dom.window.localStorage.getItem('playtalk-englishtraining-pronunciation-v1'));
+    assert.equal(recoveredScores['cue-test']['line-1'].score, 100);
+    assert.deepEqual(sentLanguages, ['en', 'en', 'pt']);
+    assert.equal(stoppedTracks, 3);
+  } finally {
+    dom.window.close();
+  }
+});
+
 test('pronunciation score counts valid matching sequences and ignores extra spoken letters', () => {
   const scoreSource = appSource.match(/function calculatePronunciationScore\([^)]*\) \{[\s\S]*?\n  \}/)?.[0];
   assert.ok(scoreSource, 'pronunciation scoring function should be available in the app');
