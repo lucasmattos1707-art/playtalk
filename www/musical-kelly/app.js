@@ -45,7 +45,8 @@
     bulkAudioZoomOut: document.getElementById('bulkAudioZoomOut'),
     bulkAudioZoomIn: document.getElementById('bulkAudioZoomIn'),
     bulkAudioZoomLabel: document.getElementById('bulkAudioZoomLabel'),
-    bulkAudioCutButton: document.getElementById('bulkAudioCutButton'),
+    bulkAudioSelectPointOne: document.getElementById('bulkAudioSelectPointOne'),
+    bulkAudioSelectPointTwo: document.getElementById('bulkAudioSelectPointTwo'),
     bulkAudioWaveformScroll: document.getElementById('bulkAudioWaveformScroll'),
     bulkAudioWaveform: document.getElementById('bulkAudioWaveform'),
     bulkAudioCutList: document.getElementById('bulkAudioCutList'),
@@ -229,7 +230,7 @@
     bulkAudio: {
       files: { audio: null, englishSrt: null, portugueseSrt: null },
       cues: { english: [], portuguese: [] }, buffer: null, peaks: [], duration: 0,
-      audioUrl: '', marks: [0], pendingCut: null, zoomLevel: 1, processing: false,
+      audioUrl: '', cuts: [], selectionPointA: null, selectionPointB: null, activePoint: 'a', pendingCut: null, zoomLevel: 1, processing: false,
       saving: false, animationFrame: 0
     }
   };
@@ -4100,6 +4101,8 @@
     if (!state.canEdit || !bulkAudioIsDesktop() || !elements.lyricsScreen.hidden) return;
     resetBulkAudio();
     showDialog(elements.bulkAudioDialog);
+    document.documentElement.classList.add('is-bulk-audio-modal-open');
+    document.body.classList.add('is-bulk-audio-modal-open');
   }
 
   function updateBulkAudioAccess() {
@@ -4123,11 +4126,12 @@
   function resetBulkAudio() {
     const bulk = state.bulkAudio;
     if (bulk.audioUrl) URL.revokeObjectURL(bulk.audioUrl);
-    Object.assign(bulk, { files: { audio: null, englishSrt: null, portugueseSrt: null }, cues: { english: [], portuguese: [] }, buffer: null, peaks: [], duration: 0, audioUrl: '', marks: [0], pendingCut: null, zoomLevel: 1, processing: false, saving: false });
+    Object.assign(bulk, { files: { audio: null, englishSrt: null, portugueseSrt: null }, cues: { english: [], portuguese: [] }, buffer: null, peaks: [], duration: 0, audioUrl: '', cuts: [], selectionPointA: null, selectionPointB: null, activePoint: 'a', pendingCut: null, zoomLevel: 1, processing: false, saving: false });
     elements.bulkAudioPreview.removeAttribute('src'); elements.bulkAudioWorkbench.hidden = true;
     elements.bulkAudioCutReview.hidden = true; elements.bulkAudioNameForm.hidden = true;
     elements.bulkAudioCutList.replaceChildren(); setBulkAudioTransport(true);
     elements.bulkAudioZoomLabel.textContent = 'Escala 1 / 10';
+    updateBulkAudioPointSelector();
     document.querySelectorAll('[data-bulk-slot]').forEach((slot) => {
       slot.classList.remove('is-received', 'is-recognized', 'is-processing', 'is-invalid');
       slot.querySelector('.bulk-audio-slot-status').textContent = 'Aguardando arquivo';
@@ -4172,7 +4176,11 @@
       if (slot === 'englishSrt') state.bulkAudio.cues.english = parsed;
       if (slot === 'portugueseSrt') state.bulkAudio.cues.portuguese = parsed;
       zone.classList.remove('is-processing', 'is-invalid'); zone.classList.add('is-received', 'is-recognized');
-      zone.querySelector('.bulk-audio-slot-status').textContent = `${file.name} · ${parsed ? `${parsed.length} blocos` : 'MP3 reconhecido'}`;
+      const shortName = file.name.slice(0, 10);
+      const displayedName = file.name.length > 10 ? `${shortName}…` : shortName;
+      const slotStatus = zone.querySelector('.bulk-audio-slot-status');
+      slotStatus.textContent = displayedName;
+      slotStatus.title = file.name;
       if (Object.values(state.bulkAudio.files).every(Boolean)) await processBulkAudio();
     } catch (error) {
       zone.classList.remove('is-processing', 'is-received', 'is-recognized'); zone.classList.add('is-invalid');
@@ -4220,26 +4228,109 @@
     const ctx = canvas.getContext('2d'); ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, width, 150);
     ctx.strokeStyle = '#59b9ff'; ctx.lineWidth = 1;
     for (let x = 0; x < width; x += 1) { const peak = bulk.peaks[Math.min(bulk.peaks.length - 1, Math.floor(x * bulk.peaks.length / width))] || 0; const h = Math.max(1, peak * 68); ctx.beginPath(); ctx.moveTo(x + .5, 75 - h); ctx.lineTo(x + .5, 75 + h); ctx.stroke(); }
-    ctx.fillStyle = 'rgba(255,255,255,.9)'; bulk.marks.forEach((mark) => ctx.fillRect(mark / bulk.duration * width - 1, 0, 2, 150));
-    if (bulk.pendingCut) { ctx.fillStyle = 'rgba(58,171,255,.2)'; ctx.fillRect(bulk.pendingCut.start / bulk.duration * width, 0, (bulk.pendingCut.end - bulk.pendingCut.start) / bulk.duration * width, 150); }
+    bulk.cuts.forEach((cut) => {
+      ctx.fillStyle = 'rgba(255,255,255,.08)';
+      ctx.fillRect(cut.start / bulk.duration * width, 0, (cut.end - cut.start) / bulk.duration * width, 150);
+      ctx.fillStyle = 'rgba(255,255,255,.9)';
+      ctx.fillRect(cut.start / bulk.duration * width - 1, 0, 2, 150);
+      ctx.fillRect(cut.end / bulk.duration * width - 1, 0, 2, 150);
+    });
+    if (bulk.pendingCut) {
+      ctx.fillStyle = 'rgba(58,171,255,.22)';
+      ctx.fillRect(bulk.pendingCut.start / bulk.duration * width, 0, (bulk.pendingCut.end - bulk.pendingCut.start) / bulk.duration * width, 150);
+    }
+    if (bulk.selectionPointA !== null) {
+      ctx.fillStyle = '#8bd0ff';
+      ctx.fillRect(bulk.selectionPointA / bulk.duration * width - 2, 0, 4, 150);
+    }
+    if (bulk.selectionPointB !== null) {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(bulk.selectionPointB / bulk.duration * width - 2, 0, 4, 150);
+    }
     elements.bulkAudioZoomLabel.textContent = `Escala ${bulk.zoomLevel} / 10`;
   }
 
   function renderBulkCutList() {
     elements.bulkAudioCutList.replaceChildren();
-    state.bulkAudio.marks.slice(1).forEach((end, index) => {
+    state.bulkAudio.cuts.forEach((cut, index) => {
       const row = document.createElement('div'); row.className = 'bulk-audio-cut-row';
-      row.textContent = `Corte ${index + 1} · ${formatDuration(state.bulkAudio.marks[index])} — ${formatDuration(end)}`; elements.bulkAudioCutList.append(row);
+      row.textContent = `Corte ${index + 1} · ${formatDuration(cut.start)} — ${formatDuration(cut.end)}${cut.title ? ` · ${cut.title}` : ''}`; elements.bulkAudioCutList.append(row);
     });
   }
 
-  function markBulkAudioCut() {
-    const bulk = state.bulkAudio; const end = elements.bulkAudioPreview.currentTime; const start = bulk.marks.at(-1);
-    if (!bulk.buffer || bulk.saving) return;
-    if (end - start < .25) { setBulkAudioStatus('Marque o corte após pelo menos 250 ms de áudio.', false, true); return; }
-    elements.bulkAudioPreview.pause(); setBulkAudioTransport(true); bulk.pendingCut = { start, end };
-    elements.bulkAudioCutSummary.textContent = `Trecho ${formatDuration(start)} — ${formatDuration(end)} · ${formatDuration(end - start)}`;
-    elements.bulkAudioCutReview.hidden = false; elements.bulkAudioNameForm.hidden = true; drawBulkWaveform();
+  function assignBulkAudioSelectionPoint(selection, activePoint, value) {
+    if (activePoint === 'a') selection.selectionPointA = value;
+    else selection.selectionPointB = value;
+    if (selection.selectionPointA === null || selection.selectionPointB === null
+      || Math.abs(selection.selectionPointA - selection.selectionPointB) < .25) return null;
+    return {
+      start: Math.min(selection.selectionPointA, selection.selectionPointB),
+      end: Math.max(selection.selectionPointA, selection.selectionPointB)
+    };
+  }
+
+  function updateBulkAudioPointSelector() {
+    const activePoint = state.bulkAudio.activePoint;
+    elements.bulkAudioSelectPointOne.setAttribute('aria-pressed', String(activePoint === 'a'));
+    elements.bulkAudioSelectPointTwo.setAttribute('aria-pressed', String(activePoint === 'b'));
+    elements.bulkAudioSelectPointOne.classList.toggle('is-active', activePoint === 'a');
+    elements.bulkAudioSelectPointTwo.classList.toggle('is-active', activePoint === 'b');
+  }
+
+  function selectBulkAudioPoint(point) {
+    state.bulkAudio.activePoint = point === 'b' ? 'b' : 'a';
+    updateBulkAudioPointSelector();
+    setBulkAudioStatus(`Ponto ${state.bulkAudio.activePoint.toUpperCase()} selecionado. Ctrl+clique na waveform para marcar ou mover só esse ponto.`);
+  }
+
+  function updateBulkAudioSelection(value) {
+    const bulk = state.bulkAudio;
+    bulk.pendingCut = assignBulkAudioSelectionPoint(bulk, bulk.activePoint, value);
+    if (!bulk.pendingCut) {
+      elements.bulkAudioCutReview.hidden = true;
+      elements.bulkAudioNameForm.hidden = true;
+      if (bulk.selectionPointA !== null && bulk.selectionPointB !== null) {
+        setBulkAudioStatus('A e B precisam ficar separados por pelo menos 250 ms. Ajuste o ponto ativo ou pressione Esc.', false, true);
+      } else {
+        const current = bulk.selectionPointA ?? bulk.selectionPointB;
+        setBulkAudioStatus(`Ponto ${bulk.selectionPointA !== null ? 'A' : 'B'} em ${formatDuration(current)}. Selecione o outro ponto para completar o corte.`);
+      }
+      return;
+    }
+    elements.bulkAudioPreview.pause();
+    elements.bulkAudioPreview.currentTime = bulk.pendingCut.end;
+    setBulkAudioTransport(true);
+    elements.bulkAudioCutSummary.textContent = `Seleção A–B · ${formatDuration(bulk.pendingCut.start)} — ${formatDuration(bulk.pendingCut.end)} · ${formatDuration(bulk.pendingCut.end - bulk.pendingCut.start)}`;
+    elements.bulkAudioCutReview.hidden = false;
+    elements.bulkAudioNameForm.hidden = true;
+  }
+
+  function handleBulkWaveformClick(event) {
+    const bulk = state.bulkAudio;
+    if (!bulk.buffer || bulk.saving || elements.bulkAudioDialog.open === false) return;
+    const rect = elements.bulkAudioWaveform.getBoundingClientRect();
+    const point = Math.max(0, Math.min(bulk.duration, (event.clientX - rect.left) / rect.width * bulk.duration));
+    if (!event.ctrlKey) {
+      elements.bulkAudioPreview.currentTime = point;
+      return;
+    }
+    event.preventDefault();
+    elements.bulkAudioPreview.currentTime = point;
+    updateBulkAudioSelection(point);
+    drawBulkWaveform();
+  }
+
+  function clearBulkAudioSelection() {
+    const bulk = state.bulkAudio;
+    bulk.selectionPointA = null;
+    bulk.selectionPointB = null;
+    bulk.pendingCut = null;
+    bulk.activePoint = 'a';
+    updateBulkAudioPointSelector();
+    elements.bulkAudioCutReview.hidden = true;
+    elements.bulkAudioNameForm.hidden = true;
+    drawBulkWaveform();
+    setBulkAudioStatus('Seleção A–B cancelada. Clique na waveform para marcar um novo ponto A.');
   }
 
   function bulkSubtitleLines(start, end) {
@@ -4288,7 +4379,9 @@
       const projectSaved = await apiJson(`${API_ROOT}/project`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...created.project, cards }) });
       const lyrics = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(cardId)}/lyrics`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lines }) });
       applyCollaborationProject(lyrics.project || projectSaved.project);
-      bulk.marks.push(cut.end); bulk.pendingCut = null; elements.bulkAudioCutReview.hidden = true; elements.bulkAudioNameForm.hidden = true;
+      bulk.cuts.push({ start: cut.start, end: cut.end, title });
+      bulk.selectionPointA = null; bulk.selectionPointB = null; bulk.activePoint = 'a'; bulk.pendingCut = null;
+      updateBulkAudioPointSelector(); elements.bulkAudioCutReview.hidden = true; elements.bulkAudioNameForm.hidden = true;
       elements.bulkAudioEpisodeName.value = ''; elements.bulkAudioPreview.currentTime = cut.end; renderBulkCutList(); drawBulkWaveform();
       setBulkAudioStatus(`Faixa “${title}” criada com áudio e ${lines.length} legendas sincronizadas.`); showToast(`Faixa “${title}” salva.`);
     } catch (error) {
@@ -4300,7 +4393,11 @@
     updateBulkAudioAccess();
     elements.bulkAudioOpenButton.addEventListener('click', openBulkAudioDialog);
     elements.bulkAudioCloseButton.addEventListener('click', () => closeDialog(elements.bulkAudioDialog));
-    elements.bulkAudioDialog.addEventListener('close', resetBulkAudio);
+    elements.bulkAudioDialog.addEventListener('close', () => {
+      document.documentElement.classList.remove('is-bulk-audio-modal-open');
+      document.body.classList.remove('is-bulk-audio-modal-open');
+      resetBulkAudio();
+    });
     document.querySelectorAll('[data-bulk-slot]').forEach((zone) => {
       zone.addEventListener('dragover', (event) => { event.preventDefault(); zone.classList.add('is-dragover'); });
       zone.addEventListener('dragleave', (event) => { if (!zone.contains(event.relatedTarget)) zone.classList.remove('is-dragover'); });
@@ -4315,12 +4412,21 @@
     elements.bulkAudioPreview.addEventListener('ended', () => setBulkAudioTransport(true));
     elements.bulkAudioZoomOut.addEventListener('click', () => { state.bulkAudio.zoomLevel = Math.max(1, state.bulkAudio.zoomLevel - 1); drawBulkWaveform(); });
     elements.bulkAudioZoomIn.addEventListener('click', () => { state.bulkAudio.zoomLevel = Math.min(10, state.bulkAudio.zoomLevel + 1); drawBulkWaveform(); });
-    elements.bulkAudioCutButton.addEventListener('click', markBulkAudioCut);
-    elements.bulkAudioWaveformScroll.addEventListener('click', (event) => { const rect = elements.bulkAudioWaveform.getBoundingClientRect(); elements.bulkAudioPreview.currentTime = Math.max(0, Math.min(state.bulkAudio.duration, (event.clientX - rect.left) / rect.width * state.bulkAudio.duration)); });
-    elements.bulkAudioUndoCut.addEventListener('click', () => { state.bulkAudio.pendingCut = null; elements.bulkAudioCutReview.hidden = true; drawBulkWaveform(); });
+    elements.bulkAudioSelectPointOne.addEventListener('click', () => selectBulkAudioPoint('a'));
+    elements.bulkAudioSelectPointTwo.addEventListener('click', () => selectBulkAudioPoint('b'));
+    elements.bulkAudioWaveformScroll.addEventListener('click', handleBulkWaveformClick);
+    elements.bulkAudioUndoCut.addEventListener('click', clearBulkAudioSelection);
     elements.bulkAudioConfirmCut.addEventListener('click', () => { elements.bulkAudioNameForm.hidden = false; elements.bulkAudioEpisodeName.focus(); });
     elements.bulkAudioNameForm.addEventListener('submit', saveBulkEpisode);
-    document.addEventListener('keydown', (event) => { if (elements.bulkAudioDialog.open && event.key.toLowerCase() === 'c' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) { event.preventDefault(); markBulkAudioCut(); } });
+    document.addEventListener('keydown', (event) => {
+      if (!elements.bulkAudioDialog.open || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) return;
+      if (event.key === 'Escape' && (state.bulkAudio.selectionPointA !== null || state.bulkAudio.selectionPointB !== null || state.bulkAudio.pendingCut)) {
+        event.preventDefault(); event.stopPropagation(); clearBulkAudioSelection(); return;
+      }
+      if (event.key === '1' || event.key === '2') {
+        event.preventDefault(); selectBulkAudioPoint(event.key === '1' ? 'a' : 'b'); return;
+      }
+    });
     window.addEventListener('resize', () => { if (elements.bulkAudioDialog.open && !elements.bulkAudioWorkbench.hidden) drawBulkWaveform(); });
   }
 

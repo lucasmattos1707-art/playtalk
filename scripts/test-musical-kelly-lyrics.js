@@ -584,6 +584,15 @@ test('admin bulk audio cutter is desktop-only with ten zoom scales ending at 15 
   assert.match(appSource, /Math\.min\(15, duration\)/);
   assert.match(appSource, /dataTransfer\?\.files\?\.\[0\]/);
   assert.match(appSource, /new window\.lamejs\.Mp3Encoder/);
+  assert.match(html, /id="bulkAudioSelectPointOne"/);
+  assert.match(html, /id="bulkAudioSelectPointTwo"/);
+  assert.match(appSource, /if \(!event\.ctrlKey\) \{\s*elements\.bulkAudioPreview\.currentTime = point;/);
+  assert.match(appSource, /event\.key === '1' \|\| event\.key === '2'/);
+  assert.match(appSource, /event\.key === 'Escape'[\s\S]*?clearBulkAudioSelection\(\)/);
+  assert.match(appSource, /file\.name\.slice\(0, 10\)/);
+  assert.doesNotMatch(html, /bulkAudioCutButton|C · cortar/);
+  assert.match(stylesSource, /\.bulk-audio-dialog[\s\S]*?overflow-y: auto;[\s\S]*?overscroll-behavior: contain/);
+  assert.match(stylesSource, /html\.is-bulk-audio-modal-open, body\.is-bulk-audio-modal-open \{ overflow: hidden; \}/);
   assert.match(serverSource, /app\.put\(musicalKellyApiPaths\('\/cards\/:cardId\/lyrics'\)[\s\S]*?await requireAdminUserFromRequest\(req\)[\s\S]*?Array\.isArray\(req\.body\?\.lines\)/);
   assert.match(stylesSource, /@media \(max-width: 1023px\), \(hover: none\), \(pointer: coarse\)[\s\S]*?\.bulk-audio-open-button, \.bulk-audio-dialog/);
   assert.match(stylesSource, /\.lyric-character-avatar[\s\S]*?overflow: clip;[\s\S]*?contain: paint;/);
@@ -600,6 +609,14 @@ test('admin bulk audio cutter is desktop-only with ten zoom scales ending at 15 
   assert.equal(scales[0], 300);
   assert.equal(scales[9], 15);
   assert.ok(scales.every((scale, index) => index === 0 || scale < scales[index - 1]));
+  const pointSetterSource = appSource.match(/function assignBulkAudioSelectionPoint\([^)]*\) \{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(pointSetterSource, 'selection point update helper should exist');
+  const assignPoint = new Function(`${pointSetterSource}; return assignBulkAudioSelectionPoint;`)();
+  const points = { selectionPointA: 10, selectionPointB: 80 };
+  assert.deepEqual(assignPoint(points, 'a', 24), { start: 24, end: 80 });
+  assert.equal(points.selectionPointB, 80);
+  assert.deepEqual(assignPoint(points, 'b', 92), { start: 24, end: 92 });
+  assert.equal(points.selectionPointA, 24);
 });
 
 test('W opens the bulk cutter from EnglishTraining home for admins on desktop only', async () => {
@@ -612,6 +629,12 @@ test('W opens the bulk cutter from EnglishTraining home for admins on desktop on
   const adminKey = new adminDom.window.KeyboardEvent('keydown', { key: 'w', bubbles: true, cancelable: true });
   adminDom.window.document.dispatchEvent(adminKey);
   assert.equal(adminDom.window.document.getElementById('bulkAudioDialog').hasAttribute('open'), true);
+  assert.equal(adminDom.window.document.body.classList.contains('is-bulk-audio-modal-open'), true);
+  assert.equal(adminDom.window.document.documentElement.classList.contains('is-bulk-audio-modal-open'), true);
+  adminDom.window.document.dispatchEvent(new adminDom.window.KeyboardEvent('keydown', { key: '2', bubbles: true, cancelable: true }));
+  assert.equal(adminDom.window.document.getElementById('bulkAudioSelectPointTwo').getAttribute('aria-pressed'), 'true');
+  adminDom.window.document.dispatchEvent(new adminDom.window.KeyboardEvent('keydown', { key: '1', bubbles: true, cancelable: true }));
+  assert.equal(adminDom.window.document.getElementById('bulkAudioSelectPointOne').getAttribute('aria-pressed'), 'true');
   assert.equal(adminKey.defaultPrevented, true);
   adminDom.window.close();
 

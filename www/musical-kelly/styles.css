@@ -746,8 +746,9 @@ body.has-playing-track .track-card:not(.is-playing):not(.is-cued) {
 
 /* Desktop-only admin bulk episode cutter. */
 .bulk-audio-open-button svg { width: 20px; height: 20px; }
-.bulk-audio-dialog { width: min(1120px, calc(100vw - 40px)); max-height: min(900px, calc(100dvh - 32px)); overflow: auto; }
-.bulk-audio-card { gap: 16px; }
+.bulk-audio-dialog { width: min(1120px, calc(100vw - 40px)); max-height: min(900px, calc(100dvh - 32px)); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.bulk-audio-card { gap: 16px; overflow: visible; }
+html.is-bulk-audio-modal-open, body.is-bulk-audio-modal-open { overflow: hidden; }
 .bulk-audio-intro, .bulk-audio-status { margin: 0; color: rgba(255,255,255,.72); }
 .bulk-audio-status.is-busy { color: #85caff; }
 .bulk-audio-status.is-error { color: #ff9c9c; }
@@ -769,13 +770,15 @@ body.has-playing-track .track-card:not(.is-playing):not(.is-cued) {
 .bulk-audio-workbench { display: grid; gap: 12px; }
 .bulk-audio-toolbar, .bulk-audio-zoom, .bulk-audio-review-actions { display: flex; align-items: center; gap: 10px; }
 .bulk-audio-toolbar { flex-wrap: wrap; }
-.bulk-audio-transport, .bulk-audio-zoom button, .bulk-audio-cut-button, .bulk-audio-secondary { min-height: 38px; padding: 7px 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 10px; color: #fff; background: rgba(255,255,255,.07); }
+.bulk-audio-transport, .bulk-audio-zoom button, .bulk-audio-secondary { min-height: 38px; padding: 7px 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 10px; color: #fff; background: rgba(255,255,255,.07); }
 .bulk-audio-transport { min-width: 44px; font-size: 1.1rem; }
 .bulk-audio-transport img { display: block; width: 22px; height: 22px; }
 .bulk-audio-clock { min-width: 180px; color: rgba(255,255,255,.76); font-variant-numeric: tabular-nums; }
 .bulk-audio-zoom { margin-left: auto; }
 .bulk-audio-zoom span { min-width: 98px; color: #b6dfff; text-align: center; font-weight: 750; }
-.bulk-audio-cut-button { border-color: rgba(78,174,255,.55); background: rgba(34,126,201,.24); font-weight: 800; }
+.bulk-audio-point-selectors { display: flex; flex-wrap: wrap; gap: 8px; }
+.bulk-audio-point-selectors button { min-height: 36px; padding: 6px 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 9px; color: rgba(255,255,255,.75); background: rgba(255,255,255,.05); }
+.bulk-audio-point-selectors button.is-active { border-color: rgba(91,178,255,.8); color: #fff; background: rgba(35,129,207,.3); box-shadow: inset 0 0 0 1px rgba(91,178,255,.24); }
 .bulk-audio-waveform-scroll { max-width: 100%; overflow: auto; border: 1px solid rgba(95,174,238,.28); border-radius: 12px; background: rgba(0,0,0,.24); cursor: crosshair; }
 .bulk-audio-waveform { display: block; height: 150px; }
 .bulk-audio-cut-list { display: grid; gap: 5px; max-height: 120px; overflow: auto; }
