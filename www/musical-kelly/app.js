@@ -3505,7 +3505,7 @@
   }
 
   async function areCardCharacterImagesCached(card) {
-    const characters = charactersUsedByCard(card);
+    const characters = charactersUsedByCard(card).filter((character) => Boolean(character?.imageUrl));
     const states = await Promise.all(characters.map((character) => isAssetCached({ url: character.imageUrl })));
     return states.every(Boolean);
   }

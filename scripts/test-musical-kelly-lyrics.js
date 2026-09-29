@@ -125,7 +125,7 @@ async function boot(canEdit, options = {}) {
   };
   window.caches = {
     open: async () => ({
-      match: async () => null,
+      match: async (...args) => typeof options.cacheMatch === 'function' ? options.cacheMatch(...args) : null,
       put: async () => {}
     })
   };
@@ -209,6 +209,30 @@ test('tapping a track that is not downloaded opens the friendly single-track mod
   assert.match(document.getElementById('downloadPromptCopy').textContent, /Faixa 1/);
   assert.doesNotMatch(document.getElementById('downloadPromptCopy').textContent, /Dorothy encontra o Leão/);
   assert.equal(document.getElementById('lyricsScreen').hidden, true);
+  dom.window.close();
+});
+
+test('characters without images do not make a downloaded track look incomplete', async () => {
+  const payload = projectPayload(false, { withAudio: true });
+  payload.characters[0].imageUrl = '';
+  const dom = await boot(false, {
+    payload,
+    cacheMatch: async () => ({ ok: true }),
+    beforeEval: (window) => {
+      window.Request = class Request {
+        constructor(url, init = {}) {
+          this.url = String(url);
+          this.credentials = init.credentials;
+        }
+      };
+    }
+  });
+  const { document, MouseEvent } = dom.window;
+
+  assert.equal(document.querySelector('.download-button').classList.contains('is-downloaded'), true);
+  document.querySelector('.track-card').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(document.getElementById('downloadPromptDialog').hasAttribute('open'), false);
   dom.window.close();
 });
 
