@@ -28654,7 +28654,7 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
       WHERE training_date = $1::date
     `, [today]),
     pool.query(`
-      SELECT participant, training_date::text AS training_date, created_at
+      SELECT participant, training_date::text AS training_date, ai_model, created_at
       FROM public.desafio_gym_entries
       ORDER BY training_date DESC, created_at DESC
       LIMIT 8
@@ -28679,6 +28679,7 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
     recent: recentResult.rows.map((row) => ({
       participant: row.participant,
       trainingDate: String(row.training_date || '').slice(0, 10),
+      verifiedByPhoto: !['manual-admin', 'no-photo'].includes(String(row.ai_model || '')),
       createdAt: row.created_at
     }))
   };
@@ -28777,7 +28778,8 @@ app.post(
         res.status(400).json({ success: false, message: 'Escolha Lucas ou Kelly.' });
         return;
       }
-      if (!Buffer.isBuffer(req.body) || req.body.length < 4_000) {
+      const withoutPhoto = String(req.query?.withoutPhoto || '') === '1';
+      if (!withoutPhoto && (!Buffer.isBuffer(req.body) || req.body.length < 4_000)) {
         res.status(400).json({ success: false, message: 'Tire uma foto nítida pela câmera.' });
         return;
       }
@@ -28815,27 +28817,42 @@ app.post(
         return;
       }
 
-      const imageBuffer = await sharp(req.body, { failOn: 'error', limitInputPixels: 24_000_000 })
-        .rotate()
-        .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 82, mozjpeg: true })
-        .toBuffer();
-      const verification = await verifyDesafioGymPhoto(imageBuffer);
-      if (!verification.isGym || verification.confidence < 60) {
-        res.status(422).json({
-          success: false,
-          message: 'Não consegui confirmar que a foto foi tirada em uma academia. Tente mostrar os aparelhos ou pesos.',
-          reason: verification.reason
-        });
-        return;
-      }
-      if (!isR2FluencyConfigured()) {
-        res.status(503).json({ success: false, message: 'O armazenamento da foto está indisponível agora.' });
-        return;
-      }
+      let verificationContentType = 'application/x-no-photo';
+      let verificationHash = sha256HexBuffer(Buffer.from(`no-photo:${participant}:${today}`));
+      let verificationModel = 'no-photo';
+      let verificationConfidence = 0;
+      let verificationReason = 'Treino registrado sem foto.';
 
-      storedObjectKey = `desafiogym/${weekStart}/${participant}-${today}-${crypto.randomUUID()}.jpg`;
-      await putR2Object(storedObjectKey, imageBuffer, 'image/jpeg', { timeoutMs: 15000, retries: 1 });
+      if (withoutPhoto) {
+        storedObjectKey = `desafiogym/no-photo/${participant}-${today}-${crypto.randomUUID()}`;
+      } else {
+        const imageBuffer = await sharp(req.body, { failOn: 'error', limitInputPixels: 24_000_000 })
+          .rotate()
+          .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 82, mozjpeg: true })
+          .toBuffer();
+        const verification = await verifyDesafioGymPhoto(imageBuffer);
+        if (!verification.isGym || verification.confidence < 60) {
+          res.status(422).json({
+            success: false,
+            message: 'Não consegui confirmar que a foto foi tirada em uma academia. Tente mostrar os aparelhos ou pesos.',
+            reason: verification.reason
+          });
+          return;
+        }
+        if (!isR2FluencyConfigured()) {
+          res.status(503).json({ success: false, message: 'O armazenamento da foto está indisponível agora.' });
+          return;
+        }
+
+        storedObjectKey = `desafiogym/${weekStart}/${participant}-${today}-${crypto.randomUUID()}.jpg`;
+        await putR2Object(storedObjectKey, imageBuffer, 'image/jpeg', { timeoutMs: 15000, retries: 1 });
+        verificationContentType = 'image/jpeg';
+        verificationHash = sha256HexBuffer(imageBuffer);
+        verificationModel = DESAFIO_GYM_VISION_MODEL;
+        verificationConfidence = verification.confidence;
+        verificationReason = verification.reason;
+      }
       await pool.query(`
         INSERT INTO public.desafio_gym_entries (
           participant,
@@ -28847,16 +28864,17 @@ app.post(
           ai_model,
           ai_confidence,
           ai_reason
-        ) VALUES ($1, $2::date, $3::date, $4, 'image/jpeg', $5, $6, $7, $8)
+        ) VALUES ($1, $2::date, $3::date, $4, $5, $6, $7, $8, $9)
       `, [
         participant,
         today,
         weekStart,
         storedObjectKey,
-        sha256HexBuffer(imageBuffer),
-        DESAFIO_GYM_VISION_MODEL,
-        verification.confidence,
-        verification.reason
+        verificationContentType,
+        verificationHash,
+        verificationModel,
+        verificationConfidence,
+        verificationReason
       ]);
 
       res.status(201).json({
@@ -28865,7 +28883,7 @@ app.post(
         ...(await readDesafioGymState(today))
       });
     } catch (error) {
-      if (storedObjectKey) {
+      if (storedObjectKey && !storedObjectKey.startsWith('desafiogym/no-photo/')) {
         getR2Client().send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storedObjectKey })).catch(() => {});
       }
       if (error?.code === '23505') {

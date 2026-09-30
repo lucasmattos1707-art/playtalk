@@ -7,11 +7,11 @@
   <meta name="description" content="Placar semanal do desafio de academia entre Kelly e Lucas.">
   <title>Kelly x Lucas — Desafio Gym</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23081224'/%3E%3Cpath d='M13 27h7v10h-7zm31 0h7v10h-7zM20 23h6v18h-6zm18 0h6v18h-6zM26 29h12v6H26z' fill='%23fff'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/desafiogym/styles.css?v=20260926-1">
+  <link rel="stylesheet" href="/desafiogym/styles.css?v=20260930-1">
 </head>
 <body>
   <div class="ambient ambient-blue" aria-hidden="true"></div>
-  <div class="ambient ambient-pink" aria-hidden="true"></div>
+  <div class="ambient ambient-orange" aria-hidden="true"></div>
 
   <main class="shell">
     <header class="topbar">
@@ -29,7 +29,7 @@
       <div class="card-heading">
         <div>
           <p class="kicker">PLACAR ATUAL</p>
-          <h2 id="score-title">Quem treinou mais?</h2>
+          <h2 id="score-title">Treinos verificados</h2>
         </div>
         <div class="week-label" id="week-label">Carregando...</div>
       </div>
@@ -41,10 +41,10 @@
             <span class="status-dot" title="Kelly"></span>
           </div>
           <div class="fighter-name">Kelly</div>
-          <div class="score-line"><strong id="kelly-score">0</strong><span>pontos</span></div>
+          <div class="score-line"><strong id="kelly-score">0</strong></div>
         </article>
 
-        <div class="versus" aria-label="versus"><span>V</span><span>S</span></div>
+        <div class="versus" aria-label="versus">X</div>
 
         <article class="fighter fighter-lucas">
           <div class="photo-ring">
@@ -52,24 +52,20 @@
             <span class="status-dot" title="Lucas"></span>
           </div>
           <div class="fighter-name">Lucas</div>
-          <div class="score-line"><strong id="lucas-score">0</strong><span>pontos</span></div>
+          <div class="score-line"><strong id="lucas-score">0</strong></div>
         </article>
       </div>
 
       <div class="score-bar-wrap" aria-label="Proporção do placar">
         <div class="score-bar">
-          <div class="bar-pink" id="kelly-bar"></div>
+          <div class="bar-orange" id="kelly-bar"></div>
           <div class="bar-blue" id="lucas-bar"></div>
-        </div>
-        <div class="bar-legend">
-          <span><i class="pink"></i><b id="kelly-percent">50%</b> Kelly</span>
-          <span>Lucas <b id="lucas-percent">50%</b><i class="blue"></i></span>
         </div>
       </div>
 
       <button class="send-button" id="open-submit" type="button">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5.5 10 3h4l1.5 2.5H19A3 3 0 0 1 22 8v9a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V8a3 3 0 0 1 3-2.5h3.5ZM12 17a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0-2a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg>
-        <span>Enviar treino</span>
+        <span id="submit-label">Enviar treino</span>
         <small>+1 ponto</small>
       </button>
       <p class="send-hint" id="send-hint">A câmera abre na hora. A foto é verificada automaticamente.</p>
@@ -78,7 +74,7 @@
     <div class="lower-grid">
       <section class="week-card">
         <div class="section-title">
-          <div><p class="kicker">ESTA SEMANA</p><h2>Ritmo dos dois</h2></div>
+          <div><p class="kicker">ESTA SEMANA</p><h2>Ritmo</h2></div>
           <span>máx. 5</span>
         </div>
         <div class="weekly-row">
@@ -115,26 +111,18 @@
           <svg viewBox="0 0 64 64"><path d="M21 16.5 25 10h14l4 6.5h8A7 7 0 0 1 58 23v25a7 7 0 0 1-7 7H13a7 7 0 0 1-7-7V23a7 7 0 0 1 7-6.5h8ZM32 47a12 12 0 1 0 0-24 12 12 0 0 0 0 24Zm0-5a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg>
         </div>
         <p class="kicker">FOTO DE VERIFICAÇÃO</p>
-        <h2 id="dialog-title">Quem treinou hoje?</h2>
-        <p id="dialog-copy">Escolha seu perfil. A câmera abre direto — sem galeria.</p>
+        <h2 id="dialog-title">Enviar treino</h2>
+        <p id="dialog-copy">A câmera abre direto — sem galeria.</p>
       </div>
 
-      <div class="profile-picker" id="profile-picker">
-        <button type="button" data-person="kelly">
-          <img src="/desafiogym/kelly.png" alt="Kelly" width="72" height="72">
-          <span>Kelly</span><small id="kelly-picker-status">Pronta para marcar</small>
-        </button>
-        <button type="button" data-person="lucas">
-          <img src="/desafiogym/lucas.jpeg" alt="Lucas" width="72" height="72">
-          <span>Lucas</span><small id="lucas-picker-status">Pronto para marcar</small>
-        </button>
-      </div>
-
-      <div class="camera-stage" id="camera-stage" hidden>
-        <video id="camera-video" autoplay muted playsinline></video>
-        <canvas id="camera-canvas" hidden></canvas>
-        <div class="selected-person"><img id="selected-avatar" src="" alt=""><span id="selected-name"></span></div>
-        <button class="shutter" id="capture-photo" type="button" aria-label="Tirar foto"><span></span></button>
+      <div class="camera-flow" id="camera-flow" hidden>
+        <div class="camera-stage">
+          <video id="camera-video" autoplay muted playsinline></video>
+          <canvas id="camera-canvas" hidden></canvas>
+          <div class="selected-person"><img id="selected-avatar" src="" alt=""><span id="selected-name"></span></div>
+          <button class="shutter" id="capture-photo" type="button" aria-label="Tirar foto"><span></span></button>
+        </div>
+        <button class="without-photo" id="register-without-photo" type="button">Registrar sem foto</button>
       </div>
 
       <div class="verification-stage" id="verification-stage" hidden>
@@ -154,6 +142,6 @@
     </div>
   </dialog>
 
-  <script src="/desafiogym/app.js?v=20260926-1" defer></script>
+  <script src="/desafiogym/app.js?v=20260930-1" defer></script>
 </body>
 </html>
