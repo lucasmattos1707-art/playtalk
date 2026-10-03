@@ -20,6 +20,7 @@ const {
   buildGroundedMusicalKellyLines,
   filterMusicalKellyTranscriptionSegments
 } = require('./lib/musical-kelly-transcription');
+const { normalizeCompletedRoundScores } = require('./lib/englishtraining-pronunciation');
 const app = express();
 
 const PORT = process.env.PORT || 3000;
@@ -16291,6 +16292,41 @@ const musicalKellyProjectMutationQueues = new Map();
 const musicalKellyNotificationMutationQueues = new Map();
 const musicalKellyProjectCaches = new Map();
 const musicalKellyCharacterSchemaReadyPromises = new Map();
+let englishTrainingPronunciationRoundsReadyPromise = null;
+
+async function ensureEnglishTrainingPronunciationRoundsTable() {
+  if (!pool) {
+    const error = new Error('O PostgreSQL ainda não está disponível.');
+    error.statusCode = 503;
+    throw error;
+  }
+  if (!englishTrainingPronunciationRoundsReadyPromise) {
+    englishTrainingPronunciationRoundsReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.englishtraining_pronunciation_rounds (
+          id bigserial PRIMARY KEY,
+          user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          round_id text NOT NULL,
+          card_id text NOT NULL,
+          language varchar(2) NOT NULL CHECK (language IN ('en', 'pt')),
+          scores jsonb NOT NULL,
+          average_score integer NOT NULL CHECK (average_score BETWEEN 0 AND 100),
+          completed_at timestamptz NOT NULL DEFAULT now(),
+          UNIQUE (user_id, round_id)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS englishtraining_pronunciation_rounds_user_card_idx
+        ON public.englishtraining_pronunciation_rounds (user_id, card_id, language, completed_at DESC)
+      `);
+      return true;
+    })().catch((error) => {
+      englishTrainingPronunciationRoundsReadyPromise = null;
+      throw error;
+    });
+  }
+  return englishTrainingPronunciationRoundsReadyPromise;
+}
 const englishTrainingPortugueseTranslationLocks = new Map();
 const MUSICAL_KELLY_AI_NO_IMAGE_FILE = 'ai-generated-no-photo.png';
 
@@ -27602,6 +27638,91 @@ app.post('/api/englishtraining/cards/:cardId/lyrics/portuguese', async (req, res
   }
 });
 
+app.get('/api/englishtraining/pronunciation/rounds', async (req, res) => {
+  try {
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      res.status(401).json({ success: false, message: 'Entre na sua conta para ver as rodadas concluídas.' });
+      return;
+    }
+    await ensureEnglishTrainingPronunciationRoundsTable();
+    const result = await pool.query(`
+      SELECT DISTINCT ON (card_id, language) card_id, language, scores, average_score, completed_at
+      FROM public.englishtraining_pronunciation_rounds
+      WHERE user_id = $1
+      ORDER BY card_id, language, completed_at DESC, id DESC
+    `, [authUser.id]);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, rounds: result.rows.map((row) => ({
+      cardId: row.card_id, language: row.language, scores: row.scores,
+      averageScore: row.average_score, completedAt: row.completed_at
+    })) });
+  } catch (error) {
+    console.error('Erro ao carregar rodadas do English Training:', error);
+    res.status(Number(error?.statusCode) || 500).json({ success: false, message: 'Não consegui carregar as rodadas.' });
+  }
+});
+
+app.post('/api/englishtraining/pronunciation/rounds', express.json({ limit: '128kb' }), async (req, res) => {
+  try {
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      res.status(401).json({ success: false, message: 'Entre na sua conta para salvar a rodada.' });
+      return;
+    }
+    const roundId = String(req.body?.roundId || '');
+    const cardId = normalizeMusicalKellyCardId(req.body?.cardId);
+    const language = String(req.body?.language || '');
+    const scores = req.body?.scores;
+    if (!/^[a-zA-Z0-9-]{8,80}$/.test(roundId) || !cardId || !['en', 'pt'].includes(language)
+      || !scores || typeof scores !== 'object' || Array.isArray(scores)) {
+      res.status(400).json({ success: false, message: 'Dados da rodada inválidos.' });
+      return;
+    }
+    const project = await readMusicalKellyGlobalProject();
+    const card = project.cards.find((entry) => entry.id === cardId);
+    if (!card) {
+      res.status(404).json({ success: false, message: 'Faixa não encontrada.' });
+      return;
+    }
+    const englishLines = Array.isArray(card.lyrics?.lines) ? card.lyrics.lines : [];
+    const portugueseLines = Array.isArray(card.lyrics?.portugueseLines) ? card.lyrics.portugueseLines : null;
+    const lines = language === 'pt' ? (portugueseLines || (englishLines.every((line) => String(line.textPt || '').trim()) ? englishLines : [])) : englishLines;
+    const normalizedScores = normalizeCompletedRoundScores(lines, scores, MUSICAL_KELLY_MAX_LYRIC_LINES);
+    if (!normalizedScores) {
+      res.status(400).json({ success: false, message: 'Avalie todos os trechos da faixa para concluir a rodada.' });
+      return;
+    }
+    const averageScore = Math.round(lines.reduce((total, line) => total + normalizedScores[line.id], 0) / lines.length);
+    await ensureEnglishTrainingPronunciationRoundsTable();
+    const result = await pool.query(`
+      INSERT INTO public.englishtraining_pronunciation_rounds
+        (user_id, round_id, card_id, language, scores, average_score)
+      VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+      ON CONFLICT (user_id, round_id) DO NOTHING
+      RETURNING id, completed_at
+    `, [authUser.id, roundId, cardId, language, JSON.stringify(normalizedScores), averageScore]);
+    if (!result.rows.length) {
+      const existing = await pool.query(`
+        SELECT card_id, language, scores, average_score, completed_at
+        FROM public.englishtraining_pronunciation_rounds WHERE user_id = $1 AND round_id = $2
+      `, [authUser.id, roundId]);
+      const row = existing.rows[0];
+      if (!row || row.card_id !== cardId || row.language !== language
+        || Object.keys(row.scores || {}).length !== lines.length
+        || lines.some((line) => row.scores?.[line.id] !== normalizedScores[line.id])) {
+        res.status(409).json({ success: false, message: 'Esta rodada já foi concluída com outros dados.' });
+        return;
+      }
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, cardId, language, averageScore, completed: true });
+  } catch (error) {
+    console.error('Erro ao salvar rodada do English Training:', error);
+    res.status(Number(error?.statusCode) || 500).json({ success: false, message: 'Não consegui salvar a rodada.' });
+  }
+});
+
 app.get(musicalKellyApiPaths('/cards/:cardId/audio'), async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
@@ -28945,8 +29066,8 @@ app.get(['/englishtraining/', '/englishtraining/index.html'], (_req, res) => {
     .replace('<title>Musical Kelly | Fluent LevelUp</title>', '<title>English Training | Fluent LevelUp</title>')
     .replace('<body>', '<body class="englishtraining-page">')
     .replace(
-      '<script src="/musical-kelly/app.js?v=54" defer></script>',
-      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=54" defer></script>`
+      '<script src="/musical-kelly/app.js?v=55" defer></script>',
+      `<script>window.MUSICAL_KELLY_CONFIG = ${config};</script>\n  <script src="/musical-kelly/app.js?v=55" defer></script>`
     );
   res.setHeader('Cache-Control', 'no-store');
   res.type('html').send(html);

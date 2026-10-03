@@ -9,6 +9,7 @@ const {
   buildGroundedMusicalKellyLines,
   filterMusicalKellyTranscriptionSegments
 } = require('../lib/musical-kelly-transcription');
+const { normalizeCompletedRoundScores } = require('../lib/englishtraining-pronunciation');
 
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'www', 'musical-kelly', 'index.html'), 'utf8');
@@ -942,7 +943,7 @@ test('Portuguese lyrics use Brazilian Portuguese speech recognition and scoring'
   document.getElementById('lyricsMicrophoneButton').click();
   await new Promise((resolve) => setTimeout(resolve, 25));
   const scores = JSON.parse(dom.window.localStorage.getItem('playtalk-englishtraining-pronunciation-v1'));
-  assert.equal(scores['cue-test']['line-1'].score, 100);
+  assert.equal(scores['cue-test']['pt:line-1'].score, 100);
   dom.window.close();
 });
 
@@ -994,7 +995,7 @@ test('mobile recording re-scores with or without a browser speech result', async
     for (const expectedScore of [100, 0]) {
       line.click();
       microphone.click();
-      assert.equal(line.querySelector('.pronunciation-score').classList.contains('is-listening'), true);
+      assert.equal(document.getElementById('lyricsFocusScore').classList.contains('is-listening'), true);
       assert.equal(microphone.classList.contains('is-recording'), true);
       microphone.click();
       await new Promise((resolve) => setTimeout(resolve, 90));
@@ -1018,12 +1019,152 @@ test('mobile recording re-scores with or without a browser speech result', async
     microphone.click();
     await new Promise((resolve) => setTimeout(resolve, 90));
     const recoveredScores = JSON.parse(dom.window.localStorage.getItem('playtalk-englishtraining-pronunciation-v1'));
-    assert.equal(recoveredScores['cue-test']['line-1'].score, 100);
+    assert.equal(recoveredScores['cue-test']['pt:line-1'].score, 100);
     assert.deepEqual(sentLanguages, ['en', 'en', 'pt']);
     assert.equal(stoppedTracks, 3);
   } finally {
     dom.window.close();
   }
+});
+
+test('EnglishTraining opens one large silent lyric and list taps only select', async () => {
+  const fetchUrls = [];
+  const dom = await boot(false, {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: { appSlug: 'englishtraining', appPath: '/englishtraining', apiRoot: '/api/englishtraining' },
+    withAudio: true,
+    fetchUrls
+  });
+  try {
+    const { document } = dom.window;
+    document.querySelector('.track-card').click();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.equal(document.getElementById('lyricsScreen').hidden, false);
+    assert.equal(document.getElementById('lyricsFocus').hidden, false);
+    assert.equal(document.getElementById('lyricsLines').hidden, true);
+    assert.equal(document.getElementById('lyricsFocusText').textContent, 'Não tenha medo.');
+    assert.match(document.querySelector('#lyricsFocusAvatar img').src, /char-dorothy/);
+    assert.equal(document.querySelectorAll('.lyrics-focus__medal').length, 4);
+    document.getElementById('lyricsFocusNext').click();
+    assert.equal(document.getElementById('lyricsFocusText').textContent, 'Eu estou com você.');
+    assert.equal(document.getElementById('lyricsFocusContent').classList.contains('is-changing'), true);
+    document.getElementById('lyricsRepeatToggle').click();
+    assert.equal(document.getElementById('lyricsFocus').hidden, true);
+    assert.equal(document.getElementById('lyricsLines').hidden, false);
+    document.querySelector('[data-line-index="0"]').click();
+    assert.equal(document.querySelector('[data-line-index="0"]').classList.contains('is-selected'), true);
+    assert.equal(fetchUrls.some((url) => url.includes('/assets/audio/')), false);
+    assert.match(stylesSource, /lyrics-focus__content\.is-changing\s*\{\s*animation: lyricsFocusChange 500ms ease/);
+  } finally { dom.window.close(); }
+});
+
+test('focused microphone plays back the local take without scoring or uploading it', async () => {
+  const fetchUrls = [];
+  let played = 0;
+  let stopped = 0;
+  const dom = await boot(false, {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: { appSlug: 'englishtraining', appPath: '/englishtraining', apiRoot: '/api/englishtraining' },
+    fetchUrls,
+    beforeEval: (window) => {
+      Object.defineProperty(window.navigator, 'mediaDevices', { configurable: true,
+        value: { getUserMedia: async () => ({ getTracks: () => [{ stop: () => { stopped += 1; } }] }) } });
+      window.MediaRecorder = class {
+        constructor() { this.handlers = {}; this.state = 'inactive'; this.mimeType = 'audio/webm'; }
+        addEventListener(name, handler) { this.handlers[name] = handler; }
+        start() { this.state = 'recording'; }
+        stop() {
+          this.state = 'inactive';
+          this.handlers.dataavailable({ data: new window.Blob(['take'], { type: 'audio/webm' }) });
+          this.handlers.stop();
+        }
+      };
+      window.URL.createObjectURL = () => 'blob:local-take';
+      window.URL.revokeObjectURL = () => {};
+      window.Audio = class {
+        addEventListener(name, handler) { if (name === 'ended') this.onEnded = handler; }
+        play() { played += 1; return Promise.resolve(); }
+        pause() {}
+      };
+    }
+  });
+  try {
+    const { document } = dom.window;
+    document.querySelector('.lyrics-button').click();
+    const record = document.getElementById('lyricsFocusRecord');
+    record.click();
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    assert.equal(record.classList.contains('is-recording'), true);
+    record.click();
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    assert.equal(played, 1);
+    assert.ok(stopped >= 1);
+    assert.equal(fetchUrls.some((url) => url.includes('/api/stt/') || url.includes('/pronunciation/rounds')), false);
+    assert.equal(dom.window.localStorage.getItem('playtalk-englishtraining-rounds-v1'), null);
+  } finally { dom.window.close(); }
+});
+
+test('pronunciation round stays local until every line has a score, then posts once', async () => {
+  const payload = projectPayload(false);
+  payload.viewerUserId = 7;
+  payload.project.cards[0].lyrics.lines[0].text = 'Do not be afraid';
+  payload.project.cards[0].lyrics.lines[1].text = 'I am with you';
+  let recognition = null;
+  const submissions = [];
+  const dom = await boot(false, {
+    pageUrl: 'https://fluentlevelup.com/englishtraining/',
+    appConfig: { appSlug: 'englishtraining', appPath: '/englishtraining', apiRoot: '/api/englishtraining' },
+    payload,
+    fetchResponder: (url, init) => {
+      if (url === '/api/englishtraining/pronunciation/rounds' && init.method === 'POST') {
+        submissions.push(JSON.parse(init.body));
+        return { success: true, completed: true };
+      }
+      if (url === '/api/englishtraining/pronunciation/rounds') return { success: true, rounds: [] };
+      return payload;
+    },
+    beforeEval: (window) => {
+      window.SpeechRecognition = class {
+        constructor() { recognition = this; }
+        start() {}
+        stop() {}
+        abort() {}
+      };
+    }
+  });
+  try {
+    const { document } = dom.window;
+    document.querySelector('.lyrics-button').click();
+    const microphone = document.getElementById('lyricsMicrophoneButton');
+    microphone.click();
+    recognition.onresult({ results: [[{ transcript: 'Do not be afraid' }]] });
+    microphone.click();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(submissions.length, 0);
+    assert.equal(document.querySelector('.lyrics-focus__round-progress').textContent, '1/2');
+    assert.ok(JSON.parse(dom.window.localStorage.getItem('playtalk-englishtraining-rounds-v1'))['7:cue-test:en']);
+    document.getElementById('lyricsFocusNext').click();
+    microphone.click();
+    recognition.onresult({ results: [[{ transcript: 'I am with you' }]] });
+    microphone.click();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    assert.equal(submissions.length, 1);
+    assert.deepEqual(Object.keys(submissions[0].scores).sort(), ['line-1', 'line-2']);
+    assert.equal(document.querySelector('.lyrics-focus__round-progress').textContent, '2/2');
+    assert.equal(JSON.parse(dom.window.localStorage.getItem('playtalk-englishtraining-rounds-v1'))['7:cue-test:en'], undefined);
+    assert.match(serverSource, /CREATE TABLE IF NOT EXISTS public\.englishtraining_pronunciation_rounds/);
+    assert.match(serverSource, /normalizeCompletedRoundScores\(lines, scores, MUSICAL_KELLY_MAX_LYRIC_LINES\)/);
+  } finally { dom.window.close(); }
+});
+
+test('server accepts only a complete set of real line IDs and integer scores', () => {
+  const lines = [{ id: 'one' }, { id: 'two' }];
+  assert.deepEqual(normalizeCompletedRoundScores(lines, { one: 0, two: 100 }), { one: 0, two: 100 });
+  assert.equal(normalizeCompletedRoundScores(lines, { one: 90 }), null);
+  assert.equal(normalizeCompletedRoundScores(lines, { one: 90, two: 80, extra: 70 }), null);
+  assert.equal(normalizeCompletedRoundScores(lines, { one: 90.5, two: 80 }), null);
+  assert.equal(normalizeCompletedRoundScores(lines, { one: 90, two: 101 }), null);
+  assert.equal(normalizeCompletedRoundScores([{ id: 'one' }, { id: 'one' }], { one: 90 }), null);
 });
 
 test('a selected character waits for manual recording and consecutive turns resume without scoring', () => {
@@ -1086,49 +1227,30 @@ test('holding a lyric never starts the microphone automatically', async () => {
   }
 });
 
-test('original line starts before scoring finishes and loop-off skips its replay', async () => {
-  const scoreStart = appSource.indexOf('function finishPronunciation(');
+test('scoring never auto-plays the original line in EnglishTraining', () => {
   const replayStart = appSource.indexOf('function replayPronunciationSource(');
-  assert.ok(scoreStart >= 0 && replayStart > scoreStart);
-  const scoreSource = appSource.slice(scoreStart, appSource.indexOf('function showPronunciationEvaluating(', scoreStart));
+  assert.ok(replayStart >= 0);
   const replaySource = appSource.slice(replayStart, appSource.indexOf('function startPronunciationCapture(', replayStart));
   const calls = [];
-  const state = { repeatOriginalLine: true };
-  const attempt = { resumeAfterSourceReplay: false, scored: false };
-  const pronunciationState = { scores: {}, latestAttempt: attempt };
-  let releasePlayback;
-  const playback = new Promise((resolve) => { releasePlayback = resolve; });
-  const { replayPronunciationSource, finishPronunciation } = new Function(
+  const attempt = { povTurn: { lineId: 'line-1' } };
+  const { replayPronunciationSource } = new Function(
     'APP_SLUG', 'state', 'pronunciationState', 'restoreMusicAfterPronunciation',
     'renderPronunciationBadge', 'pronunciationScoreFor', 'replayOriginalLyricLine',
-    'showPronunciationEvaluating', 'calculatePronunciationScore', 'lyricLineText',
-    'savePronunciationScores', 'navigator',
-    `${scoreSource}\n${replaySource}\nreturn { replayPronunciationSource, finishPronunciation };`
+    'showPronunciationEvaluating', 'continuePovAfterPronunciation',
+    `${replaySource}\nreturn { replayPronunciationSource };`
   )(
-    'englishtraining', state, pronunciationState,
+    'englishtraining', { repeatOriginalLine: true }, { latestAttempt: attempt },
     () => calls.push('restore'),
-    (_badge, score, _listening, replaying, animate) => calls.push(animate ? `score:${score}` : `replay:${replaying}`),
+    () => calls.push('badge'),
     () => null,
-    () => { calls.push('original'); return playback; },
+    () => { calls.push('original'); return Promise.resolve(); },
     () => calls.push('evaluating'),
-    () => 87,
-    () => 'expected',
-    () => calls.push('saved'),
-    { vibrate: null }
+    () => calls.push('continue')
   );
   const card = { id: 'card-1', audio: {}, lyrics: { mode: 'timesync' } };
   const line = { id: 'line-1', start: 1, end: 3 };
-  const badge = { isConnected: true };
-  replayPronunciationSource(card, line, badge, attempt);
-  assert.deepEqual(calls.slice(0, 3), ['restore', 'replay:source', 'original']);
-  attempt.scored = true;
-  finishPronunciation(card.id, line, 'spoken', badge, 'en');
-  assert.ok(calls.includes('score:87'), 'score appears while original playback is still pending');
-  state.repeatOriginalLine = false;
-  replayPronunciationSource(card, line, badge, attempt);
-  assert.equal(calls.filter((call) => call === 'original').length, 1);
-  releasePlayback();
-  await playback;
+  replayPronunciationSource(card, line, {}, attempt);
+  assert.deepEqual(calls, ['restore', 'continue']);
 });
 
 test('pronunciation score counts valid matching sequences and ignores extra spoken letters', () => {

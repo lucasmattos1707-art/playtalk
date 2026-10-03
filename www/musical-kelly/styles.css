@@ -3159,6 +3159,10 @@ body.englishtraining-page .lyrics-screen {
   background: linear-gradient(145deg, #d4f4d7 0%, #afe9d1 42%, #91cbed 100%);
 }
 
+body.englishtraining-page .lyrics-screen.is-focus-view {
+  background: linear-gradient(155deg, #6ba9a5 0%, #7196b8 53%, #687fb1 100%);
+}
+
 body.englishtraining-page .lyrics-header {
   grid-row: 2;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -3451,6 +3455,170 @@ body.englishtraining-page .lyrics-stage {
   background: linear-gradient(180deg, rgba(6, 34, 69, 0.03), rgba(4, 34, 69, 0.08));
 }
 
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-stage {
+  display: grid;
+  background: none;
+}
+
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-track-label { display: none; }
+body.englishtraining-page .lyrics-lines[hidden],
+body.englishtraining-page .lyrics-focus[hidden] { display: none; }
+
+body.englishtraining-page .lyrics-focus {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(16px, 3vh, 30px);
+  width: min(100%, 720px);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: clamp(20px, 4vh, 36px) 22px clamp(18px, 3vh, 30px);
+  color: #fff;
+}
+
+body.englishtraining-page .lyrics-focus__medals {
+  display: grid;
+  grid-template-columns: minmax(60px, 1fr) repeat(4, minmax(48px, 1fr));
+  align-items: center;
+  gap: 8px;
+  min-height: 88px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  background: rgba(99, 47, 145, 0.4);
+}
+
+body.englishtraining-page .lyrics-focus__medals.is-complete {
+  box-shadow: 0 0 0 2px rgba(175, 255, 211, 0.54);
+}
+
+body.englishtraining-page .lyrics-focus__round-progress {
+  font-size: clamp(1rem, 2vw, 1.3rem);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+body.englishtraining-page .lyrics-focus__medal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  justify-self: center;
+  gap: 2px;
+  font-size: 1rem;
+}
+
+body.englishtraining-page .lyrics-focus__medal img { width: 44px; height: 44px; object-fit: contain; }
+
+body.englishtraining-page .lyrics-focus__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 4vh, 42px);
+  min-height: 0;
+}
+
+body.englishtraining-page .lyrics-focus__content.is-changing {
+  animation: lyricsFocusChange 500ms ease both;
+}
+
+@keyframes lyricsFocusChange {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+body.englishtraining-page .lyrics-focus__avatar {
+  display: grid;
+  width: clamp(104px, 16vh, 160px);
+  height: clamp(104px, 16vh, 160px);
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  background: #ffe400;
+  box-shadow: 0 12px 32px rgba(27, 57, 106, 0.24);
+  font-size: 3.5rem;
+  font-weight: 850;
+}
+
+body.englishtraining-page .lyrics-focus__avatar img { width: 100%; height: 100%; object-fit: cover; }
+body.englishtraining-page .lyrics-focus__avatar.is-empty { border-color: rgba(255, 255, 255, 0.48); }
+
+body.englishtraining-page .lyrics-focus__text {
+  width: min(100%, 590px);
+  margin: 0;
+  font-size: clamp(2rem, 4.5vw, 3.2rem);
+  font-weight: 520;
+  line-height: 1.2;
+  text-align: center;
+  text-wrap: balance;
+}
+
+body.englishtraining-page .lyrics-focus__controls { display: grid; gap: 16px; justify-items: center; }
+body.englishtraining-page .pronunciation-score.lyrics-focus__score {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  display: block;
+  width: min(80%, 500px);
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(227, 249, 255, 0.7);
+}
+
+body.englishtraining-page .lyrics-focus__score[hidden] { visibility: hidden; display: block; }
+body.englishtraining-page .lyrics-focus__score .pronunciation-score__fill {
+  height: 100%;
+  border-radius: 999px;
+}
+body.englishtraining-page .lyrics-focus__score.is-unscored .pronunciation-score__fill { display: none; }
+body.englishtraining-page .lyrics-focus__score .pronunciation-score__seal {
+  left: -36px;
+  bottom: -20px;
+  width: 60px;
+  height: 60px;
+}
+body.englishtraining-page .lyrics-focus__score .pronunciation-score__label { right: 8px; bottom: 4px; }
+
+body.englishtraining-page .lyrics-focus__actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  width: min(80%, 500px);
+  gap: 10px;
+  justify-items: center;
+}
+
+body.englishtraining-page .lyrics-focus__actions button {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  padding: 8px;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+}
+
+body.englishtraining-page .lyrics-focus__actions button:hover,
+body.englishtraining-page .lyrics-focus__actions button:focus-visible {
+  background: rgba(255, 255, 255, 0.16);
+}
+body.englishtraining-page .lyrics-focus__actions button:disabled { opacity: 0.35; cursor: default; }
+body.englishtraining-page .lyrics-focus__actions button.is-recording { color: #ffae53; }
+body.englishtraining-page .lyrics-focus__actions button.is-playing { color: #b7f9df; }
+body.englishtraining-page .lyrics-focus__actions svg {
+  width: 36px; height: 36px; fill: none; stroke: currentColor;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+body.englishtraining-page #lyricsFocusPlay svg { fill: currentColor; stroke: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  body.englishtraining-page .lyrics-focus__content.is-changing { animation: none; }
+}
+
 body.englishtraining-page .lyrics-track-label {
   background: rgba(7, 45, 86, 0.68);
 }
@@ -3502,6 +3670,7 @@ body.englishtraining-page .lyric-line.is-pov-line::before {
 }
 
 body.englishtraining-page .lyric-line.is-pov-muted { opacity: 1; }
+body.englishtraining-page .lyric-line.is-selected { border-color: rgba(255, 240, 166, 0.95); }
 
 body.englishtraining-page .lyric-line:has(.pronunciation-score__seal:not([hidden])) {
   z-index: 2;
@@ -3688,6 +3857,25 @@ body.englishtraining-page .pronunciation-score__seal[hidden] {
   body.englishtraining-page {
     background: linear-gradient(165deg, #d4f4d7 0%, #afe9d1 43%, #91cbed 100%) fixed;
   }
+
+  body.englishtraining-page .lyrics-focus {
+    gap: 12px;
+    padding: 18px 18px 22px;
+  }
+
+  body.englishtraining-page .lyrics-focus__medals {
+    min-height: 72px;
+    gap: 2px;
+    padding: 6px 8px;
+  }
+
+  body.englishtraining-page .lyrics-focus__medal { font-size: 0.86rem; }
+  body.englishtraining-page .lyrics-focus__medal img { width: 34px; height: 34px; }
+  body.englishtraining-page .lyrics-focus__text { font-size: clamp(1.8rem, 7.3vw, 2.3rem); }
+  body.englishtraining-page .lyrics-focus__score,
+  body.englishtraining-page .lyrics-focus__actions { width: min(86%, 440px); }
+  body.englishtraining-page .lyrics-focus__actions button { width: 48px; height: 48px; }
+  body.englishtraining-page .lyrics-focus__actions svg { width: 32px; height: 32px; }
 
   body.englishtraining-page .lyrics-screen {
     background: linear-gradient(165deg, #d4f4d7 0%, #afe9d1 43%, #91cbed 100%);

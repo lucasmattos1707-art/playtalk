@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=47">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=48">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -249,7 +249,7 @@
           <img class="lyrics-icon-play" src="/arquivos-codex/icones/play-button-englishtraining.svg" alt="">
           <img class="lyrics-icon-pause" src="/arquivos-codex/icones/pause-button-englishtraining.svg" alt="">
         </button>
-        <button class="lyrics-repeat-toggle" id="lyricsRepeatToggle" type="button" aria-label="Repetir a fala original após a sua vez" aria-pressed="true" title="Repetir a fala original" hidden>
+        <button class="lyrics-repeat-toggle" id="lyricsRepeatToggle" type="button" aria-label="Mostrar lista de trechos" aria-pressed="true" title="Alternar visualização dos trechos" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h12a4 4 0 0 1 4 4v1M20 12l-3-3m3 3 3-3M20 17H8a4 4 0 0 1-4-4v-1M4 12l3 3m-3-3-3 3"/></svg>
         </button>
         <button class="lyrics-language-toggle" id="lyricsLanguageToggle" type="button" aria-label="Trocar para português" title="Trocar idioma" aria-pressed="false" hidden>
@@ -278,6 +278,25 @@
         <p>Letra ainda não disponível.</p>
       </div>
       <div class="lyrics-lines" id="lyricsLines" aria-live="off"></div>
+      <section class="lyrics-focus" id="lyricsFocus" aria-label="Trecho selecionado" hidden>
+        <div class="lyrics-focus__medals" id="lyricsFocusMedals" aria-label="Selos desta rodada"></div>
+        <div class="lyrics-focus__content" id="lyricsFocusContent">
+          <div class="lyrics-focus__avatar" id="lyricsFocusAvatar" aria-hidden="true"></div>
+          <p class="lyrics-focus__text" id="lyricsFocusText"></p>
+        </div>
+        <div class="lyrics-focus__controls">
+          <div class="pronunciation-score lyrics-focus__score" id="lyricsFocusScore">
+            <span class="pronunciation-score__label"></span><span class="pronunciation-score__fill"></span>
+            <img class="pronunciation-score__seal" alt="" hidden>
+          </div>
+          <div class="lyrics-focus__actions" aria-label="Ações do trecho">
+            <button id="lyricsFocusPrevious" type="button" aria-label="Trecho anterior" title="Trecho anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button>
+            <button id="lyricsFocusPlay" type="button" aria-label="Reproduzir este trecho" title="Reproduzir este trecho"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg></button>
+            <button id="lyricsFocusRecord" type="button" aria-label="Gravar e ouvir minha voz" title="Gravar e ouvir minha voz"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-4 0h8"/></svg></button>
+            <button id="lyricsFocusNext" type="button" aria-label="Próximo trecho" title="Próximo trecho"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+          </div>
+        </div>
+      </section>
     </div>
 
     <aside class="lyrics-admin-panel" id="lyricsAdminPanel" hidden>
@@ -520,6 +539,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <script src="/arquivos-codex/vendor/lamejs/lame.min.js" defer></script>
-  <script src="/musical-kelly/app.js?v=54" defer></script>
+  <script src="/musical-kelly/app.js?v=55" defer></script>
 </body>
 </html>
