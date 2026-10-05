@@ -28750,10 +28750,6 @@ function getDesafioGymWeekStart(dateString) {
   return date.toISOString().slice(0, 10);
 }
 
-function isDesafioGymSunday(dateString) {
-  return new Date(`${dateString}T12:00:00Z`).getUTCDay() === 0;
-}
-
 async function readDesafioGymState(today = getSaoPauloDateString()) {
   await ensureDesafioGymTable();
   const weekStart = getDesafioGymWeekStart(today);
@@ -28790,7 +28786,7 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
   return {
     today,
     weekStart,
-    isSunday: isDesafioGymSunday(today),
+    isSunday: false,
     scores: toPoints(scoreResult.rows),
     week: toPoints(weekResult.rows),
     markedToday: {
@@ -28911,11 +28907,6 @@ app.post(
 
       const today = getSaoPauloDateString();
       const weekStart = getDesafioGymWeekStart(today);
-      if (isDesafioGymSunday(today)) {
-        res.status(409).json({ success: false, message: 'Domingo é dia de descanso. Hoje não vale ponto.' });
-        return;
-      }
-
       await ensureDesafioGymTable();
       const eligibilityResult = await pool.query(`
         SELECT

@@ -56,7 +56,7 @@
   }
 
   function canRegister(participant) {
-    if (!state || state.isSunday || state.markedToday?.[participant]) return false;
+    if (!state || state.markedToday?.[participant]) return false;
     return Number(state.week?.[participant] || 0) < 5;
   }
 
@@ -81,14 +81,12 @@
 
     const kellySent = Boolean(state.markedToday?.kelly);
     const nobodyCanRegister = !canRegister('kelly') && !canRegister('lucas');
-    openButton.disabled = Boolean(state.isSunday || nobodyCanRegister);
+    openButton.disabled = Boolean(nobodyCanRegister);
     $('#submit-label').textContent = kellySent ? 'Treino enviado' : 'Enviar treino';
     openButton.querySelector('small').textContent = kellySent ? 'hoje' : '+1 ponto';
-    $('#send-hint').textContent = state.isSunday
-      ? 'Domingo é dia de descanso. A marcação volta amanhã.'
-      : kellySent
-        ? 'Seu treino de hoje já entrou no placar.'
-        : 'Toque para abrir a câmera. A foto é opcional.';
+    $('#send-hint').textContent = kellySent
+      ? 'Seu treino de hoje já entrou no placar.'
+      : 'Toque para abrir a câmera. A foto é opcional.';
 
     const history = $('#history-list');
     const recent = Array.isArray(state.recent) ? state.recent : [];
