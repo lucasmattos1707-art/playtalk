@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07110d">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=48">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=49">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -135,6 +135,20 @@
       <span><strong>Baixar áudio</strong><small id="containerDownloadAudioHint">Salvar o arquivo original</small></span>
     </button>
   </div>
+
+  <dialog class="musical-dialog audio-tracks-dialog" id="audioTracksDialog" aria-labelledby="audioTracksDialogTitle">
+    <section class="dialog-card audio-tracks-card">
+      <div class="dialog-heading">
+        <div>
+          <span class="dialog-kicker">Áudios desta música</span>
+          <h2 id="audioTracksDialogTitle">Faixas</h2>
+        </div>
+        <button class="dialog-close" id="audioTracksCloseButton" type="button" aria-label="Fechar Faixas">×</button>
+      </div>
+      <div class="audio-tracks-list" id="audioTracksList"></div>
+      <button class="dialog-primary" id="audioTracksAddButton" type="button">Adicionar nova faixa</button>
+    </section>
+  </dialog>
 
   <dialog class="musical-dialog" id="addCardDialog" aria-labelledby="addCardDialogTitle">
     <form class="dialog-card" id="addCardForm">
@@ -360,13 +374,34 @@
         <svg class="lyrics-icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 6v12M15.5 6v12"/></svg>
       </button>
       <div class="lyrics-progress">
-        <input id="lyricsSeekSlider" type="range" min="0" max="1" step="0.01" value="0" aria-label="Posição nesta faixa">
+        <div class="lyrics-progress-bar" id="lyricsProgressBar">
+          <input id="lyricsSeekSlider" type="range" min="0" max="1" step="0.01" value="0" aria-label="Posição nesta faixa">
+          <div class="lyrics-timed-comment-markers" id="lyricsTimedCommentMarkers" aria-label="Comentários nesta faixa"></div>
+        </div>
         <div><time id="lyricsCurrentTime">00:00</time><time id="lyricsDuration">00:00</time></div>
       </div>
       <button id="lyricsForwardButton" type="button" aria-label="Avançar 5 segundos" title="Avançar 5 segundos">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8h4V4m-.5 4.5A9 9 0 1 0 20 16M14.8 10.2h-3.2l2.5 2.3h-1a2.6 2.6 0 1 0 2.3 3.8"/></svg>
         <span>5</span>
       </button>
+      <section class="lyrics-time-comment-panel" id="lyricsTimeCommentPanel" aria-label="Comentário no tempo da música" hidden>
+        <div class="lyrics-time-comment-heading">
+          <div><span id="lyricsTimeCommentKicker">Comentário na faixa</span><time id="lyricsTimeCommentTime">00:00</time></div>
+          <button class="lyrics-time-comment-close" id="lyricsTimeCommentClose" type="button" aria-label="Fechar comentário">×</button>
+        </div>
+        <div id="lyricsTimeCommentReadView" hidden>
+          <p class="lyrics-time-comment-text" id="lyricsTimeCommentText"></p>
+          <div class="lyrics-time-comment-actions" id="lyricsTimeCommentActions"></div>
+        </div>
+        <form id="lyricsTimeCommentForm" hidden>
+          <label class="visually-hidden" for="lyricsTimeCommentInput">Comentário</label>
+          <textarea id="lyricsTimeCommentInput" maxlength="800" rows="3" placeholder="Escreva um comentário neste momento da música"></textarea>
+          <div class="lyrics-time-comment-actions">
+            <button class="lyrics-time-comment-cancel" id="lyricsTimeCommentCancel" type="button">Cancelar</button>
+            <button class="lyrics-time-comment-save" id="lyricsTimeCommentSave" type="submit">Salvar comentário</button>
+          </div>
+        </form>
+      </section>
     </footer>
   </section>
 
@@ -539,6 +574,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <script src="/arquivos-codex/vendor/lamejs/lame.min.js" defer></script>
-  <script src="/musical-kelly/app.js?v=55" defer></script>
+  <script src="/musical-kelly/app.js?v=56" defer></script>
 </body>
 </html>

@@ -17,6 +17,8 @@
   const PRONUNCIATION_SCORES_KEY = 'playtalk-englishtraining-pronunciation-v1';
   const PRONUNCIATION_ROUNDS_KEY = 'playtalk-englishtraining-rounds-v1';
   const LONG_PRESS_MS = 500;
+  const TIMED_COMMENT_HOLD_MS = 300;
+  const CONTAINER_MENU_HOLD_MS = 300;
   const USE_NATIVE_AUDIO_ON_APPLE = isAppleTouchDevice();
   let commentOutboxDbPromise = null;
 
@@ -103,6 +105,10 @@
     containerUploadImage: document.getElementById('containerUploadImage'),
     containerDownloadAudio: document.getElementById('containerDownloadAudio'),
     containerDownloadAudioHint: document.getElementById('containerDownloadAudioHint'),
+    audioTracksDialog: document.getElementById('audioTracksDialog'),
+    audioTracksList: document.getElementById('audioTracksList'),
+    audioTracksCloseButton: document.getElementById('audioTracksCloseButton'),
+    audioTracksAddButton: document.getElementById('audioTracksAddButton'),
     statusLine: document.getElementById('statusLine'),
     statusText: document.getElementById('statusText'),
     lyricsScreen: document.getElementById('lyricsScreen'),
@@ -153,10 +159,23 @@
     lyricsRewindButton: document.getElementById('lyricsRewindButton'),
     lyricsPlayButton: document.getElementById('lyricsPlayButton'),
     lyricsHeaderPlayButton: document.getElementById('lyricsHeaderPlayButton'),
+    lyricsProgressBar: document.getElementById('lyricsProgressBar'),
     lyricsSeekSlider: document.getElementById('lyricsSeekSlider'),
     lyricsCurrentTime: document.getElementById('lyricsCurrentTime'),
     lyricsDuration: document.getElementById('lyricsDuration'),
     lyricsForwardButton: document.getElementById('lyricsForwardButton'),
+    lyricsTimedCommentMarkers: document.getElementById('lyricsTimedCommentMarkers'),
+    lyricsTimeCommentPanel: document.getElementById('lyricsTimeCommentPanel'),
+    lyricsTimeCommentKicker: document.getElementById('lyricsTimeCommentKicker'),
+    lyricsTimeCommentTime: document.getElementById('lyricsTimeCommentTime'),
+    lyricsTimeCommentReadView: document.getElementById('lyricsTimeCommentReadView'),
+    lyricsTimeCommentText: document.getElementById('lyricsTimeCommentText'),
+    lyricsTimeCommentActions: document.getElementById('lyricsTimeCommentActions'),
+    lyricsTimeCommentForm: document.getElementById('lyricsTimeCommentForm'),
+    lyricsTimeCommentInput: document.getElementById('lyricsTimeCommentInput'),
+    lyricsTimeCommentSave: document.getElementById('lyricsTimeCommentSave'),
+    lyricsTimeCommentClose: document.getElementById('lyricsTimeCommentClose'),
+    lyricsTimeCommentCancel: document.getElementById('lyricsTimeCommentCancel'),
     characterMenu: document.getElementById('characterMenu'),
     characterDialog: document.getElementById('characterDialog'),
     characterDialogKicker: document.getElementById('characterDialogKicker'),
@@ -219,9 +238,12 @@
     playRequestGeneration: 0,
     bufferPromises: new Map(),
     durations: new Map(),
+    cardDurations: new Map(),
     durationPromises: new Map(),
     downloadStates: new Map(),
     uploading: false,
+    uploadAudioAsTrack: false,
+    audioTracksCardId: '',
     saveTimer: null,
     saveChain: Promise.resolve(),
     toastTimer: null,
@@ -234,6 +256,14 @@
     focusRecorder: null,
     pronunciationRound: null,
     lyricsScrubbing: false,
+    timedCommentsByCard: new Map(),
+    timedCommentLoads: new Map(),
+    activeTimedComment: null,
+    timedCommentPositionSeconds: 0,
+    timedCommentBusy: false,
+    timedCommentHoldTimer: null,
+    timedCommentHoldTriggered: false,
+    timedCommentPointer: null,
     lyricsBusy: false,
     lyricsLanguage: readLyricsLanguagePreference(),
     lyricsTimingRate: readLyricsTimingPreference(),
@@ -1455,6 +1485,10 @@
           size: card.audio.size,
           updatedAt: card.audio.updatedAt
         } : null,
+        audioTracks: cardAudioTracks(card).map((track) => ({
+          fileName: track.fileName, name: track.name, contentType: track.contentType,
+          size: track.size, updatedAt: track.updatedAt, createdByUserId: track.createdByUserId
+        })),
         image: card.image ? {
           fileName: card.image.fileName,
           name: card.image.name,
@@ -1519,6 +1553,24 @@
     return Boolean(card?.image?.url || card?.image?.fileName);
   }
 
+  function cardAudioTracks(card) {
+    const tracks = Array.isArray(card?.audioTracks)
+      ? card.audioTracks.filter((track) => track?.fileName && track?.url)
+      : [];
+    if (tracks.length) return tracks;
+    return card?.audio?.fileName && card.audio.url ? [card.audio] : [];
+  }
+
+  function cardAudioDuration(card) {
+    const tracks = cardAudioTracks(card);
+    if (!tracks.length) return 0;
+    return tracks.reduce((total, track) => total + (Number(state.durations.get(track.fileName)) || 0), 0);
+  }
+
+  function cardAudioFingerprint(card) {
+    return cardAudioTracks(card).map((track) => `${track.fileName}:${track.updatedAt || ''}`).join('|');
+  }
+
   function cardPublicLabel(card) {
     if (!cardHasImage(card)) return card?.title || 'Faixa';
     const index = state.project.cards.findIndex((entry) => entry.id === card?.id);
@@ -1554,23 +1606,35 @@
   }
 
   function loadCardDuration(card) {
-    if (!card?.audio?.url) return Promise.resolve(0);
-    const key = card.audio.fileName;
-    if (state.durations.has(key)) return Promise.resolve(state.durations.get(key));
+    const tracks = cardAudioTracks(card);
+    if (!tracks.length) return Promise.resolve(0);
+    const key = `card:${card.id}:${cardAudioFingerprint(card)}`;
+    if (state.cardDurations.has(key)) return Promise.resolve(state.cardDurations.get(key));
     if (!state.durationPromises.has(key)) {
-      const promise = new Promise((resolve, reject) => {
-        const media = new Audio();
-        media.preload = 'metadata';
-        media.addEventListener('loadedmetadata', () => {
-          const duration = Number.isFinite(media.duration) ? media.duration : 0;
-          state.durations.set(key, duration);
-          media.removeAttribute('src');
-          media.load();
-          resolve(duration);
-        }, { once: true });
-        media.addEventListener('error', () => reject(new Error('Duração indisponível.')), { once: true });
-        media.src = card.audio.url;
-      }).catch(() => 0).finally(() => state.durationPromises.delete(key));
+      const promise = Promise.all(tracks.map((track) => {
+        if (state.durations.has(track.fileName)) return state.durations.get(track.fileName);
+        if (!state.durationPromises.has(track.fileName)) {
+          const trackPromise = new Promise((resolve, reject) => {
+            const media = new Audio();
+            media.preload = 'metadata';
+            media.addEventListener('loadedmetadata', () => {
+              const duration = Number.isFinite(media.duration) ? media.duration : 0;
+              state.durations.set(track.fileName, duration);
+              media.removeAttribute('src');
+              media.load();
+              resolve(duration);
+            }, { once: true });
+            media.addEventListener('error', () => reject(new Error('Duração indisponível.')), { once: true });
+            media.src = track.url;
+          }).catch(() => 0).finally(() => state.durationPromises.delete(track.fileName));
+          state.durationPromises.set(track.fileName, trackPromise);
+        }
+        return state.durationPromises.get(track.fileName);
+      })).then((durations) => {
+        const total = durations.reduce((sum, duration) => sum + (Number(duration) || 0), 0);
+        state.cardDurations.set(key, total);
+        return total;
+      }).finally(() => state.durationPromises.delete(key));
       state.durationPromises.set(key, promise);
     }
     return state.durationPromises.get(key);
@@ -1655,7 +1719,7 @@
       node.querySelector('.track-title-text').textContent = cardHasImage(card) ? '' : card.title;
 
       const durationLabel = node.querySelector('.track-duration');
-      const knownDuration = card.audio ? state.durations.get(card.audio.fileName) : 0;
+      const knownDuration = card.audio ? cardAudioDuration(card) : 0;
       durationLabel.textContent = isPlaying
         ? formatDuration(currentPosition(state.current))
         : (knownDuration ? formatDuration(knownDuration) : '--');
@@ -1726,7 +1790,7 @@
       });
 
       node.addEventListener('contextmenu', (event) => {
-        if (!state.canEdit || state.sortMode) return;
+        if (!state.canContribute || state.sortMode) return;
         event.preventDefault();
         event.stopPropagation();
         openContainerUploadMenu(card.id, event.clientX, event.clientY);
@@ -1768,12 +1832,12 @@
       startX = event.clientX;
       startY = event.clientY;
       longPressed = false;
-      if (state.canEdit) {
+      if (state.canContribute) {
         timer = window.setTimeout(() => {
           longPressed = true;
           if (navigator.vibrate) navigator.vibrate(24);
-          selectCard(cardId);
-        }, LONG_PRESS_MS);
+          openContainerUploadMenu(cardId, event.clientX, event.clientY);
+        }, 300);
       }
     });
 
@@ -1827,14 +1891,14 @@
   }
 
   function openContainerUploadMenu(cardId, clientX, clientY) {
-    if (!state.canEdit || !getCard(cardId)) return;
+    if (!state.canContribute || !getCard(cardId)) return;
     state.selectedId = cardId;
     render();
     const menu = elements.containerUploadMenu;
     const card = getCard(cardId);
     elements.containerDownloadAudio.disabled = !card.audio?.url;
     elements.containerDownloadAudioHint.textContent = card.audio?.url
-      ? 'Salvar o arquivo original'
+      ? 'Gerenciar ou adicionar faixas'
       : 'Áudio ainda não enviado';
     menu.hidden = false;
     const width = Math.min(286, window.innerWidth - 24);
@@ -1846,19 +1910,73 @@
   }
 
   function downloadSelectedContainerAudio() {
-    if (!state.canEdit) return;
+    if (!state.canContribute) return;
     const card = getCard(state.selectedId);
     if (!card?.audio?.url) {
       showToast('Este container ainda não tem áudio.', true);
       return;
     }
-    const anchor = document.createElement('a');
-    anchor.href = card.audio.url;
-    anchor.download = card.audio.name || card.audio.fileName || 'faixa.mp3';
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    showToast('Download do áudio iniciado.');
+    loadAudioBuffer(card).then((buffer) => {
+      const url = URL.createObjectURL(new Blob([audioBufferToWav(buffer)], { type: 'audio/wav' }));
+      const anchor = document.createElement('a'); anchor.href = url;
+      anchor.download = `${card.title || 'faixa'}.wav`;
+      document.body.appendChild(anchor); anchor.click(); anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+      showToast('Download da música completa iniciado.');
+    }).catch((error) => showToast(error.message, true));
+  }
+
+  function renderAudioTracksDialog(cardId) {
+    const card = getCard(cardId); if (!card) return;
+    state.audioTracksCardId = cardId;
+    elements.audioTracksList.replaceChildren();
+    cardAudioTracks(card).forEach((track, index) => {
+      const row = document.createElement('div'); row.className = 'audio-track-row';
+      const label = document.createElement('span'); label.textContent = `${index + 1}. ${track.name || track.fileName}`; row.append(label);
+      const up = document.createElement('button'); up.type = 'button'; up.textContent = '↑'; up.title = 'Subir uma posição'; up.disabled = index === 0 || (!track.canManage && !state.canEdit);
+      up.addEventListener('click', () => moveAudioTrack(cardId, index)); row.append(up);
+      if (track.canManage || state.canEdit) {
+        const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Excluir';
+        remove.addEventListener('click', () => removeAudioTrack(cardId, track.fileName)); row.append(remove);
+      }
+      elements.audioTracksList.append(row);
+    });
+    if (!elements.audioTracksDialog.open) showDialog(elements.audioTracksDialog);
+  }
+
+  async function moveAudioTrack(cardId, index) {
+    const card = getCard(cardId); const tracks = cardAudioTracks(card);
+    if (!card || index < 1) return;
+    [tracks[index - 1], tracks[index]] = [tracks[index], tracks[index - 1]];
+    const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(cardId)}/audio-tracks/order`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileNames: tracks.map((track) => track.fileName) })
+    });
+    state.project = payload.project; render(); renderAudioTracksDialog(cardId);
+  }
+
+  async function removeAudioTrack(cardId, fileName) {
+    if (!window.confirm('Excluir esta faixa?')) return;
+    const payload = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(cardId)}/audio-tracks/${encodeURIComponent(fileName)}`, { method: 'DELETE' });
+    state.project = payload.project; render();
+    if (cardAudioTracks(getCard(cardId)).length) renderAudioTracksDialog(cardId);
+    else closeDialog(elements.audioTracksDialog);
+  }
+
+  function audioBufferToWav(buffer) {
+    const channels = buffer.numberOfChannels; const frames = buffer.length;
+    const output = new ArrayBuffer(44 + frames * channels * 2); const view = new DataView(output);
+    const write = (offset, value) => { for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i)); };
+    write(0, 'RIFF'); view.setUint32(4, 36 + frames * channels * 2, true); write(8, 'WAVE'); write(12, 'fmt ');
+    view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, channels, true);
+    view.setUint32(24, buffer.sampleRate, true); view.setUint32(28, buffer.sampleRate * channels * 2, true);
+    view.setUint16(32, channels * 2, true); view.setUint16(34, 16, true); write(36, 'data'); view.setUint32(40, frames * channels * 2, true);
+    let offset = 44;
+    const channelData = Array.from({ length: channels }, (_value, channel) => buffer.getChannelData(channel));
+    for (let frame = 0; frame < frames; frame++) for (let channel = 0; channel < channels; channel++) {
+      const sample = Math.max(-1, Math.min(1, channelData[channel][frame]));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true); offset += 2;
+    }
+    return output;
   }
 
   function showDialog(dialog) {
@@ -2034,7 +2152,13 @@
     }
     if (state.current?.cardId === cardId) cancelAutoAdvance();
     renderLyricsScreen();
-    if (card.audio) loadCardDuration(card).then(updateLyricsPlayer).catch(() => {});
+    if (card.audio) loadCardDuration(card).then(() => {
+      updateLyricsPlayer();
+      renderTimedCommentMarkers();
+    }).catch(() => {});
+    if (APP_SLUG === 'musical-kelly') {
+      loadTimedComments(cardId).catch((error) => showToast(error.message || 'Não foi possível carregar os comentários desta faixa.', true));
+    }
     if (state.canEdit && !card.lyrics?.lines?.length) openLyricsEditor();
   }
 
@@ -2068,6 +2192,7 @@
     elements.lyricsScreen.hidden = true;
     elements.lyricsAdminPanel.hidden = true;
     elements.characterMenu.hidden = true;
+    closeTimedCommentPanel();
     document.body.classList.remove('lyrics-open');
     state.lyricsCardId = '';
     state.pronunciationRound = null;
@@ -2366,6 +2491,166 @@
     return state.current?.cardId === state.lyricsCardId ? currentPosition(state.current) : 0;
   }
 
+  function timedCommentEndpoint(cardId, commentId = '') {
+    const base = `${API_ROOT}/cards/${encodeURIComponent(cardId)}/time-comments`;
+    return commentId ? `${base}/${encodeURIComponent(commentId)}` : base;
+  }
+
+  function timedCommentsForCard(cardId = state.lyricsCardId) {
+    return state.timedCommentsByCard.get(cardId) || [];
+  }
+
+  async function loadTimedComments(cardId, { force = false } = {}) {
+    if (APP_SLUG !== 'musical-kelly' || !cardId) return [];
+    if (!force && state.timedCommentsByCard.has(cardId)) return timedCommentsForCard(cardId);
+    if (state.timedCommentLoads.has(cardId)) return state.timedCommentLoads.get(cardId);
+    const request = apiJson(timedCommentEndpoint(cardId), {
+      cache: 'no-store',
+      headers: commenterRequestHeaders()
+    }).then((payload) => {
+      const comments = Array.isArray(payload.comments) ? payload.comments : [];
+      state.timedCommentsByCard.set(cardId, comments);
+      if (state.lyricsCardId === cardId) renderTimedCommentMarkers();
+      return comments;
+    }).finally(() => state.timedCommentLoads.delete(cardId));
+    state.timedCommentLoads.set(cardId, request);
+    return request;
+  }
+
+  function renderTimedCommentMarkers() {
+    if (!elements.lyricsTimedCommentMarkers) return;
+    elements.lyricsTimedCommentMarkers.replaceChildren();
+    if (APP_SLUG !== 'musical-kelly') return;
+    const duration = Math.max(0, Number(elements.lyricsSeekSlider.max) || 0);
+    if (!duration) return;
+    timedCommentsForCard().forEach((comment) => {
+      const position = Math.max(0, Number(comment.positionSeconds) || 0);
+      const marker = document.createElement('button');
+      marker.type = 'button';
+      marker.className = 'lyrics-time-comment-marker';
+      marker.style.left = `${Math.min(100, position / duration * 100)}%`;
+      marker.setAttribute('aria-label', `Ver comentário em ${formatTime(position)}`);
+      marker.title = `Comentário em ${formatTime(position)}`;
+      marker.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openTimedCommentDetail(comment);
+      });
+      elements.lyricsTimedCommentMarkers.appendChild(marker);
+    });
+  }
+
+  function closeTimedCommentPanel() {
+    elements.lyricsTimeCommentPanel.hidden = true;
+    elements.lyricsTimeCommentForm.hidden = true;
+    elements.lyricsTimeCommentReadView.hidden = true;
+    elements.lyricsTimeCommentInput.value = '';
+    state.activeTimedComment = null;
+  }
+
+  function openTimedCommentComposer(positionSeconds, comment = null) {
+    if (APP_SLUG !== 'musical-kelly' || state.timedCommentBusy) return;
+    state.activeTimedComment = comment;
+    state.timedCommentPositionSeconds = Math.max(0, Number(comment?.positionSeconds ?? positionSeconds) || 0);
+    elements.lyricsTimeCommentKicker.textContent = comment ? 'Editar comentário' : 'Novo comentário';
+    elements.lyricsTimeCommentTime.textContent = formatTime(state.timedCommentPositionSeconds);
+    elements.lyricsTimeCommentReadView.hidden = true;
+    elements.lyricsTimeCommentForm.hidden = false;
+    elements.lyricsTimeCommentInput.value = comment?.text || '';
+    elements.lyricsTimeCommentSave.textContent = comment ? 'Salvar alteração' : 'Salvar comentário';
+    elements.lyricsTimeCommentPanel.hidden = false;
+    window.setTimeout(() => elements.lyricsTimeCommentInput.focus(), 20);
+  }
+
+  function openTimedCommentDetail(comment) {
+    state.activeTimedComment = comment;
+    state.timedCommentPositionSeconds = Math.max(0, Number(comment.positionSeconds) || 0);
+    elements.lyricsTimeCommentKicker.textContent = 'Comentário na faixa';
+    elements.lyricsTimeCommentTime.textContent = formatTime(state.timedCommentPositionSeconds);
+    elements.lyricsTimeCommentText.textContent = comment.text || '';
+    elements.lyricsTimeCommentActions.replaceChildren();
+    if (comment.canEdit === true) {
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'lyrics-time-comment-cancel';
+      edit.textContent = 'Editar';
+      edit.addEventListener('click', () => openTimedCommentComposer(state.timedCommentPositionSeconds, comment));
+      elements.lyricsTimeCommentActions.appendChild(edit);
+    }
+    if (comment.canDelete === true || state.canDeleteComments) {
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'lyrics-time-comment-delete';
+      remove.textContent = 'Apagar';
+      remove.addEventListener('click', () => deleteTimedComment(comment).catch((error) => showToast(error.message, true)));
+      elements.lyricsTimeCommentActions.appendChild(remove);
+    }
+    elements.lyricsTimeCommentForm.hidden = true;
+    elements.lyricsTimeCommentReadView.hidden = false;
+    elements.lyricsTimeCommentPanel.hidden = false;
+  }
+
+  async function saveTimedComment(event) {
+    event.preventDefault();
+    if (state.timedCommentBusy) return;
+    const cardId = state.lyricsCardId;
+    const text = String(elements.lyricsTimeCommentInput.value || '').trim().slice(0, 800);
+    if (!cardId || !text) {
+      elements.lyricsTimeCommentInput.focus();
+      return;
+    }
+    state.timedCommentBusy = true;
+    elements.lyricsTimeCommentSave.disabled = true;
+    try {
+      const comment = state.activeTimedComment;
+      const response = await apiJson(timedCommentEndpoint(cardId, comment?.id || ''), {
+        method: comment ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json', ...commenterRequestHeaders() },
+        body: JSON.stringify({ positionSeconds: state.timedCommentPositionSeconds, text })
+      });
+      state.timedCommentsByCard.set(cardId, Array.isArray(response.comments) ? response.comments : []);
+      closeTimedCommentPanel();
+      renderTimedCommentMarkers();
+      showToast(comment ? 'Comentário atualizado.' : 'Comentário salvo neste momento.');
+    } finally {
+      state.timedCommentBusy = false;
+      elements.lyricsTimeCommentSave.disabled = false;
+    }
+  }
+
+  async function deleteTimedComment(comment) {
+    if (state.timedCommentBusy || !comment?.id) return;
+    if (!window.confirm('Apagar este comentário neste momento da música?')) return;
+    const cardId = state.lyricsCardId;
+    state.timedCommentBusy = true;
+    try {
+      const response = await apiJson(timedCommentEndpoint(cardId, comment.id), {
+        method: 'DELETE',
+        headers: commenterRequestHeaders()
+      });
+      state.timedCommentsByCard.set(cardId, Array.isArray(response.comments) ? response.comments : []);
+      closeTimedCommentPanel();
+      renderTimedCommentMarkers();
+      showToast('Comentário apagado.');
+    } finally {
+      state.timedCommentBusy = false;
+    }
+  }
+
+  function timedCommentPositionFromPointer(event) {
+    const rect = elements.lyricsProgressBar.getBoundingClientRect();
+    const duration = Math.max(0, Number(elements.lyricsSeekSlider.max) || 0);
+    if (!rect.width || !duration) return 0;
+    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    return Math.round(ratio * duration * 1000) / 1000;
+  }
+
+  function cancelTimedCommentHold() {
+    window.clearTimeout(state.timedCommentHoldTimer);
+    state.timedCommentHoldTimer = null;
+    state.timedCommentPointer = null;
+  }
+
   function updateLyricsPlayer() {
     if (elements.lyricsScreen.hidden) return;
     const card = getCard(state.lyricsCardId);
@@ -2373,7 +2658,7 @@
     const isCurrent = state.current?.cardId === card.id;
     const duration = isCurrent
       ? Math.max(0, Number(state.current?.buffer?.duration) || 0)
-      : Math.max(0, Number(state.durations.get(card.audio?.fileName)) || 0);
+      : Math.max(0, cardAudioDuration(card));
     const position = isCurrent ? Math.min(duration || Infinity, currentPosition(state.current)) : 0;
     if (state.manualSync && isCurrent) state.manualSync.lastPosition = position;
     if (!state.lyricsScrubbing) elements.lyricsSeekSlider.value = String(position);
@@ -2510,7 +2795,7 @@
     const audioDuration = Math.max(
       0,
       Number(state.current?.cardId === card.id ? state.current?.buffer?.duration : 0) || 0,
-      Number(state.durations.get(card.audio?.fileName)) || 0
+      cardAudioDuration(card)
     );
     const finalEnd = Math.max(audioDuration, position, sync.marks[sync.marks.length - 1] + 0.1);
     const timings = lines.map((line, index) => ({
@@ -2946,7 +3231,7 @@
 
   function buildPovClips(card, characterId) {
     if (card?.lyrics?.mode !== 'timesync') return [];
-    const duration = Math.max(0, Number(state.durations.get(card.audio?.fileName)) || 0);
+    const duration = cardAudioDuration(card);
     const clips = card.lyrics.lines
       .filter((line) => lineMatchesCharacter(line, characterId) && Number.isFinite(Number(line.start)) && Number.isFinite(Number(line.end)))
       .map((line) => ({
@@ -3136,7 +3421,14 @@
     state.lyricsMicLineId = '';
     if (APP_SLUG === 'englishtraining') startPronunciationRound(target);
     renderLyricsScreen();
-    loadCardDuration(target).then(updateLyricsPlayer).catch(() => {});
+    loadCardDuration(target).then(() => {
+      updateLyricsPlayer();
+      renderTimedCommentMarkers();
+    }).catch(() => {});
+    if (APP_SLUG === 'musical-kelly') {
+      closeTimedCommentPanel();
+      loadTimedComments(target.id).catch((error) => showToast(error.message || 'Não foi possível carregar os comentários desta faixa.', true));
+    }
     if (APP_SLUG === 'englishtraining') return;
     await ensureLyricsCardAt(target, 0);
     cancelAutoAdvance();
@@ -3895,7 +4187,7 @@
 
   async function isCardCached(card) {
     if (!card?.audio) return false;
-    const audioReady = await isAssetCached(card.audio);
+    const audioReady = (await Promise.all(cardAudioTracks(card).map((track) => isAssetCached(track)))).every(Boolean);
     const imageReady = !card.image || await isAssetCached(card.image);
     const characterImagesReady = await areCardCharacterImagesCached(card);
     return audioReady && imageReady && characterImagesReady;
@@ -3929,7 +4221,7 @@
     if (!quiet) setStatus(`Baixando “${cardPublicLabel(card)}” para este aparelho…`, true);
     try {
       await requestPersistentStorage();
-      await cacheAsset(card.audio);
+      await Promise.all(cardAudioTracks(card).map(cacheAsset));
       await cacheAsset(card.image);
       await cacheCardCharacterImages(card);
       saveProjectSnapshot(state.project);
@@ -4098,7 +4390,7 @@
     if (!Number.isFinite(duration) || duration <= 0) return;
     voice.buffer.duration = duration;
     const card = getCard(voice.cardId);
-    if (card?.audio?.fileName) state.durations.set(card.audio.fileName, duration);
+    if (card) state.cardDurations.set(`card:${card.id}:${cardAudioFingerprint(card)}`, duration);
     updatePlayerBar();
   }
 
@@ -4150,10 +4442,15 @@
     }
     media.pause();
     media.volume = 1;
-    media.src = absoluteUrl(sourceUrl || card.audio.url);
+    let nativeUrl = sourceUrl || card.audio.url;
+    if (cardAudioTracks(card).length > 1) {
+      const combined = await loadAudioBuffer(card);
+      nativeUrl = URL.createObjectURL(new Blob([audioBufferToWav(combined)], { type: 'audio/wav' }));
+    }
+    media.src = absoluteUrl(nativeUrl);
     media.load();
 
-    const knownDuration = Math.max(0, Number(state.durations.get(card.audio.fileName)) || 0);
+    const knownDuration = Math.max(0, cardAudioDuration(card));
     const voice = {
       cardId: card.id,
       native: true,
@@ -4222,22 +4519,36 @@
 
   async function loadAudioBuffer(card, { forceR2 = false } = {}) {
     if (!card?.audio?.url) throw new Error('Este container ainda não tem música.');
-    const key = card.audio.fileName;
+    const tracks = cardAudioTracks(card);
+    const key = `card:${card.id}:${cardAudioFingerprint(card)}`;
     if (forceR2) state.bufferPromises.delete(key);
     if (!state.bufferPromises.has(key)) {
       const promise = (async () => {
         const context = await getAudioContext();
-        const response = await fetchAssetResponse(card.audio, forceR2
-          ? { forceNetwork: true, sourceUrl: manualSyncAudioUrl(card) }
-          : {});
-        const bytes = await response.arrayBuffer();
-        let buffer;
-        try {
-          buffer = await decodeAudioBytes(context, bytes.slice(0));
-        } catch (_error) {
-          throw new Error('Este áudio não pôde ser aberto neste navegador. Para iPhone, prefira MP3 ou M4A/AAC.');
+        const decoded = await Promise.all(tracks.map(async (track, index) => {
+          const response = await fetchAssetResponse(track, forceR2
+            ? { forceNetwork: true, ...(tracks.length === 1 ? { sourceUrl: manualSyncAudioUrl(card) } : {}) }
+            : {});
+          const bytes = await response.arrayBuffer();
+          try { return await decodeAudioBytes(context, bytes.slice(0)); }
+          catch (_error) { throw new Error('Este áudio não pôde ser aberto neste navegador. Para iPhone, prefira MP3 ou M4A/AAC.'); }
+        }));
+        let buffer = decoded[0];
+        if (decoded.length > 1) {
+          const channels = Math.max(...decoded.map((part) => part.numberOfChannels));
+          const length = decoded.reduce((sum, part) => sum + part.length, 0);
+          buffer = context.createBuffer(channels, length, context.sampleRate);
+          let frameOffset = 0;
+          decoded.forEach((part) => {
+            for (let channel = 0; channel < channels; channel++) {
+              const sourceChannel = part.getChannelData(Math.min(channel, part.numberOfChannels - 1));
+              buffer.getChannelData(channel).set(sourceChannel, frameOffset);
+            }
+            frameOffset += part.length;
+          });
         }
-        state.durations.set(key, buffer.duration);
+        tracks.forEach((track, index) => state.durations.set(track.fileName, decoded[index].duration));
+        state.cardDurations.set(`card:${card.id}:${cardAudioFingerprint(card)}`, buffer.duration);
         return buffer;
       })().catch((error) => {
         state.bufferPromises.delete(key);
@@ -4267,7 +4578,7 @@
   function releaseAudioBuffer(cardId) {
     if (!cardId || state.current?.cardId === cardId || state.autoAdvance?.nextVoice?.cardId === cardId) return;
     const card = getCard(cardId);
-    if (card?.audio?.fileName) state.bufferPromises.delete(card.audio.fileName);
+    if (card) state.bufferPromises.delete(`card:${card.id}:${cardAudioFingerprint(card)}`);
   }
 
   function createVoice(cardId, buffer, when, offset, initialGain) {
@@ -4641,8 +4952,8 @@
     await startNaturalImmediately(card, buffer);
   }
 
-  async function uploadFile(kind, file) {
-    if (!state.canEdit) throw new Error('Somente o administrador pode enviar arquivos.');
+  async function uploadFile(kind, file, { asTrack = false } = {}) {
+    if (!state.canContribute) throw new Error('Entre na sua conta para enviar arquivos.');
     const card = getCard(state.selectedId);
     if (!card) throw new Error('Selecione um container antes de enviar o arquivo.');
     if (!file) return;
@@ -4658,32 +4969,35 @@
     setStatus(isAudio ? 'Enviando música para o R2…' : 'Enviando imagem para o R2…', true);
     try {
       const query = new URLSearchParams({ cardId: card.id, name: file.name });
+      if (isAudio && asTrack) query.set('asTrack', '1');
       const payload = await apiJson(`${API_ROOT}/assets/${kind}?${query}`, {
         method: 'POST',
         headers: { 'Content-Type': file.type || 'application/octet-stream' },
         body: file
       });
-      card[kind] = payload.asset;
-      if (isAudio) {
+      if (payload.project) state.project = payload.project;
+      else card[kind] = payload.asset;
+      if (isAudio && !asTrack) {
         card.approvedAt = '';
         card.approvedByUserId = 0;
         card.approvedByName = '';
       }
-      if (isAudio && /^Faixa\s+\d+$/i.test(card.title)) {
+      if (isAudio && !asTrack && /^Faixa\s+\d+$/i.test(card.title)) {
         card.title = file.name.replace(/\.[^.]+$/, '').trim().slice(0, 120) || card.title;
       }
       state.downloadStates.set(card.id, 'idle');
       render();
-      await saveProject({ quiet: false });
-      showToast(isAudio ? 'Música salva no R2.' : 'Imagem salva no R2.');
+      showToast(asTrack ? 'Faixa adicionada à música.' : (isAudio ? 'Música salva no R2.' : 'Imagem salva no R2.'));
+      if (asTrack) renderAudioTracksDialog(card.id);
     } finally {
       state.uploading = false;
+      state.uploadAudioAsTrack = false;
       (isAudio ? elements.audioInput : elements.imageInput).value = '';
     }
   }
 
   function openPicker(kind) {
-    if (!state.canEdit) return;
+    if (!state.canContribute) return;
     if (!getCard(state.selectedId)) {
       showToast('Selecione um container antes de enviar o arquivo.', true);
       return;
@@ -5307,8 +5621,26 @@
     elements.lyricsForwardButton.addEventListener('click', () => {
       seekLyricsRelative(5).catch((error) => showToast(error.message, true));
     });
-    elements.lyricsSeekSlider.addEventListener('pointerdown', () => {
+    elements.lyricsSeekSlider.addEventListener('pointerdown', (event) => {
       state.lyricsScrubbing = true;
+      if (APP_SLUG !== 'musical-kelly' || elements.lyricsSeekSlider.disabled || state.manualSync) return;
+      cancelTimedCommentHold();
+      const pointer = { x: event.clientX, y: event.clientY };
+      state.timedCommentPointer = pointer;
+      state.timedCommentHoldTimer = window.setTimeout(() => {
+        state.timedCommentHoldTimer = null;
+        state.timedCommentHoldTriggered = true;
+        state.lyricsScrubbing = false;
+        elements.lyricsSeekSlider.value = String(currentLyricsPosition());
+        updateLyricsPlayer();
+        openTimedCommentComposer(timedCommentPositionFromPointer({ clientX: pointer.x }));
+      }, TIMED_COMMENT_HOLD_MS);
+    });
+    elements.lyricsSeekSlider.addEventListener('pointermove', (event) => {
+      const pointer = state.timedCommentPointer;
+      if (pointer && Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 10) {
+        cancelTimedCommentHold();
+      }
     });
     elements.lyricsSeekSlider.addEventListener('input', () => {
       state.lyricsScrubbing = true;
@@ -5318,6 +5650,11 @@
       const card = getCard(state.lyricsCardId);
       const target = Number(elements.lyricsSeekSlider.value || 0);
       state.lyricsScrubbing = false;
+      if (state.timedCommentHoldTriggered) {
+        state.timedCommentHoldTriggered = false;
+        updateLyricsPlayer();
+        return;
+      }
       if (!card) return;
       const operation = state.selectedCharacterId
         ? (() => {
@@ -5328,6 +5665,14 @@
           })()
         : ensureLyricsCardAt(card, target);
       operation.catch((error) => showToast(error.message, true));
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((eventName) => {
+      elements.lyricsSeekSlider.addEventListener(eventName, cancelTimedCommentHold);
+    });
+    elements.lyricsTimeCommentClose.addEventListener('click', closeTimedCommentPanel);
+    elements.lyricsTimeCommentCancel.addEventListener('click', closeTimedCommentPanel);
+    elements.lyricsTimeCommentForm.addEventListener('submit', (event) => {
+      saveTimedComment(event).catch((error) => showToast(error.message || 'Não foi possível salvar o comentário.', true));
     });
     document.addEventListener('click', (event) => {
       if (!event.target.closest('#characterMenu')) elements.characterMenu.hidden = true;
@@ -5340,8 +5685,16 @@
     });
     elements.chooseAudioButton.addEventListener('click', () => openPicker('audio'));
     elements.containerUploadAudio.addEventListener('click', () => {
+      const card = getCard(state.selectedId);
       closeContainerUploadMenu();
-      openPicker('audio');
+      if (card?.audio && !state.canEdit) {
+        renderAudioTracksDialog(card.id);
+      } else if (card?.audio && cardAudioTracks(card).length > 1) {
+        renderAudioTracksDialog(card.id);
+      } else {
+        state.uploadAudioAsTrack = !state.canEdit;
+        openPicker('audio');
+      }
     });
     elements.containerUploadImage.addEventListener('click', () => {
       closeContainerUploadMenu();
@@ -5357,8 +5710,13 @@
       render();
     });
     elements.audioInput.addEventListener('change', () => {
-      uploadFile('audio', elements.audioInput.files?.[0]).catch((error) => showToast(error.message, true));
+      uploadFile('audio', elements.audioInput.files?.[0], { asTrack: state.uploadAudioAsTrack }).catch((error) => showToast(error.message, true));
     });
+    elements.audioTracksAddButton.addEventListener('click', () => {
+      state.uploadAudioAsTrack = true;
+      elements.audioInput.click();
+    });
+    elements.audioTracksCloseButton.addEventListener('click', () => closeDialog(elements.audioTracksDialog));
     elements.imageInput.addEventListener('change', () => {
       uploadFile('image', elements.imageInput.files?.[0]).catch((error) => showToast(error.message, true));
     });

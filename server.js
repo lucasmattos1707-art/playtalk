@@ -16256,6 +16256,16 @@ function normalizeMusicalKellyProject(payload) {
       .map(normalizeMusicalKellyComment)
       .filter(Boolean);
     const image = normalizeMusicalKellyAsset(source?.image, 'image');
+    const audioTracks = (Array.isArray(source?.audioTracks) ? source.audioTracks : [])
+      .map((track) => normalizeMusicalKellyAsset(track, 'audio'))
+      .filter(Boolean)
+      .slice(0, 50)
+      .map((track, index) => ({
+        ...track,
+        createdByUserId: Math.max(0, Number.parseInt(source?.audioTracks?.[index]?.createdByUserId, 10) || 0)
+      }));
+    const audio = normalizeMusicalKellyAsset(source?.audio, 'audio') || audioTracks[0] || null;
+    const normalizedTracks = audioTracks.length ? audioTracks : (audio ? [{ ...audio, createdByUserId: 0 }] : []);
     const imageGenerationStatus = image
       ? ''
       : (source?.imageGenerationStatus === 'pending'
@@ -16264,7 +16274,8 @@ function normalizeMusicalKellyProject(payload) {
     cards.push({
       id,
       title: String(source?.title || 'Faixa').trim().slice(0, 120) || 'Faixa',
-      audio: normalizeMusicalKellyAsset(source?.audio, 'audio'),
+      audio,
+      audioTracks: normalizedTracks,
       image,
       createdByUserId: Math.max(0, Number.parseInt(source?.createdByUserId, 10) || 0),
       createdByName: String(source?.createdByName || '').trim().slice(0, 64),
@@ -16292,7 +16303,45 @@ const musicalKellyProjectMutationQueues = new Map();
 const musicalKellyNotificationMutationQueues = new Map();
 const musicalKellyProjectCaches = new Map();
 const musicalKellyCharacterSchemaReadyPromises = new Map();
+let musicalKellyTimedCommentSchemaReadyPromise = null;
 let englishTrainingPronunciationRoundsReadyPromise = null;
+
+async function ensureMusicalKellyTimedCommentSchema() {
+  if (!pool) {
+    const error = new Error('O PostgreSQL ainda não está disponível.');
+    error.statusCode = 503;
+    throw error;
+  }
+  if (!musicalKellyTimedCommentSchemaReadyPromise) {
+    musicalKellyTimedCommentSchemaReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.musical_kelly_timed_comments (
+          id text PRIMARY KEY,
+          card_id text NOT NULL,
+          position_seconds numeric(10, 3) NOT NULL CHECK (position_seconds >= 0),
+          text varchar(800) NOT NULL,
+          owner_id text NOT NULL,
+          owner_hash text NOT NULL CHECK (length(owner_hash) = 64),
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS musical_kelly_timed_comments_card_time_idx
+        ON public.musical_kelly_timed_comments (card_id, position_seconds, created_at)
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS musical_kelly_timed_comments_owner_card_idx
+        ON public.musical_kelly_timed_comments (owner_id, owner_hash, card_id, position_seconds)
+      `);
+      return true;
+    })().catch((error) => {
+      musicalKellyTimedCommentSchemaReadyPromise = null;
+      throw error;
+    });
+  }
+  return musicalKellyTimedCommentSchemaReadyPromise;
+}
 
 async function ensureEnglishTrainingPronunciationRoundsTable() {
   if (!pool) {
@@ -16569,12 +16618,25 @@ function publicMusicalKellyComment(comment) {
   };
 }
 
-function hydrateMusicalKellyProject(project) {
+function hydrateMusicalKellyProject(project, authUser = null) {
   return {
     ...project,
     cards: (Array.isArray(project?.cards) ? project.cards : []).map((card) => ({
       ...card,
-      audio: card.audio ? { ...card.audio, url: musicalKellyAssetUrl('audio', card.audio.fileName) } : null,
+      audio: card.audio ? {
+        fileName: card.audio.fileName, name: card.audio.name, contentType: card.audio.contentType,
+        size: card.audio.size, updatedAt: card.audio.updatedAt,
+        url: musicalKellyAssetUrl('audio', card.audio.fileName)
+      } : null,
+      audioTracks: (Array.isArray(card.audioTracks) ? card.audioTracks : []).map((track) => ({
+        fileName: track.fileName,
+        name: track.name,
+        contentType: track.contentType,
+        size: track.size,
+        updatedAt: track.updatedAt,
+        url: musicalKellyAssetUrl('audio', track.fileName),
+        canManage: isAdminUserRecord(authUser) || (Number(authUser?.id) > 0 && Number(track.createdByUserId) === Number(authUser.id))
+      })),
       image: card.image ? { ...card.image, url: musicalKellyAssetUrl('image', card.image.fileName) } : null,
       comments: (Array.isArray(card.comments) ? card.comments : [])
         .map(publicMusicalKellyComment)
@@ -16617,6 +16679,47 @@ function musicalKellyCommenterFromRequest(req) {
       ? crypto.createHash('sha256').update(`${ownerId}:${ownerToken}`, 'utf8').digest('hex')
       : ''
   };
+}
+
+function publicMusicalKellyTimedComment(row, authUser, commenter) {
+  const isOwner = Boolean(
+    commenter?.ownerId
+    && commenter?.ownerHash
+    && String(row?.owner_id || '') === commenter.ownerId
+    && String(row?.owner_hash || '').trim() === commenter.ownerHash
+  );
+  const isAdmin = isAdminUserRecord(authUser);
+  return {
+    id: String(row?.id || ''),
+    positionSeconds: Math.max(0, Number(row?.position_seconds) || 0),
+    text: String(row?.text || '').slice(0, MUSICAL_KELLY_MAX_COMMENT_LENGTH),
+    createdAt: row?.created_at instanceof Date ? row.created_at.toISOString() : String(row?.created_at || ''),
+    updatedAt: row?.updated_at instanceof Date ? row.updated_at.toISOString() : String(row?.updated_at || ''),
+    canEdit: isOwner,
+    canDelete: isOwner || isAdmin
+  };
+}
+
+async function readMusicalKellyTimedComments(cardId, authUser, commenter) {
+  await ensureMusicalKellyTimedCommentSchema();
+  const isAdmin = isAdminUserRecord(authUser);
+  if (isAdmin) {
+    const result = await pool.query(`
+      SELECT id, position_seconds, text, owner_id, owner_hash, created_at, updated_at
+      FROM public.musical_kelly_timed_comments
+      WHERE card_id = $1
+      ORDER BY position_seconds, created_at, id
+    `, [cardId]);
+    return result.rows.map((row) => publicMusicalKellyTimedComment(row, authUser, commenter));
+  }
+  if (!commenter?.ownerId || !commenter?.ownerHash) return [];
+  const result = await pool.query(`
+    SELECT id, position_seconds, text, owner_id, owner_hash, created_at, updated_at
+    FROM public.musical_kelly_timed_comments
+    WHERE card_id = $1 AND owner_id = $2 AND owner_hash = $3
+    ORDER BY position_seconds, created_at, id
+  `, [cardId, commenter.ownerId, commenter.ownerHash]);
+  return result.rows.map((row) => publicMusicalKellyTimedComment(row, authUser, commenter));
 }
 
 function canMutateMusicalKellyCommentEntry(entry, authUser, commenter) {
@@ -27089,7 +27192,7 @@ app.get(musicalKellyApiPaths('/project'), async (req, res) => {
       unreadCardIds,
       unreadCount: unreadCardIds.length,
       characters,
-      project: hydrateMusicalKellyProject(project)
+      project: hydrateMusicalKellyProject(project, authUser)
     });
   } catch (error) {
     console.error('Erro ao carregar musical Kelly:', error);
@@ -27126,8 +27229,14 @@ app.put(musicalKellyApiPaths('/project'), async (req, res) => {
           if (!currentCard) return { ...card, publishedAt };
           const audioPublished = Boolean(card.audio?.fileName)
             && String(currentCard.audio?.fileName || '') !== String(card.audio.fileName);
+          const priorTracks = new Map((currentCard.audioTracks || []).map((track) => [track.fileName, track]));
+          const audioTracks = (card.audioTracks || []).map((track) => ({
+            ...track,
+            createdByUserId: Number(priorTracks.get(track.fileName)?.createdByUserId ?? track.createdByUserId) || 0
+          }));
           return {
             ...card,
+            audioTracks,
             createdByUserId: currentCard.createdByUserId,
             createdByName: currentCard.createdByName,
             createdAt: currentCard.createdAt,
@@ -27510,6 +27619,149 @@ app.patch(musicalKellyApiPaths('/cards/:cardId/comments/:commentId/replies/:repl
       success: false,
       message: error?.message || 'Nao foi possivel editar a resposta.'
     });
+  }
+});
+
+app.get(musicalKellyApiPaths('/cards/:cardId/time-comments'), async (req, res) => {
+  try {
+    if (currentMusicalKellyWorkspaceSlug() !== 'musical-kelly') {
+      res.status(404).json({ success: false, message: 'Comentários por tempo não estão disponíveis neste espaço.' });
+      return;
+    }
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    if (!cardId) {
+      res.status(400).json({ success: false, message: 'Faixa inválida.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
+    const commenter = musicalKellyCommenterFromRequest(req);
+    const comments = await readMusicalKellyTimedComments(cardId, authUser, commenter);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, comments });
+  } catch (error) {
+    console.error('Erro ao carregar comentários por tempo do Musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({ success: false, message: 'Não foi possível carregar os comentários desta faixa.' });
+  }
+});
+
+app.post(musicalKellyApiPaths('/cards/:cardId/time-comments'), async (req, res) => {
+  try {
+    if (currentMusicalKellyWorkspaceSlug() !== 'musical-kelly') {
+      res.status(404).json({ success: false, message: 'Comentários por tempo não estão disponíveis neste espaço.' });
+      return;
+    }
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const text = String(req.body?.text || '').trim().slice(0, MUSICAL_KELLY_MAX_COMMENT_LENGTH);
+    const positionSeconds = Number(req.body?.positionSeconds);
+    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
+    const commenter = musicalKellyCommenterFromRequest(req);
+    if (!cardId || !text || !Number.isFinite(positionSeconds) || positionSeconds < 0 || positionSeconds > 86400) {
+      res.status(400).json({ success: false, message: 'Escreva um comentário em um tempo válido da faixa.' });
+      return;
+    }
+    if (!commenter.ownerId || !commenter.ownerHash) {
+      res.status(400).json({ success: false, message: 'Não foi possível identificar este aparelho para manter o comentário privado.' });
+      return;
+    }
+    const project = await readMusicalKellyGlobalProject();
+    if (!project.cards.some((card) => card.id === cardId && (card.audio?.fileName || card.audioTracks?.length))) {
+      res.status(404).json({ success: false, message: 'Esta faixa não está disponível.' });
+      return;
+    }
+    await ensureMusicalKellyTimedCommentSchema();
+    const id = `time-${crypto.randomBytes(12).toString('hex')}`;
+    await pool.query(`
+      INSERT INTO public.musical_kelly_timed_comments
+        (id, card_id, position_seconds, text, owner_id, owner_hash)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `, [id, cardId, Math.round(positionSeconds * 1000) / 1000, text, commenter.ownerId, commenter.ownerHash]);
+    const comments = await readMusicalKellyTimedComments(cardId, authUser, commenter);
+    res.status(201).json({ success: true, comments });
+  } catch (error) {
+    console.error('Erro ao salvar comentário por tempo do Musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({ success: false, message: 'Não foi possível salvar este comentário.' });
+  }
+});
+
+app.patch(musicalKellyApiPaths('/cards/:cardId/time-comments/:commentId'), async (req, res) => {
+  try {
+    if (currentMusicalKellyWorkspaceSlug() !== 'musical-kelly') {
+      res.status(404).json({ success: false, message: 'Comentários por tempo não estão disponíveis neste espaço.' });
+      return;
+    }
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const commentId = normalizeMusicalKellyCardId(req.params.commentId);
+    const text = String(req.body?.text || '').trim().slice(0, MUSICAL_KELLY_MAX_COMMENT_LENGTH);
+    const positionSeconds = Number(req.body?.positionSeconds);
+    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
+    const commenter = musicalKellyCommenterFromRequest(req);
+    if (!cardId || !commentId || !text || !Number.isFinite(positionSeconds) || positionSeconds < 0 || positionSeconds > 86400) {
+      res.status(400).json({ success: false, message: 'Comentário inválido.' });
+      return;
+    }
+    await ensureMusicalKellyTimedCommentSchema();
+    const selected = await pool.query(`
+      SELECT owner_id, owner_hash FROM public.musical_kelly_timed_comments
+      WHERE id = $1 AND card_id = $2
+    `, [commentId, cardId]);
+    const row = selected.rows[0];
+    if (!row) {
+      res.status(404).json({ success: false, message: 'Este comentário não existe mais.' });
+      return;
+    }
+    const isOwner = row.owner_id === commenter.ownerId && String(row.owner_hash || '').trim() === commenter.ownerHash;
+    if (!isOwner && !isAdminUserRecord(authUser)) {
+      res.status(403).json({ success: false, message: 'Você só pode editar seus próprios comentários.' });
+      return;
+    }
+    await pool.query(`
+      UPDATE public.musical_kelly_timed_comments
+      SET position_seconds = $3, text = $4, updated_at = now()
+      WHERE id = $1 AND card_id = $2
+    `, [commentId, cardId, Math.round(positionSeconds * 1000) / 1000, text]);
+    const comments = await readMusicalKellyTimedComments(cardId, authUser, commenter);
+    res.json({ success: true, comments });
+  } catch (error) {
+    console.error('Erro ao editar comentário por tempo do Musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({ success: false, message: 'Não foi possível editar este comentário.' });
+  }
+});
+
+app.delete(musicalKellyApiPaths('/cards/:cardId/time-comments/:commentId'), async (req, res) => {
+  try {
+    if (currentMusicalKellyWorkspaceSlug() !== 'musical-kelly') {
+      res.status(404).json({ success: false, message: 'Comentários por tempo não estão disponíveis neste espaço.' });
+      return;
+    }
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const commentId = normalizeMusicalKellyCardId(req.params.commentId);
+    const authUser = await readAuthenticatedUserFromRequest(req).catch(() => null);
+    const commenter = musicalKellyCommenterFromRequest(req);
+    if (!cardId || !commentId) {
+      res.status(400).json({ success: false, message: 'Comentário inválido.' });
+      return;
+    }
+    await ensureMusicalKellyTimedCommentSchema();
+    const selected = await pool.query(`
+      SELECT owner_id, owner_hash FROM public.musical_kelly_timed_comments
+      WHERE id = $1 AND card_id = $2
+    `, [commentId, cardId]);
+    const row = selected.rows[0];
+    if (!row) {
+      res.status(404).json({ success: false, message: 'Este comentário não existe mais.' });
+      return;
+    }
+    const isOwner = row.owner_id === commenter.ownerId && String(row.owner_hash || '').trim() === commenter.ownerHash;
+    if (!isOwner && !isAdminUserRecord(authUser)) {
+      res.status(403).json({ success: false, message: 'Você só pode apagar seus próprios comentários.' });
+      return;
+    }
+    await pool.query('DELETE FROM public.musical_kelly_timed_comments WHERE id = $1 AND card_id = $2', [commentId, cardId]);
+    const comments = await readMusicalKellyTimedComments(cardId, authUser, commenter);
+    res.json({ success: true, comments });
+  } catch (error) {
+    console.error('Erro ao apagar comentário por tempo do Musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({ success: false, message: 'Não foi possível apagar este comentário.' });
   }
 });
 
@@ -28477,7 +28729,18 @@ app.post(
   express.raw({ type: () => true, limit: `${Math.ceil(MUSICAL_KELLY_MAX_AUDIO_BYTES / (1024 * 1024))}mb` }),
   async (req, res) => {
     try {
-      await requireAdminUserFromRequest(req);
+      const authUser = await readAuthenticatedUserFromRequest(req);
+      if (!authUser) {
+        const error = new Error('Sessao expirada.');
+        error.statusCode = 401;
+        throw error;
+      }
+      const asTrack = String(req.query?.asTrack || '') === '1';
+      if (!asTrack && req.params.kind !== 'image' && !isAdminUserRecord(authUser)) {
+        const error = new Error('Use Adicionar faixa para contribuir com este musical.');
+        error.statusCode = 403;
+        throw error;
+      }
       if (!isR2FluencyConfigured()) {
         res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
         return;
@@ -28539,7 +28802,54 @@ app.post(
         updatedAt: new Date().toISOString(),
         url: musicalKellyAssetUrl(kind, fileName)
       };
-      res.status(201).json({ success: true, asset });
+      if (kind === 'audio') {
+        await queueMusicalKellyProjectMutation(async () => {
+          const project = await readMusicalKellyGlobalProject();
+          const card = project.cards.find((entry) => entry.id === cardId);
+          if (!card) {
+            const error = new Error('Container nao encontrado.');
+            error.statusCode = 404;
+            throw error;
+          }
+          if (asTrack) {
+            const tracks = Array.isArray(card.audioTracks) && card.audioTracks.length
+              ? card.audioTracks
+              : (card.audio ? [{ ...card.audio, createdByUserId: 0 }] : []);
+            const isFirstAudio = tracks.length === 0;
+            tracks.push({ ...asset, createdByUserId: Number(authUser.id) || 0 });
+            card.audioTracks = tracks;
+            card.audio = tracks[0];
+            if (isFirstAudio && /^Faixa\s+\d+$/i.test(card.title)) {
+              card.title = uploadName.displayName.replace(/\.[^.]+$/, '').trim().slice(0, 120) || card.title;
+            }
+          } else {
+            card.audio = asset;
+            card.audioTracks = [{ ...asset, createdByUserId: 0 }];
+            if (/^Faixa\s+\d+$/i.test(card.title)) {
+              card.title = uploadName.displayName.replace(/\.[^.]+$/, '').trim().slice(0, 120) || card.title;
+            }
+            card.publishedAt = new Date().toISOString();
+            card.approvedAt = '';
+            card.approvedByUserId = 0;
+            card.approvedByName = '';
+            card.lyrics = null;
+          }
+          return writeMusicalKellyGlobalProject(project);
+        });
+      } else {
+        await queueMusicalKellyProjectMutation(async () => {
+          const project = await readMusicalKellyGlobalProject();
+          const card = project.cards.find((entry) => entry.id === cardId);
+          if (!card) {
+            const error = new Error('Container nao encontrado.');
+            error.statusCode = 404;
+            throw error;
+          }
+          card.image = asset;
+          return writeMusicalKellyGlobalProject(project);
+        });
+      }
+      res.status(201).json({ success: true, asset, project: hydrateMusicalKellyProject(await readMusicalKellyGlobalProject(), authUser) });
     } catch (error) {
       console.error('Erro ao enviar arquivo do musical Kelly:', error);
       res.status(Number(error?.statusCode) || 500).json({
@@ -28549,6 +28859,61 @@ app.post(
     }
   }
 );
+
+app.patch(musicalKellyApiPaths('/cards/:cardId/audio-tracks/order'), async (req, res) => {
+  try {
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser) { res.status(401).json({ success: false, message: 'Sessao expirada.' }); return; }
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const order = Array.isArray(req.body?.fileNames) ? req.body.fileNames.map(normalizeMusicalKellyAssetFileName) : [];
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const current = await readMusicalKellyGlobalProject();
+      const card = current.cards.find((entry) => entry.id === cardId);
+      if (!card) { const error = new Error('Container nao encontrado.'); error.statusCode = 404; throw error; }
+      const tracks = Array.isArray(card.audioTracks) ? card.audioTracks : (card.audio ? [{ ...card.audio, createdByUserId: 0 }] : []);
+      if (order.length !== tracks.length || new Set(order).size !== tracks.length || order.some((name) => !tracks.some((track) => track.fileName === name))) {
+        const error = new Error('A ordem das faixas esta invalida.'); error.statusCode = 400; throw error;
+      }
+      if (!isAdminUserRecord(authUser)) {
+        const original = tracks.map((track) => track.fileName);
+        const changed = original.map((name, index) => name === order[index] ? -1 : index).filter((index) => index >= 0);
+        if (changed.length !== 2 || changed[1] !== changed[0] + 1
+          || Number(tracks.find((track) => track.fileName === order[changed[0]])?.createdByUserId) !== Number(authUser.id)) {
+          const error = new Error('Voce pode subir uma faixa que adicionou.'); error.statusCode = 403; throw error;
+        }
+      }
+      card.audioTracks = order.map((name) => tracks.find((track) => track.fileName === name));
+      card.audio = card.audioTracks[0] || null;
+      return writeMusicalKellyGlobalProject(current);
+    });
+    res.json({ success: true, project: hydrateMusicalKellyProject(project, authUser) });
+  } catch (error) { res.status(Number(error?.statusCode) || 500).json({ success: false, message: error.message || 'Falha ao ordenar faixas.' }); }
+});
+
+app.delete(musicalKellyApiPaths('/cards/:cardId/audio-tracks/:fileName'), async (req, res) => {
+  try {
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser) { res.status(401).json({ success: false, message: 'Sessao expirada.' }); return; }
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const fileName = normalizeMusicalKellyAssetFileName(req.params.fileName);
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const current = await readMusicalKellyGlobalProject();
+      const card = current.cards.find((entry) => entry.id === cardId);
+      if (!card) { const error = new Error('Container nao encontrado.'); error.statusCode = 404; throw error; }
+      const tracks = Array.isArray(card.audioTracks) ? card.audioTracks : (card.audio ? [{ ...card.audio, createdByUserId: 0 }] : []);
+      const track = tracks.find((entry) => entry.fileName === fileName);
+      if (!track) { const error = new Error('Faixa nao encontrada.'); error.statusCode = 404; throw error; }
+      if (!isAdminUserRecord(authUser) && Number(track.createdByUserId) !== Number(authUser.id)) {
+        const error = new Error('Voce so pode excluir faixas que adicionou.'); error.statusCode = 403; throw error;
+      }
+      card.audioTracks = tracks.filter((entry) => entry.fileName !== fileName);
+      card.audio = card.audioTracks[0] || null;
+      return writeMusicalKellyGlobalProject(current);
+    });
+    try { await deleteR2Object(`${musicalKellyGlobalRoot()}/audio/${fileName}`); } catch (cleanupError) { console.warn('Audio removido do musical, mas arquivo no R2 permaneceu:', cleanupError?.message || cleanupError); }
+    res.json({ success: true, project: hydrateMusicalKellyProject(project, authUser) });
+  } catch (error) { res.status(Number(error?.statusCode) || 500).json({ success: false, message: error.message || 'Falha ao excluir faixa.' }); }
+});
 
 app.get(musicalKellyApiPaths('/assets/:kind/:fileName'), async (req, res) => {
   try {
