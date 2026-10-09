@@ -316,6 +316,7 @@
     title.textContent = item.title;
     const editing = notesMode === 'new' || notesMode === 'edit';
     heading.textContent = editing ? (notesMode === 'new' ? 'Nova nota' : 'Editar nota') : (notesDraft.length ? 'Notas da tarefa' : 'Adicione uma nota');
+    heading.hidden = !notesDraft.length && !editing;
     text.textContent = notesDraft.length ? note : 'Adicione uma nota';
     text.hidden = editing;
     text.classList.remove('note-slide-next', 'note-slide-previous');
@@ -354,7 +355,7 @@
       });
       state = { categories: Array.isArray(payload.categories) ? payload.categories : [] };
       render();
-      renderNotesDialog(delta < 0 ? 1 : -1);
+      renderNotesDialog();
     } catch (saveError) {
       error.textContent = saveError.message || 'Não foi possível salvar as notas.';
       error.hidden = false;
