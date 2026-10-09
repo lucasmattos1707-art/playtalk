@@ -94,8 +94,9 @@
       <button class="dialog-close" type="button" id="closeSubtaskDialog" aria-label="Fechar">×</button>
       <span class="dialog-icon" aria-hidden="true">📂</span>
       <h2>Criar subtarefa</h2>
-      <label for="newSubtaskTitle">Nome da subtarefa</label>
-      <input id="newSubtaskTitle" name="title" maxlength="240" placeholder="Nome da tarefa" required>
+      <label for="newSubtaskTitle">Uma subtarefa por linha</label>
+      <textarea id="newSubtaskTitle" name="titles" rows="5" maxlength="26000" placeholder="Ex.:&#10;Conferir figurinos&#10;Separar acessórios&#10;Organizar camarim" required></textarea>
+      <p class="subtask-error" id="subtaskError" role="status" hidden></p>
       <button class="dialog-submit" type="submit">Criar subtarefa <span aria-hidden="true">↗</span></button>
     </form>
   </dialog>

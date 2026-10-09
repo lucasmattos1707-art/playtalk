@@ -29659,36 +29659,71 @@ app.post('/api/oz/checklist/categories/:categoryId/items', async (req, res) => {
 });
 
 app.post('/api/oz/checklist/items/:itemId/subtasks', async (req, res) => {
+  let client;
   try {
     const actor = await getOzMember(req);
     if (!actor?.isKelly) return res.status(actor ? 403 : 401).json({ success: false, message: 'Somente Kelly pode adicionar tarefas.' });
     await ensureOzChecklistSchema();
     const parentId = String(req.params.itemId || '').slice(0, 120);
-    const title = typeof req.body?.title === 'string' ? req.body.title.trim().slice(0, 240) : '';
-    if (!title) return res.status(400).json({ success: false, message: 'Digite o nome da subtarefa.' });
-    const result = await pool.query(`
+    const rawTitles = Array.isArray(req.body?.titles)
+      ? req.body.titles
+      : (typeof req.body?.title === 'string' ? req.body.title.split(/\r?\n/) : []);
+    if (rawTitles.some((title) => typeof title !== 'string')) {
+      return res.status(400).json({ success: false, message: 'Cada linha deve conter o nome de uma subtarefa.' });
+    }
+    const titles = rawTitles.map((title) => title.trim()).filter(Boolean);
+    if (!titles.length) return res.status(400).json({ success: false, message: 'Digite o nome de pelo menos uma subtarefa.' });
+    if (titles.length > 100) return res.status(400).json({ success: false, message: 'Adicione até 100 subtarefas por vez.' });
+    if (titles.some((title) => title.length > 240)) {
+      return res.status(400).json({ success: false, message: 'Cada subtarefa pode ter até 240 caracteres.' });
+    }
+
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const parentResult = await client.query(`
+      SELECT id, category_id, group_label, assignee_id
+        FROM public.oz_checklist_items
+       WHERE id = $1
+       FOR UPDATE
+    `, [parentId]);
+    if (!parentResult.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, message: 'Tarefa pai não encontrada.' });
+    }
+    const parent = parentResult.rows[0];
+    const childrenResult = await client.query(`
+      SELECT COUNT(*)::int AS count, COALESCE(MAX(sort_order), -1)::int AS max_order
+        FROM public.oz_checklist_items
+       WHERE parent_item_id = $1
+    `, [parent.id]);
+    const children = childrenResult.rows[0];
+    if (children.count + titles.length > 500) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ success: false, message: 'O limite de sub tarefas foi atingido.' });
+    }
+
+    const values = [];
+    const rows = titles.map((title, index) => {
+      const offset = values.length;
+      values.push(crypto.randomUUID(), parent.category_id, parent.group_label, title,
+        children.max_order + index + 1, parent.id, parent.assignee_id);
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`;
+    });
+    await client.query(`
       INSERT INTO public.oz_checklist_items
         (id, category_id, group_label, title, sort_order, parent_item_id, assignee_id)
-      SELECT $1, parent.category_id, parent.group_label, $2,
-             COALESCE(MAX(child.sort_order), -1) + 1, parent.id, parent.assignee_id
-        FROM public.oz_checklist_items parent
-        LEFT JOIN public.oz_checklist_items child ON child.parent_item_id = parent.id
-       WHERE parent.id = $3
-       GROUP BY parent.id
-      HAVING COUNT(child.id) < 500
-      RETURNING id
-    `, [crypto.randomUUID(), title, parentId]);
-    if (!result.rows.length) {
-      const parent = await pool.query('SELECT 1 FROM public.oz_checklist_items WHERE id = $1', [parentId]);
-      return res.status(parent.rows.length ? 409 : 404).json({
-        success: false,
-        message: parent.rows.length ? 'O limite de sub tarefas foi atingido.' : 'Tarefa pai não encontrada.'
-      });
-    }
+      VALUES ${rows.join(', ')}
+    `, values);
+    await client.query('COMMIT');
     res.status(201).json({ success: true, ...(await readOzChecklist(actor)) });
   } catch (error) {
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch {}
+    }
     console.error('Erro ao adicionar subtarefa ao checklist de Oz:', error);
     res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível adicionar a subtarefa.' });
+  } finally {
+    client?.release();
   }
 });
 

@@ -525,14 +525,26 @@
   subtaskForm.addEventListener('submit', (event) => {
     event.preventDefault();
     if (!activeMember?.isKelly || !subtaskParentId) return;
-    const title = String(new FormData(subtaskForm).get('title') || '').trim();
-    if (!title) return;
+    const titles = String(new FormData(subtaskForm).get('titles') || '')
+      .split(/\r?\n/)
+      .map((title) => title.trim())
+      .filter(Boolean);
+    const error = document.getElementById('subtaskError');
+    const showError = (message) => {
+      error.textContent = message;
+      error.hidden = false;
+    };
+    error.textContent = '';
+    error.hidden = true;
+    if (!titles.length) return showError('Digite pelo menos uma subtarefa.');
+    if (titles.length > 100) return showError('Adicione até 100 subtarefas por vez.');
+    if (titles.some((title) => title.length > 240)) return showError('Cada subtarefa pode ter até 240 caracteres.');
     const parentId = subtaskParentId;
     subtaskParentId = '';
     subtaskDialog.close();
     openedCategories.add(`task:${parentId}`);
     persistOpened();
-    mutate(`/api/oz/checklist/items/${encodeURIComponent(parentId)}/subtasks`, 'POST', { title });
+    mutate(`/api/oz/checklist/items/${encodeURIComponent(parentId)}/subtasks`, 'POST', { titles });
   });
   document.getElementById('newCategoryForm').addEventListener('submit', (event) => {
     event.preventDefault();

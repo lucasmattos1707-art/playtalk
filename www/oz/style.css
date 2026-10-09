@@ -110,6 +110,9 @@ h1 span { color: #aa8aff; background: linear-gradient(95deg, #c5a7ff, #9274ff 63
 .category-dialog h2 { margin: 0 0 10px; font-family: var(--display); font-size: 24px; letter-spacing: -.04em; }
 .category-dialog label { margin-top: 2px; color: #a0a4ae; font-size: 10px; }
 .category-dialog input, .category-dialog select { padding: 12px; font-size: 12px; }
+.subtask-dialog textarea { width: 100%; min-height: 126px; resize: vertical; padding: 12px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 9px; outline: none; background: #10131a; color: #f0f1f5; font: inherit; font-size: 12px; line-height: 1.55; }
+.subtask-dialog textarea:focus { border-color: rgba(119, 239, 157, .65); box-shadow: 0 0 0 3px rgba(76, 228, 130, .08); }
+.subtask-error { margin: 0; color: #ed9d9d; font-size: 11px; }
 .dialog-submit { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding: 13px 15px; border: 0; border-radius: 10px; background: linear-gradient(100deg, #a9f6ad, #66e8a0); color: #082719; font-size: 11px; font-weight: 800; cursor: pointer; }
 .dialog-submit span { font-size: 17px; }
 .toast { position: fixed; z-index: 5; right: 22px; bottom: 22px; max-width: min(370px, calc(100vw - 44px)); padding: 12px 16px; transform: translateY(15px); border: 1px solid rgba(133, 244, 165, .25); border-radius: 11px; opacity: 0; background: #17251d; color: #c5f9d2; font-size: 11px; box-shadow: 0 12px 40px rgba(0,0,0,.3); pointer-events: none; transition: opacity .2s, transform .2s; }
