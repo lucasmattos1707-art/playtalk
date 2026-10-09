@@ -16329,6 +16329,14 @@ async function ensureOzChecklistSchema() {
         )
       `);
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.oz_checklist_members (
+          id text PRIMARY KEY,
+          name varchar(60) NOT NULL,
+          name_key varchar(60) NOT NULL UNIQUE,
+          created_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
         CREATE TABLE IF NOT EXISTS public.oz_checklist_items (
           id text PRIMARY KEY,
           category_id text NOT NULL REFERENCES public.oz_checklist_categories(id) ON DELETE CASCADE,
@@ -16339,6 +16347,10 @@ async function ensureOzChecklistSchema() {
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now()
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.oz_checklist_items
+        ADD COLUMN IF NOT EXISTS assignee_id text REFERENCES public.oz_checklist_members(id) ON DELETE SET NULL
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS oz_checklist_items_category_order_idx
@@ -16401,9 +16413,11 @@ async function readOzChecklist() {
     SELECT c.id AS category_id, c.title AS category_title, c.icon AS category_icon,
            c.groups AS category_groups, c.is_completed AS category_completed,
            c.sort_order AS category_order, i.id AS item_id, i.group_label AS item_group,
-           i.title AS item_title, i.is_completed AS item_completed, i.sort_order AS item_order
+           i.title AS item_title, i.is_completed AS item_completed, i.sort_order AS item_order,
+           i.assignee_id, m.name AS assignee_name
       FROM public.oz_checklist_categories c
       LEFT JOIN public.oz_checklist_items i ON i.category_id = c.id
+      LEFT JOIN public.oz_checklist_members m ON m.id = i.assignee_id
      ORDER BY c.sort_order, c.created_at, i.sort_order, i.created_at
   `);
   const categoriesById = new Map();
@@ -16425,7 +16439,9 @@ async function readOzChecklist() {
         id: row.item_id,
         group: row.item_group || '',
         title: row.item_title,
-        completed: Boolean(row.item_completed)
+        completed: Boolean(row.item_completed),
+        assigneeId: row.assignee_id || null,
+        assigneeName: row.assignee_name || ''
       });
     }
   }
@@ -29375,6 +29391,76 @@ app.get('/api/oz/checklist', async (_req, res) => {
   }
 });
 
+app.get('/api/oz/team', async (_req, res) => {
+  try {
+    await ensureOzChecklistSchema();
+    const result = await pool.query(`
+      SELECT id, name FROM public.oz_checklist_members
+       ORDER BY lower(name), created_at, id
+    `);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, members: result.rows || [] });
+  } catch (error) {
+    console.error('Erro ao carregar a equipe de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível carregar a equipe.' });
+  }
+});
+
+app.post('/api/oz/team/login', async (req, res) => {
+  try {
+    await ensureOzChecklistSchema();
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim().replace(/\s+/g, ' ').slice(0, 60) : '';
+    if (!name) {
+      res.status(400).json({ success: false, message: 'Digite seu nome.' });
+      return;
+    }
+    const nameKey = name.toLocaleLowerCase('pt-BR');
+    const result = await pool.query(`
+      SELECT id, name FROM public.oz_checklist_members WHERE name_key = $1
+    `, [nameKey]);
+    if (!result.rows.length) {
+      res.status(404).json({ success: false, message: 'Esse nome ainda não está na equipe.' });
+      return;
+    }
+    res.json({ success: true, member: result.rows[0] });
+  } catch (error) {
+    console.error('Erro ao acessar a equipe de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível verificar o nome agora.' });
+  }
+});
+
+app.post('/api/oz/team/members', async (req, res) => {
+  try {
+    await ensureOzChecklistSchema();
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim().replace(/\s+/g, ' ').slice(0, 60) : '';
+    if (name.length < 2) {
+      res.status(400).json({ success: false, message: 'Digite um nome com pelo menos 2 caracteres.' });
+      return;
+    }
+    const memberId = crypto.randomUUID();
+    const nameKey = name.toLocaleLowerCase('pt-BR');
+    const result = await pool.query(`
+      INSERT INTO public.oz_checklist_members (id, name, name_key)
+      SELECT $1, $2, $3
+       WHERE (SELECT COUNT(*) FROM public.oz_checklist_members) < 100
+      ON CONFLICT (name_key) DO NOTHING
+      RETURNING id, name
+    `, [memberId, name, nameKey]);
+    if (!result.rows.length) {
+      const duplicate = await pool.query('SELECT id, name FROM public.oz_checklist_members WHERE name_key = $1', [nameKey]);
+      res.status(duplicate.rows.length ? 409 : 409).json({
+        success: false,
+        message: duplicate.rows.length ? 'Esse nome já está na equipe.' : 'O limite de 100 integrantes foi atingido.'
+      });
+      return;
+    }
+    res.status(201).json({ success: true, member: result.rows[0] });
+  } catch (error) {
+    console.error('Erro ao adicionar integrante à equipe de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível adicionar o integrante.' });
+  }
+});
+
 app.post('/api/oz/checklist/categories', async (req, res) => {
   try {
     await ensureOzChecklistSchema();
@@ -29504,6 +29590,19 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
       }
       values.push(title);
       sets.push(`title = $${values.length}`);
+    }
+    if (req.body?.assigneeId === null || typeof req.body?.assigneeId === 'string') {
+      let assigneeId = req.body.assigneeId;
+      if (typeof assigneeId === 'string') {
+        assigneeId = assigneeId.trim().slice(0, 100);
+        const member = await pool.query('SELECT 1 FROM public.oz_checklist_members WHERE id = $1', [assigneeId]);
+        if (!member.rows.length) {
+          res.status(404).json({ success: false, message: 'Integrante não encontrado.' });
+          return;
+        }
+      }
+      values.push(assigneeId);
+      sets.push(`assignee_id = $${values.length}`);
     }
     if (!sets.length) {
       res.status(400).json({ success: false, message: 'Nenhuma alteração informada.' });

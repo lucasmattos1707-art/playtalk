@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#08090d">
   <meta name="description" content="Checklist colaborativo do espetáculo de Oz.">
-  <title>Espetáculo de Oz | Checklist</title>
+  <title>CheckList Mestre</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,42 +17,39 @@
   <div class="ambient ambient--two" aria-hidden="true"></div>
   <main class="page-shell">
     <header class="topline">
-      <a class="brand" href="/oz" aria-label="Checklist do espetáculo de Oz">
-        <span class="brand-mark" aria-hidden="true">OZ</span>
-        <span><strong>ESPETÁCULO</strong><small>PRODUÇÃO COLABORATIVA</small></span>
-      </a>
-      <button class="add-category" id="openCategoryDialog" type="button" aria-label="Adicionar categoria" title="Adicionar categoria"><span aria-hidden="true">+</span></button>
+      <button class="team-account" id="openTeamDialog" type="button" aria-label="Abrir equipe">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.3"></circle><path d="M5.5 20c.3-4 2.6-6 6.5-6s6.2 2 6.5 6"></path></svg>
+        <span id="currentMemberLabel">Equipe</span>
+      </button>
     </header>
 
-    <section class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow"><span class="eyebrow-dot"></span> CADA DETALHE FAZ A MÁGICA</p>
-        <h1>O caminho para<br><span>o grande espetáculo.</span></h1>
-        <p class="hero-description">Um plano feito por todos, para que cada momento em Oz brilhe no palco.</p>
-      </div>
+    <section class="page-intro">
+      <div class="page-title"><h1>CheckList Mestre</h1><p>WICKED: O OUTRO LADO DE OZ</p></div>
       <div class="overview" aria-label="Progresso geral">
         <div class="overview-top"><span>PROGRESSO GERAL</span><strong id="overallPercent">0%</strong></div>
         <div class="overview-track"><span id="overallBar"></span></div>
-        <div class="overview-bottom"><span id="overallSummary">Carregando o checklist…</span><span class="live-mark"><i></i> AO VIVO</span></div>
+        <div class="overview-bottom"><span id="overallSummary">Carregando checklist…</span></div>
       </div>
     </section>
 
-    <section class="list-heading" aria-label="Categorias">
-      <div><span class="section-kicker">A JORNADA</span><h2>Plano do espetáculo</h2></div>
-      <p>Toque numa categoria para abrir. As que você abrir ficam guardadas neste aparelho.</p>
-    </section>
-
     <div class="category-list" id="categoryList" aria-live="polite">
-      <div class="loading-state"><span class="loader"></span><span>Preparando a estrada de tijolos amarelos…</span></div>
+      <div class="loading-state"><span class="loader"></span><span>Carregando checklist…</span></div>
     </div>
-    <p class="sync-note" id="syncNote"><span class="sync-icon" aria-hidden="true">↻</span> As alterações são compartilhadas com todo mundo.</p>
+    <div class="list-actions">
+      <div class="add-menu-wrap">
+        <div class="add-menu" id="addMenu" hidden>
+          <button type="button" data-menu-action="category"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg><span>Categoria</span></button>
+          <button type="button" data-menu-action="team"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 20c.2-3.5 2-5.3 5.5-5.3 1.8 0 3.2.5 4.1 1.5M16 8v8M12 12h8"></path></svg><span>Equipe</span></button>
+        </div>
+        <button class="add-category" id="toggleAddMenu" type="button" aria-label="Adicionar categoria ou equipe" aria-expanded="false" aria-controls="addMenu"><span aria-hidden="true">+</span></button>
+      </div>
+    </div>
   </main>
 
   <dialog class="category-dialog" id="categoryDialog">
     <form id="newCategoryForm" method="dialog">
       <button class="dialog-close" type="button" id="closeCategoryDialog" aria-label="Fechar">×</button>
       <span class="dialog-icon" aria-hidden="true">✨</span>
-      <p class="eyebrow">MAIS UMA ETAPA DA JORNADA</p>
       <h2>Nova categoria</h2>
       <label for="newCategoryTitle">Nome da categoria</label>
       <input id="newCategoryTitle" name="title" maxlength="200" placeholder="Ex.: Ensaio geral" required>
@@ -63,6 +60,25 @@
       <button class="dialog-submit" type="submit">Adicionar categoria <span aria-hidden="true">↗</span></button>
     </form>
   </dialog>
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <dialog class="team-dialog" id="teamDialog">
+    <section class="team-panel">
+      <button class="dialog-close" type="button" id="closeTeamDialog" aria-label="Fechar">×</button>
+      <div class="team-title-row"><span class="team-dialog-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 20c.2-3.5 2-5.3 5.5-5.3M16 8v8M12 12h8"></path></svg></span><div><p class="team-eyebrow">IDENTIFICAÇÃO LOCAL</p><h2>Equipe</h2></div></div>
+      <div class="active-member" id="activeMember" hidden></div>
+      <p class="team-error" id="teamError" role="status" hidden></p>
+      <form id="teamLoginForm" class="team-login-form">
+        <label for="teamLoginName">Entre pelo seu nome</label>
+        <div class="team-login-row"><input id="teamLoginName" name="name" maxlength="60" autocomplete="name" placeholder="Seu nome" required><button type="submit">Entrar</button></div>
+        <small>O nome precisa corresponder a um integrante cadastrado.</small>
+      </form>
+      <div class="team-roster-heading"><span>Integrantes</span><button type="button" id="showAddMember">+ Adicionar integrante</button></div>
+      <div class="team-roster" id="teamRoster"><div class="roster-empty">Carregando equipe…</div></div>
+      <form id="newMemberForm" class="new-member-form" hidden>
+        <label for="newMemberName">Nome do novo integrante</label>
+        <div class="team-login-row"><input id="newMemberName" name="name" maxlength="60" placeholder="Nome completo" required><button type="submit">Adicionar</button></div>
+      </form>
+    </section>
+  </dialog>
+  <div class="task-assign-menu" id="taskAssignMenu" hidden></div>
 </body>
 </html>
