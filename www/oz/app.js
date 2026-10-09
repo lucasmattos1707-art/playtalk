@@ -17,6 +17,7 @@
   const notesDialog = document.getElementById('notesDialog');
   const addMenu = document.getElementById('addMenu');
   const accountMenu = document.getElementById('accountMenu');
+  const taskOptionsMenu = document.getElementById('taskOptionsMenu');
   let state = { categories: [] };
   let members = [];
   let activeMember = null;
@@ -96,14 +97,11 @@
     const taskOpenKey = `task:${item.id}`;
     const isOpen = openedCategories.has(taskOpenKey);
     const hasSubtasks = subtasks.length > 0;
-    const notes = Array.isArray(item.notes) ? item.notes : [];
-    const noteButtonClass = notes.length ? 'has-notes' : 'no-notes';
     return `<div class="task-node">
       <div class="task-row ${itemStatus === 'completed' ? 'is-done' : ''} ${itemStatus === 'in_progress' ? 'is-in-progress' : ''}" data-task-id="${escapeHtml(item.id)}">
         <span class="task-controls">
           <button class="item-status status-${itemStatus}" type="button" aria-label="${statusLabel(itemStatus)}" title="${statusLabel(itemStatus)}">${statusIcon(itemStatus)}</button>
-          ${activeMember?.isKelly ? `<button class="subtask-add" type="button" data-action="add-subfolder" data-id="${escapeHtml(item.id)}" aria-label="Criar subtarefa" title="Criar subtarefa"><span aria-hidden="true">+</span></button>` : '<span class="subtask-add-spacer" aria-hidden="true"></span>'}
-          <button class="task-notes ${noteButtonClass}" type="button" data-action="open-notes" data-id="${escapeHtml(item.id)}" aria-label="Abrir notas" title="Abrir notas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h8l4 4V20.25H6z"></path><path d="M14 3.75v4h4M9 12h6M9 15.5h6"></path></svg></button>
+          <button class="task-options-toggle" type="button" data-action="open-task-options" data-id="${escapeHtml(item.id)}" aria-haspopup="menu" aria-expanded="false" aria-label="Opções da tarefa" title="Opções da tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle></svg></button>
         </span>
         <span class="task-copy"><span class="task-title">${escapeHtml(item.title)}</span>${item.assigneeName ? `<span class="task-assignee"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.1"></circle><path d="M5.8 20c.25-3.8 2.35-5.7 6.2-5.7s5.95 1.9 6.2 5.7"></path></svg><span>${escapeHtml(item.assigneeName)}</span></span>` : ''}</span>
         ${hasSubtasks ? `<button class="task-toggle ${isOpen ? 'is-open' : ''}" type="button" data-action="toggle-subtasks" data-id="${escapeHtml(item.id)}" aria-expanded="${isOpen}" aria-controls="subtasks-${escapeHtml(item.id)}" aria-label="${isOpen ? 'Recolher' : 'Abrir'} sub tarefas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>` : ''}
@@ -396,8 +394,39 @@
     assignTaskId = '';
   }
 
+  function closeTaskOptions() {
+    taskOptionsMenu.hidden = true;
+    const toggle = list.querySelector('.task-options-toggle[aria-expanded="true"]');
+    toggle?.setAttribute('aria-expanded', 'false');
+  }
+
+  function openTaskOptions(row, toggle) {
+    if (!row || !toggle) return;
+    if (!taskOptionsMenu.hidden && taskOptionsMenu.dataset.taskId === row.dataset.taskId) {
+      closeTaskOptions();
+      return;
+    }
+    closeAssignMenu();
+    const canManage = Boolean(activeMember?.isKelly);
+    const optionMarkup = `
+      <button type="button" role="menuitem" data-task-option="notes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h8l4 4V20.25H6z"></path><path d="M14 3.75v4h4M9 12h6M9 15.5h6"></path></svg><span>Adicionar nota</span></button>
+      ${canManage ? '<button type="button" role="menuitem" data-task-option="subtask"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h5l2 2h7v11H5z"></path><path d="M12 10v6m-3-3h6"></path></svg><span>Adicionar subtarefa</span></button><button type="button" role="menuitem" data-task-option="delegate"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19c.2-3.5 2.05-5.25 5.5-5.25 1.15 0 2.1.2 2.85.6M15 10h5m-2.5-2.5L20 10l-2.5 2.5"></path></svg><span>Delegar</span></button>' : ''}`;
+    taskOptionsMenu.innerHTML = optionMarkup;
+    taskOptionsMenu.dataset.taskId = row.dataset.taskId;
+    taskOptionsMenu.hidden = false;
+    toggle.setAttribute('aria-expanded', 'true');
+    const bounds = toggle.getBoundingClientRect();
+    const menuBounds = taskOptionsMenu.getBoundingClientRect();
+    const left = Math.max(12, Math.min(bounds.left, window.innerWidth - menuBounds.width - 12));
+    const below = bounds.bottom + 6;
+    const top = below + menuBounds.height <= window.innerHeight - 12 ? below : Math.max(12, bounds.top - menuBounds.height - 6);
+    taskOptionsMenu.style.left = `${left}px`;
+    taskOptionsMenu.style.top = `${top}px`;
+  }
+
   function openAssignMenu(row) {
     if (!activeMember?.isKelly) return;
+    closeTaskOptions();
     assignTaskId = row.dataset.taskId;
     const currentItem = findItemById(assignTaskId);
     const people = members.map((member) => `<button type="button" class="assign-person" data-assign-id="${escapeHtml(member.id)}">${avatarSvg()}<span>${escapeHtml(member.name)}</span>${currentItem?.assigneeId === member.id ? '<span class="assigned-check">✓</span>' : ''}</button>`).join('');
@@ -421,7 +450,7 @@
   list.addEventListener('pointerdown', (event) => {
     if (!activeMember?.isKelly) return;
     const row = event.target.closest('.task-row[data-task-id]');
-    if (!row || event.target.closest('.item-status, .delete-task, .subtask-add, .task-notes, .task-toggle') || (event.button !== undefined && event.button !== 0)) return;
+    if (!row || event.target.closest('.item-status, .delete-task, .task-options-toggle, .task-toggle') || (event.button !== undefined && event.button !== 0)) return;
     holdStart = { x: event.clientX, y: event.clientY, row };
     holdTimer = window.setTimeout(() => {
       openAssignMenu(row);
@@ -445,7 +474,7 @@
       return;
     }
     const taskRow = event.target.closest('.task-row[data-task-id]');
-    if (taskRow && !event.target.closest('.delete-task, .subtask-add, .task-notes, .task-toggle')) {
+    if (taskRow && !event.target.closest('.delete-task, .task-options-toggle, .task-toggle')) {
       openStatusMenu(taskRow);
       return;
     }
@@ -454,6 +483,10 @@
     const action = control.dataset.action;
     const id = control.dataset.id;
     const card = control.closest('.category-card');
+    if (action === 'open-task-options' && id) {
+      openTaskOptions(taskRow, control);
+      return;
+    }
     if (action === 'open-category' && id) {
       const opening = !openedCategories.has(id);
       if (opening) openedCategories.add(id);
@@ -571,6 +604,24 @@
     closeAssignMenu();
     mutate(`/api/oz/checklist/items/${encodeURIComponent(id)}`, 'PATCH', { assigneeId });
   });
+  taskOptionsMenu.addEventListener('click', (event) => {
+    const option = event.target.closest('[data-task-option]');
+    if (!option) return;
+    const id = taskOptionsMenu.dataset.taskId;
+    const row = [...list.querySelectorAll('.task-row[data-task-id]')].find((entry) => entry.dataset.taskId === id);
+    closeTaskOptions();
+    if (option.dataset.taskOption === 'notes') {
+      const item = findItemById(id);
+      if (item) openNotes(item);
+    } else if (option.dataset.taskOption === 'subtask' && activeMember?.isKelly && id) {
+      subtaskParentId = id;
+      subtaskForm.reset();
+      subtaskDialog.showModal();
+      document.getElementById('newSubtaskTitle').focus();
+    } else if (option.dataset.taskOption === 'delegate' && activeMember?.isKelly && row) {
+      openAssignMenu(row);
+    }
+  });
   document.addEventListener('click', (event) => {
     if (ignoreLongPressClick && event.target.closest('.task-row[data-task-id]')) {
       ignoreLongPressClick = false;
@@ -580,7 +631,8 @@
       addMenu.hidden = true;
       document.getElementById('toggleAddMenu').setAttribute('aria-expanded', 'false');
     }
-    if (!event.target.closest('#taskAssignMenu')) closeAssignMenu();
+    if (!event.target.closest('#taskAssignMenu, #taskOptionsMenu')) closeAssignMenu();
+    if (!event.target.closest('#taskOptionsMenu, #taskAssignMenu, .task-options-toggle')) closeTaskOptions();
   });
 
   document.getElementById('closeCategoryDialog').addEventListener('click', () => dialog.close());
