@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08090d">
+  <meta name="description" content="Checklist colaborativo do espetáculo de Oz.">
+  <title>Espetáculo de Oz | Checklist</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/oz/style.css">
+  <script src="/oz/app.js" defer></script>
+</head>
+<body>
+  <div class="ambient ambient--one" aria-hidden="true"></div>
+  <div class="ambient ambient--two" aria-hidden="true"></div>
+  <main class="page-shell">
+    <header class="topline">
+      <a class="brand" href="/oz" aria-label="Checklist do espetáculo de Oz">
+        <span class="brand-mark" aria-hidden="true">OZ</span>
+        <span><strong>ESPETÁCULO</strong><small>PRODUÇÃO COLABORATIVA</small></span>
+      </a>
+      <button class="add-category" id="openCategoryDialog" type="button" aria-label="Adicionar categoria" title="Adicionar categoria"><span aria-hidden="true">+</span></button>
+    </header>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="eyebrow-dot"></span> CADA DETALHE FAZ A MÁGICA</p>
+        <h1>O caminho para<br><span>o grande espetáculo.</span></h1>
+        <p class="hero-description">Um plano feito por todos, para que cada momento em Oz brilhe no palco.</p>
+      </div>
+      <div class="overview" aria-label="Progresso geral">
+        <div class="overview-top"><span>PROGRESSO GERAL</span><strong id="overallPercent">0%</strong></div>
+        <div class="overview-track"><span id="overallBar"></span></div>
+        <div class="overview-bottom"><span id="overallSummary">Carregando o checklist…</span><span class="live-mark"><i></i> AO VIVO</span></div>
+      </div>
+    </section>
+
+    <section class="list-heading" aria-label="Categorias">
+      <div><span class="section-kicker">A JORNADA</span><h2>Plano do espetáculo</h2></div>
+      <p>Toque numa categoria para abrir. As que você abrir ficam guardadas neste aparelho.</p>
+    </section>
+
+    <div class="category-list" id="categoryList" aria-live="polite">
+      <div class="loading-state"><span class="loader"></span><span>Preparando a estrada de tijolos amarelos…</span></div>
+    </div>
+    <p class="sync-note" id="syncNote"><span class="sync-icon" aria-hidden="true">↻</span> As alterações são compartilhadas com todo mundo.</p>
+  </main>
+
+  <dialog class="category-dialog" id="categoryDialog">
+    <form id="newCategoryForm" method="dialog">
+      <button class="dialog-close" type="button" id="closeCategoryDialog" aria-label="Fechar">×</button>
+      <span class="dialog-icon" aria-hidden="true">✨</span>
+      <p class="eyebrow">MAIS UMA ETAPA DA JORNADA</p>
+      <h2>Nova categoria</h2>
+      <label for="newCategoryTitle">Nome da categoria</label>
+      <input id="newCategoryTitle" name="title" maxlength="200" placeholder="Ex.: Ensaio geral" required>
+      <label for="newCategoryIcon">Emoji do título</label>
+      <select id="newCategoryIcon" name="icon">
+        <option>✨</option><option>🎭</option><option>🎟️</option><option>💃</option><option>🎨</option><option>🎶</option><option>💡</option><option>🌟</option><option>🎤</option><option>🪄</option><option>💛</option><option>🧹</option>
+      </select>
+      <button class="dialog-submit" type="submit">Adicionar categoria <span aria-hidden="true">↗</span></button>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

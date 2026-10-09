@@ -20,6 +20,7 @@ const {
   buildGroundedMusicalKellyLines,
   filterMusicalKellyTranscriptionSegments
 } = require('./lib/musical-kelly-transcription');
+const { categories: OZ_CHECKLIST_SEED } = require('./lib/oz-checklist');
 const { normalizeCompletedRoundScores } = require('./lib/englishtraining-pronunciation');
 const app = express();
 
@@ -16305,6 +16306,131 @@ const musicalKellyProjectCaches = new Map();
 const musicalKellyCharacterSchemaReadyPromises = new Map();
 let musicalKellyTimedCommentSchemaReadyPromise = null;
 let englishTrainingPronunciationRoundsReadyPromise = null;
+let ozChecklistSchemaReadyPromise = null;
+
+async function ensureOzChecklistSchema() {
+  if (!pool) {
+    const error = new Error('O PostgreSQL ainda não está disponível.');
+    error.statusCode = 503;
+    throw error;
+  }
+  if (!ozChecklistSchemaReadyPromise) {
+    ozChecklistSchemaReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.oz_checklist_categories (
+          id text PRIMARY KEY,
+          title varchar(200) NOT NULL,
+          icon varchar(24) NOT NULL DEFAULT '✨',
+          groups jsonb NOT NULL DEFAULT '[]'::jsonb,
+          is_completed boolean NOT NULL DEFAULT false,
+          sort_order integer NOT NULL DEFAULT 0,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.oz_checklist_items (
+          id text PRIMARY KEY,
+          category_id text NOT NULL REFERENCES public.oz_checklist_categories(id) ON DELETE CASCADE,
+          group_label varchar(200) NOT NULL DEFAULT '',
+          title varchar(240) NOT NULL,
+          is_completed boolean NOT NULL DEFAULT false,
+          sort_order integer NOT NULL DEFAULT 0,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS oz_checklist_items_category_order_idx
+        ON public.oz_checklist_items (category_id, sort_order, created_at)
+      `);
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query('SELECT pg_advisory_xact_lock($1)', [84209117]);
+        const existing = await client.query('SELECT COUNT(*)::integer AS count FROM public.oz_checklist_categories');
+        if (Number(existing.rows?.[0]?.count || 0) === 0) {
+          const categoryValues = [];
+          const categoryRows = OZ_CHECKLIST_SEED.map((category, categoryIndex) => {
+            const offset = categoryValues.length;
+            categoryValues.push(category.id, category.title, category.icon, JSON.stringify(category.groups || []), categoryIndex);
+            return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}::jsonb, $${offset + 5})`;
+          });
+          await client.query(`
+            INSERT INTO public.oz_checklist_categories (id, title, icon, groups, sort_order)
+            VALUES ${categoryRows.join(', ')}
+            ON CONFLICT (id) DO NOTHING
+          `, categoryValues);
+
+          const itemValues = [];
+          const itemRows = [];
+          for (const category of OZ_CHECKLIST_SEED) {
+            for (const [itemIndex, value] of category.items.entries()) {
+              const [groupLabel, title] = Array.isArray(value) ? value : ['', value];
+              const offset = itemValues.length;
+              itemValues.push(`seed:${category.id}:${itemIndex + 1}`, category.id, groupLabel || '', title, itemIndex);
+              itemRows.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`);
+            }
+          }
+          await client.query(`
+            INSERT INTO public.oz_checklist_items (id, category_id, group_label, title, sort_order)
+            VALUES ${itemRows.join(', ')}
+            ON CONFLICT (id) DO NOTHING
+          `, itemValues);
+        }
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw error;
+      } finally {
+        client.release();
+      }
+      return true;
+    })().catch((error) => {
+      ozChecklistSchemaReadyPromise = null;
+      throw error;
+    });
+  }
+  return ozChecklistSchemaReadyPromise;
+}
+
+async function readOzChecklist() {
+  await ensureOzChecklistSchema();
+  const result = await pool.query(`
+    SELECT c.id AS category_id, c.title AS category_title, c.icon AS category_icon,
+           c.groups AS category_groups, c.is_completed AS category_completed,
+           c.sort_order AS category_order, i.id AS item_id, i.group_label AS item_group,
+           i.title AS item_title, i.is_completed AS item_completed, i.sort_order AS item_order
+      FROM public.oz_checklist_categories c
+      LEFT JOIN public.oz_checklist_items i ON i.category_id = c.id
+     ORDER BY c.sort_order, c.created_at, i.sort_order, i.created_at
+  `);
+  const categoriesById = new Map();
+  for (const row of result.rows || []) {
+    let category = categoriesById.get(row.category_id);
+    if (!category) {
+      category = {
+        id: row.category_id,
+        title: row.category_title,
+        icon: row.category_icon,
+        groups: Array.isArray(row.category_groups) ? row.category_groups : [],
+        completed: Boolean(row.category_completed),
+        items: []
+      };
+      categoriesById.set(row.category_id, category);
+    }
+    if (row.item_id) {
+      category.items.push({
+        id: row.item_id,
+        group: row.item_group || '',
+        title: row.item_title,
+        completed: Boolean(row.item_completed)
+      });
+    }
+  }
+  return { categories: [...categoriesById.values()] };
+}
 
 async function ensureMusicalKellyTimedCommentSchema() {
   if (!pool) {
@@ -29233,6 +29359,172 @@ async function verifyDesafioGymPhoto(imageBuffer) {
     reason: String(parsed?.reason || 'Não foi possível confirmar o ambiente.').slice(0, 180)
   };
 }
+
+app.get(['/oz', '/oz/', '/oz/index.html'], (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(staticDir, 'oz', 'index.html'));
+});
+
+app.get('/api/oz/checklist', async (_req, res) => {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, ...(await readOzChecklist()) });
+  } catch (error) {
+    console.error('Erro ao carregar o checklist de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível carregar a lista agora.' });
+  }
+});
+
+app.post('/api/oz/checklist/categories', async (req, res) => {
+  try {
+    await ensureOzChecklistSchema();
+    const title = typeof req.body?.title === 'string' ? req.body.title.trim().slice(0, 200) : '';
+    const icon = typeof req.body?.icon === 'string' ? [...req.body.icon.trim()].slice(0, 4).join('') : '';
+    if (!title || !icon) {
+      res.status(400).json({ success: false, message: 'Informe o nome e escolha um emoji para a categoria.' });
+      return;
+    }
+    const result = await pool.query(`
+      INSERT INTO public.oz_checklist_categories (id, title, icon, sort_order)
+      SELECT $1, $2, $3, COALESCE(MAX(sort_order), -1) + 1
+        FROM public.oz_checklist_categories
+      HAVING COUNT(*) < 100
+      RETURNING id
+    `, [crypto.randomUUID(), title, icon]);
+    if (!result.rows.length) {
+      res.status(409).json({ success: false, message: 'O limite de 100 categorias foi atingido.' });
+      return;
+    }
+    res.status(201).json({ success: true, ...(await readOzChecklist()) });
+  } catch (error) {
+    console.error('Erro ao criar categoria de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível criar a categoria.' });
+  }
+});
+
+app.patch('/api/oz/checklist/categories/:categoryId', async (req, res) => {
+  try {
+    await ensureOzChecklistSchema();
+    const categoryId = String(req.params.categoryId || '').slice(0, 100);
+    const sets = [];
+    const values = [categoryId];
+    if (typeof req.body?.completed === 'boolean') {
+      values.push(req.body.completed);
+      sets.push(`is_completed = $${values.length}`);
+    }
+    if (typeof req.body?.title === 'string') {
+      const title = req.body.title.trim().slice(0, 200);
+      if (!title) {
+        res.status(400).json({ success: false, message: 'O título da categoria não pode ficar vazio.' });
+        return;
+      }
+      values.push(title);
+      sets.push(`title = $${values.length}`);
+    }
+    if (typeof req.body?.icon === 'string') {
+      const icon = [...req.body.icon.trim()].slice(0, 4).join('');
+      if (!icon) {
+        res.status(400).json({ success: false, message: 'Escolha um emoji para a categoria.' });
+        return;
+      }
+      values.push(icon);
+      sets.push(`icon = $${values.length}`);
+    }
+    if (!sets.length) {
+      res.status(400).json({ success: false, message: 'Nenhuma alteração informada.' });
+      return;
+    }
+    const result = await pool.query(`
+      UPDATE public.oz_checklist_categories
+         SET ${sets.join(', ')}, updated_at = now()
+       WHERE id = $1
+      RETURNING id
+    `, values);
+    if (!result.rows.length) {
+      res.status(404).json({ success: false, message: 'Categoria não encontrada.' });
+      return;
+    }
+    res.json({ success: true, ...(await readOzChecklist()) });
+  } catch (error) {
+    console.error('Erro ao atualizar categoria de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível atualizar a categoria.' });
+  }
+});
+
+app.post('/api/oz/checklist/categories/:categoryId/items', async (req, res) => {
+  try {
+    await ensureOzChecklistSchema();
+    const categoryId = String(req.params.categoryId || '').slice(0, 100);
+    const title = typeof req.body?.title === 'string' ? req.body.title.trim().slice(0, 240) : '';
+    const group = typeof req.body?.group === 'string' ? req.body.group.trim().slice(0, 200) : '';
+    if (!title) {
+      res.status(400).json({ success: false, message: 'Digite o que deseja adicionar à lista.' });
+      return;
+    }
+    const result = await pool.query(`
+      INSERT INTO public.oz_checklist_items (id, category_id, group_label, title, sort_order)
+      SELECT $1, c.id, $3, $4, COALESCE(MAX(i.sort_order), -1) + 1
+        FROM public.oz_checklist_categories c
+        LEFT JOIN public.oz_checklist_items i ON i.category_id = c.id
+       WHERE c.id = $2
+       GROUP BY c.id
+      HAVING COUNT(i.id) < 500
+      RETURNING id
+    `, [crypto.randomUUID(), categoryId, group, title]);
+    if (!result.rows.length) {
+      const category = await pool.query('SELECT 1 FROM public.oz_checklist_categories WHERE id = $1', [categoryId]);
+      res.status(category.rows.length ? 409 : 404).json({
+        success: false,
+        message: category.rows.length ? 'O limite de 500 itens nesta categoria foi atingido.' : 'Categoria não encontrada.'
+      });
+      return;
+    }
+    res.status(201).json({ success: true, ...(await readOzChecklist()) });
+  } catch (error) {
+    console.error('Erro ao adicionar item ao checklist de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível adicionar o item.' });
+  }
+});
+
+app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
+  try {
+    await ensureOzChecklistSchema();
+    const itemId = String(req.params.itemId || '').slice(0, 120);
+    const sets = [];
+    const values = [itemId];
+    if (typeof req.body?.completed === 'boolean') {
+      values.push(req.body.completed);
+      sets.push(`is_completed = $${values.length}`);
+    }
+    if (typeof req.body?.title === 'string') {
+      const title = req.body.title.trim().slice(0, 240);
+      if (!title) {
+        res.status(400).json({ success: false, message: 'O item não pode ficar sem texto.' });
+        return;
+      }
+      values.push(title);
+      sets.push(`title = $${values.length}`);
+    }
+    if (!sets.length) {
+      res.status(400).json({ success: false, message: 'Nenhuma alteração informada.' });
+      return;
+    }
+    const result = await pool.query(`
+      UPDATE public.oz_checklist_items
+         SET ${sets.join(', ')}, updated_at = now()
+       WHERE id = $1
+      RETURNING id
+    `, values);
+    if (!result.rows.length) {
+      res.status(404).json({ success: false, message: 'Item não encontrado.' });
+      return;
+    }
+    res.json({ success: true, ...(await readOzChecklist()) });
+  } catch (error) {
+    console.error('Erro ao atualizar item do checklist de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível atualizar o item.' });
+  }
+});
 
 app.get(['/desafiogym', '/desafiogym/', '/desafiogym/index.html'], (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
