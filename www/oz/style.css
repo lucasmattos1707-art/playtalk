@@ -232,6 +232,28 @@ h1 span { color: #aa8aff; background: linear-gradient(95deg, #c5a7ff, #9274ff 63
 .delete-task { display: grid; flex: 0 0 auto; width: 27px; height: 27px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: #8a909d; cursor: pointer; }
 .delete-task:hover { background: rgba(255,255,255,.07); color: #f1a6b0; }
 .delete-task svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.task-row[data-task-id] { cursor: pointer; }
+.task-row[data-task-id]:hover { background: rgba(255,255,255,.025); }
+.item-status { border: 0; background: transparent; color: #777e8a; }
+.item-status::after { display: none; }
+.item-status svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.item-status.status-pending { color: #7d8390; }
+.item-status.status-completed { color: #65e996; }
+.item-status.status-in_progress { color: #57bfff; }
+.task-row.is-in-progress .task-title { color: #dceeff; }
+.status-dialog { width: min(360px, calc(100vw - 32px)); max-height: min(80vh, 560px); margin: auto; padding: 0; overflow: visible; border: 1px solid rgba(130, 161, 203, .2); border-radius: 18px; background: #12151d; color: var(--text); box-shadow: 0 28px 90px rgba(0,0,0,.56); }
+.status-dialog::backdrop { background: rgba(5, 8, 14, .57); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+.status-panel { position: relative; padding: 23px 20px 19px; }
+.status-panel .dialog-close { top: 13px; right: 13px; }
+.status-eyebrow { margin: 0 34px 7px 0; color: #8e98a8; font-size: 9px; font-weight: 800; letter-spacing: .14em; }
+.status-panel h2 { max-width: calc(100% - 22px); margin: 0 0 17px; color: #f0f2f6; font: 700 15px/1.45 var(--display); overflow-wrap: anywhere; }
+.status-options { display: grid; gap: 7px; }
+.status-choice { display: flex; align-items: center; gap: 11px; width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.07); border-radius: 11px; background: rgba(255,255,255,.025); color: #e4e7ee; font: 600 12px var(--font); text-align: left; cursor: pointer; transition: background .15s, border-color .15s, transform .15s; }
+.status-choice:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.15); background: rgba(255,255,255,.065); }
+.status-choice svg { width: 19px; height: 19px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.status-choice--pending svg { color: #9298a5; }
+.status-choice--completed svg { color: #68e99b; }
+.status-choice--in_progress svg { color: #5bbcff; }
 
 @media (max-width: 700px) {
   .page-intro { grid-template-columns: 1fr; gap: 16px; margin: 22px 0 23px; }

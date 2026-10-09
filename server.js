@@ -16353,6 +16353,28 @@ async function ensureOzChecklistSchema() {
         ADD COLUMN IF NOT EXISTS assignee_id text REFERENCES public.oz_checklist_members(id) ON DELETE SET NULL
       `);
       await pool.query(`
+        ALTER TABLE public.oz_checklist_items
+        ADD COLUMN IF NOT EXISTS status varchar(20) NOT NULL DEFAULT 'pending'
+      `);
+      await pool.query(`
+        UPDATE public.oz_checklist_items
+           SET status = 'completed'
+         WHERE is_completed = true AND status = 'pending'
+      `);
+      await pool.query(`
+        DO $$ BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+             WHERE conname = 'oz_checklist_items_status_check'
+               AND conrelid = 'public.oz_checklist_items'::regclass
+          ) THEN
+            ALTER TABLE public.oz_checklist_items
+              ADD CONSTRAINT oz_checklist_items_status_check
+              CHECK (status IN ('pending', 'completed', 'in_progress'));
+          END IF;
+        END $$
+      `);
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS oz_checklist_items_category_order_idx
         ON public.oz_checklist_items (category_id, sort_order, created_at)
       `);
@@ -16413,7 +16435,7 @@ async function readOzChecklist(member) {
     SELECT c.id AS category_id, c.title AS category_title, c.icon AS category_icon,
            c.groups AS category_groups, c.is_completed AS category_completed,
            c.sort_order AS category_order, i.id AS item_id, i.group_label AS item_group,
-           i.title AS item_title, i.is_completed AS item_completed, i.sort_order AS item_order,
+           i.title AS item_title, i.is_completed AS item_completed, i.status AS item_status, i.sort_order AS item_order,
            i.assignee_id, m.name AS assignee_name
       FROM public.oz_checklist_categories c
       LEFT JOIN public.oz_checklist_items i ON i.category_id = c.id
@@ -16439,7 +16461,10 @@ async function readOzChecklist(member) {
         id: row.item_id,
         group: row.item_group || '',
         title: row.item_title,
-        completed: Boolean(row.item_completed),
+        status: ['pending', 'completed', 'in_progress'].includes(row.item_status)
+          ? row.item_status
+          : (row.item_completed ? 'completed' : 'pending'),
+        completed: row.item_status ? row.item_status === 'completed' : Boolean(row.item_completed),
         assigneeId: row.assignee_id || null,
         assigneeName: row.assignee_name || ''
       });
@@ -29622,13 +29647,25 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
     const itemId = String(req.params.itemId || '').slice(0, 120);
     const isAdminEdit = Object.hasOwn(req.body || {}, 'title') || Object.hasOwn(req.body || {}, 'assigneeId');
     if (isAdminEdit && !actor.isKelly) return res.status(403).json({ success: false, message: 'Somente Kelly pode editar ou delegar tarefas.' });
-    if (!actor.isKelly && (Object.keys(req.body || {}).some((key) => key !== 'completed') || typeof req.body?.completed !== 'boolean')) {
+    if (!actor.isKelly && (Object.keys(req.body || {}).some((key) => !['completed', 'status'].includes(key)) || (typeof req.body?.completed !== 'boolean' && typeof req.body?.status !== 'string'))) {
       return res.status(403).json({ success: false, message: 'Você pode atualizar somente o status das suas tarefas.' });
     }
     const sets = [];
     const values = [itemId];
-    if (typeof req.body?.completed === 'boolean') {
-      values.push(req.body.completed);
+    let nextStatus = null;
+    if (typeof req.body?.status === 'string') {
+      nextStatus = req.body.status.trim();
+      if (!['pending', 'completed', 'in_progress'].includes(nextStatus)) {
+        res.status(400).json({ success: false, message: 'Escolha um status válido para a tarefa.' });
+        return;
+      }
+    } else if (typeof req.body?.completed === 'boolean') {
+      nextStatus = req.body.completed ? 'completed' : 'pending';
+    }
+    if (nextStatus) {
+      values.push(nextStatus);
+      sets.push(`status = $${values.length}`);
+      values.push(nextStatus === 'completed');
       sets.push(`is_completed = $${values.length}`);
     }
     if (typeof req.body?.title === 'string') {
