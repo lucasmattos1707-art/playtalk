@@ -260,7 +260,7 @@ h1 span { color: #aa8aff; background: linear-gradient(95deg, #c5a7ff, #9274ff 63
 .page-title { width: 100%; text-align: center; }
 .page-title p { margin-top: 9px; }
 .event-countdown { margin-top: 15px; color: #fff; font-size: 13px; font-weight: 650; letter-spacing: .2em; text-align: center; text-shadow: 0 2px 15px rgba(255,255,255,.2); }
-.overview { width: min(100%, 330px); justify-self: end; }
+.overview { width: min(100%, 330px); justify-self: center; margin-inline: auto; }
 body { background-color: #08090d; background-image: linear-gradient(180deg, rgba(7, 5, 13, .32), rgba(7, 5, 13, .5)), url('/oz/mystical-purple-nebula-void.png'); background-position: center center, center center; background-size: cover, cover; background-attachment: fixed, fixed; background-repeat: no-repeat, no-repeat; }
 .status-dialog { width: min(360px, calc(100vw - 32px)); max-height: min(80vh, 560px); margin: auto; padding: 0; overflow: visible; border: 1px solid rgba(130, 161, 203, .2); border-radius: 18px; background: #12151d; color: var(--text); box-shadow: 0 28px 90px rgba(0,0,0,.56); }
 .status-dialog::backdrop { background: rgba(5, 8, 14, .57); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
