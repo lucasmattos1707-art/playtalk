@@ -366,7 +366,7 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .subtask-list { --task-nest-offset: 17px; }
 .subtask-list > .task-node > .task-row[data-task-id] {
   width: calc(100% + var(--task-left-indent) + var(--task-nest-offset));
-  margin-left: calc(0px - var(--task-left-indent) - var(--task-nest-offset));
+  margin-left: calc(0px - var(--task-left-indent));
 }
 @media (max-width: 700px) {
   .category-content { --task-left-indent: 42px; }
@@ -390,7 +390,7 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .task-row[data-task-id],
 .task-row:last-child { border-bottom: 0; }
 .task-row[data-task-id]:hover { background: transparent; }
-.subtask-list { border-left: 0; }
+.subtask-list { border-left: 1px solid rgba(187, 160, 255, .16); }
 .category-progress { bottom: 16px; }
 @media (max-width: 700px) {
   .category-progress { bottom: 15px; }
