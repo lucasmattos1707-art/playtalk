@@ -29665,7 +29665,7 @@ app.post('/api/oz/checklist/items/:itemId/subtasks', async (req, res) => {
     await ensureOzChecklistSchema();
     const parentId = String(req.params.itemId || '').slice(0, 120);
     const title = typeof req.body?.title === 'string' ? req.body.title.trim().slice(0, 240) : '';
-    if (!title) return res.status(400).json({ success: false, message: 'Digite o nome da sub pasta.' });
+    if (!title) return res.status(400).json({ success: false, message: 'Digite o nome da subtarefa.' });
     const result = await pool.query(`
       INSERT INTO public.oz_checklist_items
         (id, category_id, group_label, title, sort_order, parent_item_id, assignee_id)
@@ -29687,8 +29687,8 @@ app.post('/api/oz/checklist/items/:itemId/subtasks', async (req, res) => {
     }
     res.status(201).json({ success: true, ...(await readOzChecklist(actor)) });
   } catch (error) {
-    console.error('Erro ao adicionar sub pasta ao checklist de Oz:', error);
-    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível adicionar a sub pasta.' });
+    console.error('Erro ao adicionar subtarefa ao checklist de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível adicionar a subtarefa.' });
   }
 });
 

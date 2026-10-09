@@ -78,6 +78,12 @@
     return items.flatMap((item) => [item, ...flattenItems(Array.isArray(item.subtasks) ? item.subtasks : [])]);
   }
 
+  function findItemById(itemId) {
+    return state.categories
+      .flatMap((category) => flattenItems(category.items || []))
+      .find((item) => item.id === itemId) || null;
+  }
+
   function renderTask(item) {
     const itemStatus = getItemStatus(item);
     const subtasks = Array.isArray(item.subtasks) ? item.subtasks : [];
@@ -86,7 +92,7 @@
     const hasSubtasks = subtasks.length > 0;
     return `<div class="task-node">
       <div class="task-row ${itemStatus === 'completed' ? 'is-done' : ''} ${itemStatus === 'in_progress' ? 'is-in-progress' : ''}" data-task-id="${escapeHtml(item.id)}">
-        ${activeMember?.isKelly ? `<button class="subtask-add" type="button" data-action="add-subfolder" data-id="${escapeHtml(item.id)}" aria-label="Adicionar sub pasta" title="Adicionar sub pasta"><span aria-hidden="true">+</span></button>` : ''}
+        ${activeMember?.isKelly ? `<button class="subtask-add" type="button" data-action="add-subfolder" data-id="${escapeHtml(item.id)}" aria-label="Criar subtarefa" title="Criar subtarefa"><span aria-hidden="true">+</span></button>` : ''}
         <button class="item-status status-${itemStatus}" type="button" aria-label="${statusLabel(itemStatus)}" title="${statusLabel(itemStatus)}">${statusIcon(itemStatus)}</button>
         ${hasSubtasks ? `<button class="task-toggle ${isOpen ? 'is-open' : ''}" type="button" data-action="toggle-subtasks" data-id="${escapeHtml(item.id)}" aria-expanded="${isOpen}" aria-controls="subtasks-${escapeHtml(item.id)}" aria-label="${isOpen ? 'Recolher' : 'Abrir'} sub tarefas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>` : '<span class="task-toggle-spacer" aria-hidden="true"></span>'}
         <span class="task-copy"><span class="task-title">${escapeHtml(item.title)}</span>${item.assigneeName ? `<span class="task-assignee"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.1"></circle><path d="M5.8 20c.25-3.8 2.35-5.7 6.2-5.7s5.95 1.9 6.2 5.7"></path></svg><span>${escapeHtml(item.assigneeName)}</span></span>` : ''}</span>
@@ -274,7 +280,7 @@
 
   function openStatusMenu(row) {
     const itemId = row?.dataset.taskId;
-    const item = state.categories.flatMap((category) => category.items || []).find((entry) => entry.id === itemId);
+    const item = findItemById(itemId);
     if (!item) return;
     const currentStatus = getItemStatus(item);
     statusTaskId = itemId;
@@ -314,7 +320,7 @@
   function openAssignMenu(row) {
     if (!activeMember?.isKelly) return;
     assignTaskId = row.dataset.taskId;
-    const currentItem = state.categories.flatMap((category) => category.items || []).find((item) => item.id === assignTaskId);
+    const currentItem = findItemById(assignTaskId);
     const people = members.map((member) => `<button type="button" class="assign-person" data-assign-id="${escapeHtml(member.id)}">${avatarSvg()}<span>${escapeHtml(member.name)}</span>${currentItem?.assigneeId === member.id ? '<span class="assigned-check">✓</span>' : ''}</button>`).join('');
     assignMenu.innerHTML = `<div class="assign-menu-title">Delegar tarefa</div>${people || '<div class="assign-empty">Ainda não há integrantes.</div>'}${currentItem?.assigneeId ? '<button type="button" class="assign-clear" data-assign-id="">Remover responsável</button>' : ''}${!members.length ? '<button type="button" class="assign-add-person" data-assign-open-team>Adicionar integrante</button>' : ''}`;
     assignMenu.hidden = false;
@@ -407,7 +413,7 @@
       return;
     }
     if (action === 'delete-item' && id && activeMember?.isKelly) {
-      const item = state.categories.flatMap((entry) => entry.items || []).find((entry) => entry.id === id);
+      const item = findItemById(id);
       if (item && window.confirm(`Excluir a tarefa "${item.title}"?`)) mutate(`/api/oz/checklist/items/${encodeURIComponent(id)}`, 'DELETE');
       return;
     }
