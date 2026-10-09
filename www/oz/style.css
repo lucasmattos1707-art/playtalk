@@ -232,8 +232,10 @@ h1 span { color: #aa8aff; background: linear-gradient(95deg, #c5a7ff, #9274ff 63
 .delete-task { display: grid; flex: 0 0 auto; width: 27px; height: 27px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: #8a909d; cursor: pointer; }
 .delete-task:hover { background: rgba(255,255,255,.07); color: #f1a6b0; }
 .delete-task svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.task-row[data-task-id] { cursor: pointer; }
+.task-row[data-task-id] { cursor: pointer; font-size: 18px; }
 .task-row[data-task-id]:hover { background: rgba(255,255,255,.025); }
+.task-copy { max-width: 100%; }
+.task-title { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item-status { border: 0; background: transparent; color: #777e8a; }
 .item-status::after { display: none; }
 .item-status svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -263,4 +265,5 @@ h1 span { color: #aa8aff; background: linear-gradient(95deg, #c5a7ff, #9274ff 63
   .category-content { padding: 0 13px 15px 52px; }
   .team-panel { padding: 21px 18px; }
   .list-actions { right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); }
+  .task-row[data-task-id] { font-size: 16.5px; }
 }
