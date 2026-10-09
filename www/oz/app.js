@@ -316,7 +316,7 @@
     const note = notesDraft[notesIndex] || '';
     title.textContent = item.title;
     const editing = notesMode === 'new' || notesMode === 'edit';
-    heading.textContent = editing ? (notesMode === 'new' ? 'Nova nota' : 'Editar nota') : (notesDraft.length ? 'Notas da tarefa' : 'Adicione uma nota');
+    heading.textContent = editing ? (notesMode === 'new' ? 'Nova nota' : 'Editar nota') : (notesDraft.length ? '' : 'Adicione uma nota');
     heading.hidden = !notesDraft.length && !editing;
     text.textContent = notesDraft.length ? note : 'Adicione uma nota';
     text.hidden = editing;
@@ -332,7 +332,7 @@
     counter.textContent = notesDraft.length ? `Nota ${notesIndex + 1} de ${notesDraft.length}` : '';
     counter.hidden = !notesDraft.length || editing;
     toolbar.innerHTML = editing
-      ? '<button type="button" data-notes-action="cancel" aria-label="Cancelar edição" title="Cancelar"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg></button><button type="button" data-notes-action="save" aria-label="Salvar nota" title="Salvar"><svg viewBox="0 0 24 24"><path d="M5 4h12l3 3v13H4V4z"></path><path d="M8 4v6h8V4M8 20v-6h8v6"></path></svg></button>'
+      ? '<button type="button" data-notes-action="cancel" aria-label="Cancelar edição" title="Cancelar"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg></button><button type="button" data-notes-action="save" aria-label="Salvar nota" title="Salvar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="m8.5 12.2 2.3 2.3 4.8-5"></path></svg></button>'
       : `<button type="button" data-notes-action="add" aria-label="Adicionar nota" title="Adicionar nota"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></button><button type="button" data-notes-action="edit" aria-label="Editar nota" title="Editar nota" ${notesDraft.length ? '' : 'disabled'}><svg viewBox="0 0 24 24"><path d="m4 16.5-.8 4.3 4.3-.8L19.6 7.9a2.5 2.5 0 0 0-3.5-3.5zM14.8 5.7l3.5 3.5"></path></svg></button><button type="button" data-notes-action="delete" aria-label="Excluir nota" title="Excluir nota" ${notesDraft.length ? '' : 'disabled'}><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7m3 0-.8 13H6.8L6 7m3 3.2v6.5m6-6.5v6.5"></path></svg></button>`;
     document.getElementById('notesError').hidden = true;
     document.getElementById('notesSuccess').hidden = true;
