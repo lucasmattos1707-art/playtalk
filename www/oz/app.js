@@ -302,7 +302,7 @@
     statusDialog.showModal();
   }
 
-  function renderNotesDialog() {
+  function renderNotesDialog(slideDirection = 0) {
     const item = findItemById(notesTaskId);
     if (!item) return;
     const title = document.getElementById('notesTaskTitle');
@@ -310,6 +310,7 @@
     const text = document.getElementById('notesText');
     const editor = document.getElementById('notesEditor');
     const dots = document.getElementById('notesDots');
+    const counter = document.getElementById('notesCounter');
     const toolbar = document.getElementById('notesToolbar');
     const note = notesDraft[notesIndex] || '';
     title.textContent = item.title;
@@ -317,10 +318,17 @@
     heading.textContent = editing ? (notesMode === 'new' ? 'Nova nota' : 'Editar nota') : (notesDraft.length ? 'Notas da tarefa' : 'Adicione uma nota');
     text.textContent = notesDraft.length ? note : 'Adicione uma nota';
     text.hidden = editing;
+    text.classList.remove('note-slide-next', 'note-slide-previous');
+    if (slideDirection && !editing) {
+      void text.offsetWidth;
+      text.classList.add(slideDirection > 0 ? 'note-slide-next' : 'note-slide-previous');
+    }
     editor.value = editing ? (notesMode === 'new' ? '' : note) : '';
     editor.hidden = !editing;
     dots.innerHTML = notesDraft.map((_entry, index) => `<button type="button" class="notes-dot ${index === notesIndex && !editing ? 'is-current' : ''}" data-note-index="${index}" aria-label="Nota ${index + 1}" ${editing ? 'disabled' : ''}></button>`).join('');
     dots.hidden = notesDraft.length < 2;
+    counter.textContent = notesDraft.length ? `Nota ${notesIndex + 1} de ${notesDraft.length}` : '';
+    counter.hidden = !notesDraft.length || editing;
     toolbar.innerHTML = editing
       ? '<button type="button" data-notes-action="cancel" aria-label="Cancelar edição" title="Cancelar"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg></button><button type="button" data-notes-action="save" aria-label="Salvar nota" title="Salvar"><svg viewBox="0 0 24 24"><path d="M5 4h12l3 3v13H4V4z"></path><path d="M8 4v6h8V4M8 20v-6h8v6"></path></svg></button>'
       : `<button type="button" data-notes-action="add" aria-label="Adicionar nota" title="Adicionar nota"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></button><button type="button" data-notes-action="edit" aria-label="Editar nota" title="Editar nota" ${notesDraft.length ? '' : 'disabled'}><svg viewBox="0 0 24 24"><path d="m4 16.5-.8 4.3 4.3-.8L19.6 7.9a2.5 2.5 0 0 0-3.5-3.5zM14.8 5.7l3.5 3.5"></path></svg></button><button type="button" data-notes-action="delete" aria-label="Excluir nota" title="Excluir nota" ${notesDraft.length ? '' : 'disabled'}><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7m3 0-.8 13H6.8L6 7m3 3.2v6.5m6-6.5v6.5"></path></svg></button>`;
@@ -346,7 +354,7 @@
       });
       state = { categories: Array.isArray(payload.categories) ? payload.categories : [] };
       render();
-      renderNotesDialog();
+      renderNotesDialog(delta < 0 ? 1 : -1);
     } catch (saveError) {
       error.textContent = saveError.message || 'Não foi possível salvar as notas.';
       error.hidden = false;
@@ -589,22 +597,26 @@
     if (notesSwipeStartX === null || notesDraft.length < 2 || notesMode !== 'view') return;
     const delta = event.changedTouches[0].clientX - notesSwipeStartX;
     if (Math.abs(delta) > 45) {
-      notesIndex = (notesIndex + (delta < 0 ? 1 : -1) + notesDraft.length) % notesDraft.length;
-      renderNotesDialog();
+      const direction = delta < 0 ? 1 : -1;
+      notesIndex = (notesIndex + direction + notesDraft.length) % notesDraft.length;
+      renderNotesDialog(direction);
     }
     notesSwipeStartX = null;
   }, { passive: true });
   document.getElementById('notesDots').addEventListener('click', (event) => {
     const dot = event.target.closest('[data-note-index]');
     if (!dot || notesMode !== 'view') return;
-    notesIndex = Number(dot.dataset.noteIndex) || 0;
-    renderNotesDialog();
+    const nextIndex = Number(dot.dataset.noteIndex) || 0;
+    const direction = nextIndex >= notesIndex ? 1 : -1;
+    notesIndex = nextIndex;
+    renderNotesDialog(direction);
   });
   document.getElementById('notesNav').addEventListener('click', (event) => {
     const button = event.target.closest('[data-note-step]');
     if (!button || notesDraft.length < 2 || notesMode !== 'view') return;
-    notesIndex = (notesIndex + Number(button.dataset.noteStep) + notesDraft.length) % notesDraft.length;
-    renderNotesDialog();
+    const direction = Number(button.dataset.noteStep);
+    notesIndex = (notesIndex + direction + notesDraft.length) % notesDraft.length;
+    renderNotesDialog(direction);
   });
   document.getElementById('notesToolbar').addEventListener('click', async (event) => {
     const button = event.target.closest('[data-notes-action]');
