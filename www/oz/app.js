@@ -32,6 +32,7 @@
   let notesDraft = [];
   let notesIndex = 0;
   let notesMode = 'view';
+  let notesSuccessTimer = 0;
   let lastPayload = '';
 
   const readOpened = () => {
@@ -334,6 +335,7 @@
       ? '<button type="button" data-notes-action="cancel" aria-label="Cancelar edição" title="Cancelar"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg></button><button type="button" data-notes-action="save" aria-label="Salvar nota" title="Salvar"><svg viewBox="0 0 24 24"><path d="M5 4h12l3 3v13H4V4z"></path><path d="M8 4v6h8V4M8 20v-6h8v6"></path></svg></button>'
       : `<button type="button" data-notes-action="add" aria-label="Adicionar nota" title="Adicionar nota"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></button><button type="button" data-notes-action="edit" aria-label="Editar nota" title="Editar nota" ${notesDraft.length ? '' : 'disabled'}><svg viewBox="0 0 24 24"><path d="m4 16.5-.8 4.3 4.3-.8L19.6 7.9a2.5 2.5 0 0 0-3.5-3.5zM14.8 5.7l3.5 3.5"></path></svg></button><button type="button" data-notes-action="delete" aria-label="Excluir nota" title="Excluir nota" ${notesDraft.length ? '' : 'disabled'}><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7m3 0-.8 13H6.8L6 7m3 3.2v6.5m6-6.5v6.5"></path></svg></button>`;
     document.getElementById('notesError').hidden = true;
+    document.getElementById('notesSuccess').hidden = true;
   }
 
   function openNotes(item) {
@@ -347,7 +349,10 @@
 
   async function saveTaskNotes() {
     const error = document.getElementById('notesError');
+    const success = document.getElementById('notesSuccess');
     error.hidden = true;
+    success.hidden = true;
+    window.clearTimeout(notesSuccessTimer);
     try {
       await mutationQueue;
       const payload = await requestJson(`/api/oz/checklist/items/${encodeURIComponent(notesTaskId)}/notes`, {
@@ -356,9 +361,12 @@
       state = { categories: Array.isArray(payload.categories) ? payload.categories : [] };
       render();
       renderNotesDialog();
+      success.hidden = false;
+      notesSuccessTimer = window.setTimeout(() => { success.hidden = true; }, 2400);
     } catch (saveError) {
       error.textContent = saveError.message || 'Não foi possível salvar as notas.';
       error.hidden = false;
+      success.hidden = true;
       try { await loadChecklist(); } catch (_refreshError) {}
     }
   }
