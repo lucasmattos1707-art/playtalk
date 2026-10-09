@@ -16365,6 +16365,10 @@ async function ensureOzChecklistSchema() {
         ADD COLUMN IF NOT EXISTS notes jsonb NOT NULL DEFAULT '[]'::jsonb
       `);
       await pool.query(`
+        ALTER TABLE public.oz_checklist_items
+        ADD COLUMN IF NOT EXISTS is_urgent boolean NOT NULL DEFAULT false
+      `);
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS oz_checklist_items_parent_order_idx
         ON public.oz_checklist_items (parent_item_id, sort_order, created_at)
       `);
@@ -16448,7 +16452,7 @@ async function readOzChecklist(member) {
            c.groups AS category_groups, c.is_completed AS category_completed,
            c.sort_order AS category_order, i.id AS item_id, i.group_label AS item_group,
            i.title AS item_title, i.is_completed AS item_completed, i.status AS item_status, i.parent_item_id,
-           i.notes AS item_notes,
+           i.notes AS item_notes, i.is_urgent AS item_urgent,
            i.sort_order AS item_order,
            i.assignee_id, m.name AS assignee_name
       FROM public.oz_checklist_categories c
@@ -16479,6 +16483,7 @@ async function readOzChecklist(member) {
           ? row.item_status
           : (row.item_completed ? 'completed' : 'pending'),
         notes: Array.isArray(row.item_notes) ? row.item_notes : [],
+        urgent: Boolean(row.item_urgent),
         completed: row.item_status ? row.item_status === 'completed' : Boolean(row.item_completed),
         parentId: row.parent_item_id || null,
         subtasks: [],
@@ -29741,8 +29746,11 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
     const itemId = String(req.params.itemId || '').slice(0, 120);
     const isAdminEdit = Object.hasOwn(req.body || {}, 'title') || Object.hasOwn(req.body || {}, 'assigneeId');
     if (isAdminEdit && !actor.isKelly) return res.status(403).json({ success: false, message: 'Somente Kelly pode editar ou delegar tarefas.' });
-    if (!actor.isKelly && (Object.keys(req.body || {}).some((key) => !['completed', 'status'].includes(key)) || (typeof req.body?.completed !== 'boolean' && typeof req.body?.status !== 'string'))) {
-      return res.status(403).json({ success: false, message: 'Você pode atualizar somente o status das suas tarefas.' });
+    if (!actor.isKelly && (Object.keys(req.body || {}).some((key) => !['completed', 'status', 'urgent'].includes(key)) || (typeof req.body?.completed !== 'boolean' && typeof req.body?.status !== 'string' && typeof req.body?.urgent !== 'boolean'))) {
+      return res.status(403).json({ success: false, message: 'Você pode atualizar somente o status e a urgência das suas tarefas.' });
+    }
+    if (Object.hasOwn(req.body || {}, 'urgent') && typeof req.body.urgent !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'Informe se a tarefa deve ficar urgente.' });
     }
     const sets = [];
     const values = [itemId];
@@ -29757,11 +29765,19 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
     } else if (typeof req.body?.completed === 'boolean') {
       nextStatus = req.body.completed ? 'completed' : 'pending';
     }
+    if (req.body?.urgent === true && nextStatus === 'completed') {
+      return res.status(400).json({ success: false, message: 'Tarefas concluídas não podem ficar como urgentes.' });
+    }
     if (nextStatus) {
       values.push(nextStatus);
       sets.push(`status = $${values.length}`);
       values.push(nextStatus === 'completed');
       sets.push(`is_completed = $${values.length}`);
+      if (nextStatus === 'completed') sets.push('is_urgent = false');
+    }
+    if (typeof req.body?.urgent === 'boolean') {
+      values.push(req.body.urgent);
+      sets.push(`is_urgent = $${values.length}`);
     }
     if (typeof req.body?.title === 'string') {
       const title = req.body.title.trim().slice(0, 240);
@@ -29792,13 +29808,22 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
     }
     const isKellyParam = values.length + 1;
     const memberIdParam = values.length + 2;
+    const urgentOnlyIncompleteParam = values.length + 3;
     const result = await pool.query(`
       UPDATE public.oz_checklist_items
          SET ${sets.join(', ')}, updated_at = now()
        WHERE id = $1 AND ($${isKellyParam}::boolean OR assignee_id = $${memberIdParam})
+         AND (NOT $${urgentOnlyIncompleteParam}::boolean OR status <> 'completed')
       RETURNING id
-    `, [...values, actor.isKelly, actor.id]);
+    `, [...values, actor.isKelly, actor.id, req.body?.urgent === true]);
     if (!result.rows.length) {
+      if (req.body?.urgent === true) {
+        const completed = await pool.query(`
+          SELECT id FROM public.oz_checklist_items
+           WHERE id = $1 AND status = 'completed' AND ($2::boolean OR assignee_id = $3)
+        `, [itemId, actor.isKelly, actor.id]);
+        if (completed.rows.length) return res.status(409).json({ success: false, message: 'Tarefas concluídas não podem ficar como urgentes.' });
+      }
       res.status(404).json({ success: false, message: 'Item não encontrado.' });
       return;
     }

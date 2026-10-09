@@ -91,17 +91,17 @@
       .find((item) => item.id === itemId) || null;
   }
 
-  function renderTask(item) {
+  function renderTask(item, options = {}) {
     const itemStatus = getItemStatus(item);
-    const subtasks = Array.isArray(item.subtasks) ? item.subtasks : [];
+    const subtasks = options.flat ? [] : (Array.isArray(item.subtasks) ? item.subtasks : []);
     const taskOpenKey = `task:${item.id}`;
     const isOpen = openedCategories.has(taskOpenKey);
     const hasSubtasks = subtasks.length > 0;
     return `<div class="task-node">
-      <div class="task-row ${itemStatus === 'completed' ? 'is-done' : ''} ${itemStatus === 'in_progress' ? 'is-in-progress' : ''}" data-task-id="${escapeHtml(item.id)}">
+      <div class="task-row ${options.urgentReplica ? 'task-row--urgent' : ''} ${itemStatus === 'completed' ? 'is-done' : ''} ${itemStatus === 'in_progress' ? 'is-in-progress' : ''}" data-task-id="${escapeHtml(item.id)}">
         <span class="task-controls">
           <button class="item-status status-${itemStatus}" type="button" aria-label="${statusLabel(itemStatus)}" title="${statusLabel(itemStatus)}">${statusIcon(itemStatus)}</button>
-          <button class="task-options-toggle" type="button" data-action="open-task-options" data-id="${escapeHtml(item.id)}" aria-haspopup="menu" aria-expanded="false" aria-label="Opções da tarefa" title="Opções da tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle></svg></button>
+          <button class="task-options-toggle" type="button" data-action="open-task-options" data-id="${escapeHtml(item.id)}" aria-haspopup="menu" aria-expanded="false" aria-label="Opções da tarefa" title="Opções da tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="12" cy="19" r="1.7"></circle></svg></button>
         </span>
         <span class="task-copy"><span class="task-title">${escapeHtml(item.title)}</span>${item.assigneeName ? `<span class="task-assignee"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.1"></circle><path d="M5.8 20c.25-3.8 2.35-5.7 6.2-5.7s5.95 1.9 6.2 5.7"></path></svg><span>${escapeHtml(item.assigneeName)}</span></span>` : ''}</span>
         ${hasSubtasks ? `<button class="task-toggle ${isOpen ? 'is-open' : ''}" type="button" data-action="toggle-subtasks" data-id="${escapeHtml(item.id)}" aria-expanded="${isOpen}" aria-controls="subtasks-${escapeHtml(item.id)}" aria-label="${isOpen ? 'Recolher' : 'Abrir'} sub tarefas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>` : ''}
@@ -146,9 +146,14 @@
 
   function render() {
     updateOverview();
-    list.innerHTML = state.categories.length
+    const urgentItems = state.categories.flatMap((category) => flattenItems(category.items || []))
+      .filter((item) => item.urgent && getItemStatus(item) !== 'completed');
+    const urgentMarkup = urgentItems.length
+      ? `<section class="urgent-panel" aria-labelledby="urgentHeading"><h2 id="urgentHeading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.75 5.58 6.16.9-4.46 4.34 1.05 6.13L12 17.06l-5.5 2.89 1.05-6.13L3.1 9.48l6.16-.9L12 3z"></path></svg>Urgente</h2><div class="urgent-list">${urgentItems.map((item) => renderTask(item, { flat: true, urgentReplica: true })).join('')}</div></section>`
+      : '';
+    list.innerHTML = urgentMarkup + (state.categories.length
       ? state.categories.map(renderCategory).join('')
-      : '<div class="loading-state">Nenhuma categoria encontrada.</div>';
+      : '<div class="loading-state">Nenhuma categoria encontrada.</div>');
     lastPayload = JSON.stringify(state);
   }
 
@@ -408,8 +413,13 @@
     }
     closeAssignMenu();
     const canManage = Boolean(activeMember?.isKelly);
+    const item = findItemById(row.dataset.taskId);
+    const urgentMarkup = item && getItemStatus(item) !== 'completed'
+      ? `<button type="button" role="menuitem" data-task-option="urgent" aria-pressed="${Boolean(item.urgent)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.75 5.58 6.16.9-4.46 4.34 1.05 6.13L12 17.06l-5.5 2.89 1.05-6.13L3.1 9.48l6.16-.9L12 3z"></path></svg><span>${item.urgent ? 'Remover de urgentes' : 'Urgente'}</span></button>`
+      : '';
     const optionMarkup = `
       <button type="button" role="menuitem" data-task-option="notes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h8l4 4V20.25H6z"></path><path d="M14 3.75v4h4M9 12h6M9 15.5h6"></path></svg><span>Adicionar nota</span></button>
+      ${urgentMarkup}
       ${canManage ? '<button type="button" role="menuitem" data-task-option="subtask"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h5l2 2h7v11H5z"></path><path d="M12 10v6m-3-3h6"></path></svg><span>Adicionar subtarefa</span></button><button type="button" role="menuitem" data-task-option="delegate"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19c.2-3.5 2.05-5.25 5.5-5.25 1.15 0 2.1.2 2.85.6M15 10h5m-2.5-2.5L20 10l-2.5 2.5"></path></svg><span>Delegar</span></button>' : ''}`;
     taskOptionsMenu.innerHTML = optionMarkup;
     taskOptionsMenu.dataset.taskId = row.dataset.taskId;
@@ -613,6 +623,9 @@
     if (option.dataset.taskOption === 'notes') {
       const item = findItemById(id);
       if (item) openNotes(item);
+    } else if (option.dataset.taskOption === 'urgent' && id) {
+      const item = findItemById(id);
+      if (item && getItemStatus(item) !== 'completed') mutate(`/api/oz/checklist/items/${encodeURIComponent(id)}`, 'PATCH', { urgent: !item.urgent });
     } else if (option.dataset.taskOption === 'subtask' && activeMember?.isKelly && id) {
       subtaskParentId = id;
       subtaskForm.reset();
