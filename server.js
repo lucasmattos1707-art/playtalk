@@ -16407,7 +16407,7 @@ async function ensureOzChecklistSchema() {
   return ozChecklistSchemaReadyPromise;
 }
 
-async function readOzChecklist() {
+async function readOzChecklist(member) {
   await ensureOzChecklistSchema();
   const result = await pool.query(`
     SELECT c.id AS category_id, c.title AS category_title, c.icon AS category_icon,
@@ -16445,7 +16445,13 @@ async function readOzChecklist() {
       });
     }
   }
-  return { categories: [...categoriesById.values()] };
+  const categories = [...categoriesById.values()];
+  if (member?.isKelly) return { categories };
+  return {
+    categories: categories
+      .map((category) => ({ ...category, items: category.items.filter((item) => item.assigneeId === member?.id) }))
+      .filter((category) => category.items.length > 0)
+  };
 }
 
 async function ensureMusicalKellyTimedCommentSchema() {
@@ -29381,18 +29387,43 @@ app.get(['/oz', '/oz/', '/oz/index.html'], (_req, res) => {
   res.sendFile(path.join(staticDir, 'oz', 'index.html'));
 });
 
-app.get('/api/oz/checklist', async (_req, res) => {
+async function getOzMember(req) {
+  const id = String(req.get('x-oz-member-id') || '').trim().slice(0, 100);
+  if (!id) return null;
+  await ensureOzChecklistSchema();
+  const result = await pool.query('SELECT id, name, name_key FROM public.oz_checklist_members WHERE id = $1', [id]);
+  const member = result.rows[0];
+  return member ? { id: member.id, name: member.name, isKelly: member.name_key === 'kelly' } : null;
+}
+
+app.get('/api/oz/team/session', async (req, res) => {
   try {
+    const member = await getOzMember(req);
+    if (!member) return res.status(401).json({ success: false, message: 'Entre novamente com seu usuario.' });
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, ...(await readOzChecklist()) });
+    res.json({ success: true, member });
+  } catch (error) {
+    console.error('Erro ao restaurar a sessão de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível entrar agora.' });
+  }
+});
+
+app.get('/api/oz/checklist', async (req, res) => {
+  try {
+    const member = await getOzMember(req);
+    if (!member) return res.status(401).json({ success: false, message: 'Entre para ver o checklist.' });
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, ...(await readOzChecklist(member)) });
   } catch (error) {
     console.error('Erro ao carregar o checklist de Oz:', error);
     res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível carregar a lista agora.' });
   }
 });
 
-app.get('/api/oz/team', async (_req, res) => {
+app.get('/api/oz/team', async (req, res) => {
   try {
+    const member = await getOzMember(req);
+    if (!member?.isKelly) return res.status(member ? 403 : 401).json({ success: false, message: 'Somente Kelly pode gerenciar a equipe.' });
     await ensureOzChecklistSchema();
     const result = await pool.query(`
       SELECT id, name FROM public.oz_checklist_members
@@ -29416,7 +29447,7 @@ app.post('/api/oz/team/login', async (req, res) => {
     }
     const nameKey = name.toLocaleLowerCase('pt-BR');
     const result = await pool.query(`
-      SELECT id, name FROM public.oz_checklist_members WHERE name_key = $1
+      SELECT id, name, (name_key = 'kelly') AS "isKelly" FROM public.oz_checklist_members WHERE name_key = $1
     `, [nameKey]);
     if (!result.rows.length) {
       res.status(404).json({ success: false, message: 'Esse nome ainda não está na equipe.' });
@@ -29431,6 +29462,8 @@ app.post('/api/oz/team/login', async (req, res) => {
 
 app.post('/api/oz/team/members', async (req, res) => {
   try {
+    const actor = await getOzMember(req);
+    if (!actor?.isKelly) return res.status(actor ? 403 : 401).json({ success: false, message: 'Somente Kelly pode adicionar integrantes.' });
     await ensureOzChecklistSchema();
     const name = typeof req.body?.name === 'string' ? req.body.name.trim().replace(/\s+/g, ' ').slice(0, 60) : '';
     if (name.length < 2) {
@@ -29463,6 +29496,8 @@ app.post('/api/oz/team/members', async (req, res) => {
 
 app.post('/api/oz/checklist/categories', async (req, res) => {
   try {
+    const actor = await getOzMember(req);
+    if (!actor?.isKelly) return res.status(actor ? 403 : 401).json({ success: false, message: 'Somente Kelly pode adicionar categorias.' });
     await ensureOzChecklistSchema();
     const title = typeof req.body?.title === 'string' ? req.body.title.trim().slice(0, 200) : '';
     const icon = typeof req.body?.icon === 'string' ? [...req.body.icon.trim()].slice(0, 4).join('') : '';
@@ -29481,7 +29516,7 @@ app.post('/api/oz/checklist/categories', async (req, res) => {
       res.status(409).json({ success: false, message: 'O limite de 100 categorias foi atingido.' });
       return;
     }
-    res.status(201).json({ success: true, ...(await readOzChecklist()) });
+    res.status(201).json({ success: true, ...(await readOzChecklist(actor)) });
   } catch (error) {
     console.error('Erro ao criar categoria de Oz:', error);
     res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível criar a categoria.' });
@@ -29490,6 +29525,8 @@ app.post('/api/oz/checklist/categories', async (req, res) => {
 
 app.patch('/api/oz/checklist/categories/:categoryId', async (req, res) => {
   try {
+    const actor = await getOzMember(req);
+    if (!actor?.isKelly) return res.status(actor ? 403 : 401).json({ success: false, message: 'Somente Kelly pode editar categorias.' });
     await ensureOzChecklistSchema();
     const categoryId = String(req.params.categoryId || '').slice(0, 100);
     const sets = [];
@@ -29530,7 +29567,7 @@ app.patch('/api/oz/checklist/categories/:categoryId', async (req, res) => {
       res.status(404).json({ success: false, message: 'Categoria não encontrada.' });
       return;
     }
-    res.json({ success: true, ...(await readOzChecklist()) });
+    res.json({ success: true, ...(await readOzChecklist(actor)) });
   } catch (error) {
     console.error('Erro ao atualizar categoria de Oz:', error);
     res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível atualizar a categoria.' });
@@ -29539,6 +29576,8 @@ app.patch('/api/oz/checklist/categories/:categoryId', async (req, res) => {
 
 app.post('/api/oz/checklist/categories/:categoryId/items', async (req, res) => {
   try {
+    const actor = await getOzMember(req);
+    if (!actor?.isKelly) return res.status(actor ? 403 : 401).json({ success: false, message: 'Somente Kelly pode adicionar tarefas.' });
     await ensureOzChecklistSchema();
     const categoryId = String(req.params.categoryId || '').slice(0, 100);
     const title = typeof req.body?.title === 'string' ? req.body.title.trim().slice(0, 240) : '';
@@ -29565,7 +29604,7 @@ app.post('/api/oz/checklist/categories/:categoryId/items', async (req, res) => {
       });
       return;
     }
-    res.status(201).json({ success: true, ...(await readOzChecklist()) });
+    res.status(201).json({ success: true, ...(await readOzChecklist(actor)) });
   } catch (error) {
     console.error('Erro ao adicionar item ao checklist de Oz:', error);
     res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível adicionar o item.' });
@@ -29575,7 +29614,14 @@ app.post('/api/oz/checklist/categories/:categoryId/items', async (req, res) => {
 app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
   try {
     await ensureOzChecklistSchema();
+    const actor = await getOzMember(req);
+    if (!actor) return res.status(401).json({ success: false, message: 'Entre para atualizar tarefas.' });
     const itemId = String(req.params.itemId || '').slice(0, 120);
+    const isAdminEdit = Object.hasOwn(req.body || {}, 'title') || Object.hasOwn(req.body || {}, 'assigneeId');
+    if (isAdminEdit && !actor.isKelly) return res.status(403).json({ success: false, message: 'Somente Kelly pode editar ou delegar tarefas.' });
+    if (!actor.isKelly && (Object.keys(req.body || {}).some((key) => key !== 'completed') || typeof req.body?.completed !== 'boolean')) {
+      return res.status(403).json({ success: false, message: 'Você pode atualizar somente o status das suas tarefas.' });
+    }
     const sets = [];
     const values = [itemId];
     if (typeof req.body?.completed === 'boolean') {
@@ -29608,20 +29654,37 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
       res.status(400).json({ success: false, message: 'Nenhuma alteração informada.' });
       return;
     }
+    const isKellyParam = values.length + 1;
+    const memberIdParam = values.length + 2;
     const result = await pool.query(`
       UPDATE public.oz_checklist_items
          SET ${sets.join(', ')}, updated_at = now()
-       WHERE id = $1
+       WHERE id = $1 AND ($${isKellyParam}::boolean OR assignee_id = $${memberIdParam})
       RETURNING id
-    `, values);
+    `, [...values, actor.isKelly, actor.id]);
     if (!result.rows.length) {
       res.status(404).json({ success: false, message: 'Item não encontrado.' });
       return;
     }
-    res.json({ success: true, ...(await readOzChecklist()) });
+    const owned = await pool.query('SELECT id FROM public.oz_checklist_items WHERE id = $1', [itemId]);
+    if (!owned.rows.length) return res.status(404).json({ success: false, message: 'Tarefa não encontrada ou não atribuída a você.' });
+    res.json({ success: true, ...(await readOzChecklist(actor)) });
   } catch (error) {
     console.error('Erro ao atualizar item do checklist de Oz:', error);
     res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível atualizar o item.' });
+  }
+});
+
+app.delete('/api/oz/checklist/items/:itemId', async (req, res) => {
+  try {
+    const actor = await getOzMember(req);
+    if (!actor?.isKelly) return res.status(actor ? 403 : 401).json({ success: false, message: 'Somente Kelly pode excluir tarefas.' });
+    const result = await pool.query('DELETE FROM public.oz_checklist_items WHERE id = $1 RETURNING id', [String(req.params.itemId || '').slice(0, 120)]);
+    if (!result.rows.length) return res.status(404).json({ success: false, message: 'Tarefa não encontrada.' });
+    res.json({ success: true, ...(await readOzChecklist(actor)) });
+  } catch (error) {
+    console.error('Erro ao excluir tarefa do checklist de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível excluir a tarefa.' });
   }
 });
 

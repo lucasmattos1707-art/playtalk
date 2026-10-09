@@ -15,12 +15,22 @@
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
   <div class="ambient ambient--two" aria-hidden="true"></div>
-  <main class="page-shell">
+  <main class="login-screen" id="loginScreen">
+    <form class="login-card" id="pageLoginForm">
+      <h1>Entre com seu usuario</h1>
+      <input id="pageLoginName" name="name" maxlength="60" autocomplete="username" placeholder="Usuario" aria-label="Usuario" required>
+      <button type="submit">Entrar</button>
+      <p class="login-error" id="loginError" role="status" hidden></p>
+    </form>
+  </main>
+
+  <main class="page-shell" id="checklistApp" hidden>
     <header class="topline">
-      <button class="team-account" id="openTeamDialog" type="button" aria-label="Abrir equipe">
+      <button class="team-account" id="accountButton" type="button" aria-label="Opções do usuario" aria-expanded="false" aria-controls="accountMenu">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.3"></circle><path d="M5.5 20c.3-4 2.6-6 6.5-6s6.2 2 6.5 6"></path></svg>
-        <span id="currentMemberLabel">Equipe</span>
+        <span id="currentMemberLabel"></span>
       </button>
+      <div class="account-menu" id="accountMenu" hidden><button type="button" data-account-action="logout">Sair</button></div>
     </header>
 
     <section class="page-intro">
@@ -63,17 +73,9 @@
   <dialog class="team-dialog" id="teamDialog">
     <section class="team-panel">
       <button class="dialog-close" type="button" id="closeTeamDialog" aria-label="Fechar">×</button>
-      <div class="team-title-row"><span class="team-dialog-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 20c.2-3.5 2-5.3 5.5-5.3M16 8v8M12 12h8"></path></svg></span><div><p class="team-eyebrow">IDENTIFICAÇÃO LOCAL</p><h2>Equipe</h2></div></div>
-      <div class="active-member" id="activeMember" hidden></div>
+      <div class="team-title-row"><span class="team-dialog-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 20c.2-3.5 2-5.3 5.5-5.3M16 8v8M12 12h8"></path></svg></span><div><h2>Equipe</h2></div></div>
       <p class="team-error" id="teamError" role="status" hidden></p>
-      <form id="teamLoginForm" class="team-login-form">
-        <label for="teamLoginName">Entre pelo seu nome</label>
-        <div class="team-login-row"><input id="teamLoginName" name="name" maxlength="60" autocomplete="name" placeholder="Seu nome" required><button type="submit">Entrar</button></div>
-        <small>O nome precisa corresponder a um integrante cadastrado.</small>
-      </form>
-      <div class="team-roster-heading"><span>Integrantes</span><button type="button" id="showAddMember">+ Adicionar integrante</button></div>
-      <div class="team-roster" id="teamRoster"><div class="roster-empty">Carregando equipe…</div></div>
-      <form id="newMemberForm" class="new-member-form" hidden>
+      <form id="newMemberForm" class="new-member-form">
         <label for="newMemberName">Nome do novo integrante</label>
         <div class="team-login-row"><input id="newMemberName" name="name" maxlength="60" placeholder="Nome completo" required><button type="submit">Adicionar</button></div>
       </form>

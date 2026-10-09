@@ -3,12 +3,15 @@
 
   const STORAGE_KEY = 'fluentlevelup:oz:opened-categories:v1';
   const MEMBER_KEY = 'fluentlevelup:oz:member:v1';
+  const loginScreen = document.getElementById('loginScreen');
+  const checklistApp = document.getElementById('checklistApp');
+  const pageLoginForm = document.getElementById('pageLoginForm');
   const list = document.getElementById('categoryList');
   const dialog = document.getElementById('categoryDialog');
   const teamDialog = document.getElementById('teamDialog');
-  const teamRoster = document.getElementById('teamRoster');
   const assignMenu = document.getElementById('taskAssignMenu');
   const addMenu = document.getElementById('addMenu');
+  const accountMenu = document.getElementById('accountMenu');
   let state = { categories: [] };
   let members = [];
   let activeMember = null;
@@ -29,9 +32,10 @@
     }
   };
   const openedCategories = readOpened();
+  let savedMemberId = '';
   try {
     const savedMember = JSON.parse(localStorage.getItem(MEMBER_KEY) || 'null');
-    if (savedMember && typeof savedMember.id === 'string' && typeof savedMember.name === 'string') activeMember = savedMember;
+    if (savedMember && typeof savedMember.id === 'string') savedMemberId = savedMember.id;
   } catch (_error) {}
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -67,12 +71,13 @@
         <div class="task-row ${item.completed ? 'is-done' : ''}" data-task-id="${escapeHtml(item.id)}">
           <button class="item-status ${item.completed ? 'is-done' : ''}" type="button" data-action="toggle-item" data-id="${escapeHtml(item.id)}" aria-label="${item.completed ? 'Marcar como pendente' : 'Marcar como concluído'}" title="${item.completed ? 'Marcar como pendente' : 'Marcar como concluído'}"></button>
           <span class="task-copy"><span class="task-title">${escapeHtml(item.title)}</span>${item.assigneeName ? `<span class="task-assignee"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.1"></circle><path d="M5.8 20c.25-3.8 2.35-5.7 6.2-5.7s5.95 1.9 6.2 5.7"></path></svg><span>${escapeHtml(item.assigneeName)}</span></span>` : ''}</span>
+          ${activeMember?.isKelly ? '<button class="delete-task" type="button" data-action="delete-item" data-id="' + escapeHtml(item.id) + '" aria-label="Excluir tarefa" title="Excluir tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h10l4 4V20H5z"></path><path d="M15 4.5V9h4M9 13h6M9 16h6"></path></svg></button>' : ''}
         </div>`).join('');
       return `<section class="group-block">${name ? `<h3 class="group-title">${escapeHtml(name)}</h3>` : ''}<div class="task-list">${taskMarkup || '<div class="task-row task-row--empty"><span class="task-title">Adicione o primeiro item desta etapa.</span></div>'}</div></section>`;
     }).join('');
     return `<article class="${cardClasses}" data-category="${escapeHtml(category.id)}">
       <div class="category-head">
-        <button class="category-status ${category.completed ? 'is-done' : ''}" type="button" data-action="toggle-category" data-id="${escapeHtml(category.id)}" aria-label="${category.completed ? 'Marcar categoria como pendente' : 'Marcar categoria como concluída'}" title="${category.completed ? 'Marcar como pendente' : 'Marcar categoria como concluída'}"></button>
+        ${activeMember?.isKelly ? `<button class="category-status ${category.completed ? 'is-done' : ''}" type="button" data-action="toggle-category" data-id="${escapeHtml(category.id)}" aria-label="${category.completed ? 'Marcar categoria como pendente' : 'Marcar categoria como concluída'}" title="${category.completed ? 'Marcar como pendente' : 'Marcar categoria como concluída'}"></button>` : '<span class="category-status-spacer" aria-hidden="true"></span>'}
         <button class="category-title-button" type="button" data-action="open-category" data-id="${escapeHtml(category.id)}" aria-expanded="${isOpen}" aria-controls="panel-${escapeHtml(category.id)}">
           <span class="category-titleline"><span class="category-emoji" aria-hidden="true">${escapeHtml(category.icon || '✨')}</span><span class="category-title">${escapeHtml(category.title)}</span><span class="chevron" aria-hidden="true">›</span></span>
         </button>
@@ -80,7 +85,7 @@
       </div>
       <div class="category-content" id="panel-${escapeHtml(category.id)}" ${isOpen ? '' : 'hidden'}>
         ${groupMarkup}
-        <div class="add-area"><button class="add-item" type="button" data-action="show-add-item" data-id="${escapeHtml(category.id)}"><span aria-hidden="true">+</span> Adicionar item</button></div>
+        ${activeMember?.isKelly ? `<div class="add-area"><button class="add-item" type="button" data-action="show-add-item" data-id="${escapeHtml(category.id)}"><span aria-hidden="true">+</span> Adicionar item</button></div>` : ''}
       </div>
     </article>`;
   }
@@ -94,14 +99,21 @@
   }
 
   async function requestJson(url, options = {}) {
+    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    if (activeMember?.id) headers['X-Oz-Member-Id'] = activeMember.id;
     const response = await fetch(url, {
       ...options,
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      headers,
       cache: 'no-store'
     });
     let payload = {};
     try { payload = await response.json(); } catch (_error) {}
-    if (!response.ok || payload.success === false) throw new Error(payload.message || 'Não foi possível salvar a alteração.');
+    if (!response.ok || payload.success === false) {
+      const error = new Error(payload.message || 'Não foi possível salvar a alteração.');
+      error.status = response.status;
+      if (response.status === 401 && activeMember) exitUser();
+      throw error;
+    }
     return payload;
   }
 
@@ -121,7 +133,8 @@
         const payload = await requestJson(url, { method, body: JSON.stringify(body) });
         state = { categories: Array.isArray(payload.categories) ? payload.categories : [] };
         render();
-      } catch (_error) {
+      } catch (error) {
+        if (error.status === 401) exitUser();
         try { await loadChecklist(); } catch (_refreshError) {}
       } finally {
         pendingMutations = Math.max(0, pendingMutations - 1);
@@ -150,15 +163,8 @@
   }
 
   function updateIdentity() {
-    document.getElementById('currentMemberLabel').textContent = activeMember?.name || 'Equipe';
-    const activePanel = document.getElementById('activeMember');
-    if (activeMember) {
-      activePanel.hidden = false;
-      activePanel.innerHTML = `<span class="member-avatar">${avatarSvg()}</span><span>Conectado como <strong>${escapeHtml(activeMember.name)}</strong></span><button type="button" data-team-action="logout">Sair</button>`;
-    } else {
-      activePanel.hidden = true;
-      activePanel.innerHTML = '';
-    }
+    document.getElementById('currentMemberLabel').textContent = activeMember?.name || '';
+    document.querySelector('.list-actions').hidden = !activeMember?.isKelly;
   }
 
   function avatarSvg() {
@@ -166,7 +172,7 @@
   }
 
   function setActiveMember(member) {
-    activeMember = member ? { id: member.id, name: member.name } : null;
+    activeMember = member ? { id: member.id, name: member.name, isKelly: Boolean(member.isKelly) } : null;
     try {
       if (activeMember) localStorage.setItem(MEMBER_KEY, JSON.stringify(activeMember));
       else localStorage.removeItem(MEMBER_KEY);
@@ -174,14 +180,17 @@
     updateIdentity();
   }
 
+  async function resolveMember(id) {
+    const response = await fetch('/api/oz/team/session', { headers: { 'X-Oz-Member-Id': id }, cache: 'no-store' });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.member) throw new Error('Sessão expirada. Entre novamente.');
+    return payload.member;
+  }
+
   async function loadTeam() {
+    if (!activeMember?.isKelly) { members = []; return; }
     const payload = await requestJson('/api/oz/team');
     members = Array.isArray(payload.members) ? payload.members : [];
-    teamRoster.innerHTML = members.length
-      ? members.map((member) => `<button class="roster-person ${activeMember?.id === member.id ? 'is-current' : ''}" type="button" data-member-id="${escapeHtml(member.id)}">${avatarSvg()}<span>${escapeHtml(member.name)}</span>${activeMember?.id === member.id ? '<small>Você</small>' : ''}</button>`).join('')
-      : '<div class="roster-empty">Nenhum integrante cadastrado.</div>';
-    if (activeMember && !members.some((member) => member.id === activeMember.id)) setActiveMember(null);
-    updateIdentity();
   }
 
   function setTeamError(message = '') {
@@ -191,13 +200,53 @@
   }
 
   async function openTeam() {
+    if (!activeMember?.isKelly) return;
     addMenu.hidden = true;
     document.getElementById('toggleAddMenu').setAttribute('aria-expanded', 'false');
     setTeamError('');
-    document.getElementById('newMemberForm').hidden = true;
+    document.getElementById('newMemberForm').reset();
     teamDialog.showModal();
-    try { await loadTeam(); } catch (_error) { teamRoster.innerHTML = '<div class="roster-empty">Equipe indisponível no momento.</div>'; }
+    document.getElementById('newMemberName').focus();
   }
+
+  function exitUser() {
+    setActiveMember(null);
+    members = [];
+    state = { categories: [] };
+    lastPayload = '';
+    checklistApp.hidden = true;
+    loginScreen.hidden = false;
+    accountMenu.hidden = true;
+    document.getElementById('accountButton').setAttribute('aria-expanded', 'false');
+    if (teamDialog.open) teamDialog.close();
+    document.getElementById('loginError').hidden = true;
+    document.getElementById('pageLoginName').value = '';
+    list.innerHTML = '<div class="loading-state"><span class="loader"></span><span>Entre para carregar suas tarefas.</span></div>';
+    document.getElementById('pageLoginName').focus();
+  }
+
+  async function enterApp() {
+    loginScreen.hidden = true;
+    checklistApp.hidden = false;
+    updateIdentity();
+    try { await loadChecklist(); } catch (_error) {}
+    try { await loadTeam(); } catch (_error) { members = []; }
+  }
+
+  pageLoginForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const name = String(new FormData(pageLoginForm).get('name') || '').trim();
+    const error = document.getElementById('loginError');
+    error.hidden = true;
+    try {
+      const payload = await requestJson('/api/oz/team/login', { method: 'POST', body: JSON.stringify({ name }) });
+      setActiveMember(payload.member);
+      await enterApp();
+    } catch (problem) {
+      error.textContent = problem.message || 'Não foi possível entrar.';
+      error.hidden = false;
+    }
+  });
 
   function closeAssignMenu() {
     assignMenu.hidden = true;
@@ -205,6 +254,7 @@
   }
 
   function openAssignMenu(row) {
+    if (!activeMember?.isKelly) return;
     assignTaskId = row.dataset.taskId;
     const currentItem = state.categories.flatMap((category) => category.items || []).find((item) => item.id === assignTaskId);
     const people = members.map((member) => `<button type="button" class="assign-person" data-assign-id="${escapeHtml(member.id)}">${avatarSvg()}<span>${escapeHtml(member.name)}</span>${currentItem?.assigneeId === member.id ? '<span class="assigned-check">✓</span>' : ''}</button>`).join('');
@@ -226,8 +276,9 @@
   }
 
   list.addEventListener('pointerdown', (event) => {
+    if (!activeMember?.isKelly) return;
     const row = event.target.closest('.task-row[data-task-id]');
-    if (!row || event.target.closest('.item-status') || (event.button !== undefined && event.button !== 0)) return;
+    if (!row || event.target.closest('.item-status, .delete-task') || (event.button !== undefined && event.button !== 0)) return;
     holdStart = { x: event.clientX, y: event.clientY, row };
     holdTimer = window.setTimeout(() => {
       openAssignMenu(row);
@@ -263,6 +314,7 @@
       return;
     }
     if (action === 'toggle-category' && id) {
+      if (!activeMember?.isKelly) return;
       const category = state.categories.find((entry) => entry.id === id);
       if (category) mutate(`/api/oz/checklist/categories/${encodeURIComponent(id)}`, 'PATCH', { completed: !category.completed });
       return;
@@ -270,6 +322,11 @@
     if (action === 'toggle-item' && id) {
       const item = state.categories.flatMap((entry) => entry.items || []).find((entry) => entry.id === id);
       if (item) mutate(`/api/oz/checklist/items/${encodeURIComponent(id)}`, 'PATCH', { completed: !item.completed });
+      return;
+    }
+    if (action === 'delete-item' && id && activeMember?.isKelly) {
+      const item = state.categories.flatMap((entry) => entry.items || []).find((entry) => entry.id === id);
+      if (item && window.confirm(`Excluir a tarefa "${item.title}"?`)) mutate(`/api/oz/checklist/items/${encodeURIComponent(id)}`, 'DELETE');
       return;
     }
     if (action === 'show-add-item') revealAddForm(card);
@@ -288,7 +345,7 @@
     const group = String(formData.get('group') || '').trim();
     if (!title) return;
     const categoryId = form.dataset.categoryId;
-    mutate(`/api/oz/checklist/categories/${encodeURIComponent(categoryId)}/items`, 'POST', { title, group });
+    if (activeMember?.isKelly) mutate(`/api/oz/checklist/categories/${encodeURIComponent(categoryId)}/items`, 'POST', { title, group });
   });
 
   document.getElementById('toggleAddMenu').addEventListener('click', () => {
@@ -307,44 +364,16 @@
       document.getElementById('newCategoryTitle').focus();
     } else if (option.dataset.menuAction === 'team') openTeam();
   });
-  document.getElementById('openTeamDialog').addEventListener('click', openTeam);
-  document.getElementById('closeTeamDialog').addEventListener('click', () => {
-    if (activeMember) teamDialog.close();
+  document.getElementById('closeTeamDialog').addEventListener('click', () => teamDialog.close());
+  teamDialog.addEventListener('cancel', () => {});
+  teamDialog.addEventListener('click', (event) => { if (event.target === teamDialog) teamDialog.close(); });
+  document.getElementById('accountButton').addEventListener('click', () => {
+    const opening = accountMenu.hidden;
+    accountMenu.hidden = !opening;
+    document.getElementById('accountButton').setAttribute('aria-expanded', String(opening));
   });
-  teamDialog.addEventListener('cancel', (event) => {
-    if (!activeMember) event.preventDefault();
-  });
-  teamDialog.addEventListener('click', (event) => { if (event.target === teamDialog && activeMember) teamDialog.close(); });
-  document.getElementById('showAddMember').addEventListener('click', () => {
-    const form = document.getElementById('newMemberForm');
-    form.hidden = !form.hidden;
-    if (!form.hidden) document.getElementById('newMemberName').focus();
-    setTeamError('');
-  });
-  teamRoster.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-member-id]');
-    if (!button) return;
-    const member = members.find((entry) => entry.id === button.dataset.memberId);
-    if (member) {
-      setActiveMember(member);
-      loadTeam().catch(() => {});
-    }
-  });
-  document.getElementById('activeMember').addEventListener('click', (event) => {
-    if (event.target.closest('[data-team-action="logout"]')) {
-      setActiveMember(null);
-      loadTeam().catch(() => {});
-      if (!teamDialog.open) teamDialog.showModal();
-    }
-  });
-  document.getElementById('teamLoginForm').addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const name = String(new FormData(event.currentTarget).get('name') || '').trim();
-    try {
-      const payload = await requestJson('/api/oz/team/login', { method: 'POST', body: JSON.stringify({ name }) });
-      setActiveMember(payload.member);
-      teamDialog.close();
-    } catch (error) { setTeamError(error.message); }
+  accountMenu.addEventListener('click', (event) => {
+    if (event.target.closest('[data-account-action="logout"]')) exitUser();
   });
   document.getElementById('newMemberForm').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -352,11 +381,9 @@
     const name = String(new FormData(form).get('name') || '').trim();
     try {
       const payload = await requestJson('/api/oz/team/members', { method: 'POST', body: JSON.stringify({ name }) });
-      setActiveMember(payload.member);
+      members = [...members, payload.member];
       form.reset();
-      form.hidden = true;
-      await loadTeam();
-      teamDialog.close();
+      setTeamError('Integrante adicionado à equipe.');
     } catch (error) { setTeamError(error.message); }
   });
   assignMenu.addEventListener('click', (event) => {
@@ -397,23 +424,15 @@
     mutate('/api/oz/checklist/categories', 'POST', { title, icon });
   });
 
-  loadChecklist().catch((error) => {
-    list.innerHTML = `<div class="error-state"><span>${escapeHtml(error.message || 'Não foi possível carregar o checklist agora.')}</span><button type="button" id="retryLoad">Tentar novamente</button></div>`;
-    document.getElementById('retryLoad')?.addEventListener('click', () => {
-      list.innerHTML = '<div class="loading-state"><span class="loader"></span><span>Carregando…</span></div>';
-      loadChecklist().catch(() => {});
-    });
-  });
   updateIdentity();
-  loadTeam().then(() => {
-    if (!activeMember) {
-      teamDialog.showModal();
-      document.getElementById('teamLoginName').focus();
-    }
-  }).catch(() => {});
+  if (savedMemberId) resolveMember(savedMemberId).then(async (member) => {
+    setActiveMember(member);
+    await enterApp();
+  }).catch(() => exitUser());
   window.setInterval(() => {
+    if (!activeMember) return;
     if (document.hidden || pendingMutations || document.activeElement?.closest('.inline-add, .category-dialog, .team-dialog')) return;
     loadChecklist().catch(() => {});
-    if (teamDialog.open) loadTeam().catch(() => {});
+    if (activeMember?.isKelly) loadTeam().catch(() => {});
   }, 10000);
 })();
