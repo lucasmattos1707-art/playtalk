@@ -14,6 +14,7 @@
   const statusOptions = document.getElementById('statusOptions');
   const subtaskDialog = document.getElementById('subtaskDialog');
   const subtaskForm = document.getElementById('newSubtaskForm');
+  const notesDialog = document.getElementById('notesDialog');
   const addMenu = document.getElementById('addMenu');
   const accountMenu = document.getElementById('accountMenu');
   let state = { categories: [] };
@@ -27,6 +28,10 @@
   let assignTaskId = '';
   let statusTaskId = '';
   let subtaskParentId = '';
+  let notesTaskId = '';
+  let notesDraft = [];
+  let notesIndex = 0;
+  let notesMode = 'view';
   let lastPayload = '';
 
   const readOpened = () => {
@@ -90,13 +95,18 @@
     const taskOpenKey = `task:${item.id}`;
     const isOpen = openedCategories.has(taskOpenKey);
     const hasSubtasks = subtasks.length > 0;
+    const notes = Array.isArray(item.notes) ? item.notes : [];
+    const noteButtonClass = notes.length ? 'has-notes' : 'no-notes';
     return `<div class="task-node">
       <div class="task-row ${itemStatus === 'completed' ? 'is-done' : ''} ${itemStatus === 'in_progress' ? 'is-in-progress' : ''}" data-task-id="${escapeHtml(item.id)}">
-        ${activeMember?.isKelly ? `<button class="subtask-add" type="button" data-action="add-subfolder" data-id="${escapeHtml(item.id)}" aria-label="Criar subtarefa" title="Criar subtarefa"><span aria-hidden="true">+</span></button>` : ''}
-        <button class="item-status status-${itemStatus}" type="button" aria-label="${statusLabel(itemStatus)}" title="${statusLabel(itemStatus)}">${statusIcon(itemStatus)}</button>
-        ${hasSubtasks ? `<button class="task-toggle ${isOpen ? 'is-open' : ''}" type="button" data-action="toggle-subtasks" data-id="${escapeHtml(item.id)}" aria-expanded="${isOpen}" aria-controls="subtasks-${escapeHtml(item.id)}" aria-label="${isOpen ? 'Recolher' : 'Abrir'} sub tarefas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>` : '<span class="task-toggle-spacer" aria-hidden="true"></span>'}
+        <span class="task-controls">
+          <button class="item-status status-${itemStatus}" type="button" aria-label="${statusLabel(itemStatus)}" title="${statusLabel(itemStatus)}">${statusIcon(itemStatus)}</button>
+          ${activeMember?.isKelly ? `<button class="subtask-add" type="button" data-action="add-subfolder" data-id="${escapeHtml(item.id)}" aria-label="Criar subtarefa" title="Criar subtarefa"><span aria-hidden="true">+</span></button>` : '<span class="subtask-add-spacer" aria-hidden="true"></span>'}
+          <button class="task-notes ${noteButtonClass}" type="button" data-action="open-notes" data-id="${escapeHtml(item.id)}" aria-label="${notes.length ? 'Ver notas' : 'Criar primeira nota'}" title="${notes.length ? 'Ver notas' : 'Criar primeira nota'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h8l4 4V20.25H6z"></path><path d="M14 3.75v4h4M9 12h6M9 15.5h6"></path></svg></button>
+        </span>
         <span class="task-copy"><span class="task-title">${escapeHtml(item.title)}</span>${item.assigneeName ? `<span class="task-assignee"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.1"></circle><path d="M5.8 20c.25-3.8 2.35-5.7 6.2-5.7s5.95 1.9 6.2 5.7"></path></svg><span>${escapeHtml(item.assigneeName)}</span></span>` : ''}</span>
-        ${activeMember?.isKelly ? `<button class="delete-task" type="button" data-action="delete-item" data-id="${escapeHtml(item.id)}" aria-label="Excluir tarefa" title="Excluir tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h10l4 4V20H5z"></path><path d="M15 4.5V9h4M9 13h6M9 16h6"></path></svg></button>` : ''}
+        ${hasSubtasks ? `<button class="task-toggle ${isOpen ? 'is-open' : ''}" type="button" data-action="toggle-subtasks" data-id="${escapeHtml(item.id)}" aria-expanded="${isOpen}" aria-controls="subtasks-${escapeHtml(item.id)}" aria-label="${isOpen ? 'Recolher' : 'Abrir'} sub tarefas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>` : ''}
+        ${activeMember?.isKelly ? `<button class="delete-task" type="button" data-action="delete-item" data-id="${escapeHtml(item.id)}" aria-label="Excluir tarefa" title="Excluir tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7m3 0-.8 13H6.8L6 7m3 3.2v6.5m6-6.5v6.5"></path></svg></button>` : ''}
       </div>
       ${hasSubtasks ? `<div class="subtask-list" id="subtasks-${escapeHtml(item.id)}" ${isOpen ? '' : 'hidden'}>${subtasks.map(renderTask).join('')}</div>` : ''}
     </div>`;
@@ -292,6 +302,61 @@
     statusDialog.showModal();
   }
 
+  function renderNotesDialog() {
+    const item = findItemById(notesTaskId);
+    if (!item) return;
+    const title = document.getElementById('notesTaskTitle');
+    const heading = document.getElementById('notesHeading');
+    const text = document.getElementById('notesText');
+    const editor = document.getElementById('notesEditor');
+    const dots = document.getElementById('notesDots');
+    const toolbar = document.getElementById('notesToolbar');
+    const note = notesDraft[notesIndex] || '';
+    title.textContent = item.title;
+    const editing = notesMode === 'new' || notesMode === 'edit';
+    heading.textContent = notesDraft.length ? (editing ? (notesMode === 'new' ? 'Nova nota' : 'Editar nota') : 'Notas da tarefa') : 'Criar primeira nota';
+    text.textContent = note;
+    text.hidden = editing || !notesDraft.length;
+    editor.value = editing ? (notesMode === 'new' ? '' : note) : '';
+    editor.hidden = !editing;
+    dots.innerHTML = notesDraft.map((_entry, index) => `<button type="button" class="notes-dot ${index === notesIndex && !editing ? 'is-current' : ''}" data-note-index="${index}" aria-label="Nota ${index + 1}" ${editing ? 'disabled' : ''}></button>`).join('');
+    dots.hidden = notesDraft.length < 2;
+    toolbar.innerHTML = editing
+      ? '<button type="button" data-notes-action="cancel" aria-label="Cancelar edição" title="Cancelar"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg></button><button type="button" data-notes-action="save" aria-label="Salvar nota" title="Salvar"><svg viewBox="0 0 24 24"><path d="M5 4h12l3 3v13H4V4z"></path><path d="M8 4v6h8V4M8 20v-6h8v6"></path></svg></button>'
+      : notesDraft.length
+        ? '<button type="button" data-notes-action="add" aria-label="Adicionar nota" title="Adicionar nota"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></button><button type="button" data-notes-action="edit" aria-label="Editar nota" title="Editar nota"><svg viewBox="0 0 24 24"><path d="m4 16.5-.8 4.3 4.3-.8L19.6 7.9a2.5 2.5 0 0 0-3.5-3.5zM14.8 5.7l3.5 3.5"></path></svg></button><button type="button" data-notes-action="delete" aria-label="Excluir nota" title="Excluir nota"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7m3 0-.8 13H6.8L6 7m3 3.2v6.5m6-6.5v6.5"></path></svg></button>'
+        : '<button type="button" data-notes-action="save" aria-label="Criar primeira nota" title="Criar primeira nota"><svg viewBox="0 0 24 24"><path d="M5 4h12l3 3v13H4V4z"></path><path d="M8 4v6h8V4M8 20v-6h8v6"></path></svg></button>';
+    document.getElementById('notesError').hidden = true;
+  }
+
+  function openNotes(item) {
+    notesTaskId = item.id;
+    notesDraft = (Array.isArray(item.notes) ? item.notes : []).slice();
+    notesIndex = 0;
+    notesMode = notesDraft.length ? 'view' : 'new';
+    renderNotesDialog();
+    notesDialog.showModal();
+    if (!notesDraft.length) document.getElementById('notesEditor').focus();
+  }
+
+  async function saveTaskNotes() {
+    const error = document.getElementById('notesError');
+    error.hidden = true;
+    try {
+      await mutationQueue;
+      const payload = await requestJson(`/api/oz/checklist/items/${encodeURIComponent(notesTaskId)}/notes`, {
+        method: 'PUT', body: JSON.stringify({ notes: notesDraft })
+      });
+      state = { categories: Array.isArray(payload.categories) ? payload.categories : [] };
+      render();
+      renderNotesDialog();
+    } catch (saveError) {
+      error.textContent = saveError.message || 'Não foi possível salvar as notas.';
+      error.hidden = false;
+      try { await loadChecklist(); } catch (_refreshError) {}
+    }
+  }
+
   function closeStatusMenu() {
     statusTaskId = '';
     if (statusDialog.open) statusDialog.close();
@@ -342,7 +407,7 @@
   list.addEventListener('pointerdown', (event) => {
     if (!activeMember?.isKelly) return;
     const row = event.target.closest('.task-row[data-task-id]');
-    if (!row || event.target.closest('.item-status, .delete-task, .subtask-add, .task-toggle') || (event.button !== undefined && event.button !== 0)) return;
+    if (!row || event.target.closest('.item-status, .delete-task, .subtask-add, .task-notes, .task-toggle') || (event.button !== undefined && event.button !== 0)) return;
     holdStart = { x: event.clientX, y: event.clientY, row };
     holdTimer = window.setTimeout(() => {
       openAssignMenu(row);
@@ -366,7 +431,7 @@
       return;
     }
     const taskRow = event.target.closest('.task-row[data-task-id]');
-    if (taskRow && !event.target.closest('.delete-task, .subtask-add, .task-toggle')) {
+    if (taskRow && !event.target.closest('.delete-task, .subtask-add, .task-notes, .task-toggle')) {
       openStatusMenu(taskRow);
       return;
     }
@@ -410,6 +475,11 @@
       subtaskForm.reset();
       subtaskDialog.showModal();
       document.getElementById('newSubtaskTitle').focus();
+      return;
+    }
+    if (action === 'open-notes' && id) {
+      const item = findItemById(id);
+      if (item) openNotes(item);
       return;
     }
     if (action === 'delete-item' && id && activeMember?.isKelly) {
@@ -512,6 +582,80 @@
     closeStatusMenu();
     mutate(`/api/oz/checklist/items/${encodeURIComponent(itemId)}`, 'PATCH', { status });
   });
+  document.getElementById('closeNotesDialog').addEventListener('click', () => notesDialog.close());
+  notesDialog.addEventListener('click', (event) => { if (event.target === notesDialog) notesDialog.close(); });
+  let notesSwipeStartX = null;
+  document.getElementById('notesCard').addEventListener('touchstart', (event) => {
+    notesSwipeStartX = event.changedTouches[0]?.clientX ?? null;
+  }, { passive: true });
+  document.getElementById('notesCard').addEventListener('touchend', (event) => {
+    if (notesSwipeStartX === null || notesDraft.length < 2 || notesMode !== 'view') return;
+    const delta = event.changedTouches[0].clientX - notesSwipeStartX;
+    if (Math.abs(delta) > 45) {
+      notesIndex = (notesIndex + (delta < 0 ? 1 : -1) + notesDraft.length) % notesDraft.length;
+      renderNotesDialog();
+    }
+    notesSwipeStartX = null;
+  }, { passive: true });
+  document.getElementById('notesDots').addEventListener('click', (event) => {
+    const dot = event.target.closest('[data-note-index]');
+    if (!dot || notesMode !== 'view') return;
+    notesIndex = Number(dot.dataset.noteIndex) || 0;
+    renderNotesDialog();
+  });
+  document.getElementById('notesNav').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-note-step]');
+    if (!button || notesDraft.length < 2 || notesMode !== 'view') return;
+    notesIndex = (notesIndex + Number(button.dataset.noteStep) + notesDraft.length) % notesDraft.length;
+    renderNotesDialog();
+  });
+  document.getElementById('notesToolbar').addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-notes-action]');
+    if (!button) return;
+    const action = button.dataset.notesAction;
+    if (action === 'add') { notesMode = 'new'; renderNotesDialog(); document.getElementById('notesEditor').focus(); return; }
+    if (action === 'edit') { notesMode = 'edit'; renderNotesDialog(); document.getElementById('notesEditor').focus(); return; }
+    if (action === 'cancel') {
+      notesMode = notesDraft.length ? 'view' : 'new';
+      renderNotesDialog();
+      return;
+    }
+    if (action === 'delete') {
+      notesDraft.splice(notesIndex, 1);
+      notesIndex = Math.max(0, Math.min(notesIndex, notesDraft.length - 1));
+      notesMode = notesDraft.length ? 'view' : 'new';
+      await saveTaskNotes();
+      return;
+    }
+    if (action === 'save') {
+      const value = document.getElementById('notesEditor').value.trim();
+      if (!value) {
+        const error = document.getElementById('notesError');
+        error.textContent = 'Escreva o texto da nota antes de salvar.';
+        error.hidden = false;
+        return;
+      }
+      if (value.length > 4000) {
+        const error = document.getElementById('notesError');
+        error.textContent = 'Cada nota pode ter até 4.000 caracteres.';
+        error.hidden = false;
+        return;
+      }
+      if (notesMode === 'new') {
+        if (notesDraft.length >= 20) {
+          const error = document.getElementById('notesError');
+          error.textContent = 'Cada tarefa pode ter até 20 notas.';
+          error.hidden = false;
+          return;
+        }
+        notesDraft.push(value);
+        notesIndex = notesDraft.length - 1;
+      } else notesDraft[notesIndex] = value;
+      notesMode = 'view';
+      await saveTaskNotes();
+    }
+  });
+  notesDialog.addEventListener('close', () => { notesTaskId = ''; });
   document.getElementById('closeSubtaskDialog').addEventListener('click', () => {
     subtaskParentId = '';
     subtaskDialog.close();

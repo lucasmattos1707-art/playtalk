@@ -100,6 +100,25 @@
       <button class="dialog-submit" type="submit">Criar subtarefa <span aria-hidden="true">↗</span></button>
     </form>
   </dialog>
+  <dialog class="notes-dialog" id="notesDialog" aria-labelledby="notesHeading">
+    <section class="notes-panel" id="notesCard">
+      <button class="dialog-close" type="button" id="closeNotesDialog" aria-label="Fechar">×</button>
+      <p class="notes-eyebrow">NOTAS DA TAREFA</p>
+      <h2 id="notesTaskTitle"></h2>
+      <div class="notes-content">
+        <h3 id="notesHeading"></h3>
+        <p id="notesText" class="notes-text"></p>
+        <textarea id="notesEditor" maxlength="4000" placeholder="Escreva sua nota..."></textarea>
+      </div>
+      <div class="notes-nav" id="notesNav" hidden>
+        <button type="button" data-note-step="-1" aria-label="Nota anterior"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></svg></button>
+        <div class="notes-dots" id="notesDots"></div>
+        <button type="button" data-note-step="1" aria-label="Próxima nota"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"></path></svg></button>
+      </div>
+      <p class="notes-error" id="notesError" role="status" hidden></p>
+      <div class="notes-toolbar" id="notesToolbar"></div>
+    </section>
+  </dialog>
   <div class="task-assign-menu" id="taskAssignMenu" hidden></div>
 </body>
 </html>

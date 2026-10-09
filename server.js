@@ -16361,6 +16361,10 @@ async function ensureOzChecklistSchema() {
         ADD COLUMN IF NOT EXISTS parent_item_id text REFERENCES public.oz_checklist_items(id) ON DELETE CASCADE
       `);
       await pool.query(`
+        ALTER TABLE public.oz_checklist_items
+        ADD COLUMN IF NOT EXISTS notes jsonb NOT NULL DEFAULT '[]'::jsonb
+      `);
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS oz_checklist_items_parent_order_idx
         ON public.oz_checklist_items (parent_item_id, sort_order, created_at)
       `);
@@ -16444,6 +16448,7 @@ async function readOzChecklist(member) {
            c.groups AS category_groups, c.is_completed AS category_completed,
            c.sort_order AS category_order, i.id AS item_id, i.group_label AS item_group,
            i.title AS item_title, i.is_completed AS item_completed, i.status AS item_status, i.parent_item_id,
+           i.notes AS item_notes,
            i.sort_order AS item_order,
            i.assignee_id, m.name AS assignee_name
       FROM public.oz_checklist_categories c
@@ -16473,6 +16478,7 @@ async function readOzChecklist(member) {
         status: ['pending', 'completed', 'in_progress'].includes(row.item_status)
           ? row.item_status
           : (row.item_completed ? 'completed' : 'pending'),
+        notes: Array.isArray(row.item_notes) ? row.item_notes : [],
         completed: row.item_status ? row.item_status === 'completed' : Boolean(row.item_completed),
         parentId: row.parent_item_id || null,
         subtasks: [],
@@ -29816,6 +29822,38 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
   } catch (error) {
     console.error('Erro ao atualizar item do checklist de Oz:', error);
     res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível atualizar o item.' });
+  }
+});
+
+app.put('/api/oz/checklist/items/:itemId/notes', async (req, res) => {
+  try {
+    await ensureOzChecklistSchema();
+    const actor = await getOzMember(req);
+    if (!actor) return res.status(401).json({ success: false, message: 'Entre para atualizar as notas.' });
+    const itemId = String(req.params.itemId || '').slice(0, 120);
+    if (!Array.isArray(req.body?.notes)) {
+      return res.status(400).json({ success: false, message: 'Envie uma lista válida de notas.' });
+    }
+    if (req.body.notes.length > 20 || req.body.notes.some((note) => typeof note !== 'string')) {
+      return res.status(400).json({ success: false, message: 'Cada tarefa pode ter até 20 notas.' });
+    }
+    const notes = req.body.notes.map((note) => note.trim()).filter(Boolean);
+    if (notes.some((note) => note.length > 4000)) {
+      return res.status(400).json({ success: false, message: 'Cada nota pode ter até 4.000 caracteres.' });
+    }
+    const result = await pool.query(`
+      UPDATE public.oz_checklist_items
+         SET notes = $2::jsonb, updated_at = now()
+       WHERE id = $1 AND ($3::boolean OR assignee_id = $4)
+      RETURNING id
+    `, [itemId, JSON.stringify(notes), actor.isKelly, actor.id]);
+    if (!result.rows.length) {
+      return res.status(404).json({ success: false, message: 'Tarefa não encontrada ou não atribuída a você.' });
+    }
+    res.json({ success: true, ...(await readOzChecklist(actor)) });
+  } catch (error) {
+    console.error('Erro ao salvar notas do checklist de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível salvar as notas.' });
   }
 });
 
