@@ -232,9 +232,9 @@ h1 span { color: #aa8aff; background: linear-gradient(95deg, #c5a7ff, #9274ff 63
 .delete-task { display: grid; flex: 0 0 auto; width: 27px; height: 27px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: #8a909d; cursor: pointer; }
 .delete-task:hover { background: rgba(255,255,255,.07); color: #f1a6b0; }
 .delete-task svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.task-row[data-task-id] { cursor: pointer; font-size: 18px; }
+.task-row[data-task-id] { gap: 4px; cursor: pointer; font-size: 18px; }
 .task-row[data-task-id]:hover { background: rgba(255,255,255,.025); }
-.task-copy { max-width: 100%; }
+.task-copy { max-width: 100%; padding: 3px 0; }
 .task-title { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item-status { border: 0; background: transparent; color: #777e8a; }
 .item-status::after { display: none; }
@@ -243,14 +243,17 @@ h1 span { color: #aa8aff; background: linear-gradient(95deg, #c5a7ff, #9274ff 63
 .item-status.status-completed { color: #65e996; }
 .item-status.status-in_progress { color: #57bfff; }
 .task-row.is-in-progress .task-title { color: #dceeff; }
-.subtask-add { display: grid; flex: 0 0 20px; width: 20px; height: 22px; place-items: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #9298a5; font-size: 17px; font-weight: 500; line-height: 1; cursor: pointer; }
+.subtask-add { display: grid; flex: 0 0 16px; width: 16px; height: 20px; place-items: center; padding: 0; border: 0; border-radius: 5px; background: transparent; color: #9298a5; font-size: 15px; font-weight: 500; line-height: 1; cursor: pointer; }
 .subtask-add:hover { background: rgba(255,255,255,.08); color: #fff; }
-.task-toggle, .task-toggle-spacer { display: grid; flex: 0 0 18px; width: 18px; height: 22px; place-items: center; padding: 0; border: 0; background: transparent; color: #89909d; }
+.task-toggle, .task-toggle-spacer { display: grid; flex: 0 0 16px; width: 16px; height: 20px; place-items: center; padding: 0; border: 0; background: transparent; color: #89909d; }
 .task-toggle { cursor: pointer; }
 .task-toggle:hover { color: #d8c9ff; }
-.task-toggle svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .16s ease; }
+.task-toggle svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .16s ease; }
 .task-toggle.is-open svg { transform: rotate(90deg); color: #c2a4ff; }
-.subtask-list { display: grid; gap: 1px; margin: 0 0 2px 18px; padding: 2px 0 3px 12px; border-left: 1px solid rgba(187, 160, 255, .2); }
+.task-toggle-spacer { display: none; }
+.item-status { flex: 0 0 17px; }
+.subtask-list { display: grid; gap: 0; margin: 0 0 2px 8px; padding: 1px 0 2px 8px; border-left: 1px solid rgba(187, 160, 255, .2); }
+.category-content { padding-left: 54px; }
 .subtask-list .task-row { min-height: 38px; }
 .page-intro { grid-template-columns: minmax(0, 1fr); justify-items: center; }
 .page-title { width: 100%; text-align: center; }
@@ -277,10 +280,10 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
   .page-title h1 { font-size: clamp(29px, 8vw, 38px); }
   .category-head { grid-template-columns: 32px minmax(0, 1fr); gap: 9px; min-height: 76px; padding: 11px 12px 22px; }
   .category-progress { right: 14px; bottom: 10px; left: 53px; }
-  .category-content { padding: 0 13px 15px 52px; }
+  .category-content { padding: 0 13px 15px 42px; }
   .team-panel { padding: 21px 18px; }
   .list-actions { right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); }
   .task-row[data-task-id] { font-size: 16.5px; }
-  .subtask-list { margin-left: 10px; padding-left: 9px; }
+  .subtask-list { margin-left: 6px; padding-left: 6px; }
   body { background-attachment: scroll, scroll; }
 }
