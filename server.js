@@ -29146,6 +29146,9 @@ app.use(async (req, res, next) => {
     '/insonic',
     '/insonic/',
     '/insonic/index.html',
+    '/oz',
+    '/oz/',
+    '/oz/index.html',
     '/desafiogym',
     '/desafiogym/',
     '/desafiogym/index.html'
