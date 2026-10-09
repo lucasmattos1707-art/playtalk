@@ -91,14 +91,14 @@
       .find((item) => item.id === itemId) || null;
   }
 
-  function renderTask(item, options = {}) {
+  function renderTask(item, { flat = false, urgentReplica = false } = {}) {
     const itemStatus = getItemStatus(item);
-    const subtasks = options.flat ? [] : (Array.isArray(item.subtasks) ? item.subtasks : []);
+    const subtasks = flat ? [] : (Array.isArray(item.subtasks) ? item.subtasks : []);
     const taskOpenKey = `task:${item.id}`;
     const isOpen = openedCategories.has(taskOpenKey);
     const hasSubtasks = subtasks.length > 0;
     return `<div class="task-node">
-      <div class="task-row ${options.urgentReplica ? 'task-row--urgent' : ''} ${itemStatus === 'completed' ? 'is-done' : ''} ${itemStatus === 'in_progress' ? 'is-in-progress' : ''}" data-task-id="${escapeHtml(item.id)}">
+      <div class="task-row ${urgentReplica ? 'task-row--urgent' : ''} ${itemStatus === 'completed' ? 'is-done' : ''} ${itemStatus === 'in_progress' ? 'is-in-progress' : ''}" data-task-id="${escapeHtml(item.id)}">
         <span class="task-controls">
           <button class="item-status status-${itemStatus}" type="button" aria-label="${statusLabel(itemStatus)}" title="${statusLabel(itemStatus)}">${statusIcon(itemStatus)}</button>
           <button class="task-options-toggle" type="button" data-action="open-task-options" data-id="${escapeHtml(item.id)}" aria-haspopup="menu" aria-expanded="false" aria-label="Opções da tarefa" title="Opções da tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="12" cy="19" r="1.7"></circle></svg></button>
@@ -107,7 +107,7 @@
         ${hasSubtasks ? `<button class="task-toggle ${isOpen ? 'is-open' : ''}" type="button" data-action="toggle-subtasks" data-id="${escapeHtml(item.id)}" aria-expanded="${isOpen}" aria-controls="subtasks-${escapeHtml(item.id)}" aria-label="${isOpen ? 'Recolher' : 'Abrir'} sub tarefas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>` : ''}
         ${activeMember?.isKelly ? `<button class="delete-task" type="button" data-action="delete-item" data-id="${escapeHtml(item.id)}" aria-label="Excluir tarefa" title="Excluir tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7m3 0-.8 13H6.8L6 7m3 3.2v6.5m6-6.5v6.5"></path></svg></button>` : ''}
       </div>
-      ${hasSubtasks ? `<div class="subtask-list" id="subtasks-${escapeHtml(item.id)}" ${isOpen ? '' : 'hidden'}>${subtasks.map(renderTask).join('')}</div>` : ''}
+      ${hasSubtasks ? `<div class="subtask-list" id="subtasks-${escapeHtml(item.id)}" ${isOpen ? '' : 'hidden'}>${subtasks.map((subtask) => renderTask(subtask)).join('')}</div>` : ''}
     </div>`;
   }
 
@@ -126,7 +126,7 @@
     if (!grouped.size) grouped.set('', items);
 
     const groupMarkup = [...grouped.entries()].map(([name, groupItems]) => {
-      const taskMarkup = groupItems.map(renderTask).join('');
+      const taskMarkup = groupItems.map((item) => renderTask(item)).join('');
       return `<section class="group-block">${name ? `<h3 class="group-title">${escapeHtml(name)}</h3>` : ''}<div class="task-list">${taskMarkup || '<div class="task-row task-row--empty"><span class="task-title">Adicione o primeiro item desta etapa.</span></div>'}</div></section>`;
     }).join('');
     return `<article class="${cardClasses}" data-category="${escapeHtml(category.id)}">
