@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="tile" x1="8" y1="4" x2="58" y2="61" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#32145e"/>
+      <stop offset="1" stop-color="#10091f"/>
+    </linearGradient>
+    <linearGradient id="hat" x1="20" y1="8" x2="50" y2="47" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d6a7ff"/>
+      <stop offset=".48" stop-color="#9c62ec"/>
+      <stop offset="1" stop-color="#6632b3"/>
+    </linearGradient>
+    <linearGradient id="brim" x1="9" y1="43" x2="56" y2="51" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c99cff"/>
+      <stop offset="1" stop-color="#8a4ed1"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#tile)"/>
+  <path d="m13 17 1.2 3.2 3.3 1.3-3.3 1.2-1.2 3.3-1.3-3.3-3.2-1.2 3.2-1.3L13 17Zm38-7 .9 2.4 2.5 1-2.5.9-.9 2.5-1-2.5-2.4-.9 2.4-1 .9-2.4Z" fill="#ffe9a6"/>
+  <path d="M20.5 43.7c4.8-8.8 12.9-23.4 20-34.1 1.2-1.9 4.3-1.2 4.4 1l.3 6.4c-4.1.1-6.7 2.4-7.2 6.2l10.8 19.6c-8.2 4-19.7 5-28.3.9Z" fill="url(#hat)" stroke="#e0c1ff" stroke-opacity=".65" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M36.1 31.2c4.4 1.7 8.4 1.3 12.1-.8l2.7 4.9c-4.4 2.2-9 2.5-13.7 1.2l-1.1-5.3Z" fill="#f0c6ff"/>
+  <path d="M8 46.5c4.3-4 13.4-5.9 22.2-3.4 9.5-3 19.3-1.1 25.8 3.2-4.5 4.9-12.3 6.5-21.3 4.7-9.8 2.9-21.2 1.1-26.7-4.5Z" fill="url(#brim)" stroke="#e4c8ff" stroke-width="1.2"/>
+  <path d="M10.4 46.8c7.1 4.1 15.8 4.8 24.2 2.2 7.4 1.4 13.5.6 18.3-2.1" fill="none" stroke="#f0ddff" stroke-opacity=".7" stroke-width="1.1" stroke-linecap="round"/>
+  <path d="M27.1 39.4c2.6 1 5.1 1.5 7.8 1.6l1 4.4c-2.8-.1-5.4-.7-7.9-1.7l-.9-4.3Z" fill="#ffe69a"/>
+  <rect x="30.2" y="40.5" width="2.4" height="2.8" rx=".5" fill="#fff4c7"/>
+</svg>
