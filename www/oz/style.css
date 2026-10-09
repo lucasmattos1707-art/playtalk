@@ -364,3 +364,18 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
   .task-controls { flex-basis: 55px; width: 55px; }
   .notes-panel { padding: 22px 17px 16px; }
 }
+
+/* Keep checklist content visible without the surrounding category/task boxes. */
+.category-card,
+.category-card.is-open,
+.category-card.is-complete {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.task-row[data-task-id],
+.task-row:last-child { border-bottom: 0; }
+.task-row[data-task-id]:hover { background: transparent; }
+.subtask-list { border-left: 0; }
