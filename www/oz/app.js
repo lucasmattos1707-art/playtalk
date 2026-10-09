@@ -12,6 +12,8 @@
   const assignMenu = document.getElementById('taskAssignMenu');
   const statusDialog = document.getElementById('statusDialog');
   const statusOptions = document.getElementById('statusOptions');
+  const subtaskDialog = document.getElementById('subtaskDialog');
+  const subtaskForm = document.getElementById('newSubtaskForm');
   const addMenu = document.getElementById('addMenu');
   const accountMenu = document.getElementById('accountMenu');
   let state = { categories: [] };
@@ -24,6 +26,7 @@
   let ignoreLongPressClick = false;
   let assignTaskId = '';
   let statusTaskId = '';
+  let subtaskParentId = '';
   let lastPayload = '';
 
   const readOpened = () => {
@@ -48,7 +51,7 @@
   };
 
   function updateOverview() {
-    const items = state.categories.flatMap((category) => category.items || []);
+    const items = state.categories.flatMap((category) => flattenItems(category.items || []));
     const done = items.filter((item) => item.completed).length;
     const rate = items.length ? Math.round((done / items.length) * 100) : 0;
     document.getElementById('overallPercent').textContent = `${rate}%`;
@@ -71,10 +74,33 @@
     return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.3"></circle></svg>';
   }
 
+  function flattenItems(items) {
+    return items.flatMap((item) => [item, ...flattenItems(Array.isArray(item.subtasks) ? item.subtasks : [])]);
+  }
+
+  function renderTask(item) {
+    const itemStatus = getItemStatus(item);
+    const subtasks = Array.isArray(item.subtasks) ? item.subtasks : [];
+    const taskOpenKey = `task:${item.id}`;
+    const isOpen = openedCategories.has(taskOpenKey);
+    const hasSubtasks = subtasks.length > 0;
+    return `<div class="task-node">
+      <div class="task-row ${itemStatus === 'completed' ? 'is-done' : ''} ${itemStatus === 'in_progress' ? 'is-in-progress' : ''}" data-task-id="${escapeHtml(item.id)}">
+        ${activeMember?.isKelly ? `<button class="subtask-add" type="button" data-action="add-subfolder" data-id="${escapeHtml(item.id)}" aria-label="Adicionar sub pasta" title="Adicionar sub pasta"><span aria-hidden="true">+</span></button>` : ''}
+        <button class="item-status status-${itemStatus}" type="button" aria-label="${statusLabel(itemStatus)}" title="${statusLabel(itemStatus)}">${statusIcon(itemStatus)}</button>
+        ${hasSubtasks ? `<button class="task-toggle ${isOpen ? 'is-open' : ''}" type="button" data-action="toggle-subtasks" data-id="${escapeHtml(item.id)}" aria-expanded="${isOpen}" aria-controls="subtasks-${escapeHtml(item.id)}" aria-label="${isOpen ? 'Recolher' : 'Abrir'} sub tarefas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>` : '<span class="task-toggle-spacer" aria-hidden="true"></span>'}
+        <span class="task-copy"><span class="task-title">${escapeHtml(item.title)}</span>${item.assigneeName ? `<span class="task-assignee"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.1"></circle><path d="M5.8 20c.25-3.8 2.35-5.7 6.2-5.7s5.95 1.9 6.2 5.7"></path></svg><span>${escapeHtml(item.assigneeName)}</span></span>` : ''}</span>
+        ${activeMember?.isKelly ? `<button class="delete-task" type="button" data-action="delete-item" data-id="${escapeHtml(item.id)}" aria-label="Excluir tarefa" title="Excluir tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h10l4 4V20H5z"></path><path d="M15 4.5V9h4M9 13h6M9 16h6"></path></svg></button>` : ''}
+      </div>
+      ${hasSubtasks ? `<div class="subtask-list" id="subtasks-${escapeHtml(item.id)}" ${isOpen ? '' : 'hidden'}>${subtasks.map(renderTask).join('')}</div>` : ''}
+    </div>`;
+  }
+
   function renderCategory(category) {
     const items = Array.isArray(category.items) ? category.items : [];
-    const doneCount = items.filter((item) => item.completed).length;
-    const itemRate = items.length ? Math.round((doneCount / items.length) * 100) : 0;
+    const allItems = flattenItems(items);
+    const doneCount = allItems.filter((item) => getItemStatus(item) === 'completed').length;
+    const itemRate = allItems.length ? Math.round((doneCount / allItems.length) * 100) : 0;
     const isOpen = openedCategories.has(category.id);
     const cardClasses = ['category-card', isOpen ? 'is-open' : '', category.completed ? 'is-complete' : ''].filter(Boolean).join(' ');
     const grouped = new Map();
@@ -85,15 +111,7 @@
     if (!grouped.size) grouped.set('', items);
 
     const groupMarkup = [...grouped.entries()].map(([name, groupItems]) => {
-      const taskMarkup = groupItems.map((item) => {
-        const itemStatus = getItemStatus(item);
-        return `
-        <div class="task-row ${itemStatus === 'completed' ? 'is-done' : ''} ${itemStatus === 'in_progress' ? 'is-in-progress' : ''}" data-task-id="${escapeHtml(item.id)}">
-          <button class="item-status status-${itemStatus}" type="button" aria-label="${statusLabel(itemStatus)}" title="${statusLabel(itemStatus)}">${statusIcon(itemStatus)}</button>
-          <span class="task-copy"><span class="task-title">${escapeHtml(item.title)}</span>${item.assigneeName ? `<span class="task-assignee"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.1"></circle><path d="M5.8 20c.25-3.8 2.35-5.7 6.2-5.7s5.95 1.9 6.2 5.7"></path></svg><span>${escapeHtml(item.assigneeName)}</span></span>` : ''}</span>
-          ${activeMember?.isKelly ? '<button class="delete-task" type="button" data-action="delete-item" data-id="' + escapeHtml(item.id) + '" aria-label="Excluir tarefa" title="Excluir tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h10l4 4V20H5z"></path><path d="M15 4.5V9h4M9 13h6M9 16h6"></path></svg></button>' : ''}
-        </div>`;
-      }).join('');
+      const taskMarkup = groupItems.map(renderTask).join('');
       return `<section class="group-block">${name ? `<h3 class="group-title">${escapeHtml(name)}</h3>` : ''}<div class="task-list">${taskMarkup || '<div class="task-row task-row--empty"><span class="task-title">Adicione o primeiro item desta etapa.</span></div>'}</div></section>`;
     }).join('');
     return `<article class="${cardClasses}" data-category="${escapeHtml(category.id)}">
@@ -318,7 +336,7 @@
   list.addEventListener('pointerdown', (event) => {
     if (!activeMember?.isKelly) return;
     const row = event.target.closest('.task-row[data-task-id]');
-    if (!row || event.target.closest('.item-status, .delete-task') || (event.button !== undefined && event.button !== 0)) return;
+    if (!row || event.target.closest('.item-status, .delete-task, .subtask-add, .task-toggle') || (event.button !== undefined && event.button !== 0)) return;
     holdStart = { x: event.clientX, y: event.clientY, row };
     holdTimer = window.setTimeout(() => {
       openAssignMenu(row);
@@ -342,7 +360,7 @@
       return;
     }
     const taskRow = event.target.closest('.task-row[data-task-id]');
-    if (taskRow && !event.target.closest('.delete-task')) {
+    if (taskRow && !event.target.closest('.delete-task, .subtask-add, .task-toggle')) {
       openStatusMenu(taskRow);
       return;
     }
@@ -366,6 +384,26 @@
       if (!activeMember?.isKelly) return;
       const category = state.categories.find((entry) => entry.id === id);
       if (category) mutate(`/api/oz/checklist/categories/${encodeURIComponent(id)}`, 'PATCH', { completed: !category.completed });
+      return;
+    }
+    if (action === 'toggle-subtasks' && id) {
+      const openKey = `task:${id}`;
+      const opening = !openedCategories.has(openKey);
+      if (opening) openedCategories.add(openKey);
+      else openedCategories.delete(openKey);
+      persistOpened();
+      control.setAttribute('aria-expanded', String(opening));
+      control.setAttribute('aria-label', `${opening ? 'Recolher' : 'Abrir'} sub tarefas`);
+      control.classList.toggle('is-open', opening);
+      const panel = document.getElementById(control.getAttribute('aria-controls'));
+      if (panel) panel.hidden = !opening;
+      return;
+    }
+    if (action === 'add-subfolder' && id && activeMember?.isKelly) {
+      subtaskParentId = id;
+      subtaskForm.reset();
+      subtaskDialog.showModal();
+      document.getElementById('newSubtaskTitle').focus();
       return;
     }
     if (action === 'delete-item' && id && activeMember?.isKelly) {
@@ -468,6 +506,28 @@
     closeStatusMenu();
     mutate(`/api/oz/checklist/items/${encodeURIComponent(itemId)}`, 'PATCH', { status });
   });
+  document.getElementById('closeSubtaskDialog').addEventListener('click', () => {
+    subtaskParentId = '';
+    subtaskDialog.close();
+  });
+  subtaskDialog.addEventListener('click', (event) => {
+    if (event.target === subtaskDialog) {
+      subtaskParentId = '';
+      subtaskDialog.close();
+    }
+  });
+  subtaskForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!activeMember?.isKelly || !subtaskParentId) return;
+    const title = String(new FormData(subtaskForm).get('title') || '').trim();
+    if (!title) return;
+    const parentId = subtaskParentId;
+    subtaskParentId = '';
+    subtaskDialog.close();
+    openedCategories.add(`task:${parentId}`);
+    persistOpened();
+    mutate(`/api/oz/checklist/items/${encodeURIComponent(parentId)}/subtasks`, 'POST', { title });
+  });
   document.getElementById('newCategoryForm').addEventListener('submit', (event) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -484,6 +544,18 @@
     setActiveMember(member);
     await enterApp();
   }).catch(() => exitUser());
+  const eventAt = new Date('2026-11-29T16:00:00-03:00').getTime();
+  const updateCountdown = () => {
+    const remainingHours = Math.max(0, Math.floor((eventAt - Date.now()) / 3600000));
+    const days = Math.floor(remainingHours / 24);
+    const hours = remainingHours % 24;
+    const label = `${days} DIAS · ${String(hours).padStart(2, '0')} HORAS`;
+    const countdown = document.getElementById('eventCountdown');
+    countdown.textContent = label;
+    countdown.setAttribute('aria-label', label.toLocaleLowerCase('pt-BR'));
+  };
+  updateCountdown();
+  window.setInterval(updateCountdown, 60000);
   window.setInterval(() => {
     if (!activeMember) return;
     if (document.hidden || pendingMutations || document.activeElement?.closest('.inline-add, .category-dialog, .team-dialog')) return;

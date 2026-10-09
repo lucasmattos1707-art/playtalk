@@ -16357,6 +16357,14 @@ async function ensureOzChecklistSchema() {
         ADD COLUMN IF NOT EXISTS status varchar(20) NOT NULL DEFAULT 'pending'
       `);
       await pool.query(`
+        ALTER TABLE public.oz_checklist_items
+        ADD COLUMN IF NOT EXISTS parent_item_id text REFERENCES public.oz_checklist_items(id) ON DELETE CASCADE
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS oz_checklist_items_parent_order_idx
+        ON public.oz_checklist_items (parent_item_id, sort_order, created_at)
+      `);
+      await pool.query(`
         UPDATE public.oz_checklist_items
            SET status = 'completed'
          WHERE is_completed = true AND status = 'pending'
@@ -16435,7 +16443,8 @@ async function readOzChecklist(member) {
     SELECT c.id AS category_id, c.title AS category_title, c.icon AS category_icon,
            c.groups AS category_groups, c.is_completed AS category_completed,
            c.sort_order AS category_order, i.id AS item_id, i.group_label AS item_group,
-           i.title AS item_title, i.is_completed AS item_completed, i.status AS item_status, i.sort_order AS item_order,
+           i.title AS item_title, i.is_completed AS item_completed, i.status AS item_status, i.parent_item_id,
+           i.sort_order AS item_order,
            i.assignee_id, m.name AS assignee_name
       FROM public.oz_checklist_categories c
       LEFT JOIN public.oz_checklist_items i ON i.category_id = c.id
@@ -16465,18 +16474,28 @@ async function readOzChecklist(member) {
           ? row.item_status
           : (row.item_completed ? 'completed' : 'pending'),
         completed: row.item_status ? row.item_status === 'completed' : Boolean(row.item_completed),
+        parentId: row.parent_item_id || null,
+        subtasks: [],
         assigneeId: row.assignee_id || null,
         assigneeName: row.assignee_name || ''
       });
     }
   }
   const categories = [...categoriesById.values()];
-  if (member?.isKelly) return { categories };
-  return {
-    categories: categories
-      .map((category) => ({ ...category, items: category.items.filter((item) => item.assigneeId === member?.id) }))
-      .filter((category) => category.items.length > 0)
-  };
+  for (const category of categories) {
+    const visibleItems = member?.isKelly
+      ? category.items
+      : category.items.filter((item) => item.assigneeId === member?.id);
+    const visibleById = new Map(visibleItems.map((item) => [item.id, item]));
+    const roots = [];
+    for (const item of visibleItems) {
+      const parent = item.parentId ? visibleById.get(item.parentId) : null;
+      if (parent) parent.subtasks.push(item);
+      else roots.push(item);
+    }
+    category.items = roots;
+  }
+  return { categories: member?.isKelly ? categories : categories.filter((category) => category.items.length > 0) };
 }
 
 async function ensureMusicalKellyTimedCommentSchema() {
@@ -29639,6 +29658,40 @@ app.post('/api/oz/checklist/categories/:categoryId/items', async (req, res) => {
   }
 });
 
+app.post('/api/oz/checklist/items/:itemId/subtasks', async (req, res) => {
+  try {
+    const actor = await getOzMember(req);
+    if (!actor?.isKelly) return res.status(actor ? 403 : 401).json({ success: false, message: 'Somente Kelly pode adicionar tarefas.' });
+    await ensureOzChecklistSchema();
+    const parentId = String(req.params.itemId || '').slice(0, 120);
+    const title = typeof req.body?.title === 'string' ? req.body.title.trim().slice(0, 240) : '';
+    if (!title) return res.status(400).json({ success: false, message: 'Digite o nome da sub pasta.' });
+    const result = await pool.query(`
+      INSERT INTO public.oz_checklist_items
+        (id, category_id, group_label, title, sort_order, parent_item_id, assignee_id)
+      SELECT $1, parent.category_id, parent.group_label, $2,
+             COALESCE(MAX(child.sort_order), -1) + 1, parent.id, parent.assignee_id
+        FROM public.oz_checklist_items parent
+        LEFT JOIN public.oz_checklist_items child ON child.parent_item_id = parent.id
+       WHERE parent.id = $3
+       GROUP BY parent.id
+      HAVING COUNT(child.id) < 500
+      RETURNING id
+    `, [crypto.randomUUID(), title, parentId]);
+    if (!result.rows.length) {
+      const parent = await pool.query('SELECT 1 FROM public.oz_checklist_items WHERE id = $1', [parentId]);
+      return res.status(parent.rows.length ? 409 : 404).json({
+        success: false,
+        message: parent.rows.length ? 'O limite de sub tarefas foi atingido.' : 'Tarefa pai não encontrada.'
+      });
+    }
+    res.status(201).json({ success: true, ...(await readOzChecklist(actor)) });
+  } catch (error) {
+    console.error('Erro ao adicionar sub pasta ao checklist de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível adicionar a sub pasta.' });
+  }
+});
+
 app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
   try {
     await ensureOzChecklistSchema();
@@ -29652,6 +29705,7 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
     }
     const sets = [];
     const values = [itemId];
+    let requestedAssigneeId;
     let nextStatus = null;
     if (typeof req.body?.status === 'string') {
       nextStatus = req.body.status.trim();
@@ -29687,6 +29741,7 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
           return;
         }
       }
+      requestedAssigneeId = assigneeId;
       values.push(assigneeId);
       sets.push(`assignee_id = $${values.length}`);
     }
@@ -29705,6 +29760,20 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
     if (!result.rows.length) {
       res.status(404).json({ success: false, message: 'Item não encontrado.' });
       return;
+    }
+    if (requestedAssigneeId !== undefined) {
+      await pool.query(`
+        WITH RECURSIVE task_tree(id) AS (
+          SELECT id FROM public.oz_checklist_items WHERE id = $1
+          UNION ALL
+          SELECT child.id
+            FROM public.oz_checklist_items child
+            JOIN task_tree parent ON child.parent_item_id = parent.id
+        )
+        UPDATE public.oz_checklist_items
+           SET assignee_id = $2, updated_at = now()
+         WHERE id IN (SELECT id FROM task_tree)
+      `, [itemId, requestedAssigneeId]);
     }
     const owned = await pool.query('SELECT id FROM public.oz_checklist_items WHERE id = $1', [itemId]);
     if (!owned.rows.length) return res.status(404).json({ success: false, message: 'Tarefa não encontrada ou não atribuída a você.' });

@@ -243,6 +243,21 @@ h1 span { color: #aa8aff; background: linear-gradient(95deg, #c5a7ff, #9274ff 63
 .item-status.status-completed { color: #65e996; }
 .item-status.status-in_progress { color: #57bfff; }
 .task-row.is-in-progress .task-title { color: #dceeff; }
+.subtask-add { display: grid; flex: 0 0 20px; width: 20px; height: 22px; place-items: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #9298a5; font-size: 17px; font-weight: 500; line-height: 1; cursor: pointer; }
+.subtask-add:hover { background: rgba(255,255,255,.08); color: #fff; }
+.task-toggle, .task-toggle-spacer { display: grid; flex: 0 0 18px; width: 18px; height: 22px; place-items: center; padding: 0; border: 0; background: transparent; color: #89909d; }
+.task-toggle { cursor: pointer; }
+.task-toggle:hover { color: #d8c9ff; }
+.task-toggle svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .16s ease; }
+.task-toggle.is-open svg { transform: rotate(90deg); color: #c2a4ff; }
+.subtask-list { display: grid; gap: 1px; margin: 0 0 2px 18px; padding: 2px 0 3px 12px; border-left: 1px solid rgba(187, 160, 255, .2); }
+.subtask-list .task-row { min-height: 38px; }
+.page-intro { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+.page-title { width: 100%; text-align: center; }
+.page-title p { margin-top: 9px; }
+.event-countdown { margin-top: 15px; color: #fff; font-size: 13px; font-weight: 650; letter-spacing: .2em; text-align: center; text-shadow: 0 2px 15px rgba(255,255,255,.2); }
+.overview { width: min(100%, 330px); justify-self: end; }
+body { background-color: #08090d; background-image: linear-gradient(180deg, rgba(7, 5, 13, .32), rgba(7, 5, 13, .5)), url('/oz/mystical-purple-nebula-void.png'); background-position: center center, center center; background-size: cover, cover; background-attachment: fixed, fixed; background-repeat: no-repeat, no-repeat; }
 .status-dialog { width: min(360px, calc(100vw - 32px)); max-height: min(80vh, 560px); margin: auto; padding: 0; overflow: visible; border: 1px solid rgba(130, 161, 203, .2); border-radius: 18px; background: #12151d; color: var(--text); box-shadow: 0 28px 90px rgba(0,0,0,.56); }
 .status-dialog::backdrop { background: rgba(5, 8, 14, .57); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
 .status-panel { position: relative; padding: 23px 20px 19px; }
@@ -266,4 +281,6 @@ h1 span { color: #aa8aff; background: linear-gradient(95deg, #c5a7ff, #9274ff 63
   .team-panel { padding: 21px 18px; }
   .list-actions { right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); }
   .task-row[data-task-id] { font-size: 16.5px; }
+  .subtask-list { margin-left: 10px; padding-left: 9px; }
+  body { background-attachment: scroll, scroll; }
 }

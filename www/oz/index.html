@@ -34,7 +34,7 @@
     </header>
 
     <section class="page-intro">
-      <div class="page-title"><h1>CheckList Mestre</h1><p>WICKED: O OUTRO LADO DE OZ</p></div>
+      <div class="page-title"><h1>CheckList Mestre</h1><p>WICKED: O OUTRO LADO DE OZ</p><div class="event-countdown" id="eventCountdown" aria-live="off"></div></div>
       <div class="overview" aria-label="Progresso geral">
         <div class="overview-top"><span>PROGRESSO GERAL</span><strong id="overallPercent">0%</strong></div>
         <div class="overview-track"><span id="overallBar"></span></div>
@@ -88,6 +88,16 @@
       <h2 id="statusTaskTitle"></h2>
       <div class="status-options" id="statusOptions"></div>
     </section>
+  </dialog>
+  <dialog class="category-dialog subtask-dialog" id="subtaskDialog">
+    <form id="newSubtaskForm">
+      <button class="dialog-close" type="button" id="closeSubtaskDialog" aria-label="Fechar">×</button>
+      <span class="dialog-icon" aria-hidden="true">📂</span>
+      <h2>Adicionar Sub Pasta</h2>
+      <label for="newSubtaskTitle">Nome da sub pasta</label>
+      <input id="newSubtaskTitle" name="title" maxlength="240" placeholder="Nome da tarefa" required>
+      <button class="dialog-submit" type="submit">Adicionar Sub Pasta <span aria-hidden="true">↗</span></button>
+    </form>
   </dialog>
   <div class="task-assign-menu" id="taskAssignMenu" hidden></div>
 </body>
