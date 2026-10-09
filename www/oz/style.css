@@ -340,13 +340,20 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .notes-toolbar svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .notes-error { margin: 0; color: #ed9d9d; font-size: 11px; }
 .category-content { --task-left-indent: 54px; }
-.task-list > .task-node > .task-row[data-task-id] { width: calc(100% + var(--task-left-indent)); margin-left: calc(-1 * var(--task-left-indent)); }
-.task-controls { flex-basis: 72px; width: 72px; padding-left: 4px; }
-.subtask-list .task-row[data-task-id] { width: 100%; margin-left: 0; }
+.task-list > .task-node > .task-row[data-task-id] { width: calc(100% + var(--task-left-indent)); margin-left: calc(0px - var(--task-left-indent)); }
+.task-controls { flex-basis: 55px; width: 55px; padding-left: 4px; }
+.task-controls .task-notes svg { width: 13px; height: 13px; }
+.task-copy { margin-left: 17px; }
+.subtask-list { --task-nest-offset: 17px; }
+.subtask-list > .task-node > .task-row[data-task-id] {
+  width: calc(100% + var(--task-left-indent) + var(--task-nest-offset));
+  margin-left: calc(0px - var(--task-left-indent) - var(--task-nest-offset));
+}
 @media (max-width: 700px) {
   .category-content { --task-left-indent: 42px; }
+  .subtask-list { --task-nest-offset: 13px; }
   .task-row[data-task-id] { min-height: 37px; font-size: 15.84px; }
   .subtask-list .task-row[data-task-id] { font-size: 13.86px; }
-  .task-controls { flex-basis: 72px; width: 72px; }
+  .task-controls { flex-basis: 55px; width: 55px; }
   .notes-panel { padding: 22px 17px 16px; }
 }
