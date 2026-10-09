@@ -295,10 +295,12 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 
 /* Task controls stay grouped at the left; titles use the remaining row width. */
 .task-row[data-task-id] { gap: 0; min-height: 39px; font-size: 17.28px; }
-.task-controls { display: grid; flex: 0 0 65px; grid-template-columns: 17px 16px 16px; align-items: center; justify-content: space-between; }
+.task-controls { display: grid; flex: 0 0 65px; grid-template-columns: 17px 16px 16px; align-items: center; justify-content: space-between; padding-inline: 3px; }
 .task-controls .item-status { width: 17px; height: 20px; justify-self: start; }
+.task-controls .item-status svg { transform: scale(1.25); transform-origin: center; }
 .task-controls .subtask-add, .task-controls .subtask-add-spacer, .task-notes { display: grid; width: 16px; height: 20px; place-items: center; padding: 0; border: 0; border-radius: 4px; background: transparent; cursor: pointer; }
 .task-controls .subtask-add { flex: none; color: #a0a5b0; font-size: 17px; font-weight: 500; line-height: 1; }
+.task-controls .subtask-add > span { transform: scale(1.25); transform-origin: center; }
 .task-controls .subtask-add:hover { color: #fff; background: rgba(255,255,255,.08); }
 .task-notes { color: #f5d45e; transition: color .15s, opacity .15s, background .15s; }
 .task-notes svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
@@ -353,8 +355,8 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .notes-success svg { width: 14px; height: 14px; flex: 0 0 auto; fill: none; stroke: #82d99b; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .category-content { --task-left-indent: 54px; }
 .task-list > .task-node > .task-row[data-task-id] { width: calc(100% + var(--task-left-indent)); margin-left: calc(0px - var(--task-left-indent)); }
-.task-controls { flex-basis: 55px; width: 55px; padding-left: 4px; }
-.task-controls .task-notes svg { width: 13px; height: 13px; }
+.task-controls { flex-basis: 65px; width: 65px; padding-left: 4px; }
+.task-controls .task-notes svg { transform: scale(1.25); transform-origin: center; }
 .task-copy { margin-left: 17px; }
 .subtask-list { --task-nest-offset: 17px; }
 .subtask-list > .task-node > .task-row[data-task-id] {
