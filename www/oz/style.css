@@ -316,8 +316,8 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .notes-dialog::backdrop { background: rgba(5, 7, 13, .67); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .notes-panel { position: relative; display: grid; gap: 12px; padding: 24px 22px 19px; }
 .notes-panel .dialog-close { top: 16px; right: 16px; }
-.notes-eyebrow { margin: 0; color: #88d9ff; font-size: 9px; font-weight: 800; letter-spacing: .14em; }
 .notes-panel h2 { max-width: calc(100% - 35px); margin: 0; color: #f0f2f6; font: 700 15px/1.45 var(--display); overflow-wrap: anywhere; }
+.notes-divider { width: 100%; height: 1px; background: linear-gradient(90deg, rgba(157, 167, 190, .28), rgba(157, 167, 190, .08)); }
 .notes-content { min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
 .notes-content h3 { margin: 0 0 10px; color: #a9b1c0; font: 700 10px var(--font); }
 .notes-text { margin: 0; color: #e1e6ef; font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
