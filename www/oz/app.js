@@ -102,7 +102,7 @@
         <span class="task-controls">
           <button class="item-status status-${itemStatus}" type="button" aria-label="${statusLabel(itemStatus)}" title="${statusLabel(itemStatus)}">${statusIcon(itemStatus)}</button>
           ${activeMember?.isKelly ? `<button class="subtask-add" type="button" data-action="add-subfolder" data-id="${escapeHtml(item.id)}" aria-label="Criar subtarefa" title="Criar subtarefa"><span aria-hidden="true">+</span></button>` : '<span class="subtask-add-spacer" aria-hidden="true"></span>'}
-          <button class="task-notes ${noteButtonClass}" type="button" data-action="open-notes" data-id="${escapeHtml(item.id)}" aria-label="${notes.length ? 'Ver notas' : 'Criar primeira nota'}" title="${notes.length ? 'Ver notas' : 'Criar primeira nota'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h8l4 4V20.25H6z"></path><path d="M14 3.75v4h4M9 12h6M9 15.5h6"></path></svg></button>
+          <button class="task-notes ${noteButtonClass}" type="button" data-action="open-notes" data-id="${escapeHtml(item.id)}" aria-label="Abrir notas" title="Abrir notas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h8l4 4V20.25H6z"></path><path d="M14 3.75v4h4M9 12h6M9 15.5h6"></path></svg></button>
         </span>
         <span class="task-copy"><span class="task-title">${escapeHtml(item.title)}</span>${item.assigneeName ? `<span class="task-assignee"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.1"></circle><path d="M5.8 20c.25-3.8 2.35-5.7 6.2-5.7s5.95 1.9 6.2 5.7"></path></svg><span>${escapeHtml(item.assigneeName)}</span></span>` : ''}</span>
         ${hasSubtasks ? `<button class="task-toggle ${isOpen ? 'is-open' : ''}" type="button" data-action="toggle-subtasks" data-id="${escapeHtml(item.id)}" aria-expanded="${isOpen}" aria-controls="subtasks-${escapeHtml(item.id)}" aria-label="${isOpen ? 'Recolher' : 'Abrir'} sub tarefas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>` : ''}
@@ -314,18 +314,16 @@
     const note = notesDraft[notesIndex] || '';
     title.textContent = item.title;
     const editing = notesMode === 'new' || notesMode === 'edit';
-    heading.textContent = notesDraft.length ? (editing ? (notesMode === 'new' ? 'Nova nota' : 'Editar nota') : 'Notas da tarefa') : 'Criar primeira nota';
-    text.textContent = note;
-    text.hidden = editing || !notesDraft.length;
+    heading.textContent = editing ? (notesMode === 'new' ? 'Nova nota' : 'Editar nota') : (notesDraft.length ? 'Notas da tarefa' : 'Adicione uma nota');
+    text.textContent = notesDraft.length ? note : 'Adicione uma nota';
+    text.hidden = editing;
     editor.value = editing ? (notesMode === 'new' ? '' : note) : '';
     editor.hidden = !editing;
     dots.innerHTML = notesDraft.map((_entry, index) => `<button type="button" class="notes-dot ${index === notesIndex && !editing ? 'is-current' : ''}" data-note-index="${index}" aria-label="Nota ${index + 1}" ${editing ? 'disabled' : ''}></button>`).join('');
     dots.hidden = notesDraft.length < 2;
     toolbar.innerHTML = editing
       ? '<button type="button" data-notes-action="cancel" aria-label="Cancelar edição" title="Cancelar"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg></button><button type="button" data-notes-action="save" aria-label="Salvar nota" title="Salvar"><svg viewBox="0 0 24 24"><path d="M5 4h12l3 3v13H4V4z"></path><path d="M8 4v6h8V4M8 20v-6h8v6"></path></svg></button>'
-      : notesDraft.length
-        ? '<button type="button" data-notes-action="add" aria-label="Adicionar nota" title="Adicionar nota"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></button><button type="button" data-notes-action="edit" aria-label="Editar nota" title="Editar nota"><svg viewBox="0 0 24 24"><path d="m4 16.5-.8 4.3 4.3-.8L19.6 7.9a2.5 2.5 0 0 0-3.5-3.5zM14.8 5.7l3.5 3.5"></path></svg></button><button type="button" data-notes-action="delete" aria-label="Excluir nota" title="Excluir nota"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7m3 0-.8 13H6.8L6 7m3 3.2v6.5m6-6.5v6.5"></path></svg></button>'
-        : '<button type="button" data-notes-action="save" aria-label="Criar primeira nota" title="Criar primeira nota"><svg viewBox="0 0 24 24"><path d="M5 4h12l3 3v13H4V4z"></path><path d="M8 4v6h8V4M8 20v-6h8v6"></path></svg></button>';
+      : `<button type="button" data-notes-action="add" aria-label="Adicionar nota" title="Adicionar nota"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></button><button type="button" data-notes-action="edit" aria-label="Editar nota" title="Editar nota" ${notesDraft.length ? '' : 'disabled'}><svg viewBox="0 0 24 24"><path d="m4 16.5-.8 4.3 4.3-.8L19.6 7.9a2.5 2.5 0 0 0-3.5-3.5zM14.8 5.7l3.5 3.5"></path></svg></button><button type="button" data-notes-action="delete" aria-label="Excluir nota" title="Excluir nota" ${notesDraft.length ? '' : 'disabled'}><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7m3 0-.8 13H6.8L6 7m3 3.2v6.5m6-6.5v6.5"></path></svg></button>`;
     document.getElementById('notesError').hidden = true;
   }
 
@@ -333,10 +331,9 @@
     notesTaskId = item.id;
     notesDraft = (Array.isArray(item.notes) ? item.notes : []).slice();
     notesIndex = 0;
-    notesMode = notesDraft.length ? 'view' : 'new';
+    notesMode = 'view';
     renderNotesDialog();
     notesDialog.showModal();
-    if (!notesDraft.length) document.getElementById('notesEditor').focus();
   }
 
   async function saveTaskNotes() {
@@ -614,16 +611,22 @@
     if (!button) return;
     const action = button.dataset.notesAction;
     if (action === 'add') { notesMode = 'new'; renderNotesDialog(); document.getElementById('notesEditor').focus(); return; }
-    if (action === 'edit') { notesMode = 'edit'; renderNotesDialog(); document.getElementById('notesEditor').focus(); return; }
+    if (action === 'edit') {
+      if (!notesDraft.length) return;
+      notesMode = 'edit';
+      renderNotesDialog();
+      document.getElementById('notesEditor').focus();
+      return;
+    }
     if (action === 'cancel') {
-      notesMode = notesDraft.length ? 'view' : 'new';
+      notesMode = 'view';
       renderNotesDialog();
       return;
     }
-    if (action === 'delete') {
+    if (action === 'delete' && notesDraft.length) {
       notesDraft.splice(notesIndex, 1);
       notesIndex = Math.max(0, Math.min(notesIndex, notesDraft.length - 1));
-      notesMode = notesDraft.length ? 'view' : 'new';
+      notesMode = 'view';
       await saveTaskNotes();
       return;
     }

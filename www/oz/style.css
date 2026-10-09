@@ -302,7 +302,7 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .task-controls .subtask-add:hover { color: #fff; background: rgba(255,255,255,.08); }
 .task-notes { color: #f5d45e; transition: color .15s, opacity .15s, background .15s; }
 .task-notes svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.task-notes.no-notes { opacity: .5; }
+.task-notes.no-notes { color: #fff; opacity: .5; }
 .task-notes.no-notes:hover { opacity: .5; }
 .task-notes.has-notes { opacity: 1; color: #85d9ff; }
 .task-notes:hover { background: rgba(133,217,255,.1); opacity: 1; }
@@ -334,6 +334,8 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .notes-toolbar { display: flex; justify-content: flex-end; gap: 8px; }
 .notes-toolbar button { display: grid; width: 35px; height: 35px; place-items: center; border: 1px solid rgba(255,255,255,.09); border-radius: 10px; background: rgba(255,255,255,.035); color: #bdc8d7; cursor: pointer; }
 .notes-toolbar button:hover { border-color: rgba(132,214,255,.28); background: rgba(132,214,255,.08); color: #9bdfff; }
+.notes-toolbar button:disabled { opacity: .35; cursor: default; }
+.notes-toolbar button:disabled:hover { border-color: rgba(255,255,255,.09); background: rgba(255,255,255,.035); color: #bdc8d7; }
 .notes-toolbar button[data-notes-action="delete"]:hover { color: #ff747c; border-color: rgba(255,116,124,.26); background: rgba(255,116,124,.08); }
 .notes-toolbar svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .notes-error { margin: 0; color: #ed9d9d; font-size: 11px; }
