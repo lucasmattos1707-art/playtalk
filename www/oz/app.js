@@ -130,7 +130,7 @@
         </span>
         <span class="task-copy"><span class="task-title">${escapeHtml(item.title)}</span>${item.assigneeName ? `<span class="task-assignee"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.1"></circle><path d="M5.8 20c.25-3.8 2.35-5.7 6.2-5.7s5.95 1.9 6.2 5.7"></path></svg><span>${escapeHtml(item.assigneeName)}</span></span>` : ''}</span>
         ${hasSubtasks ? `<button class="task-toggle ${isOpen ? 'is-open' : ''}" type="button" data-action="toggle-subtasks" data-id="${escapeHtml(item.id)}" aria-expanded="${isOpen}" aria-controls="subtasks-${escapeHtml(item.id)}" aria-label="${isOpen ? 'Recolher' : 'Abrir'} sub tarefas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>` : ''}
-        ${hasNotes ? '<span class="task-note-indicator" role="img" aria-label="Esta tarefa possui notas" title="Esta tarefa possui notas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h8l4 4V20.25H6z"></path><path d="M14 3.75v4h4M9 12h6M9 15.5h6"></path></svg></span>' : ''}
+        ${hasNotes ? `<button class="task-note-indicator" type="button" data-action="open-task-notes-scroll" data-id="${escapeHtml(item.id)}" aria-label="Abrir notas da tarefa" title="Abrir notas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h8l4 4V20.25H6z"></path><path d="M14 3.75v4h4M9 12h6M9 15.5h6"></path></svg></button>` : ''}
       </div>
       ${hasSubtasks ? `<div class="subtask-list" id="subtasks-${escapeHtml(item.id)}" ${isOpen ? '' : 'hidden'}>${subtasks.map((subtask) => renderTask(subtask)).join('')}</div>` : ''}
     </div>`;
@@ -494,7 +494,7 @@
 
   list.addEventListener('pointerdown', (event) => {
     const row = event.target.closest('.task-row[data-task-id]');
-    if (!row || event.target.closest('.item-status, .delete-task, .task-options-toggle, .task-toggle') || (event.button !== undefined && event.button !== 0)) return;
+    if (!row || event.target.closest('.item-status, .delete-task, .task-options-toggle, .task-toggle, .task-note-indicator') || (event.button !== undefined && event.button !== 0)) return;
     const item = findItemById(row.dataset.taskId);
     if (!item) return;
     holdStart = { x: event.clientX, y: event.clientY, row };
@@ -520,7 +520,7 @@
       return;
     }
     const taskRow = event.target.closest('.task-row[data-task-id]');
-    if (taskRow && !event.target.closest('.delete-task, .task-options-toggle, .task-toggle')) {
+    if (taskRow && !event.target.closest('.delete-task, .task-options-toggle, .task-toggle, .task-note-indicator')) {
       openStatusMenu(taskRow);
       return;
     }
@@ -531,6 +531,11 @@
     const card = control.closest('.category-card');
     if (action === 'open-task-options' && id) {
       openTaskOptions(taskRow, control);
+      return;
+    }
+    if (action === 'open-task-notes-scroll' && id) {
+      const item = findItemById(id);
+      if (item) openTaskNotesScroll(item);
       return;
     }
     if (action === 'open-category' && id) {

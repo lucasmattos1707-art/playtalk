@@ -412,7 +412,9 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .account-menu { left: 0; right: auto; }
 .task-options-toggle.has-notes { color: #ffe28a; }
 .task-options-toggle.has-notes:hover, .task-options-toggle.has-notes[aria-expanded="true"] { color: #fff0b7; }
-.task-note-indicator { display: grid; width: 27px; height: 27px; flex: 0 0 27px; place-items: center; color: #ffe28a; }
+.task-note-indicator { display: grid; width: 27px; height: 27px; flex: 0 0 27px; place-items: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #ffe28a; cursor: pointer; }
+.task-note-indicator:hover, .task-note-indicator:focus-visible { color: #fff0b7; }
+.task-note-indicator:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .task-note-indicator svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Long-press on a microtask opens every note in a vertical, scrollable list. */
