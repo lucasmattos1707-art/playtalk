@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/oz/style.css">
-  <script src="/oz/app.js" defer></script>
+  <link rel="stylesheet" href="/oz/style.css?v=20261009-stars-notes">
+  <script src="/oz/app.js?v=20261009-stars-notes" defer></script>
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -27,9 +27,15 @@
 
   <main class="page-shell" id="checklistApp" hidden>
     <header class="topline">
-      <button class="team-account" id="accountButton" type="button" aria-label="Opções do usuario" aria-expanded="false" aria-controls="accountMenu">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.3"></circle><path d="M5.5 20c.3-4 2.6-6 6.5-6s6.2 2 6.5 6"></path></svg>
-        <span id="currentMemberLabel"></span>
+      <div class="profile-summary">
+        <button class="team-account" id="accountButton" type="button" aria-label="Opções do usuario" aria-expanded="false" aria-controls="accountMenu">
+          <span class="profile-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.3"></circle><path d="M5.5 20c.3-4 2.6-6 6.5-6s6.2 2 6.5 6"></path></svg></span>
+          <span id="currentMemberLabel"></span>
+        </button>
+        <div class="star-balance" aria-label="Estrelas conquistadas"><img src="/oz/icons/star.svg" alt=""><strong id="starCount">0</strong></div>
+      </div>
+      <button class="badge-album-button" type="button" disabled aria-label="Álbum de selos ainda indisponível" title="Álbum de selos em breve">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5c2.9-.9 5.6-.5 8 1.2v13c-2.4-1.7-5.1-2.1-8-1.2z"></path><path d="M20 5.5c-2.9-.9-5.6-.5-8 1.2v13c2.4-1.7 5.1-2.1 8-1.2z"></path><path d="M12 6.7v13"></path><path d="m7 9 1.2 1.2L10 8.5m7 1.5h1"></path></svg>
       </button>
       <div class="account-menu" id="accountMenu" hidden><button type="button" data-account-action="logout">Sair</button></div>
     </header>
@@ -122,6 +128,22 @@
       <div class="notes-toolbar" id="notesToolbar"></div>
     </section>
   </dialog>
+  <dialog class="microtask-notes-dialog" id="microtaskNotesDialog" aria-labelledby="microtaskNotesTitle">
+    <section class="microtask-notes-panel">
+      <button class="dialog-close" type="button" id="closeMicrotaskNotesDialog" aria-label="Fechar">×</button>
+      <p class="notes-eyebrow">NOTAS DA MICROTAREFA</p>
+      <h2 id="microtaskNotesTitle"></h2>
+      <div class="microtask-notes-list" id="microtaskNotesList"></div>
+    </section>
+  </dialog>
+  <dialog class="star-celebration" id="starCelebrationDialog" aria-labelledby="starCelebrationHeading">
+    <section class="star-celebration-content">
+      <p id="starCelebrationHeading">Você ganhou</p>
+      <img class="star-celebration-icon" src="/oz/icons/star.svg" alt="Estrela">
+      <strong id="awardedStars"></strong>
+    </section>
+  </dialog>
+  <audio id="starCelebrationAudio" src="/oz/audio/5star.mp3" preload="auto"></audio>
   <div class="task-options-menu" id="taskOptionsMenu" role="menu" aria-label="Opções da tarefa" hidden></div>
   <div class="task-assign-menu" id="taskAssignMenu" hidden></div>
 </body>

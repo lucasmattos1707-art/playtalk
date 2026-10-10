@@ -395,3 +395,54 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 @media (max-width: 700px) {
   .category-progress { bottom: 15px; }
 }
+
+/* Member stars and the locked badge-album entry. */
+.topline { align-items: center; }
+.profile-summary { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.team-account { max-width: 190px; }
+.profile-avatar { display: grid; width: 27px; height: 27px; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid rgba(191, 165, 255, .42); border-radius: 50%; background: rgba(158, 121, 239, .13); }
+.team-account .profile-avatar svg { width: 16px; height: 16px; stroke: currentColor; }
+.star-balance { display: inline-flex; align-items: center; gap: 5px; min-width: 48px; color: #fff; font-family: var(--display); font-size: 12px; font-weight: 800; }
+.star-balance img { display: block; width: 17px; height: 17px; object-fit: contain; }
+.badge-album-button { display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; margin-left: auto; padding: 7px; border: 1px solid rgba(190, 170, 226, .14); border-radius: 11px; background: rgba(29, 27, 39, .55); color: #aaa3bc; opacity: .48; cursor: not-allowed; }
+.badge-album-button svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.55; stroke-linecap: round; stroke-linejoin: round; }
+.account-menu { left: 0; right: auto; }
+.task-options-toggle.has-notes { color: #ffe28a; }
+.task-options-toggle.has-notes:hover, .task-options-toggle.has-notes[aria-expanded="true"] { color: #fff0b7; }
+
+/* Long-press on a microtask opens every note in a vertical, scrollable list. */
+.microtask-notes-dialog { width: min(470px, calc(100vw - 28px)); max-height: min(82vh, 680px); overflow: hidden; padding: 0; border: 1px solid rgba(187, 160, 255, .2); border-radius: 18px; background: #11131b; color: var(--text); box-shadow: 0 28px 90px rgba(0,0,0,.62); }
+.microtask-notes-dialog::backdrop { background: rgba(5, 7, 13, .72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.microtask-notes-panel { position: relative; display: grid; gap: 10px; max-height: min(82vh, 680px); padding: 23px 21px 20px; }
+.microtask-notes-panel .dialog-close { top: 15px; right: 15px; }
+.notes-eyebrow { margin: 0; color: #a99bcb; font-size: 9px; font-weight: 750; letter-spacing: .15em; }
+.microtask-notes-panel h2 { max-width: calc(100% - 36px); margin: 0; color: #f0f2f6; font: 700 15px/1.45 var(--display); overflow-wrap: anywhere; }
+.microtask-notes-list { display: grid; gap: 14px; max-height: min(59vh, 490px); overflow-y: auto; overscroll-behavior: contain; padding: 2px 5px 3px 0; touch-action: pan-y; scrollbar-color: rgba(178, 159, 219, .46) transparent; scrollbar-width: thin; }
+.microtask-note { padding: 0 0 12px; border-bottom: 1px solid rgba(255, 255, 255, .09); }
+.microtask-note:last-child { padding-bottom: 0; border-bottom: 0; }
+.microtask-note h3 { margin: 0 0 5px; color: #ffe28a; font-size: 10px; font-weight: 700; letter-spacing: .04em; }
+.microtask-note p { margin: 0; color: #e1e6ef; font-size: 13px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.microtask-notes-empty { margin: 0; padding: 8px 0; color: #c0c4ce; font-size: 13px; }
+
+/* Celebration lasts 1.2 seconds, including the fade-out. */
+.star-celebration { display: grid; width: 100vw; height: 100vh; max-width: none; max-height: none; place-items: center; overflow: hidden; margin: 0; padding: 0; border: 0; border-radius: 0; background: radial-gradient(circle at center, rgba(81, 50, 130, .54), rgba(8, 7, 16, .96) 65%); color: #fff; }
+.star-celebration::backdrop { background: rgba(5, 4, 11, .78); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.star-celebration-content { display: grid; justify-items: center; gap: 14px; opacity: 0; transform: scale(.82); text-align: center; }
+.star-celebration.is-animating .star-celebration-content { animation: star-celebration-pop 1200ms cubic-bezier(.2,.75,.25,1) both; }
+.star-celebration-content p { margin: 0; color: #fff; font-family: var(--display); font-size: clamp(21px, 5vw, 30px); font-weight: 750; letter-spacing: -.03em; }
+.star-celebration-icon { display: block; width: clamp(138px, 34vw, 220px); height: clamp(138px, 34vw, 220px); object-fit: contain; filter: drop-shadow(0 0 24px rgba(255, 202, 59, .37)); }
+.star-celebration-content strong { color: #fff; font-family: var(--display); font-size: clamp(16px, 4vw, 21px); font-weight: 700; }
+@keyframes star-celebration-pop {
+  0% { opacity: 0; transform: scale(.72); }
+  14% { opacity: 1; transform: scale(1.08); }
+  24% { transform: scale(1); }
+  78% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.94); }
+}
+@media (max-width: 430px) {
+  .profile-summary { gap: 6px; }
+  .team-account { max-width: 150px; padding: 6px 8px; }
+  .star-balance { min-width: 41px; font-size: 11px; }
+  .badge-album-button { width: 33px; height: 33px; }
+  .account-menu { left: 0; right: auto; }
+}

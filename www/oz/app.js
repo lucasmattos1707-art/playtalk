@@ -15,10 +15,13 @@
   const subtaskDialog = document.getElementById('subtaskDialog');
   const subtaskForm = document.getElementById('newSubtaskForm');
   const notesDialog = document.getElementById('notesDialog');
+  const microtaskNotesDialog = document.getElementById('microtaskNotesDialog');
+  const starCelebrationDialog = document.getElementById('starCelebrationDialog');
+  const starCelebrationAudio = document.getElementById('starCelebrationAudio');
   const addMenu = document.getElementById('addMenu');
   const accountMenu = document.getElementById('accountMenu');
   const taskOptionsMenu = document.getElementById('taskOptionsMenu');
-  let state = { categories: [] };
+  let state = { categories: [], stars: 0 };
   let members = [];
   let activeMember = null;
   let mutationQueue = Promise.resolve();
@@ -34,6 +37,7 @@
   let notesIndex = 0;
   let notesMode = 'view';
   let notesSuccessTimer = 0;
+  let starCelebrationTimer = 0;
   let lastPayload = '';
 
   const readOpened = () => {
@@ -64,6 +68,26 @@
     document.getElementById('overallPercent').textContent = `${rate}%`;
     document.getElementById('overallBar').style.width = `${rate}%`;
     document.getElementById('overallSummary').textContent = `${done} de ${items.length} tarefas concluídas`;
+    document.getElementById('starCount').textContent = String(Math.max(0, Number(state.stars) || 0));
+  }
+
+  function showStarCelebration(stars) {
+    const count = Math.max(0, Number(stars) || 0);
+    if (!count) return;
+    window.clearTimeout(starCelebrationTimer);
+    document.getElementById('awardedStars').textContent = `${count} ${count === 1 ? 'estrela' : 'estrelas'}`;
+    if (starCelebrationDialog.open) starCelebrationDialog.close();
+    starCelebrationDialog.showModal();
+    starCelebrationDialog.classList.remove('is-animating');
+    void starCelebrationDialog.offsetWidth;
+    starCelebrationDialog.classList.add('is-animating');
+    starCelebrationAudio.currentTime = 0;
+    const playback = starCelebrationAudio.play();
+    if (playback && typeof playback.catch === 'function') playback.catch(() => {});
+    starCelebrationTimer = window.setTimeout(() => {
+      starCelebrationDialog.classList.remove('is-animating');
+      if (starCelebrationDialog.open) starCelebrationDialog.close();
+    }, 1200);
   }
 
   function getItemStatus(item) {
@@ -97,11 +121,12 @@
     const taskOpenKey = `task:${item.id}`;
     const isOpen = openedCategories.has(taskOpenKey);
     const hasSubtasks = subtasks.length > 0;
+    const hasNotes = Array.isArray(item.notes) && item.notes.length > 0;
     return `<div class="task-node">
       <div class="task-row ${urgentReplica ? 'task-row--urgent' : ''} ${itemStatus === 'completed' ? 'is-done' : ''} ${itemStatus === 'in_progress' ? 'is-in-progress' : ''}" data-task-id="${escapeHtml(item.id)}">
         <span class="task-controls">
           <button class="item-status status-${itemStatus}" type="button" aria-label="${statusLabel(itemStatus)}" title="${statusLabel(itemStatus)}">${statusIcon(itemStatus)}</button>
-          <button class="task-options-toggle" type="button" data-action="open-task-options" data-id="${escapeHtml(item.id)}" aria-haspopup="menu" aria-expanded="false" aria-label="Opções da tarefa" title="Opções da tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="12" cy="19" r="1.7"></circle></svg></button>
+          <button class="task-options-toggle ${hasNotes ? 'has-notes' : ''}" type="button" data-action="open-task-options" data-id="${escapeHtml(item.id)}" aria-haspopup="menu" aria-expanded="false" aria-label="Opções da tarefa${hasNotes ? ' — possui notas' : ''}" title="Opções da tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="12" cy="19" r="1.7"></circle></svg></button>
         </span>
         <span class="task-copy"><span class="task-title">${escapeHtml(item.title)}</span>${item.assigneeName ? `<span class="task-assignee"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.1"></circle><path d="M5.8 20c.25-3.8 2.35-5.7 6.2-5.7s5.95 1.9 6.2 5.7"></path></svg><span>${escapeHtml(item.assigneeName)}</span></span>` : ''}</span>
         ${hasSubtasks ? `<button class="task-toggle ${isOpen ? 'is-open' : ''}" type="button" data-action="toggle-subtasks" data-id="${escapeHtml(item.id)}" aria-expanded="${isOpen}" aria-controls="subtasks-${escapeHtml(item.id)}" aria-label="${isOpen ? 'Recolher' : 'Abrir'} sub tarefas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>` : ''}
@@ -178,7 +203,7 @@
 
   async function loadChecklist() {
     const payload = await requestJson('/api/oz/checklist');
-    const next = { categories: Array.isArray(payload.categories) ? payload.categories : [] };
+    const next = { categories: Array.isArray(payload.categories) ? payload.categories : [], stars: Number(payload.stars) || 0 };
     if (JSON.stringify(next) !== lastPayload) {
       state = next;
       render();
@@ -190,8 +215,9 @@
     mutationQueue = mutationQueue.then(async () => {
       try {
         const payload = await requestJson(url, { method, body: JSON.stringify(body) });
-        state = { categories: Array.isArray(payload.categories) ? payload.categories : [] };
+        state = { categories: Array.isArray(payload.categories) ? payload.categories : [], stars: Number(payload.stars) || 0 };
         render();
+        if (Number(payload.starsAwarded) > 0) showStarCelebration(payload.starsAwarded);
       } catch (error) {
         if (error.status === 401) exitUser();
         try { await loadChecklist(); } catch (_refreshError) {}
@@ -271,7 +297,7 @@
   function exitUser() {
     setActiveMember(null);
     members = [];
-    state = { categories: [] };
+    state = { categories: [], stars: 0 };
     lastPayload = '';
     checklistApp.hidden = true;
     loginScreen.hidden = false;
@@ -350,6 +376,15 @@
     notesDialog.showModal();
   }
 
+  function openMicrotaskNotes(item) {
+    const entries = Array.isArray(item.notes) ? item.notes : [];
+    document.getElementById('microtaskNotesTitle').textContent = item.title;
+    document.getElementById('microtaskNotesList').innerHTML = entries.length
+      ? entries.map((note, index) => `<article class="microtask-note"><h3>Nota ${index + 1}</h3><p>${escapeHtml(note)}</p></article>`).join('')
+      : '<p class="microtask-notes-empty">Adicione uma nota</p>';
+    microtaskNotesDialog.showModal();
+  }
+
   async function saveTaskNotes() {
     const error = document.getElementById('notesError');
     const success = document.getElementById('notesSuccess');
@@ -361,7 +396,7 @@
       const payload = await requestJson(`/api/oz/checklist/items/${encodeURIComponent(notesTaskId)}/notes`, {
         method: 'PUT', body: JSON.stringify({ notes: notesDraft })
       });
-      state = { categories: Array.isArray(payload.categories) ? payload.categories : [] };
+      state = { categories: Array.isArray(payload.categories) ? payload.categories : [], stars: Number(payload.stars) || 0 };
       render();
       renderNotesDialog();
       success.hidden = false;
@@ -458,12 +493,14 @@
   }
 
   list.addEventListener('pointerdown', (event) => {
-    if (!activeMember?.isKelly) return;
     const row = event.target.closest('.task-row[data-task-id]');
     if (!row || event.target.closest('.item-status, .delete-task, .task-options-toggle, .task-toggle') || (event.button !== undefined && event.button !== 0)) return;
+    const item = findItemById(row.dataset.taskId);
+    if (!item || (!item.parentId && !activeMember?.isKelly)) return;
     holdStart = { x: event.clientX, y: event.clientY, row };
     holdTimer = window.setTimeout(() => {
-      openAssignMenu(row);
+      if (item.parentId) openMicrotaskNotes(item);
+      else openAssignMenu(row);
       holdStart = null;
       ignoreLongPressClick = true;
       window.setTimeout(() => { ignoreLongPressClick = false; }, 1000);
@@ -663,6 +700,9 @@
   });
   document.getElementById('closeNotesDialog').addEventListener('click', () => notesDialog.close());
   notesDialog.addEventListener('click', (event) => { if (event.target === notesDialog) notesDialog.close(); });
+  document.getElementById('closeMicrotaskNotesDialog').addEventListener('click', () => microtaskNotesDialog.close());
+  microtaskNotesDialog.addEventListener('click', (event) => { if (event.target === microtaskNotesDialog) microtaskNotesDialog.close(); });
+  starCelebrationDialog.addEventListener('cancel', (event) => event.preventDefault());
   let notesSwipeStartX = null;
   document.getElementById('notesCard').addEventListener('touchstart', (event) => {
     notesSwipeStartX = event.changedTouches[0]?.clientX ?? null;

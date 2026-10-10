@@ -16369,6 +16369,18 @@ async function ensureOzChecklistSchema() {
         ADD COLUMN IF NOT EXISTS is_urgent boolean NOT NULL DEFAULT false
       `);
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.oz_checklist_star_awards (
+          item_id text PRIMARY KEY,
+          member_id text NOT NULL REFERENCES public.oz_checklist_members(id) ON DELETE CASCADE,
+          stars integer NOT NULL CHECK (stars IN (3, 5)),
+          created_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS oz_checklist_star_awards_member_idx
+        ON public.oz_checklist_star_awards (member_id, created_at)
+      `);
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS oz_checklist_items_parent_order_idx
         ON public.oz_checklist_items (parent_item_id, sort_order, created_at)
       `);
@@ -16506,7 +16518,13 @@ async function readOzChecklist(member) {
     }
     category.items = roots;
   }
-  return { categories: member?.isKelly ? categories : categories.filter((category) => category.items.length > 0) };
+  const starsResult = member?.id
+    ? await pool.query('SELECT COALESCE(SUM(stars), 0)::integer AS stars FROM public.oz_checklist_star_awards WHERE member_id = $1', [member.id])
+    : { rows: [] };
+  return {
+    categories: member?.isKelly ? categories : categories.filter((category) => category.items.length > 0),
+    stars: Number(starsResult.rows?.[0]?.stars || 0)
+  };
 }
 
 async function ensureMusicalKellyTimedCommentSchema() {
@@ -29809,13 +29827,32 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
     const isKellyParam = values.length + 1;
     const memberIdParam = values.length + 2;
     const urgentOnlyIncompleteParam = values.length + 3;
+    const starMemberParam = values.length + 4;
+    const awardStatusParam = values.length + 5;
     const result = await pool.query(`
-      UPDATE public.oz_checklist_items
-         SET ${sets.join(', ')}, updated_at = now()
-       WHERE id = $1 AND ($${isKellyParam}::boolean OR assignee_id = $${memberIdParam})
-         AND (NOT $${urgentOnlyIncompleteParam}::boolean OR status <> 'completed')
-      RETURNING id
-    `, [...values, actor.isKelly, actor.id, req.body?.urgent === true]);
+      WITH previous AS MATERIALIZED (
+        SELECT id, status, parent_item_id
+          FROM public.oz_checklist_items
+         WHERE id = $1 AND ($${isKellyParam}::boolean OR assignee_id = $${memberIdParam})
+         FOR UPDATE
+      ), updated AS (
+        UPDATE public.oz_checklist_items
+           SET ${sets.join(', ')}, updated_at = now()
+         WHERE id = $1 AND id IN (SELECT id FROM previous)
+           AND (NOT $${urgentOnlyIncompleteParam}::boolean OR status <> 'completed')
+        RETURNING id
+      ), awarded AS (
+        INSERT INTO public.oz_checklist_star_awards (item_id, member_id, stars)
+        SELECT updated.id, $${starMemberParam}, CASE WHEN previous.parent_item_id IS NULL THEN 5 ELSE 3 END
+          FROM updated
+          JOIN previous ON previous.id = updated.id
+         WHERE $${awardStatusParam}::text = 'completed' AND previous.status <> 'completed'
+        ON CONFLICT (item_id) DO NOTHING
+        RETURNING stars
+      )
+      SELECT updated.id, COALESCE((SELECT stars FROM awarded), 0)::integer AS stars_awarded
+        FROM updated
+    `, [...values, actor.isKelly, actor.id, req.body?.urgent === true, actor.id, nextStatus]);
     if (!result.rows.length) {
       if (req.body?.urgent === true) {
         const completed = await pool.query(`
@@ -29843,7 +29880,7 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
     }
     const owned = await pool.query('SELECT id FROM public.oz_checklist_items WHERE id = $1', [itemId]);
     if (!owned.rows.length) return res.status(404).json({ success: false, message: 'Tarefa não encontrada ou não atribuída a você.' });
-    res.json({ success: true, ...(await readOzChecklist(actor)) });
+    res.json({ success: true, ...(await readOzChecklist(actor)), starsAwarded: Number(result.rows[0]?.stars_awarded || 0) });
   } catch (error) {
     console.error('Erro ao atualizar item do checklist de Oz:', error);
     res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível atualizar o item.' });
