@@ -376,7 +376,7 @@
     notesDialog.showModal();
   }
 
-  function openMicrotaskNotes(item) {
+  function openTaskNotesScroll(item) {
     const entries = Array.isArray(item.notes) ? item.notes : [];
     document.getElementById('microtaskNotesTitle').textContent = item.title;
     document.getElementById('microtaskNotesList').innerHTML = entries.length
@@ -496,11 +496,10 @@
     const row = event.target.closest('.task-row[data-task-id]');
     if (!row || event.target.closest('.item-status, .delete-task, .task-options-toggle, .task-toggle') || (event.button !== undefined && event.button !== 0)) return;
     const item = findItemById(row.dataset.taskId);
-    if (!item || (!item.parentId && !activeMember?.isKelly)) return;
+    if (!item) return;
     holdStart = { x: event.clientX, y: event.clientY, row };
     holdTimer = window.setTimeout(() => {
-      if (item.parentId) openMicrotaskNotes(item);
-      else openAssignMenu(row);
+      openTaskNotesScroll(item);
       holdStart = null;
       ignoreLongPressClick = true;
       window.setTimeout(() => { ignoreLongPressClick = false; }, 1000);
