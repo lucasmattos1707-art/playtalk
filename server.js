@@ -16390,6 +16390,12 @@ async function ensureOzChecklistSchema() {
          WHERE is_completed = true AND status = 'pending'
       `);
       await pool.query(`
+        DELETE FROM public.oz_checklist_star_awards award
+         USING public.oz_checklist_items item
+         WHERE item.id = award.item_id
+           AND item.status <> 'completed'
+      `);
+      await pool.query(`
         DO $$ BEGIN
           IF NOT EXISTS (
             SELECT 1 FROM pg_constraint
@@ -29846,7 +29852,10 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
           FROM updated
           JOIN previous ON previous.id = updated.id
          WHERE updated.status = 'completed' AND previous.status <> 'completed'
-        ON CONFLICT (item_id) DO NOTHING
+        ON CONFLICT (item_id) DO UPDATE
+          SET member_id = EXCLUDED.member_id,
+              stars = EXCLUDED.stars,
+              created_at = now()
         RETURNING stars
       ), revoked AS (
         DELETE FROM public.oz_checklist_star_awards award
