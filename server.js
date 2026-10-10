@@ -29828,7 +29828,6 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
     const memberIdParam = values.length + 2;
     const urgentOnlyIncompleteParam = values.length + 3;
     const starMemberParam = values.length + 4;
-    const awardStatusParam = values.length + 5;
     const result = await pool.query(`
       WITH previous AS MATERIALIZED (
         SELECT id, status, parent_item_id
@@ -29840,19 +29839,29 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
            SET ${sets.join(', ')}, updated_at = now()
          WHERE id = $1 AND id IN (SELECT id FROM previous)
            AND (NOT $${urgentOnlyIncompleteParam}::boolean OR status <> 'completed')
-        RETURNING id
+        RETURNING id, status
       ), awarded AS (
         INSERT INTO public.oz_checklist_star_awards (item_id, member_id, stars)
         SELECT updated.id, $${starMemberParam}, CASE WHEN previous.parent_item_id IS NULL THEN 5 ELSE 3 END
           FROM updated
           JOIN previous ON previous.id = updated.id
-         WHERE $${awardStatusParam}::text = 'completed' AND previous.status <> 'completed'
+         WHERE updated.status = 'completed' AND previous.status <> 'completed'
         ON CONFLICT (item_id) DO NOTHING
         RETURNING stars
+      ), revoked AS (
+        DELETE FROM public.oz_checklist_star_awards award
+         USING updated, previous
+         WHERE award.item_id = updated.id
+           AND previous.id = updated.id
+           AND previous.status = 'completed'
+           AND updated.status <> 'completed'
+        RETURNING award.stars
       )
-      SELECT updated.id, COALESCE((SELECT stars FROM awarded), 0)::integer AS stars_awarded
+      SELECT updated.id,
+             COALESCE((SELECT stars FROM awarded), 0)::integer AS stars_awarded,
+             COALESCE((SELECT SUM(stars) FROM revoked), 0)::integer AS stars_revoked
         FROM updated
-    `, [...values, actor.isKelly, actor.id, req.body?.urgent === true, actor.id, nextStatus]);
+    `, [...values, actor.isKelly, actor.id, req.body?.urgent === true, actor.id]);
     if (!result.rows.length) {
       if (req.body?.urgent === true) {
         const completed = await pool.query(`
@@ -29880,7 +29889,12 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
     }
     const owned = await pool.query('SELECT id FROM public.oz_checklist_items WHERE id = $1', [itemId]);
     if (!owned.rows.length) return res.status(404).json({ success: false, message: 'Tarefa não encontrada ou não atribuída a você.' });
-    res.json({ success: true, ...(await readOzChecklist(actor)), starsAwarded: Number(result.rows[0]?.stars_awarded || 0) });
+    res.json({
+      success: true,
+      ...(await readOzChecklist(actor)),
+      starsAwarded: Number(result.rows[0]?.stars_awarded || 0),
+      starsRevoked: Number(result.rows[0]?.stars_revoked || 0)
+    });
   } catch (error) {
     console.error('Erro ao atualizar item do checklist de Oz:', error);
     res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível atualizar o item.' });

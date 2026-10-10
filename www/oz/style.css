@@ -145,7 +145,7 @@ h1 span { color: #aa8aff; background: linear-gradient(95deg, #c5a7ff, #9274ff 63
 
 /* Layout refinements for the master checklist, team identity and assignment menu. */
 [hidden] { display: none !important; }
-.topline { justify-content: flex-end; min-height: 44px; }
+.topline { justify-content: space-between; min-height: 44px; }
 .team-account { display: inline-flex; align-items: center; gap: 8px; max-width: 190px; padding: 4px 0; border: 0; border-radius: 0; background: transparent; color: #d0bbff; font-size: 11px; cursor: pointer; }
 .team-account svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .team-account span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -405,7 +405,7 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .team-account { max-width: 190px; }
 .profile-avatar { display: grid; width: 27px; height: 27px; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid rgba(191, 165, 255, .42); border-radius: 50%; background: rgba(158, 121, 239, .13); }
 .team-account .profile-avatar svg { width: 16px; height: 16px; stroke: currentColor; }
-.star-balance { display: inline-flex; align-items: center; gap: 5px; min-width: 48px; color: #fff; font-family: var(--display); font-size: 12px; font-weight: 800; }
+.star-balance { position: absolute; left: 50%; display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 48px; color: #fff; font-family: var(--display); font-size: 12px; font-weight: 800; transform: translateX(-50%); }
 .star-balance img { display: block; width: 17px; height: 17px; object-fit: contain; }
 .badge-album-button { display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; margin-left: auto; padding: 7px; border: 1px solid rgba(190, 170, 226, .14); border-radius: 11px; background: rgba(29, 27, 39, .55); color: #aaa3bc; opacity: .48; cursor: not-allowed; }
 .badge-album-button svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.55; stroke-linecap: round; stroke-linejoin: round; }
@@ -446,7 +446,7 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 }
 @media (max-width: 430px) {
   .profile-summary { gap: 6px; }
-  .team-account { max-width: 150px; padding: 6px 8px; }
+  .team-account { max-width: 150px; padding: 4px 0; }
   .star-balance { min-width: 41px; font-size: 11px; }
   .badge-album-button { width: 33px; height: 33px; }
   .account-menu { left: 0; right: auto; }
