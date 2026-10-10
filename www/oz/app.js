@@ -130,7 +130,7 @@
         </span>
         <span class="task-copy"><span class="task-title">${escapeHtml(item.title)}</span>${item.assigneeName ? `<span class="task-assignee"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.1"></circle><path d="M5.8 20c.25-3.8 2.35-5.7 6.2-5.7s5.95 1.9 6.2 5.7"></path></svg><span>${escapeHtml(item.assigneeName)}</span></span>` : ''}</span>
         ${hasSubtasks ? `<button class="task-toggle ${isOpen ? 'is-open' : ''}" type="button" data-action="toggle-subtasks" data-id="${escapeHtml(item.id)}" aria-expanded="${isOpen}" aria-controls="subtasks-${escapeHtml(item.id)}" aria-label="${isOpen ? 'Recolher' : 'Abrir'} sub tarefas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>` : ''}
-        ${activeMember?.isKelly ? `<button class="delete-task" type="button" data-action="delete-item" data-id="${escapeHtml(item.id)}" aria-label="Excluir tarefa" title="Excluir tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7m3 0-.8 13H6.8L6 7m3 3.2v6.5m6-6.5v6.5"></path></svg></button>` : ''}
+        ${hasNotes ? '<span class="task-note-indicator" role="img" aria-label="Esta tarefa possui notas" title="Esta tarefa possui notas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h8l4 4V20.25H6z"></path><path d="M14 3.75v4h4M9 12h6M9 15.5h6"></path></svg></span>' : ''}
       </div>
       ${hasSubtasks ? `<div class="subtask-list" id="subtasks-${escapeHtml(item.id)}" ${isOpen ? '' : 'hidden'}>${subtasks.map((subtask) => renderTask(subtask)).join('')}</div>` : ''}
     </div>`;
@@ -455,7 +455,7 @@
     const optionMarkup = `
       <button type="button" role="menuitem" data-task-option="notes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h8l4 4V20.25H6z"></path><path d="M14 3.75v4h4M9 12h6M9 15.5h6"></path></svg><span>Adicionar nota</span></button>
       ${urgentMarkup}
-      ${canManage ? '<button type="button" role="menuitem" data-task-option="subtask"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h5l2 2h7v11H5z"></path><path d="M12 10v6m-3-3h6"></path></svg><span>Adicionar subtarefa</span></button><button type="button" role="menuitem" data-task-option="delegate"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19c.2-3.5 2.05-5.25 5.5-5.25 1.15 0 2.1.2 2.85.6M15 10h5m-2.5-2.5L20 10l-2.5 2.5"></path></svg><span>Delegar</span></button>' : ''}`;
+      ${canManage ? '<button type="button" role="menuitem" data-task-option="subtask"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h5l2 2h7v11H5z"></path><path d="M12 10v6m-3-3h6"></path></svg><span>Adicionar subtarefa</span></button><button type="button" role="menuitem" data-task-option="delegate"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19c.2-3.5 2.05-5.25 5.5-5.25 1.15 0 2.1.2 2.85.6M15 10h5m-2.5-2.5L20 10l-2.5 2.5"></path></svg><span>Delegar</span></button><button type="button" role="menuitem" data-task-option="delete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7m3 0-.8 13H6.8L6 7m3 3.2v6.5m6-6.5v6.5"></path></svg><span>Excluir</span></button>' : ''}`;
     taskOptionsMenu.innerHTML = optionMarkup;
     taskOptionsMenu.dataset.taskId = row.dataset.taskId;
     taskOptionsMenu.hidden = false;
@@ -670,6 +670,9 @@
       document.getElementById('newSubtaskTitle').focus();
     } else if (option.dataset.taskOption === 'delegate' && activeMember?.isKelly && row) {
       openAssignMenu(row);
+    } else if (option.dataset.taskOption === 'delete' && activeMember?.isKelly && id) {
+      const item = findItemById(id);
+      if (item && window.confirm(`Excluir a tarefa "${item.title}"?`)) mutate(`/api/oz/checklist/items/${encodeURIComponent(id)}`, 'DELETE');
     }
   });
   document.addEventListener('click', (event) => {
