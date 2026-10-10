@@ -76,6 +76,7 @@
     if (!count) return;
     window.clearTimeout(starCelebrationTimer);
     document.getElementById('awardedStars').textContent = `${count} ${count === 1 ? 'estrela' : 'estrelas'}`;
+    document.getElementById('starCelebrationEarned').innerHTML = Array.from({ length: count }, (_, index) => `<img src="/oz/icons/star.svg" alt="" style="--star-index:${index}">`).join('');
     if (starCelebrationDialog.open) starCelebrationDialog.close();
     starCelebrationDialog.showModal();
     starCelebrationDialog.classList.remove('is-animating');
@@ -87,7 +88,7 @@
     starCelebrationTimer = window.setTimeout(() => {
       starCelebrationDialog.classList.remove('is-animating');
       if (starCelebrationDialog.open) starCelebrationDialog.close();
-    }, 1200);
+    }, 1500);
   }
 
   function getItemStatus(item) {
