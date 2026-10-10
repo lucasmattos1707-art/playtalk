@@ -146,7 +146,7 @@ h1 span { color: #aa8aff; background: linear-gradient(95deg, #c5a7ff, #9274ff 63
 /* Layout refinements for the master checklist, team identity and assignment menu. */
 [hidden] { display: none !important; }
 .topline { justify-content: flex-end; min-height: 44px; }
-.team-account { display: inline-flex; align-items: center; gap: 8px; max-width: 190px; padding: 8px 11px; border: 1px solid rgba(179, 143, 255, .22); border-radius: 999px; background: rgba(23, 20, 37, .74); color: #d0bbff; font-size: 11px; cursor: pointer; }
+.team-account { display: inline-flex; align-items: center; gap: 8px; max-width: 190px; padding: 4px 0; border: 0; border-radius: 0; background: transparent; color: #d0bbff; font-size: 11px; cursor: pointer; }
 .team-account svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .team-account span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .page-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 330px); align-items: end; gap: 32px; margin: 37px 0 32px; }
