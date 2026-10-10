@@ -88,7 +88,7 @@
     starCelebrationTimer = window.setTimeout(() => {
       starCelebrationDialog.classList.remove('is-animating');
       if (starCelebrationDialog.open) starCelebrationDialog.close();
-    }, 1500);
+    }, 1800);
   }
 
   function getItemStatus(item) {
