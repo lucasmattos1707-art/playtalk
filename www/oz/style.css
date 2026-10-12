@@ -558,8 +558,9 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 
 /* Keep every category title beside its icon, including after a cached layout update. */
 .category-title-button { display: block; width: 100%; }
-.category-titleline { display: flex; width: 100%; min-width: 0; }
-.category-titleline .category-title { display: block; flex: 1 1 auto; min-width: 0; color: #eff0f4; }
+.category-titleline { display: flex; width: 100%; min-width: 0; align-items: center; }
+.category-titleline .category-title { display: block; flex: 1 1 auto; min-width: 72px; overflow: hidden; color: #eff0f4; opacity: 1; visibility: visible; white-space: nowrap; text-overflow: ellipsis; }
+.category-titleline .category-emoji, .category-titleline .chevron { visibility: visible; opacity: 1; }
 
 .badge-info-dialog { width: min(330px, calc(100vw - 30px)); margin: auto; padding: 0; overflow: visible; border: 1px solid rgba(187, 160, 255, .3); border-radius: 19px; background: #11131c; color: var(--text); box-shadow: 0 28px 90px rgba(0,0,0,.65); }
 .badge-info-dialog::backdrop { background: rgba(5, 4, 11, .73); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
@@ -686,6 +687,12 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .oz-musical-note-actions button.is-primary svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .oz-musical-note-actions button.is-danger { border-color: rgba(255, 115, 124, .25); background: rgba(255, 80, 94, .1); color: #ffadb3; }
 .oz-musical-note-empty { margin: 0; color: #aaa2b7; font-size: 13px; font-weight: 650; }
+
+/* Keep primary category names visible in narrow mobile layouts. */
+@media (max-width: 700px) {
+  .category-title-button { min-width: 0; }
+  .category-titleline .category-title { min-width: 72px; font-size: 11px; }
+}
 
 .oz-musical-list-dialog:not([open]) { display: none; }
 .oz-musical-list-dialog { display: grid; width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 0; overflow: hidden; border: 0; border-radius: 0; background: radial-gradient(circle at 50% 5%, rgba(126, 72, 183, .35), transparent 34%), linear-gradient(160deg, #211139 0%, #10111d 52%, #08090d 100%); color: #fff; }
