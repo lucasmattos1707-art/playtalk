@@ -16370,6 +16370,21 @@ async function ensureOzChecklistSchema() {
         ADD COLUMN IF NOT EXISTS is_urgent boolean NOT NULL DEFAULT false
       `);
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.oz_musical_notes (
+          id text PRIMARY KEY,
+          card_id text NOT NULL,
+          position_seconds numeric(10, 3) NOT NULL CHECK (position_seconds >= 0),
+          text varchar(1200) NOT NULL,
+          author_member_id text NOT NULL REFERENCES public.oz_checklist_members(id) ON DELETE CASCADE,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS oz_musical_notes_card_time_idx
+        ON public.oz_musical_notes (card_id, position_seconds, created_at)
+      `);
+      await pool.query(`
         CREATE TABLE IF NOT EXISTS public.oz_checklist_star_awards (
           item_id text PRIMARY KEY,
           member_id text NOT NULL REFERENCES public.oz_checklist_members(id) ON DELETE CASCADE,
@@ -29577,6 +29592,29 @@ async function getOzMember(req) {
   return member ? { id: member.id, name: member.name, isKelly: member.name_key === 'kelly' } : null;
 }
 
+function canViewOzMusicalNotes(member) {
+  return Boolean(member?.isKelly || String(member?.name || '').trim().toLocaleLowerCase('pt-BR') === 'lucas');
+}
+
+async function readOzMusicalNotes(member, cardId) {
+  if (!canViewOzMusicalNotes(member)) return [];
+  await ensureOzChecklistSchema();
+  const result = await pool.query(`
+    SELECT id, card_id, position_seconds, text, created_at, updated_at
+      FROM public.oz_musical_notes
+     WHERE card_id = $1
+     ORDER BY position_seconds, created_at, id
+  `, [cardId]);
+  return (result.rows || []).map((row) => ({
+    id: row.id,
+    cardId: row.card_id,
+    positionSeconds: Number(row.position_seconds) || 0,
+    text: row.text,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at || row.created_at
+  }));
+}
+
 app.get('/api/oz/team/session', async (req, res) => {
   try {
     const member = await getOzMember(req);
@@ -29599,6 +29637,93 @@ app.get('/api/oz/checklist', async (req, res) => {
   } catch (error) {
     console.error('Erro ao carregar o checklist de Oz:', error);
     res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível carregar a lista agora.' });
+  }
+});
+
+app.get('/api/oz/musical/notes/:cardId', async (req, res) => {
+  try {
+    const member = await getOzMember(req);
+    if (!member) return res.status(401).json({ success: false, message: 'Entre para ver as notas.' });
+    if (!canViewOzMusicalNotes(member)) return res.status(403).json({ success: false, message: 'Estas notas são privadas.' });
+    const cardId = String(req.params.cardId || '').trim().slice(0, 160);
+    if (!cardId) return res.status(400).json({ success: false, message: 'Faixa inválida.' });
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, notes: await readOzMusicalNotes(member, cardId) });
+  } catch (error) {
+    console.error('Erro ao carregar notas privadas do musical:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível carregar as notas.' });
+  }
+});
+
+app.post('/api/oz/musical/notes/:cardId', async (req, res) => {
+  try {
+    const member = await getOzMember(req);
+    if (!member) return res.status(401).json({ success: false, message: 'Entre novamente no Oz.' });
+    if (!member.isKelly) return res.status(403).json({ success: false, message: 'Somente Kelly pode adicionar notas.' });
+    const cardId = String(req.params.cardId || '').trim().slice(0, 160);
+    const text = typeof req.body?.text === 'string' ? req.body.text.trim().slice(0, 1200) : '';
+    const positionSeconds = Number(req.body?.positionSeconds);
+    if (!cardId || !text || !Number.isFinite(positionSeconds) || positionSeconds < 0 || positionSeconds > 86400) {
+      return res.status(400).json({ success: false, message: 'Informe a nota e um tempo válido.' });
+    }
+    await ensureOzChecklistSchema();
+    await pool.query(`
+      INSERT INTO public.oz_musical_notes (id, card_id, position_seconds, text, author_member_id)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [`oz-note-${crypto.randomUUID()}`, cardId, Math.round(positionSeconds * 1000) / 1000, text, member.id]);
+    res.status(201).json({ success: true, notes: await readOzMusicalNotes(member, cardId) });
+  } catch (error) {
+    console.error('Erro ao salvar nota privada do musical:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível salvar a nota.' });
+  }
+});
+
+app.patch('/api/oz/musical/notes/:cardId/:noteId', async (req, res) => {
+  try {
+    const member = await getOzMember(req);
+    if (!member) return res.status(401).json({ success: false, message: 'Entre novamente no Oz.' });
+    if (!member.isKelly) return res.status(403).json({ success: false, message: 'Somente Kelly pode editar notas.' });
+    const cardId = String(req.params.cardId || '').trim().slice(0, 160);
+    const noteId = String(req.params.noteId || '').trim().slice(0, 160);
+    const text = typeof req.body?.text === 'string' ? req.body.text.trim().slice(0, 1200) : '';
+    const positionSeconds = Number(req.body?.positionSeconds);
+    if (!cardId || !noteId || !text || !Number.isFinite(positionSeconds) || positionSeconds < 0 || positionSeconds > 86400) {
+      return res.status(400).json({ success: false, message: 'Nota inválida.' });
+    }
+    await ensureOzChecklistSchema();
+    const result = await pool.query(`
+      UPDATE public.oz_musical_notes
+         SET position_seconds = $3, text = $4, updated_at = now()
+       WHERE id = $1 AND card_id = $2 AND author_member_id = $5
+       RETURNING id
+    `, [noteId, cardId, Math.round(positionSeconds * 1000) / 1000, text, member.id]);
+    if (!result.rows.length) return res.status(404).json({ success: false, message: 'Esta nota não existe mais.' });
+    res.json({ success: true, notes: await readOzMusicalNotes(member, cardId) });
+  } catch (error) {
+    console.error('Erro ao editar nota privada do musical:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível editar a nota.' });
+  }
+});
+
+app.delete('/api/oz/musical/notes/:cardId/:noteId', async (req, res) => {
+  try {
+    const member = await getOzMember(req);
+    if (!member) return res.status(401).json({ success: false, message: 'Entre novamente no Oz.' });
+    if (!member.isKelly) return res.status(403).json({ success: false, message: 'Somente Kelly pode apagar notas.' });
+    const cardId = String(req.params.cardId || '').trim().slice(0, 160);
+    const noteId = String(req.params.noteId || '').trim().slice(0, 160);
+    if (!cardId || !noteId) return res.status(400).json({ success: false, message: 'Nota inválida.' });
+    await ensureOzChecklistSchema();
+    const result = await pool.query(`
+      DELETE FROM public.oz_musical_notes
+       WHERE id = $1 AND card_id = $2 AND author_member_id = $3
+       RETURNING id
+    `, [noteId, cardId, member.id]);
+    if (!result.rows.length) return res.status(404).json({ success: false, message: 'Esta nota não existe mais.' });
+    res.json({ success: true, notes: await readOzMusicalNotes(member, cardId) });
+  } catch (error) {
+    console.error('Erro ao apagar nota privada do musical:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível apagar a nota.' });
   }
 });
 

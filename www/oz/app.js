@@ -37,6 +37,16 @@
   const musicalDuration = document.getElementById('ozMusicalDuration');
   const musicalPlay = document.getElementById('ozMusicalPlay');
   const musicalTrackList = document.getElementById('ozMusicalTrackList');
+  const musicalNotesButton = document.getElementById('ozMusicalNotes');
+  const musicalNoteMarkers = document.getElementById('ozMusicalNoteMarkers');
+  const musicalNoteDialog = document.getElementById('ozMusicalNoteDialog');
+  const musicalNoteList = document.getElementById('ozMusicalNoteList');
+  const musicalNoteCurrent = document.getElementById('ozMusicalNoteCurrent');
+  const musicalNoteTime = document.getElementById('ozMusicalNoteTime');
+  const musicalNoteText = document.getElementById('ozMusicalNoteText');
+  const musicalNoteEditor = document.getElementById('ozMusicalNoteEditor');
+  const musicalNoteEmpty = document.getElementById('ozMusicalNoteEmpty');
+  const musicalNoteActions = document.getElementById('ozMusicalNoteActions');
   const addMenu = document.getElementById('addMenu');
   const accountMenu = document.getElementById('accountMenu');
   const headerOptionsButton = document.getElementById('headerOptionsButton');
@@ -67,6 +77,21 @@
   let musicalTrackIndex = 0;
   let musicalProjectLoaded = false;
   let musicalProjectLoading = false;
+  let musicalNotes = [];
+  let musicalNotesTrackId = '';
+  let musicalNoteId = '';
+  let musicalNoteMode = 'view';
+  let musicalNoteDraftPosition = 0;
+  const musicalTrackTitleOverrides = [
+    'Abertura',
+    'Além do arco íris',
+    'Dorethy e pintinhos',
+    'Dorethy e ovelinhas',
+    'Furacão e Oz',
+    'Dorothy e os Munchkins',
+    'Fada e Dorothy',
+    'Espantalho e Dorothy'
+  ];
 
   const readOpened = () => {
     try {
@@ -141,6 +166,10 @@
     return Array.isArray(track?.audioTracks) ? track.audioTracks.find((entry) => entry?.url) || null : null;
   }
 
+  function getMusicalTrackTitle(track, index) {
+    return musicalTrackTitleOverrides[index] || String(track?.title || `Faixa ${index + 1}`).trim();
+  }
+
   function renderMusicalCaption() {
     const track = musicalTracks[musicalTrackIndex];
     const lines = Array.isArray(track?.lyrics?.lines)
@@ -177,10 +206,127 @@
     musicalTrackList.innerHTML = musicalTracks.length
       ? musicalTracks.map((track, index) => {
         const image = musicalAssetUrl(track.image?.url, '/oz/oz-musical-cover.webp');
-        const title = String(track.title || `Faixa ${index + 1}`).trim();
+        const title = getMusicalTrackTitle(track, index);
         return `<button class="oz-musical-track-option ${index === musicalTrackIndex ? 'is-active' : ''}" type="button" role="option" aria-selected="${index === musicalTrackIndex}" data-musical-index="${index}"><img src="${escapeHtml(image)}" alt=""><span><strong>${escapeHtml(title)}</strong><small>Faixa ${index + 1}</small></span><span aria-hidden="true">${index === musicalTrackIndex && !musicalAudio.paused ? '▶' : ''}</span></button>`;
       }).join('')
       : '<p class="oz-musical-empty">Nenhuma faixa disponível.</p>';
+  }
+
+  function renderMusicalNoteMarkers() {
+    const duration = Number.isFinite(musicalAudio.duration) ? musicalAudio.duration : 0;
+    musicalNoteMarkers.innerHTML = duration > 0
+      ? musicalNotes.map((note) => {
+        const position = Math.min(100, Math.max(0, (Number(note.positionSeconds) / duration) * 100));
+        return `<button class="oz-musical-note-marker" type="button" data-musical-note-id="${escapeHtml(note.id)}" style="left:${position}%" aria-label="Abrir nota em ${musicalTime(note.positionSeconds)}" title="Nota em ${musicalTime(note.positionSeconds)}"></button>`;
+      }).join('')
+      : '';
+    musicalNotesButton.classList.toggle('has-notes', musicalNotes.length > 0);
+  }
+
+  async function loadMusicalNotes(trackId) {
+    musicalNotes = [];
+    musicalNotesTrackId = trackId || '';
+    renderMusicalNoteMarkers();
+    if (!trackId || !activeMember?.id || (!activeMember.isKelly && String(activeMember.name || '').trim().toLocaleLowerCase('pt-BR') !== 'lucas')) return;
+    try {
+      const response = await fetch(`/api/oz/musical/notes/${encodeURIComponent(trackId)}`, {
+        headers: { Accept: 'application/json', 'x-oz-member-id': activeMember.id },
+        cache: 'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success === false) throw new Error(payload.message || 'Não foi possível carregar as notas.');
+      if (musicalNotesTrackId !== trackId) return;
+      musicalNotes = Array.isArray(payload.notes) ? payload.notes : [];
+      renderMusicalNoteMarkers();
+    } catch (_error) {
+      musicalNotes = [];
+      renderMusicalNoteMarkers();
+    }
+  }
+
+  function musicalNoteById(noteId) {
+    return musicalNotes.find((note) => note.id === noteId) || null;
+  }
+
+  function renderMusicalNotesDialog() {
+    const selected = musicalNoteById(musicalNoteId);
+    const editing = musicalNoteMode === 'new' || musicalNoteMode === 'edit';
+    musicalNoteList.innerHTML = musicalNotes.length
+      ? musicalNotes.map((note) => `<button class="oz-musical-note-option ${note.id === musicalNoteId ? 'is-active' : ''}" type="button" data-musical-note-select="${escapeHtml(note.id)}"><span>${musicalTime(note.positionSeconds)}</span><strong>${escapeHtml(note.text)}</strong></button>`).join('')
+      : '';
+    musicalNoteList.hidden = !musicalNotes.length;
+    musicalNoteCurrent.hidden = !selected && !editing;
+    musicalNoteEmpty.hidden = Boolean(selected || editing || musicalNotes.length);
+    musicalNoteTime.textContent = selected ? `Marcada em ${musicalTime(selected.positionSeconds)}` : `Nova nota em ${musicalTime(musicalNoteDraftPosition)}`;
+    musicalNoteText.textContent = selected?.text || '';
+    musicalNoteText.hidden = editing;
+    musicalNoteEditor.hidden = !editing;
+    musicalNoteEditor.value = editing ? (selected?.text || '') : '';
+    if (editing) musicalNoteEditor.focus();
+    if (editing) {
+      musicalNoteActions.innerHTML = '<button type="button" data-musical-note-action="cancel">Cancelar</button><button class="is-primary" type="button" data-musical-note-action="save">Salvar nota</button>';
+    } else if (selected && activeMember?.isKelly) {
+      musicalNoteActions.innerHTML = '<button type="button" data-musical-note-action="edit">Editar</button><button class="is-danger" type="button" data-musical-note-action="delete">Apagar</button>';
+    } else if (activeMember?.isKelly) {
+      musicalNoteActions.innerHTML = '<button class="is-primary" type="button" data-musical-note-action="add">Adicionar nota</button>';
+    } else {
+      musicalNoteActions.innerHTML = '';
+    }
+  }
+
+  function openMusicalNotes(noteId = '') {
+    const currentTime = Number(musicalAudio.currentTime) || 0;
+    const nearby = !noteId && activeMember?.isKelly
+      ? musicalNotes.find((note) => Math.abs(Number(note.positionSeconds) - currentTime) < 1)
+      : null;
+    musicalNoteId = noteId || nearby?.id || '';
+    musicalNoteDraftPosition = nearby ? Number(nearby.positionSeconds) : currentTime;
+    musicalNoteMode = nearby && activeMember?.isKelly ? 'edit' : 'view';
+    if (!musicalNoteId && activeMember?.isKelly) musicalNoteMode = 'new';
+    if (!musicalNoteId && !activeMember?.isKelly && musicalNotes.length) musicalNoteId = musicalNotes[0].id;
+    renderMusicalNotesDialog();
+    if (!musicalNoteDialog.open) musicalNoteDialog.showModal();
+  }
+
+  async function saveMusicalNote() {
+    if (!activeMember?.isKelly || !musicalNotesTrackId) return;
+    const text = musicalNoteEditor.value.trim();
+    if (!text) return;
+    const noteId = musicalNoteId;
+    const method = noteId ? 'PATCH' : 'POST';
+    const endpoint = noteId
+      ? `/api/oz/musical/notes/${encodeURIComponent(musicalNotesTrackId)}/${encodeURIComponent(noteId)}`
+      : `/api/oz/musical/notes/${encodeURIComponent(musicalNotesTrackId)}`;
+    const response = await fetch(endpoint, {
+      method,
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'x-oz-member-id': activeMember.id },
+      body: JSON.stringify({ text, positionSeconds: noteId ? Number(musicalNoteById(noteId)?.positionSeconds || musicalNoteDraftPosition) : musicalNoteDraftPosition })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.success === false) throw new Error(payload.message || 'Não foi possível salvar a nota.');
+    musicalNotes = Array.isArray(payload.notes) ? payload.notes : musicalNotes;
+    const saved = noteId
+      ? musicalNoteById(noteId)
+      : musicalNotes.reduce((closest, note) => !closest || Math.abs(Number(note.positionSeconds) - musicalNoteDraftPosition) < Math.abs(Number(closest.positionSeconds) - musicalNoteDraftPosition) ? note : closest, null);
+    musicalNoteId = saved?.id || '';
+    musicalNoteMode = 'view';
+    renderMusicalNoteMarkers();
+    renderMusicalNotesDialog();
+  }
+
+  async function deleteMusicalNote() {
+    if (!activeMember?.isKelly || !musicalNotesTrackId || !musicalNoteId) return;
+    if (!window.confirm('Apagar esta nota da faixa?')) return;
+    const response = await fetch(`/api/oz/musical/notes/${encodeURIComponent(musicalNotesTrackId)}/${encodeURIComponent(musicalNoteId)}`, {
+      method: 'DELETE', headers: { Accept: 'application/json', 'x-oz-member-id': activeMember.id }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.success === false) throw new Error(payload.message || 'Não foi possível apagar a nota.');
+    musicalNotes = Array.isArray(payload.notes) ? payload.notes : [];
+    musicalNoteId = musicalNotes[0]?.id || '';
+    musicalNoteMode = 'view';
+    renderMusicalNoteMarkers();
+    renderMusicalNotesDialog();
   }
 
   function setMusicalTrack(index, { autoplay = false } = {}) {
@@ -188,13 +334,13 @@
     musicalTrackIndex = (Number(index) + musicalTracks.length) % musicalTracks.length;
     const track = musicalTracks[musicalTrackIndex];
     const audio = musicalTrackAudio(track);
-    const title = String(track.title || `Faixa ${musicalTrackIndex + 1}`).trim();
+    const title = getMusicalTrackTitle(track, musicalTrackIndex);
     musicalAudio.pause();
     musicalAudio.removeAttribute('src');
     musicalAudio.load();
     musicalTrackTitle.textContent = title;
     musicalTrackNumber.textContent = `Faixa ${musicalTrackIndex + 1} de ${musicalTracks.length}`;
-    musicalStatus.textContent = audio?.url ? 'Musical Kelly' : 'Áudio indisponível';
+    musicalStatus.textContent = audio?.url ? 'Espetáculo Arabesque' : 'Áudio indisponível';
     musicalCurrentTime.textContent = '0:00';
     musicalDuration.textContent = '0:00';
     musicalSeek.value = '0';
@@ -213,7 +359,9 @@
       musicalAudio.src = musicalAssetUrl(audio.url);
       musicalAudio.load();
     }
+    loadMusicalNotes(track.id).catch(() => {});
     renderMusicalTrackList();
+    renderMusicalNoteMarkers();
     updateMusicalPlayer();
     if (autoplay && audio?.url) {
       const playback = musicalAudio.play();
@@ -248,8 +396,18 @@
     loadMusicalProject().catch(() => {});
   }
 
+  function sortBadgesForAlbum(badges) {
+    return [...(Array.isArray(badges) ? badges : [])].sort((left, right) => {
+      const leftMission = left?.group === 'missao';
+      const rightMission = right?.group === 'missao';
+      if (leftMission !== rightMission) return leftMission ? -1 : 1;
+      if (leftMission && rightMission) return Number(left.threshold || 0) - Number(right.threshold || 0);
+      return 0;
+    });
+  }
+
   function renderBadgeAlbum() {
-    const badges = state.badges || [];
+    const badges = sortBadgesForAlbum(state.badges);
     const unlocked = badges.filter((badge) => badge.unlocked).length;
     document.getElementById('badgeAlbumCount').textContent = `${unlocked}/${badges.length || 40}`;
     document.getElementById('badgeAlbumGrid').innerHTML = badges.map((badge) => `
@@ -424,6 +582,7 @@
 
   function renderCategory(category) {
     const items = Array.isArray(category.items) ? category.items : [];
+    const categoryTitle = String(category.title || category.name || category.id || 'Categoria').trim();
     const allItems = flattenItems(items);
     const doneCount = allItems.filter((item) => getItemStatus(item) === 'completed').length;
     const itemRate = allItems.length ? Math.round((doneCount / allItems.length) * 100) : 0;
@@ -444,7 +603,7 @@
     return `<article class="${cardClasses}" data-category="${escapeHtml(category.id)}">
       <div class="category-head">
         <button class="category-title-button" type="button" data-action="open-category" data-id="${escapeHtml(category.id)}" aria-expanded="${isOpen}" aria-controls="panel-${escapeHtml(category.id)}">
-          <span class="category-titleline"><span class="category-emoji" aria-hidden="true">${escapeHtml(category.icon || '✨')}</span><span class="category-title">${escapeHtml(category.title)}</span><span class="chevron" aria-hidden="true">›</span></span>
+          <span class="category-titleline"><span class="category-emoji" aria-hidden="true">${escapeHtml(category.icon || '✨')}</span><span class="category-title">${escapeHtml(categoryTitle)}</span><span class="chevron" aria-hidden="true">›</span></span>
         </button>
         <div class="category-progress" role="img" aria-label="Progresso da categoria"><div class="progress-track"><span style="width:${itemRate}%"></span></div></div>
       </div>
@@ -940,6 +1099,14 @@
   document.getElementById('closeOzMusical').addEventListener('click', () => musicalDialog.close());
   musicalDialog.addEventListener('click', (event) => { if (event.target === musicalDialog) musicalDialog.close(); });
   musicalDialog.addEventListener('close', () => { musicalAudio.pause(); });
+  document.getElementById('ozMusicalNotes').addEventListener('click', () => openMusicalNotes());
+  musicalNoteMarkers.addEventListener('click', (event) => {
+    const marker = event.target.closest('[data-musical-note-id]');
+    if (!marker) return;
+    event.preventDefault();
+    event.stopPropagation();
+    openMusicalNotes(marker.dataset.musicalNoteId);
+  });
   musicalPlay.addEventListener('click', () => {
     if (!musicalTracks.length) return;
     if (musicalAudio.paused) {
@@ -948,7 +1115,7 @@
     } else musicalAudio.pause();
   });
   musicalAudio.addEventListener('timeupdate', updateMusicalPlayer);
-  musicalAudio.addEventListener('loadedmetadata', updateMusicalPlayer);
+  musicalAudio.addEventListener('loadedmetadata', () => { updateMusicalPlayer(); renderMusicalNoteMarkers(); });
   musicalAudio.addEventListener('play', () => { renderMusicalTrackList(); updateMusicalPlayer(); });
   musicalAudio.addEventListener('pause', () => { renderMusicalTrackList(); updateMusicalPlayer(); });
   musicalAudio.addEventListener('ended', updateMusicalPlayer);
@@ -968,6 +1135,43 @@
     const option = event.target.closest('[data-musical-index]');
     if (!option) return;
     setMusicalTrack(Number(option.dataset.musicalIndex), { autoplay: true });
+  });
+  document.getElementById('closeOzMusicalNote').addEventListener('click', () => musicalNoteDialog.close());
+  musicalNoteDialog.addEventListener('click', (event) => { if (event.target === musicalNoteDialog) musicalNoteDialog.close(); });
+  musicalNoteList.addEventListener('click', (event) => {
+    const option = event.target.closest('[data-musical-note-select]');
+    if (!option || musicalNoteMode === 'new' || musicalNoteMode === 'edit') return;
+    musicalNoteId = option.dataset.musicalNoteSelect;
+    musicalNoteMode = 'view';
+    renderMusicalNotesDialog();
+  });
+  musicalNoteActions.addEventListener('click', async (event) => {
+    const action = event.target.closest('[data-musical-note-action]')?.dataset.musicalNoteAction;
+    if (!action) return;
+    if (action === 'cancel') {
+      musicalNoteMode = 'view';
+      renderMusicalNotesDialog();
+      return;
+    }
+    if (action === 'add') {
+      musicalNoteId = '';
+      musicalNoteDraftPosition = Number(musicalAudio.currentTime) || 0;
+      musicalNoteMode = 'new';
+      renderMusicalNotesDialog();
+      return;
+    }
+    if (action === 'edit') {
+      musicalNoteMode = 'edit';
+      renderMusicalNotesDialog();
+      return;
+    }
+    try {
+      if (action === 'save') await saveMusicalNote();
+      if (action === 'delete') await deleteMusicalNote();
+    } catch (error) {
+      musicalNoteText.textContent = error.message || 'Não foi possível atualizar a nota.';
+      musicalNoteText.hidden = false;
+    }
   });
   document.getElementById('closeBadgeAlbum').addEventListener('click', () => badgeAlbumDialog.close());
   badgeAlbumDialog.addEventListener('click', (event) => { if (event.target === badgeAlbumDialog) badgeAlbumDialog.close(); });

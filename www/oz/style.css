@@ -598,3 +598,60 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
   .oz-musical-main { gap: 17px; }
   .oz-musical-cover-wrap { width: min(70vw, 260px); }
 }
+
+/* Final musical player polish: square album art, centered controls and readable type. */
+.oz-musical-panel { width: min(100%, 620px); justify-items: center; }
+.oz-musical-header, .oz-musical-main, .oz-musical-caption, .oz-musical-progress, .oz-musical-controls, .oz-musical-track-list { width: 100%; }
+.oz-musical-header { align-items: center; }
+.oz-musical-header h2 { font-size: clamp(28px, 6vw, 38px); font-weight: 850; }
+.oz-musical-kicker { font-size: 11px; font-weight: 850; }
+.oz-musical-cover-wrap { width: min(76vw, 360px); aspect-ratio: 1; padding: 0; border-radius: 22px; background: transparent; box-shadow: 0 24px 76px rgba(0,0,0,.55), 0 0 44px rgba(170, 114, 255, .2); }
+.oz-musical-cover { border-radius: 22px; }
+.oz-musical-cover::after { display: none; }
+.oz-musical-track-copy h3 { font-size: clamp(32px, 7vw, 46px); font-weight: 850; }
+.oz-musical-track-copy p { font-size: 12px; font-weight: 800; }
+.oz-musical-track-copy span { font-size: 13px; font-weight: 700; }
+.oz-musical-caption { min-height: 48px; color: #f0ecf7; font-size: 16px; font-weight: 750; line-height: 1.5; }
+.oz-musical-progress-track { position: relative; min-width: 0; }
+.oz-musical-progress { gap: 12px; font-size: 11px; font-weight: 700; }
+.oz-musical-progress input { position: relative; z-index: 1; }
+.oz-musical-note-markers { position: absolute; z-index: 2; inset: 0; pointer-events: none; }
+.oz-musical-note-marker { position: absolute; top: 50%; width: 5px; height: 13px; padding: 0; transform: translate(-50%, -50%); border: 0; border-radius: 2px; background: #ffd66b; box-shadow: 0 0 8px rgba(255, 207, 93, .7); cursor: pointer; pointer-events: auto; }
+.oz-musical-note-marker:hover { width: 7px; height: 17px; background: #fff0a7; }
+.oz-musical-controls { gap: 26px; justify-content: center; }
+.oz-musical-controls button { width: 28px; height: 34px; border-radius: 0; color: #fff; }
+.oz-musical-controls button:hover { background: transparent; color: #e5c7ff; transform: translateY(-1px); }
+.oz-musical-controls button svg { width: 23px; height: 23px; stroke-width: 1.8; }
+.oz-musical-controls .oz-musical-play { width: 34px; height: 34px; background: transparent; color: #fff; box-shadow: none; }
+.oz-musical-controls .oz-musical-play:hover { background: transparent; color: #fff; }
+.oz-musical-play svg { width: 30px !important; height: 30px !important; fill: none !important; stroke: currentColor !important; stroke-width: 1.8 !important; }
+.oz-musical-controls .oz-musical-icon-play { fill: currentColor !important; stroke: none !important; }
+.oz-musical-icon-pause { display: none; }
+.oz-musical-play.is-playing .oz-musical-icon-play { display: none; }
+.oz-musical-play.is-playing .oz-musical-icon-pause { display: block; }
+.oz-musical-controls #ozMusicalNotes.has-notes { color: #ffd66b; }
+.oz-musical-list-toggle { margin-left: 0; }
+.oz-musical-track-option strong { font-size: 14px; font-weight: 800; }
+.oz-musical-track-option small { font-size: 11px; font-weight: 600; }
+.oz-musical-note-dialog { width: min(430px, calc(100vw - 28px)); max-height: min(82vh, 640px); margin: auto; padding: 0; overflow: hidden; border: 1px solid rgba(201, 164, 255, .28); border-radius: 20px; background: #151321; color: #f5f2fb; box-shadow: 0 28px 100px rgba(0,0,0,.68); }
+.oz-musical-note-dialog::backdrop { background: rgba(6, 4, 12, .72); backdrop-filter: blur(9px); }
+.oz-musical-note-panel { position: relative; display: grid; gap: 13px; padding: 26px 23px 21px; }
+.oz-musical-note-panel > .dialog-close { top: 13px; right: 13px; }
+.oz-musical-note-panel h2 { margin: 0; font: 850 25px/1.15 var(--display); }
+.oz-musical-note-list { display: grid; max-height: 190px; gap: 5px; overflow-y: auto; }
+.oz-musical-note-list[hidden] { display: none; }
+.oz-musical-note-option { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; align-items: center; padding: 9px 10px; border: 0; border-radius: 9px; background: rgba(255,255,255,.045); color: #d4ccdf; text-align: left; cursor: pointer; }
+.oz-musical-note-option:hover, .oz-musical-note-option.is-active { background: rgba(255, 213, 100, .12); color: #fff4cb; }
+.oz-musical-note-option span { color: #ffd66b; font-size: 11px; font-weight: 800; }
+.oz-musical-note-option strong { overflow: hidden; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.oz-musical-note-current { display: grid; gap: 8px; }
+.oz-musical-note-current[hidden], .oz-musical-note-empty[hidden] { display: none; }
+.oz-musical-note-time { color: #ffd66b; font-size: 11px; font-weight: 800; }
+.oz-musical-note-current p { margin: 0; color: #f5f2fb; font-size: 15px; font-weight: 700; line-height: 1.55; white-space: pre-wrap; }
+.oz-musical-note-editor { width: 100%; min-height: 110px; resize: vertical; padding: 11px; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; outline: 0; background: rgba(0,0,0,.22); color: #fff; font: 600 14px/1.5 var(--font); }
+.oz-musical-note-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.oz-musical-note-actions:empty { display: none; }
+.oz-musical-note-actions button { padding: 9px 13px; border: 1px solid rgba(255,255,255,.14); border-radius: 9px; background: rgba(255,255,255,.06); color: #e8e3f1; font-size: 11px; font-weight: 800; cursor: pointer; }
+.oz-musical-note-actions button.is-primary { border-color: rgba(122, 238, 160, .3); background: rgba(70, 194, 112, .2); color: #b9ffca; }
+.oz-musical-note-actions button.is-danger { border-color: rgba(255, 115, 124, .25); background: rgba(255, 80, 94, .1); color: #ffadb3; }
+.oz-musical-note-empty { margin: 0; color: #aaa2b7; font-size: 13px; font-weight: 650; }
