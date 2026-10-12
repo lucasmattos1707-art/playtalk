@@ -531,6 +531,11 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .task-assignee-toggle:hover, .task-assignee-toggle:focus-visible { color: #dbcaff; background: rgba(179, 145, 255, .13); }
 .task-assignee-toggle svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
+/* Keep every category title beside its icon, including after a cached layout update. */
+.category-title-button { display: block; width: 100%; }
+.category-titleline { display: flex; width: 100%; min-width: 0; }
+.category-titleline .category-title { display: block; flex: 1 1 auto; min-width: 0; color: #eff0f4; }
+
 .badge-info-dialog { width: min(330px, calc(100vw - 30px)); margin: auto; padding: 0; overflow: visible; border: 1px solid rgba(187, 160, 255, .3); border-radius: 19px; background: #11131c; color: var(--text); box-shadow: 0 28px 90px rgba(0,0,0,.65); }
 .badge-info-dialog::backdrop { background: rgba(5, 4, 11, .73); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .badge-info-panel { position: relative; display: grid; justify-items: center; gap: 11px; padding: 24px 24px 22px; text-align: center; }
