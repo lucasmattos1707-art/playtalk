@@ -97,7 +97,10 @@
     'Furacão e Oz',
     'Dorothy e os Munchkins',
     'Fada e Dorothy',
-    'Espantalho e Dorothy'
+    'Espantalho e Dorothy',
+    'Homem de Lata',
+    'Dorethy e o Leão',
+    'Bruxa do Oeste'
   ];
 
   const readOpened = () => {
