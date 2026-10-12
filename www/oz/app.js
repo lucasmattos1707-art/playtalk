@@ -284,7 +284,7 @@
     musicalNoteEditor.value = editing ? (selected?.text || '') : '';
     if (editing) musicalNoteEditor.focus();
     if (editing) {
-      musicalNoteActions.innerHTML = '<button type="button" data-musical-note-action="cancel">Cancelar</button><button class="is-primary" type="button" data-musical-note-action="save">Salvar nota</button>';
+      musicalNoteActions.innerHTML = '<button type="button" data-musical-note-action="cancel">Cancelar</button><button class="is-primary" type="button" data-musical-note-action="save" aria-label="Salvar nota" title="Salvar nota"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="m8 12.2 2.6 2.6 5.5-5.5"></path></svg></button>';
     } else if (selected && activeMember?.isKelly) {
       musicalNoteActions.innerHTML = '<button type="button" data-musical-note-action="edit">Editar</button><button class="is-danger" type="button" data-musical-note-action="delete">Apagar</button>';
     } else if (activeMember?.isKelly) {

@@ -401,12 +401,12 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 /* Member stars and header options. */
 .topline { align-items: center; }
 .profile-summary { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.team-account { max-width: 190px; }
-.profile-avatar { display: grid; width: 27px; height: 27px; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid rgba(191, 165, 255, .42); border-radius: 50%; background: rgba(158, 121, 239, .13); cursor: pointer; }
+.team-account { max-width: 190px; gap: 10px; font-size: 14px; }
+.profile-avatar { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid rgba(191, 165, 255, .42); border-radius: 50%; background: rgba(158, 121, 239, .13); cursor: pointer; }
 .profile-avatar img { display: none; width: 100%; height: 100%; object-fit: cover; }
 .profile-avatar.has-image img { display: block; }
 .profile-avatar.has-image svg { display: none; }
-.team-account .profile-avatar svg { width: 16px; height: 16px; stroke: currentColor; }
+.team-account .profile-avatar svg { width: 20px; height: 20px; stroke: currentColor; }
 .star-balance { position: absolute; left: 50%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 60px; color: #fff; font-family: var(--display); font-size: 15px; font-weight: 800; transform: translateX(-50%); }
 .star-balance img { display: block; width: 21px; height: 21px; object-fit: contain; }
 .header-options-wrap { position: relative; margin-left: auto; }
@@ -481,7 +481,8 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 }
 @media (max-width: 430px) {
   .profile-summary { gap: 6px; }
-  .team-account { max-width: 150px; padding: 4px 0; }
+  .team-account { max-width: 150px; padding: 4px 0; font-size: 13.75px; }
+  .profile-avatar { width: 33px; height: 33px; }
   .star-balance { min-width: 51px; gap: 5px; font-size: 14px; }
   .star-balance img { width: 20px; height: 20px; }
   .header-options-toggle { width: 33px; height: 33px; }
@@ -681,6 +682,8 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .oz-musical-note-actions:empty { display: none; }
 .oz-musical-note-actions button { padding: 9px 13px; border: 1px solid rgba(255,255,255,.14); border-radius: 9px; background: rgba(255,255,255,.06); color: #e8e3f1; font-size: 11px; font-weight: 800; cursor: pointer; }
 .oz-musical-note-actions button.is-primary { border-color: rgba(122, 238, 160, .3); background: rgba(70, 194, 112, .2); color: #b9ffca; }
+.oz-musical-note-actions button.is-primary { display: grid; width: 40px; height: 36px; place-items: center; padding: 0; }
+.oz-musical-note-actions button.is-primary svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .oz-musical-note-actions button.is-danger { border-color: rgba(255, 115, 124, .25); background: rgba(255, 80, 94, .1); color: #ffadb3; }
 .oz-musical-note-empty { margin: 0; color: #aaa2b7; font-size: 13px; font-weight: 650; }
 
