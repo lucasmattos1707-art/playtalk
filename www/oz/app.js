@@ -271,12 +271,11 @@
   function renderMusicalNotesDialog() {
     const selected = musicalNoteById(musicalNoteId);
     const editing = musicalNoteMode === 'new' || musicalNoteMode === 'edit';
-    musicalNoteList.innerHTML = musicalNotes.length
-      ? musicalNotes.map((note) => `<button class="oz-musical-note-option ${note.id === musicalNoteId ? 'is-active' : ''}" type="button" data-musical-note-select="${escapeHtml(note.id)}"><span>${musicalTime(note.positionSeconds)}</span><strong>${escapeHtml(note.text)}</strong></button>`).join('')
-      : '';
-    musicalNoteList.hidden = !musicalNotes.length;
+    musicalNoteList.innerHTML = '';
+    musicalNoteList.hidden = true;
     musicalNoteCurrent.hidden = !selected && !editing;
-    musicalNoteEmpty.hidden = Boolean(selected || editing || musicalNotes.length);
+    musicalNoteEmpty.textContent = 'Toque em um tracinho amarelo para ver a nota.';
+    musicalNoteEmpty.hidden = Boolean(selected || editing);
     musicalNoteTime.textContent = selected ? `Marcada em ${musicalTime(selected.positionSeconds)}` : `Nova nota em ${musicalTime(musicalNoteDraftPosition)}`;
     musicalNoteText.textContent = selected?.text || '';
     musicalNoteText.hidden = editing;
@@ -303,7 +302,6 @@
     musicalNoteDraftPosition = nearby ? Number(nearby.positionSeconds) : currentTime;
     musicalNoteMode = nearby && activeMember?.isKelly ? 'edit' : 'view';
     if (!musicalNoteId && activeMember?.isKelly) musicalNoteMode = 'new';
-    if (!musicalNoteId && !activeMember?.isKelly && musicalNotes.length) musicalNoteId = musicalNotes[0].id;
     renderMusicalNotesDialog();
     if (!musicalNoteDialog.open) musicalNoteDialog.showModal();
   }
@@ -331,7 +329,7 @@
     musicalNoteId = saved?.id || '';
     musicalNoteMode = 'view';
     renderMusicalNoteMarkers();
-    renderMusicalNotesDialog();
+    musicalNoteDialog.close();
   }
 
   async function deleteMusicalNote() {
