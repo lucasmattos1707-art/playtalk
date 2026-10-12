@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/oz/style.css?v=20261012-oz-musical-notes">
-  <script src="/oz/app.js?v=20261012-oz-musical-notes" defer></script>
+  <link rel="stylesheet" href="/oz/style.css?v=20261012-oz-profile">
+  <script src="/oz/app.js?v=20261012-oz-profile" defer></script>
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -29,7 +29,7 @@
     <header class="topline">
       <div class="profile-summary">
         <button class="team-account" id="accountButton" type="button" aria-label="Opções do usuario" aria-expanded="false" aria-controls="accountMenu">
-          <span class="profile-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.3"></circle><path d="M5.5 20c.3-4 2.6-6 6.5-6s6.2 2 6.5 6"></path></svg></span>
+          <span class="profile-avatar" id="profileAvatarButton" role="button" tabindex="0" aria-label="Trocar foto de perfil"><img id="profileAvatarImage" alt=""><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.3"></circle><path d="M5.5 20c.3-4 2.6-6 6.5-6s6.2 2 6.5 6"></path></svg></span>
           <span id="currentMemberLabel"></span>
         </button>
       </div>
@@ -77,6 +77,17 @@
       </select>
       <button class="dialog-submit" type="submit">Adicionar categoria <span aria-hidden="true">↗</span></button>
     </form>
+  </dialog>
+  <dialog class="profile-avatar-dialog" id="profileAvatarDialog" aria-labelledby="profileAvatarTitle">
+    <section class="profile-avatar-panel">
+      <button class="dialog-close" type="button" id="closeProfileAvatar" aria-label="Fechar">×</button>
+      <p class="profile-avatar-eyebrow">PERFIL DO OZ</p>
+      <h2 id="profileAvatarTitle">Trocar foto de perfil</h2>
+      <div class="profile-avatar-preview"><img id="profileAvatarPreview" alt="Prévia da foto de perfil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.3"></circle><path d="M5.5 20c.3-4 2.6-6 6.5-6s6.2 2 6.5 6"></path></svg></div>
+      <label class="profile-avatar-picker" for="profileAvatarInput"><span>Escolher foto</span><input id="profileAvatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label>
+      <p class="profile-avatar-error" id="profileAvatarError" role="status" hidden></p>
+      <div class="profile-avatar-actions"><button type="button" id="cancelProfileAvatar">Cancelar</button><button class="is-primary" type="button" id="saveProfileAvatar" disabled>Salvar foto</button></div>
+    </section>
   </dialog>
   <dialog class="team-dialog" id="teamDialog">
     <section class="team-panel">

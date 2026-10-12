@@ -24,6 +24,11 @@
   const badgeCelebrationDialog = document.getElementById('badgeCelebrationDialog');
   const badgeCelebrationAudio = document.getElementById('badgeCelebrationAudio');
   const categoryBadgeCelebrationAudio = document.getElementById('categoryBadgeCelebrationAudio');
+  const profileAvatarDialog = document.getElementById('profileAvatarDialog');
+  const profileAvatarInput = document.getElementById('profileAvatarInput');
+  const profileAvatarPreview = document.getElementById('profileAvatarPreview');
+  const profileAvatarError = document.getElementById('profileAvatarError');
+  const saveProfileAvatar = document.getElementById('saveProfileAvatar');
   const musicalDialog = document.getElementById('ozMusicalDialog');
   const musicalAudio = document.getElementById('ozMusicalAudio');
   const musicalCover = document.getElementById('ozMusicalCover');
@@ -72,6 +77,7 @@
   let badgeCelebrationTimer = 0;
   let badgeCelebrationQueue = [];
   let badgeCelebrationRunning = false;
+  let profileAvatarDraft = '';
   let lastPayload = '';
   let musicalTracks = [];
   let musicalTrackIndex = 0;
@@ -695,6 +701,7 @@
 
   function updateIdentity() {
     document.getElementById('currentMemberLabel').textContent = activeMember?.name || '';
+    setProfileAvatar(document.getElementById('profileAvatarButton'), activeMember?.avatarImage);
     document.querySelector('.list-actions').hidden = !activeMember?.isKelly;
     document.getElementById('eventCountdown').hidden = !isCountdownVisible();
     renderHeaderOptions();
@@ -704,8 +711,70 @@
     return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.1"></circle><path d="M5.8 20c.25-3.8 2.35-5.7 6.2-5.7s5.95 1.9 6.2 5.7"></path></svg>';
   }
 
+  function setProfileAvatar(element, avatarImage) {
+    if (!element) return;
+    const image = element.querySelector('img');
+    const value = String(avatarImage || '').trim();
+    if (image) {
+      image.src = value;
+      image.alt = activeMember?.name ? `Foto de ${activeMember.name}` : 'Foto de perfil';
+    }
+    element.classList.toggle('has-image', Boolean(value));
+  }
+
+  function setProfileAvatarPreview(avatarImage) {
+    setProfileAvatar(profileAvatarPreview, avatarImage);
+  }
+
+  function readProfileAvatar(file) {
+    return new Promise((resolve, reject) => {
+      if (!file || !/^image\/(?:png|jpe?g|webp|gif)$/i.test(file.type)) {
+        reject(new Error('Escolha uma imagem PNG, JPG, WEBP ou GIF.'));
+        return;
+      }
+      if (file.size > 12 * 1024 * 1024) {
+        reject(new Error('A imagem precisa ter até 12 MB.'));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Não foi possível ler essa imagem.'));
+      reader.onload = () => {
+        const image = new Image();
+        image.onerror = () => reject(new Error('Não foi possível abrir essa imagem.'));
+        image.onload = () => {
+          const size = 512;
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const context = canvas.getContext('2d');
+          const scale = Math.max(size / image.width, size / image.height);
+          const width = image.width * scale;
+          const height = image.height * scale;
+          context.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
+          resolve(canvas.toDataURL('image/webp', .84));
+        };
+        image.src = String(reader.result || '');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function setProfileAvatarError(message = '') {
+    profileAvatarError.textContent = message;
+    profileAvatarError.hidden = !message;
+  }
+
+  function openProfileAvatar() {
+    profileAvatarDraft = '';
+    profileAvatarInput.value = '';
+    setProfileAvatarError('');
+    setProfileAvatarPreview(activeMember?.avatarImage);
+    saveProfileAvatar.disabled = true;
+    if (!profileAvatarDialog.open) profileAvatarDialog.showModal();
+  }
+
   function setActiveMember(member) {
-    activeMember = member ? { id: member.id, name: member.name, isKelly: Boolean(member.isKelly) } : null;
+    activeMember = member ? { id: member.id, name: member.name, avatarImage: String(member.avatarImage || '').trim(), isKelly: Boolean(member.isKelly) } : null;
     try {
       if (activeMember) localStorage.setItem(MEMBER_KEY, JSON.stringify(activeMember));
       else localStorage.removeItem(MEMBER_KEY);
@@ -1070,6 +1139,46 @@
   document.getElementById('closeTeamDialog').addEventListener('click', () => teamDialog.close());
   teamDialog.addEventListener('cancel', () => {});
   teamDialog.addEventListener('click', (event) => { if (event.target === teamDialog) teamDialog.close(); });
+  document.getElementById('profileAvatarButton').addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openProfileAvatar();
+  });
+  document.getElementById('profileAvatarButton').addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    event.stopPropagation();
+    openProfileAvatar();
+  });
+  document.getElementById('closeProfileAvatar').addEventListener('click', () => profileAvatarDialog.close());
+  document.getElementById('cancelProfileAvatar').addEventListener('click', () => profileAvatarDialog.close());
+  profileAvatarDialog.addEventListener('click', (event) => { if (event.target === profileAvatarDialog) profileAvatarDialog.close(); });
+  profileAvatarInput.addEventListener('change', async () => {
+    setProfileAvatarError('');
+    saveProfileAvatar.disabled = true;
+    try {
+      profileAvatarDraft = await readProfileAvatar(profileAvatarInput.files?.[0]);
+      setProfileAvatarPreview(profileAvatarDraft);
+      saveProfileAvatar.disabled = false;
+    } catch (error) {
+      profileAvatarDraft = '';
+      setProfileAvatarPreview(activeMember?.avatarImage);
+      setProfileAvatarError(error.message || 'Não foi possível preparar a imagem.');
+    }
+  });
+  saveProfileAvatar.addEventListener('click', async () => {
+    if (!profileAvatarDraft || !activeMember?.id) return;
+    saveProfileAvatar.disabled = true;
+    setProfileAvatarError('');
+    try {
+      const payload = await requestJson('/api/oz/team/profile', { method: 'PATCH', body: JSON.stringify({ avatarImage: profileAvatarDraft }) });
+      setActiveMember(payload.member);
+      profileAvatarDialog.close();
+    } catch (error) {
+      setProfileAvatarError(error.message || 'Não foi possível salvar a foto.');
+      saveProfileAvatar.disabled = false;
+    }
+  });
   document.getElementById('accountButton').addEventListener('click', () => {
     headerOptionsMenu.hidden = true;
     headerOptionsButton.setAttribute('aria-expanded', 'false');

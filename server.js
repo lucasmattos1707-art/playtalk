@@ -16334,8 +16334,18 @@ async function ensureOzChecklistSchema() {
           id text PRIMARY KEY,
           name varchar(60) NOT NULL,
           name_key varchar(60) NOT NULL UNIQUE,
+          avatar_image text NOT NULL DEFAULT '',
           created_at timestamptz NOT NULL DEFAULT now()
         )
+      `);
+      await pool.query(`
+        ALTER TABLE public.oz_checklist_members
+        ADD COLUMN IF NOT EXISTS avatar_image text NOT NULL DEFAULT ''
+      `);
+      await pool.query(`
+        UPDATE public.oz_checklist_members
+           SET avatar_image = '/oz/kelly-avatar.webp'
+         WHERE name_key = 'kelly' AND COALESCE(avatar_image, '') = ''
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.oz_checklist_items (
@@ -29587,9 +29597,17 @@ async function getOzMember(req) {
   const id = String(req.get('x-oz-member-id') || '').trim().slice(0, 100);
   if (!id) return null;
   await ensureOzChecklistSchema();
-  const result = await pool.query('SELECT id, name, name_key FROM public.oz_checklist_members WHERE id = $1', [id]);
+  const result = await pool.query('SELECT id, name, name_key, avatar_image FROM public.oz_checklist_members WHERE id = $1', [id]);
   const member = result.rows[0];
-  return member ? { id: member.id, name: member.name, isKelly: member.name_key === 'kelly' } : null;
+  return member ? { id: member.id, name: member.name, avatarImage: String(member.avatar_image || '').trim(), isKelly: member.name_key === 'kelly' } : null;
+}
+
+function normalizeOzAvatarImage(value) {
+  const avatar = typeof value === 'string' ? value.trim() : '';
+  if (!avatar) return '';
+  if (avatar.length > 2200000) return null;
+  if (!/^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(avatar)) return null;
+  return avatar;
 }
 
 function canViewOzMusicalNotes(member) {
@@ -29733,7 +29751,7 @@ app.get('/api/oz/team', async (req, res) => {
     if (!member?.isKelly) return res.status(member ? 403 : 401).json({ success: false, message: 'Somente Kelly pode gerenciar a equipe.' });
     await ensureOzChecklistSchema();
     const result = await pool.query(`
-      SELECT id, name FROM public.oz_checklist_members
+      SELECT id, name, avatar_image AS "avatarImage" FROM public.oz_checklist_members
        ORDER BY lower(name), created_at, id
     `);
     res.setHeader('Cache-Control', 'no-store');
@@ -29741,6 +29759,31 @@ app.get('/api/oz/team', async (req, res) => {
   } catch (error) {
     console.error('Erro ao carregar a equipe de Oz:', error);
     res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível carregar a equipe.' });
+  }
+});
+
+app.patch('/api/oz/team/profile', async (req, res) => {
+  try {
+    const member = await getOzMember(req);
+    if (!member) return res.status(401).json({ success: false, message: 'Entre novamente com seu usuario.' });
+    const avatarImage = normalizeOzAvatarImage(req.body?.avatarImage);
+    if (!avatarImage) return res.status(400).json({ success: false, message: 'Escolha uma imagem válida.' });
+    const result = await pool.query(`
+      UPDATE public.oz_checklist_members
+         SET avatar_image = $2
+       WHERE id = $1
+       RETURNING id, name, name_key, avatar_image
+    `, [member.id, avatarImage]);
+    const row = result.rows[0];
+    if (!row) return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      success: true,
+      member: { id: row.id, name: row.name, avatarImage: String(row.avatar_image || ''), isKelly: row.name_key === 'kelly' }
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar foto do usuário de Oz:', error);
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível atualizar a foto agora.' });
   }
 });
 
@@ -29754,7 +29797,7 @@ app.post('/api/oz/team/login', async (req, res) => {
     }
     const nameKey = name.toLocaleLowerCase('pt-BR');
     const result = await pool.query(`
-      SELECT id, name, (name_key = 'kelly') AS "isKelly" FROM public.oz_checklist_members WHERE name_key = $1
+      SELECT id, name, avatar_image AS "avatarImage", (name_key = 'kelly') AS "isKelly" FROM public.oz_checklist_members WHERE name_key = $1
     `, [nameKey]);
     if (!result.rows.length) {
       res.status(404).json({ success: false, message: 'Esse nome ainda não está na equipe.' });
@@ -29784,7 +29827,7 @@ app.post('/api/oz/team/members', async (req, res) => {
       SELECT $1, $2, $3
        WHERE (SELECT COUNT(*) FROM public.oz_checklist_members) < 100
       ON CONFLICT (name_key) DO NOTHING
-      RETURNING id, name
+      RETURNING id, name, avatar_image AS "avatarImage"
     `, [memberId, name, nameKey]);
     if (!result.rows.length) {
       const duplicate = await pool.query('SELECT id, name FROM public.oz_checklist_members WHERE name_key = $1', [nameKey]);
