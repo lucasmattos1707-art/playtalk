@@ -16608,6 +16608,8 @@ async function readOzChecklist(member) {
   }
   const categories = [...categoriesById.values()];
   for (const category of categories) {
+    category.completed = category.items.length > 0
+      && category.items.every((item) => item.status === 'completed');
     const visibleItems = member?.isKelly
       ? category.items
       : category.items.filter((item) => item.assigneeId === member?.id);
@@ -29711,10 +29713,6 @@ app.patch('/api/oz/checklist/categories/:categoryId', async (req, res) => {
     const categoryId = String(req.params.categoryId || '').slice(0, 100);
     const sets = [];
     const values = [categoryId];
-    if (typeof req.body?.completed === 'boolean') {
-      values.push(req.body.completed);
-      sets.push(`is_completed = $${values.length}`);
-    }
     if (typeof req.body?.title === 'string') {
       const title = req.body.title.trim().slice(0, 200);
       if (!title) {

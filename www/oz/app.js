@@ -20,6 +20,7 @@
   const starCelebrationDialog = document.getElementById('starCelebrationDialog');
   const starCelebrationAudio = document.getElementById('starCelebrationAudio');
   const badgeAlbumDialog = document.getElementById('badgeAlbumDialog');
+  const badgeInfoDialog = document.getElementById('badgeInfoDialog');
   const badgeCelebrationDialog = document.getElementById('badgeCelebrationDialog');
   const badgeCelebrationAudio = document.getElementById('badgeCelebrationAudio');
   const categoryBadgeCelebrationAudio = document.getElementById('categoryBadgeCelebrationAudio');
@@ -110,7 +111,6 @@
     const badges = state.badges || [];
     const unlocked = badges.filter((badge) => badge.unlocked).length;
     document.getElementById('badgeAlbumCount').textContent = `${unlocked}/${badges.length || 40}`;
-    document.getElementById('badgeUnlockHint').hidden = true;
     document.getElementById('badgeAlbumGrid').innerHTML = badges.map((badge) => `
       <article class="badge-card ${badge.unlocked ? 'is-unlocked' : ''}">
         <button class="badge-info" type="button" data-badge-info="${escapeHtml(badge.id)}" aria-label="Como desbloquear ${escapeHtml(badge.title)}">i</button>
@@ -118,6 +118,43 @@
         <strong>${escapeHtml(badge.title)}</strong>
         <span>${escapeHtml(badge.description)}</span>
       </article>`).join('');
+  }
+
+  function getBadgeProgress(badge) {
+    const items = state.categories.flatMap((category) => flattenItems(category.items || []));
+    const completed = items.filter((item) => getItemStatus(item) === 'completed').length;
+    if (badge.group === 'categoria') {
+      const category = state.categories.find((entry) => entry.id === badge.categoryId);
+      const categoryItems = category ? flattenItems(category.items || []) : [];
+      return { value: categoryItems.filter((item) => getItemStatus(item) === 'completed').length, max: categoryItems.length };
+    }
+    if (badge.group === 'delegacao') {
+      const delegated = items.filter((item) => item.assigneeId && item.assigneeId !== activeMember?.id).length;
+      return { value: delegated, max: badge.threshold };
+    }
+    if (badge.group === 'missao') return { value: completed, max: badge.threshold };
+    if (badge.id === 'finale:show-completo') return { value: completed, max: items.length };
+    if (badge.id === 'finale:lenda-de-oz') {
+      const delegated = items.filter((item) => item.assigneeId && item.assigneeId !== activeMember?.id).length;
+      return { value: Math.min(completed, delegated), max: Math.max(items.length, 50) };
+    }
+    return { value: badge.unlocked ? 1 : 0, max: 1 };
+  }
+
+  function openBadgeInfo(badge) {
+    const progress = getBadgeProgress(badge);
+    const percent = progress.max ? Math.min(100, Math.round((progress.value / progress.max) * 100)) : 0;
+    const image = document.getElementById('badgeInfoImage');
+    image.src = badge.image;
+    image.alt = `Selo ${badge.title}`;
+    image.classList.toggle('is-unlocked', Boolean(badge.unlocked));
+    document.getElementById('badgeInfoTitle').textContent = badge.title;
+    document.getElementById('badgeInfoProgressBar').style.width = `${percent}%`;
+    const progressbar = document.querySelector('.badge-info-progress');
+    progressbar.setAttribute('aria-valuenow', String(percent));
+    document.getElementById('badgeInfoProgressLabel').textContent = badge.unlocked ? 'Selo desbloqueado' : 'Progresso do selo';
+    document.getElementById('badgeInfoInstruction').textContent = badge.unlockText;
+    if (!badgeInfoDialog.open) badgeInfoDialog.showModal();
   }
 
   function openBadgeAlbum() {
@@ -227,13 +264,16 @@
     const isOpen = openedCategories.has(taskOpenKey);
     const hasSubtasks = subtasks.length > 0;
     const hasNotes = Array.isArray(item.notes) && item.notes.length > 0;
+    const assigneeMarkup = item.assigneeName
+      ? `<button class="task-assignee-toggle" type="button" data-action="open-task-assign" data-id="${escapeHtml(item.id)}" aria-label="Responsável: ${escapeHtml(item.assigneeName)}. Abrir opções de delegação" title="Opções de delegação">${avatarSvg()}</button>`
+      : '';
     return `<div class="task-node">
       <div class="task-row ${urgentReplica ? 'task-row--urgent' : ''} ${itemStatus === 'completed' ? 'is-done' : ''} ${itemStatus === 'in_progress' ? 'is-in-progress' : ''}" data-task-id="${escapeHtml(item.id)}">
         <span class="task-controls">
           <button class="item-status status-${itemStatus}" type="button" aria-label="${statusLabel(itemStatus)}" title="${statusLabel(itemStatus)}">${statusIcon(itemStatus)}</button>
           <button class="task-options-toggle ${hasNotes ? 'has-notes' : ''}" type="button" data-action="open-task-options" data-id="${escapeHtml(item.id)}" aria-haspopup="menu" aria-expanded="false" aria-label="Opções da tarefa${hasNotes ? ' — possui notas' : ''}" title="Opções da tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="12" cy="19" r="1.7"></circle></svg></button>
         </span>
-        <span class="task-copy"><span class="task-title">${escapeHtml(item.title)}</span>${item.assigneeName ? `<span class="task-assignee"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.1"></circle><path d="M5.8 20c.25-3.8 2.35-5.7 6.2-5.7s5.95 1.9 6.2 5.7"></path></svg><span>${escapeHtml(item.assigneeName)}</span></span>` : ''}</span>
+        <span class="task-copy"><span class="task-title-line"><span class="task-title">${escapeHtml(item.title)}</span>${assigneeMarkup}</span></span>
         ${hasSubtasks ? `<button class="task-toggle ${isOpen ? 'is-open' : ''}" type="button" data-action="toggle-subtasks" data-id="${escapeHtml(item.id)}" aria-expanded="${isOpen}" aria-controls="subtasks-${escapeHtml(item.id)}" aria-label="${isOpen ? 'Recolher' : 'Abrir'} sub tarefas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>` : ''}
         ${hasNotes ? `<button class="task-note-indicator" type="button" data-action="open-task-notes-scroll" data-id="${escapeHtml(item.id)}" aria-label="Abrir notas da tarefa" title="Abrir notas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h8l4 4V20.25H6z"></path><path d="M14 3.75v4h4M9 12h6M9 15.5h6"></path></svg></button>` : ''}
       </div>
@@ -247,7 +287,8 @@
     const doneCount = allItems.filter((item) => getItemStatus(item) === 'completed').length;
     const itemRate = allItems.length ? Math.round((doneCount / allItems.length) * 100) : 0;
     const isOpen = openedCategories.has(category.id);
-    const cardClasses = ['category-card', isOpen ? 'is-open' : '', category.completed ? 'is-complete' : ''].filter(Boolean).join(' ');
+    const categoryComplete = Boolean(category.completed);
+    const cardClasses = ['category-card', isOpen ? 'is-open' : '', categoryComplete ? 'is-complete' : ''].filter(Boolean).join(' ');
     const grouped = new Map();
     const names = [...(Array.isArray(category.groups) ? category.groups : [])];
     for (const item of items) if (item.group && !names.includes(item.group)) names.push(item.group);
@@ -261,7 +302,6 @@
     }).join('');
     return `<article class="${cardClasses}" data-category="${escapeHtml(category.id)}">
       <div class="category-head">
-        ${activeMember?.isKelly ? `<button class="category-status ${category.completed ? 'is-done' : ''}" type="button" data-action="toggle-category" data-id="${escapeHtml(category.id)}" aria-label="${category.completed ? 'Marcar categoria como pendente' : 'Marcar categoria como concluída'}" title="${category.completed ? 'Marcar como pendente' : 'Marcar categoria como concluída'}"></button>` : '<span class="category-status-spacer" aria-hidden="true"></span>'}
         <button class="category-title-button" type="button" data-action="open-category" data-id="${escapeHtml(category.id)}" aria-expanded="${isOpen}" aria-controls="panel-${escapeHtml(category.id)}">
           <span class="category-titleline"><span class="category-emoji" aria-hidden="true">${escapeHtml(category.icon || '✨')}</span><span class="category-title">${escapeHtml(category.title)}</span><span class="chevron" aria-hidden="true">›</span></span>
         </button>
@@ -564,7 +604,7 @@
     const optionMarkup = `
       <button type="button" role="menuitem" data-task-option="notes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h8l4 4V20.25H6z"></path><path d="M14 3.75v4h4M9 12h6M9 15.5h6"></path></svg><span>Adicionar nota</span></button>
       ${urgentMarkup}
-      ${canManage ? '<button type="button" role="menuitem" data-task-option="subtask"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h5l2 2h7v11H5z"></path><path d="M12 10v6m-3-3h6"></path></svg><span>Adicionar subtarefa</span></button><button type="button" role="menuitem" data-task-option="delegate"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19c.2-3.5 2.05-5.25 5.5-5.25 1.15 0 2.1.2 2.85.6M15 10h5m-2.5-2.5L20 10l-2.5 2.5"></path></svg><span>Delegar</span></button><button type="button" role="menuitem" data-task-option="delete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7m3 0-.8 13H6.8L6 7m3 3.2v6.5m6-6.5v6.5"></path></svg><span>Excluir</span></button>' : ''}`;
+      ${canManage ? `<button type="button" role="menuitem" data-task-option="subtask"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h5l2 2h7v11H5z"></path><path d="M12 10v6m-3-3h6"></path></svg><span>Adicionar subtarefa</span></button><button type="button" role="menuitem" data-task-option="delegate"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19c.2-3.5 2.05-5.25 5.5-5.25 1.15 0 2.1.2 2.85.6M15 10h5m-2.5-2.5L20 10l-2.5 2.5"></path></svg><span>${item?.assigneeId ? 'Desatribuir' : 'Delegar'}</span></button><button type="button" role="menuitem" data-task-option="delete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7m3 0-.8 13H6.8L6 7m3 3.2v6.5m6-6.5v6.5"></path></svg><span>Excluir</span></button>` : ''}`;
     taskOptionsMenu.innerHTML = optionMarkup;
     taskOptionsMenu.dataset.taskId = row.dataset.taskId;
     taskOptionsMenu.hidden = false;
@@ -603,7 +643,7 @@
 
   list.addEventListener('pointerdown', (event) => {
     const row = event.target.closest('.task-row[data-task-id]');
-    if (!row || event.target.closest('.item-status, .delete-task, .task-options-toggle, .task-toggle, .task-note-indicator') || (event.button !== undefined && event.button !== 0)) return;
+    if (!row || event.target.closest('.item-status, .delete-task, .task-options-toggle, .task-assignee-toggle, .task-toggle, .task-note-indicator') || (event.button !== undefined && event.button !== 0)) return;
     const item = findItemById(row.dataset.taskId);
     if (!item) return;
     holdStart = { x: event.clientX, y: event.clientY, row };
@@ -629,7 +669,7 @@
       return;
     }
     const taskRow = event.target.closest('.task-row[data-task-id]');
-    if (taskRow && !event.target.closest('.delete-task, .task-options-toggle, .task-toggle, .task-note-indicator')) {
+    if (taskRow && !event.target.closest('.delete-task, .task-options-toggle, .task-assignee-toggle, .task-toggle, .task-note-indicator')) {
       openStatusMenu(taskRow);
       return;
     }
@@ -640,6 +680,10 @@
     const card = control.closest('.category-card');
     if (action === 'open-task-options' && id) {
       openTaskOptions(taskRow, control);
+      return;
+    }
+    if (action === 'open-task-assign' && id) {
+      if (activeMember?.isKelly) openAssignMenu(taskRow);
       return;
     }
     if (action === 'open-task-notes-scroll' && id) {
@@ -656,12 +700,6 @@
       card?.classList.toggle('is-open', opening);
       const panel = card?.querySelector('.category-content');
       if (panel) panel.hidden = !opening;
-      return;
-    }
-    if (action === 'toggle-category' && id) {
-      if (!activeMember?.isKelly) return;
-      const category = state.categories.find((entry) => entry.id === id);
-      if (category) mutate(`/api/oz/checklist/categories/${encodeURIComponent(id)}`, 'PATCH', { completed: !category.completed });
       return;
     }
     if (action === 'toggle-subtasks' && id) {
@@ -764,10 +802,10 @@
     if (!info) return;
     const badge = state.badges.find((entry) => entry.id === info.dataset.badgeInfo);
     if (!badge) return;
-    const hint = document.getElementById('badgeUnlockHint');
-    hint.textContent = badge.unlocked ? `Conquistado: ${badge.unlockText}` : badge.unlockText;
-    hint.hidden = false;
+    openBadgeInfo(badge);
   });
+  document.getElementById('closeBadgeInfo').addEventListener('click', () => badgeInfoDialog.close());
+  badgeInfoDialog.addEventListener('click', (event) => { if (event.target === badgeInfoDialog) badgeInfoDialog.close(); });
   document.getElementById('newMemberForm').addEventListener('submit', async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -810,7 +848,9 @@
       subtaskDialog.showModal();
       document.getElementById('newSubtaskTitle').focus();
     } else if (option.dataset.taskOption === 'delegate' && activeMember?.isKelly && row) {
-      openAssignMenu(row);
+      const item = findItemById(id);
+      if (item?.assigneeId) mutate(`/api/oz/checklist/items/${encodeURIComponent(id)}`, 'PATCH', { assigneeId: null });
+      else openAssignMenu(row);
     } else if (option.dataset.taskOption === 'delete' && activeMember?.isKelly && id) {
       const item = findItemById(id);
       if (item && window.confirm(`Excluir a tarefa "${item.title}"?`)) mutate(`/api/oz/checklist/items/${encodeURIComponent(id)}`, 'DELETE');

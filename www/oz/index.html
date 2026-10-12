@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/oz/style.css?v=20261012-oz-badge-color">
-  <script src="/oz/app.js?v=20261012-oz-badge-flash" defer></script>
+  <link rel="stylesheet" href="/oz/style.css?v=20261012-oz-delegation-badge-modal">
+  <script src="/oz/app.js?v=20261012-oz-delegation-badge-modal" defer></script>
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -150,8 +150,17 @@
     <section class="badge-album-panel">
       <button class="dialog-close" id="closeBadgeAlbum" type="button" aria-label="Fechar">×</button>
       <div class="badge-album-title-row"><span class="badge-album-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5c2.9-.9 5.6-.5 8 1.2v13c-2.4-1.7-5.1-2.1-8-1.2z"></path><path d="M20 5.5c-2.9-.9-5.6-.5-8 1.2v13c2.4-1.7 5.1-2.1 8-1.2z"></path><path d="M12 6.7v13"></path></svg></span><div><p>ÁLBUM DE OZ</p><h2 id="badgeAlbumTitle">Seus selos</h2></div><strong id="badgeAlbumCount">0/40</strong></div>
-      <p class="badge-album-hint" id="badgeUnlockHint" hidden aria-live="polite"></p>
       <div class="badge-album-grid" id="badgeAlbumGrid"></div>
+    </section>
+  </dialog>
+  <dialog class="badge-info-dialog" id="badgeInfoDialog" aria-labelledby="badgeInfoTitle">
+    <section class="badge-info-panel">
+      <button class="dialog-close" id="closeBadgeInfo" type="button" aria-label="Fechar">×</button>
+      <img class="badge-info-image" id="badgeInfoImage" alt="">
+      <h2 id="badgeInfoTitle"></h2>
+      <div class="badge-info-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Progresso do selo"><span id="badgeInfoProgressBar"></span></div>
+      <p class="badge-info-progress-label" id="badgeInfoProgressLabel"></p>
+      <p class="badge-info-instruction" id="badgeInfoInstruction"></p>
     </section>
   </dialog>
   <dialog class="badge-celebration" id="badgeCelebrationDialog" aria-labelledby="badgeCelebrationTitle">
