@@ -180,13 +180,22 @@
     return musicalTrackTitleOverrides[index] || String(track?.title || `Faixa ${index + 1}`).trim();
   }
 
+  function setMusicalCaptionText(value) {
+    const next = String(value || 'Legenda ainda não disponível.').trim();
+    if (musicalCaption.textContent === next) return;
+    musicalCaption.classList.remove('is-dissolving');
+    void musicalCaption.offsetWidth;
+    musicalCaption.textContent = next;
+    musicalCaption.classList.add('is-dissolving');
+  }
+
   function renderMusicalCaption() {
     const track = musicalTracks[musicalTrackIndex];
     const lines = Array.isArray(track?.lyrics?.lines)
       ? track.lyrics.lines.filter((line) => String(line?.text || line?.textPt || '').trim())
       : [];
     if (!lines.length) {
-      musicalCaption.textContent = 'Legenda ainda não disponível.';
+      setMusicalCaptionText('Legenda ainda não disponível.');
       return;
     }
     const time = Number(musicalAudio.currentTime) || 0;
@@ -195,7 +204,7 @@
       active = lines.reduce((last, line, index) => Number.isFinite(Number(line.start)) && Number(line.start) <= time ? index : last, -1);
     }
     const text = lines[Math.max(0, active)]?.text || lines[Math.max(0, active)]?.textPt || lines[0]?.text || lines[0]?.textPt;
-    musicalCaption.textContent = String(text || 'Legenda ainda não disponível.').trim();
+    setMusicalCaptionText(text);
   }
 
   function updateMusicalPlayer() {
@@ -396,7 +405,7 @@
       else musicalStatus.textContent = 'Nenhuma faixa disponível.';
     } catch (error) {
       musicalStatus.textContent = error.message || 'Não foi possível carregar o musical.';
-      musicalCaption.textContent = 'Tente novamente em instantes.';
+      setMusicalCaptionText('Tente novamente em instantes.');
     } finally {
       musicalProjectLoading = false;
     }
