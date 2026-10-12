@@ -674,9 +674,9 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .oz-musical-note-current[hidden], .oz-musical-note-empty[hidden] { display: none; }
 .oz-musical-note-time { color: #ffd66b; font-size: 11px; font-weight: 800; }
 .oz-musical-note-current p { margin: 0; color: #f5f2fb; font-size: 15px; font-weight: 700; line-height: 1.55; white-space: pre-wrap; }
-.oz-musical-note-editor { box-sizing: border-box; width: 100%; min-height: 110px; resize: vertical; padding: 12px 13px; border: 1px solid rgba(190, 155, 255, .28); border-radius: 12px; outline: 0; background: rgba(29, 23, 48, .86); color: #f8f3ff; font: 600 14px/1.5 var(--font); box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 8px 22px rgba(3, 2, 10, .16); transition: border-color .2s ease, box-shadow .2s ease, background .2s ease; }
-.oz-musical-note-editor::placeholder { color: #9e93b5; opacity: 1; }
-.oz-musical-note-editor:focus { border-color: rgba(185, 145, 255, .78); background: rgba(35, 27, 58, .96); box-shadow: 0 0 0 3px rgba(169, 120, 255, .14), inset 0 1px 0 rgba(255,255,255,.06); }
+.oz-musical-note-editor { appearance: none; -webkit-appearance: none; box-sizing: border-box; width: 100%; min-height: 96px; resize: vertical; padding: 12px 13px; border: 1px solid rgba(190, 155, 255, .34) !important; border-radius: 12px; outline: 0; background: linear-gradient(145deg, rgba(39, 27, 63, .96), rgba(22, 18, 39, .98)) !important; color: #f8f3ff !important; font: 600 14px/1.5 var(--font); box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 8px 22px rgba(3, 2, 10, .18); transition: border-color .2s ease, box-shadow .2s ease, background .2s ease; }
+.oz-musical-note-editor::placeholder { color: #afa2c6 !important; opacity: 1; }
+.oz-musical-note-editor:focus { border-color: rgba(185, 145, 255, .82) !important; background: linear-gradient(145deg, rgba(47, 32, 76, .98), rgba(25, 20, 46, .99)) !important; box-shadow: 0 0 0 3px rgba(169, 120, 255, .16), inset 0 1px 0 rgba(255,255,255,.08); }
 .oz-musical-note-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .oz-musical-note-actions:empty { display: none; }
 .oz-musical-note-actions button { padding: 9px 13px; border: 1px solid rgba(255,255,255,.14); border-radius: 9px; background: rgba(255,255,255,.06); color: #e8e3f1; font-size: 11px; font-weight: 800; cursor: pointer; }
