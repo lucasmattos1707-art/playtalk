@@ -106,10 +106,6 @@
       <button type="button" role="menuitem" data-header-option="countdown"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.3"></circle><path d="M12 7.5v5l3.2 1.8"></path></svg><span>${countdownVisible ? 'Ocultar contagem' : 'Mostrar contagem'}</span></button>`;
   }
 
-  function badgeSealSvg() {
-    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 2.1 2.1 3-.1.8 2.9 2.6 1.5-1 2.8 1 2.8-2.6 1.5-.8 2.9-3-.1L12 21.2l-2.1-2.1-3 .1-.8-2.9-2.6-1.5 1-2.8-1-2.8 2.6-1.5.8-2.9 3 .1z"></path><path d="m8.7 12.1 2.1 2.1 4.6-4.6"></path></svg>';
-  }
-
   function renderBadgeAlbum() {
     const badges = state.badges || [];
     const unlocked = badges.filter((badge) => badge.unlocked).length;
@@ -118,7 +114,7 @@
     document.getElementById('badgeAlbumGrid').innerHTML = badges.map((badge) => `
       <article class="badge-card ${badge.unlocked ? 'is-unlocked' : ''}">
         <button class="badge-info" type="button" data-badge-info="${escapeHtml(badge.id)}" aria-label="Como desbloquear ${escapeHtml(badge.title)}">i</button>
-        <span class="badge-card-seal">${badgeSealSvg()}</span>
+        <span class="badge-card-seal"><img src="${escapeHtml(badge.image)}" alt=""></span>
         <strong>${escapeHtml(badge.title)}</strong>
         <span>${escapeHtml(badge.description)}</span>
       </article>`).join('');
@@ -142,6 +138,9 @@
     badgeCelebrationRunning = true;
     document.getElementById('badgeCelebrationTitle').textContent = badge.title;
     document.getElementById('badgeCelebrationDescription').textContent = badge.description;
+    const image = document.getElementById('badgeCelebrationImage');
+    image.src = badge.image;
+    image.alt = `Selo ${badge.title}`;
     if (badgeCelebrationDialog.open) badgeCelebrationDialog.close();
     badgeCelebrationDialog.showModal();
     badgeCelebrationDialog.classList.remove('is-animating');
