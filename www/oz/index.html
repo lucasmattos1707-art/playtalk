@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/oz/style.css?v=20261012-oz-profile">
-  <script src="/oz/app.js?v=20261012-oz-profile" defer></script>
+  <link rel="stylesheet" href="/oz/style.css?v=20261012-oz-fullscreen-tracks">
+  <script src="/oz/app.js?v=20261012-oz-fullscreen-tracks" defer></script>
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -203,8 +203,16 @@
         <button type="button" id="ozMusicalNext" aria-label="Próxima faixa" title="Próxima faixa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>
         <button class="oz-musical-list-toggle" type="button" id="ozMusicalListToggle" aria-label="Ver lista de faixas" aria-expanded="false" title="Lista de faixas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"></path></svg></button>
       </div>
-      <div class="oz-musical-track-list" id="ozMusicalTrackList" role="listbox" aria-label="Lista de faixas" hidden></div>
       <audio id="ozMusicalAudio" preload="metadata"></audio>
+    </section>
+  </dialog>
+  <dialog class="oz-musical-list-dialog" id="ozMusicalListDialog" aria-labelledby="ozMusicalListTitle">
+    <section class="oz-musical-list-panel">
+      <header class="oz-musical-list-header">
+        <div><span class="oz-musical-kicker">ESPETÁCULO ARABESQUE</span><h2 id="ozMusicalListTitle">Lista de faixas</h2></div>
+        <button class="oz-musical-close" id="closeOzMusicalList" type="button" aria-label="Fechar lista de faixas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+      </header>
+      <div class="oz-musical-track-list oz-musical-track-list--fullscreen" id="ozMusicalTrackList" role="listbox" aria-label="Lista de faixas"></div>
     </section>
   </dialog>
   <dialog class="oz-musical-note-dialog" id="ozMusicalNoteDialog" aria-labelledby="ozMusicalNoteTitle">

@@ -42,6 +42,7 @@
   const musicalDuration = document.getElementById('ozMusicalDuration');
   const musicalPlay = document.getElementById('ozMusicalPlay');
   const musicalTrackList = document.getElementById('ozMusicalTrackList');
+  const musicalListDialog = document.getElementById('ozMusicalListDialog');
   const musicalNotesButton = document.getElementById('ozMusicalNotes');
   const musicalNoteMarkers = document.getElementById('ozMusicalNoteMarkers');
   const musicalNoteDialog = document.getElementById('ozMusicalNoteDialog');
@@ -213,7 +214,8 @@
       ? musicalTracks.map((track, index) => {
         const image = musicalAssetUrl(track.image?.url, '/oz/oz-musical-cover.webp');
         const title = getMusicalTrackTitle(track, index);
-        return `<button class="oz-musical-track-option ${index === musicalTrackIndex ? 'is-active' : ''}" type="button" role="option" aria-selected="${index === musicalTrackIndex}" data-musical-index="${index}"><img src="${escapeHtml(image)}" alt=""><span><strong>${escapeHtml(title)}</strong><small>Faixa ${index + 1}</small></span><span aria-hidden="true">${index === musicalTrackIndex && !musicalAudio.paused ? '▶' : ''}</span></button>`;
+        const active = index === musicalTrackIndex;
+        return `<button class="oz-musical-track-option ${active ? 'is-active' : ''} ${active && !musicalAudio.paused ? 'is-playing' : ''}" type="button" role="option" aria-selected="${active}" data-musical-index="${index}"><img src="${escapeHtml(image)}" alt=""><span><strong>${escapeHtml(title)}</strong><small>Faixa ${index + 1}</small></span><span aria-hidden="true">${active && !musicalAudio.paused ? '▶' : ''}</span></button>`;
       }).join('')
       : '<p class="oz-musical-empty">Nenhuma faixa disponível.</p>';
   }
@@ -1236,9 +1238,20 @@
   document.getElementById('ozMusicalPrevious').addEventListener('click', () => setMusicalTrack(musicalTrackIndex - 1, { autoplay: true }));
   document.getElementById('ozMusicalNext').addEventListener('click', () => setMusicalTrack(musicalTrackIndex + 1, { autoplay: true }));
   document.getElementById('ozMusicalListToggle').addEventListener('click', (event) => {
-    const opening = musicalTrackList.hidden;
-    musicalTrackList.hidden = !opening;
+    const opening = !musicalListDialog.open;
+    if (opening) musicalListDialog.showModal();
+    else musicalListDialog.close();
     event.currentTarget.setAttribute('aria-expanded', String(opening));
+  });
+  document.getElementById('closeOzMusicalList').addEventListener('click', () => {
+    musicalListDialog.close();
+    document.getElementById('ozMusicalListToggle').setAttribute('aria-expanded', 'false');
+  });
+  musicalListDialog.addEventListener('close', () => {
+    document.getElementById('ozMusicalListToggle').setAttribute('aria-expanded', 'false');
+  });
+  musicalListDialog.addEventListener('click', (event) => {
+    if (event.target === musicalListDialog) musicalListDialog.close();
   });
   musicalTrackList.addEventListener('click', (event) => {
     const option = event.target.closest('[data-musical-index]');

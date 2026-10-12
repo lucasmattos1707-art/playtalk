@@ -679,3 +679,26 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .oz-musical-note-actions button.is-primary { border-color: rgba(122, 238, 160, .3); background: rgba(70, 194, 112, .2); color: #b9ffca; }
 .oz-musical-note-actions button.is-danger { border-color: rgba(255, 115, 124, .25); background: rgba(255, 80, 94, .1); color: #ffadb3; }
 .oz-musical-note-empty { margin: 0; color: #aaa2b7; font-size: 13px; font-weight: 650; }
+
+.oz-musical-list-dialog:not([open]) { display: none; }
+.oz-musical-list-dialog { display: grid; width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 0; overflow: hidden; border: 0; border-radius: 0; background: radial-gradient(circle at 50% 5%, rgba(126, 72, 183, .35), transparent 34%), linear-gradient(160deg, #211139 0%, #10111d 52%, #08090d 100%); color: #fff; }
+.oz-musical-list-dialog::backdrop { background: rgba(4, 3, 10, .94); backdrop-filter: blur(13px); -webkit-backdrop-filter: blur(13px); }
+.oz-musical-list-panel { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 22px; width: min(100%, 720px); height: 100%; margin: 0 auto; padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); overflow: hidden; }
+.oz-musical-list-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.oz-musical-list-header h2 { margin: 7px 0 0; color: #fff; font: 850 clamp(28px, 6vw, 42px)/1.08 var(--display); letter-spacing: -.04em; }
+.oz-musical-track-list--fullscreen { display: grid; align-content: start; gap: 7px; max-height: none; min-height: 0; padding: 0 4px 14px 0; overflow-y: auto; border: 0; border-radius: 0; background: transparent; scrollbar-color: rgba(178, 159, 219, .46) transparent; scrollbar-width: thin; }
+.oz-musical-track-list--fullscreen .oz-musical-track-option { grid-template-columns: 58px minmax(0, 1fr) auto; min-height: 70px; padding: 9px 12px; border-radius: 13px; background: rgba(255,255,255,.045); }
+.oz-musical-track-list--fullscreen .oz-musical-track-option:hover { background: rgba(194, 148, 255, .15); }
+.oz-musical-track-list--fullscreen .oz-musical-track-option.is-active { background: rgba(70, 216, 128, .13); color: #73ed9a; }
+.oz-musical-track-list--fullscreen .oz-musical-track-option.is-active strong { color: #73ed9a; }
+.oz-musical-track-list--fullscreen .oz-musical-track-option.is-active small { color: rgba(145, 240, 169, .72); }
+.oz-musical-track-list--fullscreen .oz-musical-track-option > span:last-child { color: #73ed9a; }
+.oz-musical-track-list--fullscreen .oz-musical-track-option img { width: 58px; height: 58px; border-radius: 11px; }
+.oz-musical-track-list--fullscreen .oz-musical-track-option strong { font-size: 16px; font-weight: 850; }
+.oz-musical-track-list--fullscreen .oz-musical-track-option small { margin-top: 5px; font-size: 11px; font-weight: 650; }
+@media (max-width: 560px) {
+  .oz-musical-list-panel { gap: 17px; padding-inline: 17px; }
+  .oz-musical-track-list--fullscreen .oz-musical-track-option { grid-template-columns: 50px minmax(0, 1fr) auto; min-height: 62px; padding: 8px 9px; }
+  .oz-musical-track-list--fullscreen .oz-musical-track-option img { width: 50px; height: 50px; }
+  .oz-musical-track-list--fullscreen .oz-musical-track-option strong { font-size: 14px; }
+}
