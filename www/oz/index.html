@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/oz/style.css?v=20261012-oz-category-titles">
-  <script src="/oz/app.js?v=20261012-oz-category-titles" defer></script>
+  <link rel="stylesheet" href="/oz/style.css?v=20261012-oz-musical-player">
+  <script src="/oz/app.js?v=20261012-oz-musical-player" defer></script>
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -173,6 +173,28 @@
   </dialog>
   <audio id="badgeCelebrationAudio" src="/oz/audio/badge-unlocked.mp3" preload="auto"></audio>
   <audio id="categoryBadgeCelebrationAudio" src="/oz/audio/badge-category-unlocked.mp3" preload="auto"></audio>
+  <dialog class="oz-musical-dialog" id="ozMusicalDialog" aria-labelledby="ozMusicalTitle">
+    <section class="oz-musical-panel">
+      <header class="oz-musical-header">
+        <div><span class="oz-musical-kicker">WICKED · O MUSICAL</span><h2 id="ozMusicalTitle">Musical Kelly</h2></div>
+        <button class="oz-musical-close" id="closeOzMusical" type="button" aria-label="Fechar musical"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+      </header>
+      <div class="oz-musical-main">
+        <div class="oz-musical-cover-wrap"><div class="oz-musical-cover"><img id="ozMusicalCover" alt="Capa da faixa"><span id="ozMusicalCoverFallback" aria-hidden="true">♪</span></div></div>
+        <div class="oz-musical-track-copy"><p id="ozMusicalStatus">Carregando faixas…</p><h3 id="ozMusicalTrackTitle">Musical Kelly</h3><span id="ozMusicalTrackNumber">Faixa 0 de 0</span></div>
+      </div>
+      <div class="oz-musical-caption" id="ozMusicalCaption" aria-live="polite">Legenda ainda não disponível.</div>
+      <div class="oz-musical-progress"><span id="ozMusicalCurrentTime">0:00</span><input id="ozMusicalSeek" type="range" min="0" max="0" step="0.1" value="0" aria-label="Progresso da faixa"><span id="ozMusicalDuration">0:00</span></div>
+      <div class="oz-musical-controls">
+        <button type="button" id="ozMusicalPrevious" aria-label="Faixa anterior" title="Faixa anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"></path></svg></button>
+        <button class="oz-musical-play" type="button" id="ozMusicalPlay" aria-label="Reproduzir" title="Reproduzir"><svg class="oz-musical-icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5 18 12 8 18.5Z"></path></svg><svg class="oz-musical-icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 6v12M15.5 6v12"></path></svg></button>
+        <button type="button" id="ozMusicalNext" aria-label="Próxima faixa" title="Próxima faixa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>
+        <button class="oz-musical-list-toggle" type="button" id="ozMusicalListToggle" aria-label="Ver lista de faixas" aria-expanded="false" title="Lista de faixas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"></path></svg></button>
+      </div>
+      <div class="oz-musical-track-list" id="ozMusicalTrackList" role="listbox" aria-label="Lista de faixas" hidden></div>
+      <audio id="ozMusicalAudio" preload="metadata"></audio>
+    </section>
+  </dialog>
   <div class="task-options-menu" id="taskOptionsMenu" role="menu" aria-label="Opções da tarefa" hidden></div>
   <div class="task-assign-menu" id="taskAssignMenu" hidden></div>
 </body>

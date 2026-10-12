@@ -24,6 +24,19 @@
   const badgeCelebrationDialog = document.getElementById('badgeCelebrationDialog');
   const badgeCelebrationAudio = document.getElementById('badgeCelebrationAudio');
   const categoryBadgeCelebrationAudio = document.getElementById('categoryBadgeCelebrationAudio');
+  const musicalDialog = document.getElementById('ozMusicalDialog');
+  const musicalAudio = document.getElementById('ozMusicalAudio');
+  const musicalCover = document.getElementById('ozMusicalCover');
+  const musicalCoverFallback = document.getElementById('ozMusicalCoverFallback');
+  const musicalStatus = document.getElementById('ozMusicalStatus');
+  const musicalTrackTitle = document.getElementById('ozMusicalTrackTitle');
+  const musicalTrackNumber = document.getElementById('ozMusicalTrackNumber');
+  const musicalCaption = document.getElementById('ozMusicalCaption');
+  const musicalSeek = document.getElementById('ozMusicalSeek');
+  const musicalCurrentTime = document.getElementById('ozMusicalCurrentTime');
+  const musicalDuration = document.getElementById('ozMusicalDuration');
+  const musicalPlay = document.getElementById('ozMusicalPlay');
+  const musicalTrackList = document.getElementById('ozMusicalTrackList');
   const addMenu = document.getElementById('addMenu');
   const accountMenu = document.getElementById('accountMenu');
   const headerOptionsButton = document.getElementById('headerOptionsButton');
@@ -50,6 +63,10 @@
   let badgeCelebrationQueue = [];
   let badgeCelebrationRunning = false;
   let lastPayload = '';
+  let musicalTracks = [];
+  let musicalTrackIndex = 0;
+  let musicalProjectLoaded = false;
+  let musicalProjectLoading = false;
 
   const readOpened = () => {
     try {
@@ -104,7 +121,131 @@
     const countdownVisible = isCountdownVisible();
     headerOptionsMenu.innerHTML = `
       <button type="button" role="menuitem" data-header-option="badges"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 2.1 2.1 3-.1.8 2.9 2.6 1.5-1 2.8 1 2.8-2.6 1.5-.8 2.9-3-.1L12 21.2l-2.1-2.1-3 .1-.8-2.9-2.6-1.5 1-2.8-1-2.8 2.6-1.5.8-2.9 3 .1z"></path><path d="m8.7 12.1 2.1 2.1 4.6-4.6"></path></svg><span>Selos</span></button>
+      <button type="button" role="menuitem" data-header-option="musical"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l10-2v13"></path><path d="M9 9l10-2M6.5 21A2.5 2.5 0 1 0 6.5 16a2.5 2.5 0 0 0 0 5ZM16.5 19a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"></path></svg><span>Musical</span></button>
       <button type="button" role="menuitem" data-header-option="countdown"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.3"></circle><path d="M12 7.5v5l3.2 1.8"></path></svg><span>${countdownVisible ? 'Ocultar contagem' : 'Mostrar contagem'}</span></button>`;
+  }
+
+  function musicalTime(seconds) {
+    const total = Math.max(0, Math.floor(Number(seconds) || 0));
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+  }
+
+  function musicalAssetUrl(url, fallback = '') {
+    const value = String(url || fallback || '').trim();
+    if (!value) return '';
+    try { return new URL(value, window.location.origin).href; } catch (_error) { return value; }
+  }
+
+  function musicalTrackAudio(track) {
+    if (track?.audio?.url) return track.audio;
+    return Array.isArray(track?.audioTracks) ? track.audioTracks.find((entry) => entry?.url) || null : null;
+  }
+
+  function renderMusicalCaption() {
+    const track = musicalTracks[musicalTrackIndex];
+    const lines = Array.isArray(track?.lyrics?.lines)
+      ? track.lyrics.lines.filter((line) => String(line?.text || line?.textPt || '').trim())
+      : [];
+    if (!lines.length) {
+      musicalCaption.textContent = 'Legenda ainda não disponível.';
+      return;
+    }
+    const time = Number(musicalAudio.currentTime) || 0;
+    let active = lines.findIndex((line) => Number.isFinite(Number(line.start)) && Number(line.start) <= time && (line.end == null || time < Number(line.end)));
+    if (active < 0) {
+      active = lines.reduce((last, line, index) => Number.isFinite(Number(line.start)) && Number(line.start) <= time ? index : last, -1);
+    }
+    const text = lines[Math.max(0, active)]?.text || lines[Math.max(0, active)]?.textPt || lines[0]?.text || lines[0]?.textPt;
+    musicalCaption.textContent = String(text || 'Legenda ainda não disponível.').trim();
+  }
+
+  function updateMusicalPlayer() {
+    const track = musicalTracks[musicalTrackIndex];
+    const duration = Number.isFinite(musicalAudio.duration) ? musicalAudio.duration : 0;
+    const position = Number(musicalAudio.currentTime) || 0;
+    musicalSeek.max = String(Math.max(0, duration));
+    musicalSeek.value = String(Math.min(position, duration || position));
+    musicalCurrentTime.textContent = musicalTime(position);
+    musicalDuration.textContent = musicalTime(duration);
+    musicalPlay.classList.toggle('is-playing', !musicalAudio.paused && Boolean(track));
+    musicalPlay.setAttribute('aria-label', musicalAudio.paused ? 'Reproduzir' : 'Pausar');
+    musicalPlay.title = musicalAudio.paused ? 'Reproduzir' : 'Pausar';
+    renderMusicalCaption();
+  }
+
+  function renderMusicalTrackList() {
+    musicalTrackList.innerHTML = musicalTracks.length
+      ? musicalTracks.map((track, index) => {
+        const image = musicalAssetUrl(track.image?.url, '/oz/oz-musical-cover.webp');
+        const title = String(track.title || `Faixa ${index + 1}`).trim();
+        return `<button class="oz-musical-track-option ${index === musicalTrackIndex ? 'is-active' : ''}" type="button" role="option" aria-selected="${index === musicalTrackIndex}" data-musical-index="${index}"><img src="${escapeHtml(image)}" alt=""><span><strong>${escapeHtml(title)}</strong><small>Faixa ${index + 1}</small></span><span aria-hidden="true">${index === musicalTrackIndex && !musicalAudio.paused ? '▶' : ''}</span></button>`;
+      }).join('')
+      : '<p class="oz-musical-empty">Nenhuma faixa disponível.</p>';
+  }
+
+  function setMusicalTrack(index, { autoplay = false } = {}) {
+    if (!musicalTracks.length) return;
+    musicalTrackIndex = (Number(index) + musicalTracks.length) % musicalTracks.length;
+    const track = musicalTracks[musicalTrackIndex];
+    const audio = musicalTrackAudio(track);
+    const title = String(track.title || `Faixa ${musicalTrackIndex + 1}`).trim();
+    musicalAudio.pause();
+    musicalAudio.removeAttribute('src');
+    musicalAudio.load();
+    musicalTrackTitle.textContent = title;
+    musicalTrackNumber.textContent = `Faixa ${musicalTrackIndex + 1} de ${musicalTracks.length}`;
+    musicalStatus.textContent = audio?.url ? 'Musical Kelly' : 'Áudio indisponível';
+    musicalCurrentTime.textContent = '0:00';
+    musicalDuration.textContent = '0:00';
+    musicalSeek.value = '0';
+    musicalSeek.max = '0';
+    const imageUrl = '/oz/oz-musical-cover.webp';
+    musicalCover.classList.remove('is-ready');
+    musicalCoverFallback.hidden = false;
+    if (imageUrl) {
+      musicalCover.onload = () => { musicalCover.classList.add('is-ready'); musicalCoverFallback.hidden = true; };
+      musicalCover.onerror = () => { musicalCover.classList.remove('is-ready'); musicalCoverFallback.hidden = false; };
+      musicalCover.src = imageUrl;
+    } else {
+      musicalCover.removeAttribute('src');
+    }
+    if (audio?.url) {
+      musicalAudio.src = musicalAssetUrl(audio.url);
+      musicalAudio.load();
+    }
+    renderMusicalTrackList();
+    updateMusicalPlayer();
+    if (autoplay && audio?.url) {
+      const playback = musicalAudio.play();
+      if (playback?.catch) playback.catch(() => {});
+    }
+  }
+
+  async function loadMusicalProject() {
+    if (musicalProjectLoaded || musicalProjectLoading) return;
+    musicalProjectLoading = true;
+    musicalStatus.textContent = 'Carregando faixas…';
+    try {
+      const response = await fetch('/api/musical-kelly/project', { headers: { Accept: 'application/json' }, cache: 'no-store' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success === false) throw new Error(payload.message || 'Não foi possível carregar o musical.');
+      musicalTracks = Array.isArray(payload.project?.cards)
+        ? payload.project.cards.filter((track) => musicalTrackAudio(track)?.url)
+        : [];
+      musicalProjectLoaded = true;
+      if (musicalTracks.length) setMusicalTrack(0);
+      else musicalStatus.textContent = 'Nenhuma faixa disponível.';
+    } catch (error) {
+      musicalStatus.textContent = error.message || 'Não foi possível carregar o musical.';
+      musicalCaption.textContent = 'Tente novamente em instantes.';
+    } finally {
+      musicalProjectLoading = false;
+    }
+  }
+
+  function openMusical() {
+    if (!musicalDialog.open) musicalDialog.showModal();
+    loadMusicalProject().catch(() => {});
   }
 
   function renderBadgeAlbum() {
@@ -793,7 +934,40 @@
     headerOptionsMenu.hidden = true;
     headerOptionsButton.setAttribute('aria-expanded', 'false');
     if (option.dataset.headerOption === 'badges') openBadgeAlbum();
+    if (option.dataset.headerOption === 'musical') openMusical();
     if (option.dataset.headerOption === 'countdown') setCountdownVisible(!isCountdownVisible());
+  });
+  document.getElementById('closeOzMusical').addEventListener('click', () => musicalDialog.close());
+  musicalDialog.addEventListener('click', (event) => { if (event.target === musicalDialog) musicalDialog.close(); });
+  musicalDialog.addEventListener('close', () => { musicalAudio.pause(); });
+  musicalPlay.addEventListener('click', () => {
+    if (!musicalTracks.length) return;
+    if (musicalAudio.paused) {
+      const playback = musicalAudio.play();
+      if (playback?.catch) playback.catch(() => {});
+    } else musicalAudio.pause();
+  });
+  musicalAudio.addEventListener('timeupdate', updateMusicalPlayer);
+  musicalAudio.addEventListener('loadedmetadata', updateMusicalPlayer);
+  musicalAudio.addEventListener('play', () => { renderMusicalTrackList(); updateMusicalPlayer(); });
+  musicalAudio.addEventListener('pause', () => { renderMusicalTrackList(); updateMusicalPlayer(); });
+  musicalAudio.addEventListener('ended', updateMusicalPlayer);
+  musicalSeek.addEventListener('input', () => {
+    if (!Number.isFinite(musicalAudio.duration)) return;
+    musicalAudio.currentTime = Number(musicalSeek.value) || 0;
+    updateMusicalPlayer();
+  });
+  document.getElementById('ozMusicalPrevious').addEventListener('click', () => setMusicalTrack(musicalTrackIndex - 1, { autoplay: true }));
+  document.getElementById('ozMusicalNext').addEventListener('click', () => setMusicalTrack(musicalTrackIndex + 1, { autoplay: true }));
+  document.getElementById('ozMusicalListToggle').addEventListener('click', (event) => {
+    const opening = musicalTrackList.hidden;
+    musicalTrackList.hidden = !opening;
+    event.currentTarget.setAttribute('aria-expanded', String(opening));
+  });
+  musicalTrackList.addEventListener('click', (event) => {
+    const option = event.target.closest('[data-musical-index]');
+    if (!option) return;
+    setMusicalTrack(Number(option.dataset.musicalIndex), { autoplay: true });
   });
   document.getElementById('closeBadgeAlbum').addEventListener('click', () => badgeAlbumDialog.close());
   badgeAlbumDialog.addEventListener('click', (event) => { if (event.target === badgeAlbumDialog) badgeAlbumDialog.close(); });
