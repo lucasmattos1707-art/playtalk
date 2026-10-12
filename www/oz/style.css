@@ -160,11 +160,12 @@ h1 span { color: #aa8aff; background: linear-gradient(95deg, #c5a7ff, #9274ff 63
 .category-title-button { min-width: 0; align-self: center; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; }
 .category-titleline { display: flex; gap: 9px; align-items: center; min-width: 0; }
 .category-title { overflow: hidden; color: #eff0f4; font-family: var(--display); font-size: 12px; font-weight: 750; letter-spacing: .035em; line-height: 1.4; text-overflow: ellipsis; }
-.category-title-button { grid-column: 1; grid-row: 1; }
+.category-title-button { display: block; grid-column: 1; grid-row: 1; width: 100%; }
 .category-progress { position: absolute; right: 22px; bottom: 11px; left: 19px; width: auto; }
 .progress-label { display: none; }
 .progress-track { height: 3px; background: rgba(255, 255, 255, .085); }
 .category-titleline .chevron { flex: 0 0 auto; margin-left: auto; color: #858b98; font-size: 16px; transition: transform .2s, color .2s; }
+.category-titleline .category-title { display: block; flex: 1 1 auto; min-width: 0; }
 .is-open .category-titleline .chevron { transform: rotate(90deg); color: #c4aaff; }
 .is-complete .category-titleline .chevron { color: #9cebb4; }
 .category-content { padding: 0 20px 17px 68px; }
