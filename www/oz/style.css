@@ -559,7 +559,7 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 /* Keep every category title beside its icon, including after a cached layout update. */
 .category-title-button { display: block; width: 100%; }
 .category-titleline { display: flex; width: 100%; min-width: 0; align-items: center; }
-.category-titleline .category-title { display: block; flex: 1 1 auto; min-width: 72px; overflow: hidden; color: #eff0f4; opacity: 1; visibility: visible; white-space: nowrap; text-overflow: ellipsis; }
+.category-titleline .category-title { display: block; flex: 1 1 auto; min-width: 72px; overflow: visible; color: #eff0f4; opacity: 1; visibility: visible; white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
 .category-titleline .category-emoji, .category-titleline .chevron { visibility: visible; opacity: 1; }
 
 .badge-info-dialog { width: min(330px, calc(100vw - 30px)); margin: auto; padding: 0; overflow: visible; border: 1px solid rgba(187, 160, 255, .3); border-radius: 19px; background: #11131c; color: var(--text); box-shadow: 0 28px 90px rgba(0,0,0,.65); }
@@ -691,7 +691,8 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 /* Keep primary category names visible in narrow mobile layouts. */
 @media (max-width: 700px) {
   .category-title-button { min-width: 0; }
-  .category-titleline .category-title { min-width: 72px; font-size: 11px; }
+  .category-titleline .category-title { min-width: 0; font-size: 11px; }
+  .category-head { min-height: 76px; }
 }
 
 .oz-musical-list-dialog:not([open]) { display: none; }
