@@ -694,11 +694,11 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .oz-musical-track-list--fullscreen .oz-musical-track-option.is-active small { color: rgba(145, 240, 169, .72); }
 .oz-musical-track-list--fullscreen .oz-musical-track-option > span:last-child { color: #73ed9a; }
 .oz-musical-track-list--fullscreen .oz-musical-track-option img { width: 58px; height: 58px; border-radius: 11px; }
-.oz-musical-track-list--fullscreen .oz-musical-track-option strong { font-size: 16px; font-weight: 850; }
+.oz-musical-track-list--fullscreen .oz-musical-track-option strong { font-size: 10.4px; font-weight: 800; }
 .oz-musical-track-list--fullscreen .oz-musical-track-option small { margin-top: 5px; font-size: 11px; font-weight: 650; }
 @media (max-width: 560px) {
   .oz-musical-list-panel { gap: 17px; padding-inline: 17px; }
   .oz-musical-track-list--fullscreen .oz-musical-track-option { grid-template-columns: 50px minmax(0, 1fr) auto; min-height: 62px; padding: 8px 9px; }
   .oz-musical-track-list--fullscreen .oz-musical-track-option img { width: 50px; height: 50px; }
-  .oz-musical-track-list--fullscreen .oz-musical-track-option strong { font-size: 14px; }
+  .oz-musical-track-list--fullscreen .oz-musical-track-option strong { font-size: 9.1px; }
 }
