@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/oz/style.css?v=20261009-oz-star-hold-until-close">
-  <script src="/oz/app.js?v=20261009-oz-star-hold-until-close" defer></script>
+  <link rel="stylesheet" href="/oz/style.css?v=20261012-oz-badges">
+  <script src="/oz/app.js?v=20261012-oz-badges" defer></script>
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -34,9 +34,10 @@
         </button>
       </div>
       <div class="star-balance" aria-label="Estrelas conquistadas"><img src="/oz/icons/star.svg" alt=""><strong id="starCount">0</strong></div>
-      <button class="badge-album-button" type="button" disabled aria-label="Álbum de selos ainda indisponível" title="Álbum de selos em breve">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5c2.9-.9 5.6-.5 8 1.2v13c-2.4-1.7-5.1-2.1-8-1.2z"></path><path d="M20 5.5c-2.9-.9-5.6-.5-8 1.2v13c2.4-1.7 5.1-2.1 8-1.2z"></path><path d="M12 6.7v13"></path><path d="m7 9 1.2 1.2L10 8.5m7 1.5h1"></path></svg>
-      </button>
+      <div class="header-options-wrap">
+        <button class="header-options-toggle" id="headerOptionsButton" type="button" aria-label="Opções do cabeçalho" aria-expanded="false" aria-controls="headerOptionsMenu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="12" cy="19" r="1.7"></circle></svg></button>
+        <div class="header-options-menu" id="headerOptionsMenu" role="menu" hidden></div>
+      </div>
       <div class="account-menu" id="accountMenu" hidden><button type="button" data-account-action="logout">Sair</button></div>
     </header>
 
@@ -145,6 +146,24 @@
     </section>
   </dialog>
   <audio id="starCelebrationAudio" src="/oz/audio/5star.mp3" preload="auto"></audio>
+  <dialog class="badge-album-dialog" id="badgeAlbumDialog" aria-labelledby="badgeAlbumTitle">
+    <section class="badge-album-panel">
+      <button class="dialog-close" id="closeBadgeAlbum" type="button" aria-label="Fechar">×</button>
+      <div class="badge-album-title-row"><span class="badge-album-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5c2.9-.9 5.6-.5 8 1.2v13c-2.4-1.7-5.1-2.1-8-1.2z"></path><path d="M20 5.5c-2.9-.9-5.6-.5-8 1.2v13c2.4-1.7 5.1-2.1 8-1.2z"></path><path d="M12 6.7v13"></path></svg></span><div><p>ÁLBUM DE OZ</p><h2 id="badgeAlbumTitle">Seus selos</h2></div><strong id="badgeAlbumCount">0/40</strong></div>
+      <p class="badge-album-hint" id="badgeUnlockHint" hidden aria-live="polite"></p>
+      <div class="badge-album-grid" id="badgeAlbumGrid"></div>
+    </section>
+  </dialog>
+  <dialog class="badge-celebration" id="badgeCelebrationDialog" aria-labelledby="badgeCelebrationTitle">
+    <section class="badge-celebration-content">
+      <p>Selo desbloqueado</p>
+      <div class="badge-celebration-seal" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 2.8 2.1 2.1 3-.1.8 2.9 2.6 1.5-1 2.8 1 2.8-2.6 1.5-.8 2.9-3-.1L12 21.2l-2.1-2.1-3 .1-.8-2.9-2.6-1.5 1-2.8-1-2.8 2.6-1.5.8-2.9 3 .1z"></path><path d="m8.7 12.1 2.1 2.1 4.6-4.6"></path></svg></div>
+      <strong id="badgeCelebrationTitle"></strong>
+      <span id="badgeCelebrationDescription"></span>
+    </section>
+  </dialog>
+  <audio id="badgeCelebrationAudio" src="/oz/audio/badge-unlocked.mp3" preload="auto"></audio>
+  <audio id="categoryBadgeCelebrationAudio" src="/oz/audio/badge-category-unlocked.mp3" preload="auto"></audio>
   <div class="task-options-menu" id="taskOptionsMenu" role="menu" aria-label="Opções da tarefa" hidden></div>
   <div class="task-assign-menu" id="taskAssignMenu" hidden></div>
 </body>

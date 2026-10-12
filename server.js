@@ -21,6 +21,7 @@ const {
   filterMusicalKellyTranscriptionSegments
 } = require('./lib/musical-kelly-transcription');
 const { categories: OZ_CHECKLIST_SEED } = require('./lib/oz-checklist');
+const { OZ_BADGES, badgeIsUnlocked } = require('./lib/oz-badges');
 const { normalizeCompletedRoundScores } = require('./lib/englishtraining-pronunciation');
 const app = express();
 
@@ -16377,8 +16378,20 @@ async function ensureOzChecklistSchema() {
         )
       `);
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.oz_checklist_badge_awards (
+          member_id text NOT NULL REFERENCES public.oz_checklist_members(id) ON DELETE CASCADE,
+          badge_id varchar(100) NOT NULL,
+          unlocked_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (member_id, badge_id)
+        )
+      `);
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS oz_checklist_star_awards_member_idx
         ON public.oz_checklist_star_awards (member_id, created_at)
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS oz_checklist_badge_awards_member_idx
+        ON public.oz_checklist_badge_awards (member_id, unlocked_at)
       `);
       await pool.query(`
         CREATE INDEX IF NOT EXISTS oz_checklist_items_parent_order_idx
@@ -16463,6 +16476,72 @@ async function ensureOzChecklistSchema() {
   return ozChecklistSchemaReadyPromise;
 }
 
+async function getOzBadgeStats(member) {
+  const result = await pool.query(`
+    SELECT category_id,
+           COUNT(*)::integer AS total,
+           COUNT(*) FILTER (WHERE status = 'completed')::integer AS completed
+      FROM public.oz_checklist_items
+     GROUP BY category_id
+  `);
+  const categories = new Map((result.rows || []).map((row) => [row.category_id, {
+    total: Number(row.total || 0),
+    completed: Number(row.completed || 0)
+  }]));
+  const total = [...categories.values()].reduce((sum, category) => sum + category.total, 0);
+  const completed = [...categories.values()].reduce((sum, category) => sum + category.completed, 0);
+  const delegatedResult = await pool.query(`
+    SELECT COUNT(*)::integer AS count
+      FROM public.oz_checklist_items
+     WHERE assignee_id IS NOT NULL AND assignee_id <> $1
+  `, [member.id]);
+  return {
+    categories,
+    total,
+    completed,
+    delegated: Number(delegatedResult.rows?.[0]?.count || 0)
+  };
+}
+
+async function readOzBadgeState(member) {
+  const locked = OZ_BADGES.map((badge) => ({ ...badge, unlocked: false }));
+  if (!member?.isKelly) return locked;
+  const result = await pool.query(`
+    SELECT badge_id, unlocked_at
+      FROM public.oz_checklist_badge_awards
+     WHERE member_id = $1
+  `, [member.id]);
+  const unlockedAt = new Map((result.rows || []).map((row) => [row.badge_id, row.unlocked_at]));
+  return OZ_BADGES.map((badge) => ({
+    ...badge,
+    unlocked: unlockedAt.has(badge.id),
+    unlockedAt: unlockedAt.get(badge.id) || null
+  }));
+}
+
+async function syncOzBadges(member) {
+  if (!member?.isKelly) return [];
+  const stats = await getOzBadgeStats(member);
+  const unlocked = OZ_BADGES.filter((badge) => badgeIsUnlocked(badge, stats));
+  if (!unlocked.length) return [];
+  const values = [];
+  const rows = unlocked.map((badge, index) => {
+    const offset = index * 2;
+    values.push(member.id, badge.id);
+    return `($${offset + 1}, $${offset + 2})`;
+  });
+  const result = await pool.query(`
+    INSERT INTO public.oz_checklist_badge_awards (member_id, badge_id)
+    VALUES ${rows.join(', ')}
+    ON CONFLICT (member_id, badge_id) DO NOTHING
+    RETURNING badge_id, unlocked_at
+  `, values);
+  const awarded = new Map((result.rows || []).map((row) => [row.badge_id, row.unlocked_at]));
+  return OZ_BADGES
+    .filter((badge) => awarded.has(badge.id))
+    .map((badge) => ({ ...badge, unlocked: true, unlockedAt: awarded.get(badge.id) }));
+}
+
 async function readOzChecklist(member) {
   await ensureOzChecklistSchema();
   const result = await pool.query(`
@@ -16529,7 +16608,8 @@ async function readOzChecklist(member) {
     : { rows: [] };
   return {
     categories: member?.isKelly ? categories : categories.filter((category) => category.items.length > 0),
-    stars: Number(starsResult.rows?.[0]?.stars || 0)
+    stars: Number(starsResult.rows?.[0]?.stars || 0),
+    badges: await readOzBadgeState(member)
   };
 }
 
@@ -29494,6 +29574,7 @@ app.get('/api/oz/checklist', async (req, res) => {
   try {
     const member = await getOzMember(req);
     if (!member) return res.status(401).json({ success: false, message: 'Entre para ver o checklist.' });
+    await syncOzBadges(member);
     res.setHeader('Cache-Control', 'no-store');
     res.json({ success: true, ...(await readOzChecklist(member)) });
   } catch (error) {
@@ -29898,11 +29979,13 @@ app.patch('/api/oz/checklist/items/:itemId', async (req, res) => {
     }
     const owned = await pool.query('SELECT id FROM public.oz_checklist_items WHERE id = $1', [itemId]);
     if (!owned.rows.length) return res.status(404).json({ success: false, message: 'Tarefa não encontrada ou não atribuída a você.' });
+    const badgesAwarded = await syncOzBadges(actor);
     res.json({
       success: true,
       ...(await readOzChecklist(actor)),
       starsAwarded: Number(result.rows[0]?.stars_awarded || 0),
-      starsRevoked: Number(result.rows[0]?.stars_revoked || 0)
+      starsRevoked: Number(result.rows[0]?.stars_revoked || 0),
+      badgesAwarded
     });
   } catch (error) {
     console.error('Erro ao atualizar item do checklist de Oz:', error);

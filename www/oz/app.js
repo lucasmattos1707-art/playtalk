@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = 'fluentlevelup:oz:opened-categories:v1';
   const MEMBER_KEY = 'fluentlevelup:oz:member:v1';
+  const COUNTDOWN_KEY_PREFIX = 'fluentlevelup:oz:show-countdown:v1';
   const loginScreen = document.getElementById('loginScreen');
   const checklistApp = document.getElementById('checklistApp');
   const pageLoginForm = document.getElementById('pageLoginForm');
@@ -18,10 +19,16 @@
   const microtaskNotesDialog = document.getElementById('microtaskNotesDialog');
   const starCelebrationDialog = document.getElementById('starCelebrationDialog');
   const starCelebrationAudio = document.getElementById('starCelebrationAudio');
+  const badgeAlbumDialog = document.getElementById('badgeAlbumDialog');
+  const badgeCelebrationDialog = document.getElementById('badgeCelebrationDialog');
+  const badgeCelebrationAudio = document.getElementById('badgeCelebrationAudio');
+  const categoryBadgeCelebrationAudio = document.getElementById('categoryBadgeCelebrationAudio');
   const addMenu = document.getElementById('addMenu');
   const accountMenu = document.getElementById('accountMenu');
+  const headerOptionsButton = document.getElementById('headerOptionsButton');
+  const headerOptionsMenu = document.getElementById('headerOptionsMenu');
   const taskOptionsMenu = document.getElementById('taskOptionsMenu');
-  let state = { categories: [], stars: 0 };
+  let state = { categories: [], stars: 0, badges: [] };
   let members = [];
   let activeMember = null;
   let mutationQueue = Promise.resolve();
@@ -38,6 +45,9 @@
   let notesMode = 'view';
   let notesSuccessTimer = 0;
   let starCelebrationTimer = 0;
+  let badgeCelebrationTimer = 0;
+  let badgeCelebrationQueue = [];
+  let badgeCelebrationRunning = false;
   let lastPayload = '';
 
   const readOpened = () => {
@@ -60,6 +70,101 @@
   const persistOpened = () => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...openedCategories])); } catch (_error) {}
   };
+
+  function stateFromPayload(payload) {
+    return {
+      categories: Array.isArray(payload.categories) ? payload.categories : [],
+      stars: Number(payload.stars) || 0,
+      badges: Array.isArray(payload.badges) ? payload.badges : []
+    };
+  }
+
+  function countdownPreferenceKey() {
+    return activeMember?.id ? `${COUNTDOWN_KEY_PREFIX}:${activeMember.id}` : '';
+  }
+
+  function isCountdownVisible() {
+    const key = countdownPreferenceKey();
+    if (!key) return true;
+    try { return localStorage.getItem(key) !== 'hidden'; } catch (_error) { return true; }
+  }
+
+  function setCountdownVisible(visible) {
+    const countdown = document.getElementById('eventCountdown');
+    countdown.hidden = !visible;
+    const key = countdownPreferenceKey();
+    try {
+      if (key) localStorage.setItem(key, visible ? 'visible' : 'hidden');
+    } catch (_error) {}
+    renderHeaderOptions();
+  }
+
+  function renderHeaderOptions() {
+    const countdownVisible = isCountdownVisible();
+    headerOptionsMenu.innerHTML = `
+      <button type="button" role="menuitem" data-header-option="badges"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 2.1 2.1 3-.1.8 2.9 2.6 1.5-1 2.8 1 2.8-2.6 1.5-.8 2.9-3-.1L12 21.2l-2.1-2.1-3 .1-.8-2.9-2.6-1.5 1-2.8-1-2.8 2.6-1.5.8-2.9 3 .1z"></path><path d="m8.7 12.1 2.1 2.1 4.6-4.6"></path></svg><span>Selos</span></button>
+      <button type="button" role="menuitem" data-header-option="countdown"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.3"></circle><path d="M12 7.5v5l3.2 1.8"></path></svg><span>${countdownVisible ? 'Ocultar contagem' : 'Mostrar contagem'}</span></button>`;
+  }
+
+  function badgeSealSvg() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 2.1 2.1 3-.1.8 2.9 2.6 1.5-1 2.8 1 2.8-2.6 1.5-.8 2.9-3-.1L12 21.2l-2.1-2.1-3 .1-.8-2.9-2.6-1.5 1-2.8-1-2.8 2.6-1.5.8-2.9 3 .1z"></path><path d="m8.7 12.1 2.1 2.1 4.6-4.6"></path></svg>';
+  }
+
+  function renderBadgeAlbum() {
+    const badges = state.badges || [];
+    const unlocked = badges.filter((badge) => badge.unlocked).length;
+    document.getElementById('badgeAlbumCount').textContent = `${unlocked}/${badges.length || 40}`;
+    document.getElementById('badgeUnlockHint').hidden = true;
+    document.getElementById('badgeAlbumGrid').innerHTML = badges.map((badge) => `
+      <article class="badge-card ${badge.unlocked ? 'is-unlocked' : ''}">
+        <button class="badge-info" type="button" data-badge-info="${escapeHtml(badge.id)}" aria-label="Como desbloquear ${escapeHtml(badge.title)}">i</button>
+        <span class="badge-card-seal">${badgeSealSvg()}</span>
+        <strong>${escapeHtml(badge.title)}</strong>
+        <span>${escapeHtml(badge.description)}</span>
+      </article>`).join('');
+  }
+
+  function openBadgeAlbum() {
+    renderBadgeAlbum();
+    if (!badgeAlbumDialog.open) badgeAlbumDialog.showModal();
+  }
+
+  function playBadgeCelebrationAudio(badge) {
+    const audio = badge.group === 'categoria' ? categoryBadgeCelebrationAudio : badgeCelebrationAudio;
+    audio.currentTime = 0;
+    const playback = audio.play();
+    if (playback && typeof playback.catch === 'function') playback.catch(() => {});
+  }
+
+  function playNextBadgeCelebration() {
+    if (badgeCelebrationRunning || !badgeCelebrationQueue.length) return;
+    const badge = badgeCelebrationQueue.shift();
+    badgeCelebrationRunning = true;
+    document.getElementById('badgeCelebrationTitle').textContent = badge.title;
+    document.getElementById('badgeCelebrationDescription').textContent = badge.description;
+    if (badgeCelebrationDialog.open) badgeCelebrationDialog.close();
+    badgeCelebrationDialog.showModal();
+    badgeCelebrationDialog.classList.remove('is-animating');
+    void badgeCelebrationDialog.offsetWidth;
+    badgeCelebrationDialog.classList.add('is-animating');
+    playBadgeCelebrationAudio(badge);
+    window.clearTimeout(badgeCelebrationTimer);
+    badgeCelebrationTimer = window.setTimeout(() => {
+      badgeCelebrationDialog.classList.remove('is-animating');
+      if (badgeCelebrationDialog.open) badgeCelebrationDialog.close();
+      badgeCelebrationRunning = false;
+      playNextBadgeCelebration();
+    }, 2400);
+  }
+
+  function queueBadgeCelebrations(badges, delay = 0) {
+    const next = (Array.isArray(badges) ? badges : []).filter((badge) => badge?.id);
+    if (!next.length) return;
+    window.setTimeout(() => {
+      badgeCelebrationQueue.push(...next);
+      playNextBadgeCelebration();
+    }, delay);
+  }
 
   function updateOverview() {
     const items = state.categories.flatMap((category) => flattenItems(category.items || []));
@@ -204,7 +309,7 @@
 
   async function loadChecklist() {
     const payload = await requestJson('/api/oz/checklist');
-    const next = { categories: Array.isArray(payload.categories) ? payload.categories : [], stars: Number(payload.stars) || 0 };
+    const next = stateFromPayload(payload);
     if (JSON.stringify(next) !== lastPayload) {
       state = next;
       render();
@@ -216,9 +321,10 @@
     mutationQueue = mutationQueue.then(async () => {
       try {
         const payload = await requestJson(url, { method, body: JSON.stringify(body) });
-        state = { categories: Array.isArray(payload.categories) ? payload.categories : [], stars: Number(payload.stars) || 0 };
+        state = stateFromPayload(payload);
         render();
         if (Number(payload.starsAwarded) > 0) showStarCelebration(payload.starsAwarded);
+        queueBadgeCelebrations(payload.badgesAwarded, Number(payload.starsAwarded) > 0 ? 1850 : 0);
       } catch (error) {
         if (error.status === 401) exitUser();
         try { await loadChecklist(); } catch (_refreshError) {}
@@ -251,6 +357,8 @@
   function updateIdentity() {
     document.getElementById('currentMemberLabel').textContent = activeMember?.name || '';
     document.querySelector('.list-actions').hidden = !activeMember?.isKelly;
+    document.getElementById('eventCountdown').hidden = !isCountdownVisible();
+    renderHeaderOptions();
   }
 
   function avatarSvg() {
@@ -298,11 +406,12 @@
   function exitUser() {
     setActiveMember(null);
     members = [];
-    state = { categories: [], stars: 0 };
+    state = { categories: [], stars: 0, badges: [] };
     lastPayload = '';
     checklistApp.hidden = true;
     loginScreen.hidden = false;
     accountMenu.hidden = true;
+    headerOptionsMenu.hidden = true;
     document.getElementById('accountButton').setAttribute('aria-expanded', 'false');
     if (teamDialog.open) teamDialog.close();
     document.getElementById('loginError').hidden = true;
@@ -397,7 +506,7 @@
       const payload = await requestJson(`/api/oz/checklist/items/${encodeURIComponent(notesTaskId)}/notes`, {
         method: 'PUT', body: JSON.stringify({ notes: notesDraft })
       });
-      state = { categories: Array.isArray(payload.categories) ? payload.categories : [], stars: Number(payload.stars) || 0 };
+      state = stateFromPayload(payload);
       render();
       renderNotesDialog();
       success.hidden = false;
@@ -625,12 +734,40 @@
   teamDialog.addEventListener('cancel', () => {});
   teamDialog.addEventListener('click', (event) => { if (event.target === teamDialog) teamDialog.close(); });
   document.getElementById('accountButton').addEventListener('click', () => {
+    headerOptionsMenu.hidden = true;
+    headerOptionsButton.setAttribute('aria-expanded', 'false');
     const opening = accountMenu.hidden;
     accountMenu.hidden = !opening;
     document.getElementById('accountButton').setAttribute('aria-expanded', String(opening));
   });
   accountMenu.addEventListener('click', (event) => {
     if (event.target.closest('[data-account-action="logout"]')) exitUser();
+  });
+  headerOptionsButton.addEventListener('click', () => {
+    accountMenu.hidden = true;
+    document.getElementById('accountButton').setAttribute('aria-expanded', 'false');
+    const opening = headerOptionsMenu.hidden;
+    headerOptionsMenu.hidden = !opening;
+    headerOptionsButton.setAttribute('aria-expanded', String(opening));
+  });
+  headerOptionsMenu.addEventListener('click', (event) => {
+    const option = event.target.closest('[data-header-option]');
+    if (!option) return;
+    headerOptionsMenu.hidden = true;
+    headerOptionsButton.setAttribute('aria-expanded', 'false');
+    if (option.dataset.headerOption === 'badges') openBadgeAlbum();
+    if (option.dataset.headerOption === 'countdown') setCountdownVisible(!isCountdownVisible());
+  });
+  document.getElementById('closeBadgeAlbum').addEventListener('click', () => badgeAlbumDialog.close());
+  badgeAlbumDialog.addEventListener('click', (event) => { if (event.target === badgeAlbumDialog) badgeAlbumDialog.close(); });
+  document.getElementById('badgeAlbumGrid').addEventListener('click', (event) => {
+    const info = event.target.closest('[data-badge-info]');
+    if (!info) return;
+    const badge = state.badges.find((entry) => entry.id === info.dataset.badgeInfo);
+    if (!badge) return;
+    const hint = document.getElementById('badgeUnlockHint');
+    hint.textContent = badge.unlocked ? `Conquistado: ${badge.unlockText}` : badge.unlockText;
+    hint.hidden = false;
   });
   document.getElementById('newMemberForm').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -689,6 +826,14 @@
       addMenu.hidden = true;
       document.getElementById('toggleAddMenu').setAttribute('aria-expanded', 'false');
     }
+    if (!event.target.closest('.header-options-wrap')) {
+      headerOptionsMenu.hidden = true;
+      headerOptionsButton.setAttribute('aria-expanded', 'false');
+    }
+    if (!event.target.closest('#accountButton, #accountMenu')) {
+      accountMenu.hidden = true;
+      document.getElementById('accountButton').setAttribute('aria-expanded', 'false');
+    }
     if (!event.target.closest('#taskAssignMenu, #taskOptionsMenu')) closeAssignMenu();
     if (!event.target.closest('#taskOptionsMenu, #taskAssignMenu, .task-options-toggle')) closeTaskOptions();
   });
@@ -711,6 +856,7 @@
   document.getElementById('closeMicrotaskNotesDialog').addEventListener('click', () => microtaskNotesDialog.close());
   microtaskNotesDialog.addEventListener('click', (event) => { if (event.target === microtaskNotesDialog) microtaskNotesDialog.close(); });
   starCelebrationDialog.addEventListener('cancel', (event) => event.preventDefault());
+  badgeCelebrationDialog.addEventListener('cancel', (event) => event.preventDefault());
   let notesSwipeStartX = null;
   document.getElementById('notesCard').addEventListener('touchstart', (event) => {
     notesSwipeStartX = event.changedTouches[0]?.clientX ?? null;
