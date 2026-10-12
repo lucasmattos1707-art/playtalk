@@ -273,7 +273,7 @@
           <button class="item-status status-${itemStatus}" type="button" aria-label="${statusLabel(itemStatus)}" title="${statusLabel(itemStatus)}">${statusIcon(itemStatus)}</button>
           <button class="task-options-toggle ${hasNotes ? 'has-notes' : ''}" type="button" data-action="open-task-options" data-id="${escapeHtml(item.id)}" aria-haspopup="menu" aria-expanded="false" aria-label="Opções da tarefa${hasNotes ? ' — possui notas' : ''}" title="Opções da tarefa"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="12" cy="19" r="1.7"></circle></svg></button>
         </span>
-        <span class="task-copy"><span class="task-title-line"><span class="task-title">${escapeHtml(item.title)}</span>${assigneeMarkup}</span></span>
+        <span class="task-copy"><span class="task-title-line ${item.assigneeName ? 'has-assignee' : ''}"><span class="task-title">${escapeHtml(item.title)}</span>${assigneeMarkup}</span></span>
         ${hasSubtasks ? `<button class="task-toggle ${isOpen ? 'is-open' : ''}" type="button" data-action="toggle-subtasks" data-id="${escapeHtml(item.id)}" aria-expanded="${isOpen}" aria-controls="subtasks-${escapeHtml(item.id)}" aria-label="${isOpen ? 'Recolher' : 'Abrir'} sub tarefas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg></button>` : ''}
         ${hasNotes ? `<button class="task-note-indicator" type="button" data-action="open-task-notes-scroll" data-id="${escapeHtml(item.id)}" aria-label="Abrir notas da tarefa" title="Abrir notas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.75h8l4 4V20.25H6z"></path><path d="M14 3.75v4h4M9 12h6M9 15.5h6"></path></svg></button>` : ''}
       </div>
@@ -873,7 +873,7 @@
       accountMenu.hidden = true;
       document.getElementById('accountButton').setAttribute('aria-expanded', 'false');
     }
-    if (!event.target.closest('#taskAssignMenu, #taskOptionsMenu')) closeAssignMenu();
+    if (!event.target.closest('#taskAssignMenu, #taskOptionsMenu, .task-assignee-toggle')) closeAssignMenu();
     if (!event.target.closest('#taskOptionsMenu, #taskAssignMenu, .task-options-toggle')) closeTaskOptions();
   });
 
