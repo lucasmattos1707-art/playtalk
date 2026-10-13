@@ -64,6 +64,8 @@ button { font: inherit; }
 .fighter-name { grid-area: name; justify-self: center; min-width: 62px; margin-top: 2px; padding: 1px 4px; color: #fff; font-size: .82rem; font-style: normal; font-weight: 850; }
 .score-line { grid-area: score; display: flex; align-items: baseline; justify-content: center; }
 .score-line strong { position: relative; display: inline-block; min-width: .8em; font-size: clamp(3rem, 9vw, 5rem); line-height: .92; letter-spacing: -.085em; cursor: pointer; touch-action: none; user-select: none; filter: drop-shadow(0 6px 10px rgba(0,0,0,.3)); }
+.score-line strong.is-loading { color: transparent !important; text-shadow: none !important; filter: none; cursor: default; }
+.score-line strong.is-loading::after { content: ""; position: absolute; top: 50%; left: 50%; width: .52em; height: .52em; border: .085em solid rgba(124,170,255,.2); border-top-color: #4d9aff; border-right-color: #ff842c; border-radius: 50%; transform: translate(-50%, -50%); animation: spin .85s linear infinite; }
 .fighter-kelly .score-line strong { color: #ff842c; text-shadow: 0 0 18px rgba(255,112,20,.52); }
 .fighter-lucas .score-line strong { color: #4d9aff; text-shadow: 0 0 18px rgba(34,119,255,.55); }
 .score-line strong.bonus-drop-ready { transform: scale(1.15); filter: drop-shadow(0 0 18px #fff); }

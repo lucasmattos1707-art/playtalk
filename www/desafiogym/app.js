@@ -123,6 +123,10 @@
     orderFighters(kelly, lucas);
     $('#kelly-score').textContent = kelly;
     $('#lucas-score').textContent = lucas;
+    $('#kelly-score').classList.remove('is-loading');
+    $('#lucas-score').classList.remove('is-loading');
+    $('#kelly-score').setAttribute('aria-label', `Pontos da Kelly: ${kelly}`);
+    $('#lucas-score').setAttribute('aria-label', `Pontos do Lucas: ${lucas}`);
     $('#kelly-bar').style.width = `${kellyPercent}%`;
     $('#lucas-bar').style.width = `${lucasPercent}%`;
     $('#week-label').textContent = formatWeek(state.weekStart);
@@ -174,6 +178,12 @@
       if (!response.ok || !payload.success) throw new Error(payload.message || 'Falha ao carregar.');
       renderState(payload);
     } catch (error) {
+      ['kelly', 'lucas'].forEach((person) => {
+        const score = $(`#${person}-score`);
+        score.textContent = '—';
+        score.classList.remove('is-loading');
+        score.setAttribute('aria-label', 'Placar indisponível');
+      });
       $('#history-list').innerHTML = '<p class="empty">Não foi possível carregar o placar agora.</p>';
       $('#send-hint').textContent = error.message;
     }
