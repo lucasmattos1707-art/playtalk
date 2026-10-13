@@ -50,6 +50,14 @@
     return date.toISOString().slice(0, 10);
   }
 
+  function todayInSaoPaulo() {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+    return `${values.year}-${values.month}-${values.day}`;
+  }
+
   function formatWeek(startString) {
     if (!startString) return '';
     const start = new Date(`${startString}T12:00:00`);
@@ -61,15 +69,19 @@
 
   function renderDots(target, activityDates, weekStart) {
     const activeDates = new Set(activityDates || []);
+    const today = todayInSaoPaulo();
     target.innerHTML = Array.from({ length: 7 }, (_, index) => {
       const date = new Date(dateForWeekday(weekStart, index) + 'T12:00:00Z');
       const dateString = date.toISOString().slice(0, 10);
       const dayLabel = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', timeZone: 'UTC' }).format(date);
       const completed = activeDates.has(dateString);
+      const passed = dateString < today;
       const icon = completed
         ? '<span class="day-check" aria-hidden="true">✓</span>'
-        : '<svg class="day-miss" viewBox="0 0 18 18" aria-hidden="true"><path d="m6 6 6 6m0-6-6 6"/></svg>';
-      return `<i class="${completed ? 'on' : 'missed'}" title="${dayLabel}${completed ? ': treino registrado' : ': sem treino'}">${icon}</i>`;
+        : (passed ? '<svg class="day-miss" viewBox="0 0 18 18" aria-hidden="true"><path d="m6 6 6 6m0-6-6 6"/></svg>' : '');
+      const status = completed ? 'on' : (passed ? 'missed' : 'pending');
+      const description = completed ? 'treino registrado' : (passed ? 'dia encerrado sem treino' : 'ainda disponível');
+      return `<i class="${status}" title="${dayLabel}: ${description}">${icon}</i>`;
     }).join('');
   }
 
