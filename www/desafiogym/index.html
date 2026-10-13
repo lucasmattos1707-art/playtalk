@@ -7,7 +7,7 @@
   <meta name="description" content="Placar semanal do desafio de academia entre Kelly e Lucas.">
   <title>Kelly x Lucas — Desafio Gym</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23081224'/%3E%3Cpath d='M13 27h7v10h-7zm31 0h7v10h-7zM20 23h6v18h-6zm18 0h6v18h-6zM26 29h12v6H26z' fill='%23fff'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/desafiogym/styles.css?v=20261013-1">
+  <link rel="stylesheet" href="/desafiogym/styles.css?v=20261013-2">
 </head>
 <body>
   <div class="ambient ambient-blue" aria-hidden="true"></div>
@@ -40,7 +40,6 @@
             <img src="/desafiogym/kelly.png" alt="Kelly" width="116" height="116">
             <button class="bonus-orb" id="kelly-bonus" data-person="kelly" type="button" aria-label="Kelly tem 0 pontos bônus">
               <span id="kelly-bonus-count">0</span>
-              <small>BÔNUS</small>
             </button>
           </div>
           <div class="fighter-name">Kelly</div>
@@ -54,7 +53,6 @@
             <img src="/desafiogym/lucas.jpeg" alt="Lucas" width="116" height="116">
             <button class="bonus-orb" id="lucas-bonus" data-person="lucas" type="button" aria-label="Lucas tem 0 pontos bônus">
               <span id="lucas-bonus-count">0</span>
-              <small>BÔNUS</small>
             </button>
           </div>
           <div class="fighter-name">Lucas</div>
@@ -80,18 +78,27 @@
     <div class="lower-grid">
       <section class="week-card">
         <div class="section-title">
-          <div><p class="kicker">ESTA SEMANA</p><h2>Ritmo</h2></div>
+          <div><p class="kicker">ESTA SEMANA</p><h2>Ritmo de Treinos</h2></div>
           <span>máx. 5</span>
         </div>
-        <div class="weekly-row">
-          <img src="/desafiogym/kelly.png" alt="" width="44" height="44">
-          <div class="weekly-person"><strong>Kelly</strong><small id="kelly-week-text">0 de 5 treinos</small></div>
-          <div class="week-dots" id="kelly-dots" aria-label="Treinos de Kelly na semana"></div>
-        </div>
-        <div class="weekly-row">
-          <img src="/desafiogym/lucas.jpeg" alt="" width="44" height="44">
-          <div class="weekly-person"><strong>Lucas</strong><small id="lucas-week-text">0 de 5 treinos</small></div>
-          <div class="week-dots" id="lucas-dots" aria-label="Treinos de Lucas na semana"></div>
+        <div class="week-grid" aria-label="Treinos por dia nesta semana">
+          <div class="week-grid-header" aria-hidden="true">
+            <span></span><span></span>
+            <span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span><span>DOM</span>
+            <span></span>
+          </div>
+          <div class="weekly-row">
+            <img src="/desafiogym/kelly.png" alt="" width="40" height="40">
+            <div class="weekly-person"><strong>Kelly</strong></div>
+            <div class="week-dots" id="kelly-dots" aria-label="Treinos de Kelly na semana"></div>
+            <b class="week-count orange" id="kelly-week-text">0/5</b>
+          </div>
+          <div class="weekly-row">
+            <img src="/desafiogym/lucas.jpeg" alt="" width="40" height="40">
+            <div class="weekly-person"><strong>Lucas</strong></div>
+            <div class="week-dots" id="lucas-dots" aria-label="Treinos de Lucas na semana"></div>
+            <b class="week-count blue" id="lucas-week-text">0/5</b>
+          </div>
         </div>
         <div class="rules">
           <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2v3m10-3v3M3.5 9h17M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z"/></svg>1 ponto por dia</span>
@@ -150,6 +157,6 @@
     </div>
   </dialog>
 
-  <script src="/desafiogym/app.js?v=20261013-1" defer></script>
+  <script src="/desafiogym/app.js?v=20261013-2" defer></script>
 </body>
 </html>

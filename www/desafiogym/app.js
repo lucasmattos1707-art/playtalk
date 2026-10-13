@@ -53,10 +53,16 @@
     return `${short.format(start).replace('.', '')} — ${short.format(end).replace('.', '')}`;
   }
 
-  function renderDots(target, amount, color) {
-    target.innerHTML = Array.from({ length: 5 }, (_, index) =>
-      `<i class="${index < amount ? `on ${color}` : ''}"></i>`
-    ).join('');
+  function renderDots(target, activityDates, weekStart) {
+    const activeDates = new Set(activityDates || []);
+    const start = new Date(`${weekStart}T12:00:00Z`);
+    target.innerHTML = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(start);
+      date.setUTCDate(date.getUTCDate() + index);
+      const dateString = date.toISOString().slice(0, 10);
+      const dayLabel = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', timeZone: 'UTC' }).format(date);
+      return `<i class="${activeDates.has(dateString) ? 'on' : ''}" title="${dayLabel}${activeDates.has(dateString) ? ': treino registrado' : ''}"></i>`;
+    }).join('');
   }
 
   function canRegister(participant) {
@@ -116,8 +122,8 @@
     ['kelly', 'lucas'].forEach((person) => {
       const points = Math.min(5, Number(state.week?.[person] || 0));
       const bonus = Math.max(0, Number(state.bonus?.[person] || 0));
-      $(`#${person}-week-text`).textContent = `${points} de 5 treino${points === 1 ? '' : 's'}`;
-      renderDots($(`#${person}-dots`), points, people[person].color);
+      $(`#${person}-week-text`).textContent = `${points}/5`;
+      renderDots($(`#${person}-dots`), state.weekActivity?.[person], state.weekStart);
       $(`#${person}-bonus-count`).textContent = bonus;
       const orb = $(`#${person}-bonus`);
       orb.classList.toggle('empty', bonus < 1);
@@ -281,16 +287,30 @@
   }
 
   async function redeemBonus(participant) {
+    if (Number(state?.bonus?.[participant] || 0) < 1) {
+      showBonusToast(`${people[participant].name} ainda não tem bônus disponível.`, true);
+      return;
+    }
+
+    const optimisticState = {
+      ...state,
+      scores: { ...state.scores, [participant]: Number(state.scores?.[participant] || 0) + 1 },
+      bonus: { ...state.bonus, [participant]: Number(state.bonus?.[participant] || 0) - 1 }
+    };
+    renderState(optimisticState);
+    animateScore(participant);
+    playBonusSound();
+    showBonusToast(`+1 para ${people[participant].name} — salvando…`);
+
     try {
       const response = await fetch(`/api/desafiogym/bonus/redeem?participant=${encodeURIComponent(participant)}`, { method: 'POST' });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.success) throw new Error(payload.message || 'Não foi possível aplicar o bônus.');
       renderState(payload);
-      animateScore(participant);
-      playBonusSound();
       showBonusToast(`+1 para ${people[participant].name} na semana ${formatWeek(payload.targetWeekStart)}`);
     } catch (error) {
-      showBonusToast(error.message, true);
+      await loadState();
+      showBonusToast(`${error.message} O placar foi sincronizado.`, true);
     }
   }
 

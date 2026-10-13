@@ -29521,7 +29521,7 @@ function getDesafioGymWeekStart(dateString) {
 async function readDesafioGymState(today = getSaoPauloDateString()) {
   await ensureDesafioGymTable();
   const weekStart = getDesafioGymWeekStart(today);
-  const [scoreResult, weekResult, todayResult, recentResult, bonusResult] = await Promise.all([
+  const [scoreResult, weekResult, todayResult, recentResult, bonusResult, weekActivityResult] = await Promise.all([
     pool.query(`
       WITH totals AS (
         SELECT participant, COUNT(*)::integer AS points
@@ -29573,7 +29573,17 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
              GREATEST(0, SUM(CASE WHEN event_type = 'earned' THEN amount ELSE -amount END))::integer AS points
       FROM public.desafio_gym_bonus_events
       GROUP BY participant
-    `)
+    `),
+    pool.query(`
+      SELECT participant, training_date::text AS training_date
+      FROM public.desafio_gym_entries
+      WHERE week_start = $1::date
+      UNION
+      SELECT participant, source_training_date::text AS training_date
+      FROM public.desafio_gym_bonus_events
+      WHERE event_type = 'earned' AND source_training_date >= $1::date
+        AND source_training_date < ($1::date + INTERVAL '7 days')
+    `, [weekStart])
   ]);
 
   const toPoints = (rows) => rows.reduce((result, row) => {
@@ -29584,6 +29594,10 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
   const scores = toPoints(scoreResult.rows);
   const week = toPoints(weekResult.rows);
   const bonus = toPoints(bonusResult.rows);
+  const weekActivity = weekActivityResult.rows.reduce((result, row) => {
+    result[row.participant].push(String(row.training_date || '').slice(0, 10));
+    return result;
+  }, { lucas: [], kelly: [] });
   const todayKind = (participant) => todayResult.rows.find((row) => row.participant === participant)?.kind || '';
 
   return {
@@ -29592,6 +29606,7 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
     isSunday: false,
     scores,
     week,
+    weekActivity,
     bonus,
     bonusMode: {
       lucas: week.lucas >= 5,
