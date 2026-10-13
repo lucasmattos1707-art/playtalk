@@ -2957,6 +2957,55 @@ const ensureDesafioGymTable = async () => {
         CREATE INDEX IF NOT EXISTS desafio_gym_entries_week_idx
         ON public.desafio_gym_entries (week_start, participant, training_date DESC)
       `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.desafio_gym_bonus_events (
+          id bigserial PRIMARY KEY,
+          participant varchar(16) NOT NULL CHECK (participant IN ('lucas', 'kelly')),
+          event_type varchar(16) NOT NULL CHECK (event_type IN ('earned', 'spent')),
+          amount integer NOT NULL DEFAULT 1 CHECK (amount = 1),
+          event_key varchar(160) NOT NULL UNIQUE,
+          source_training_date date,
+          target_week_start date,
+          verification_object_key text,
+          verification_content_type varchar(64),
+          verification_sha256 char(64),
+          ai_model varchar(120),
+          ai_confidence integer CHECK (ai_confidence BETWEEN 0 AND 100),
+          ai_reason text NOT NULL DEFAULT '',
+          created_at timestamptz NOT NULL DEFAULT now(),
+          CHECK (
+            (event_type = 'earned' AND target_week_start IS NULL)
+            OR (event_type = 'spent' AND source_training_date IS NULL AND target_week_start IS NOT NULL)
+          )
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS desafio_gym_bonus_events_participant_idx
+        ON public.desafio_gym_bonus_events (participant, created_at DESC)
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS desafio_gym_bonus_events_target_week_idx
+        ON public.desafio_gym_bonus_events (participant, target_week_start)
+        WHERE event_type = 'spent'
+      `);
+      await pool.query(`
+        INSERT INTO public.desafio_gym_bonus_events (
+          participant,
+          event_type,
+          event_key,
+          ai_model,
+          ai_confidence,
+          ai_reason
+        ) VALUES (
+          'kelly',
+          'earned',
+          'initial:kelly:2026-10-13',
+          'manual-bonus',
+          100,
+          'Bônus inicial definido pelo administrador.'
+        )
+        ON CONFLICT (event_key) DO NOTHING
+      `);
       return true;
     })().catch((error) => {
       desafioGymTableReadyPromise = null;
@@ -29472,28 +29521,58 @@ function getDesafioGymWeekStart(dateString) {
 async function readDesafioGymState(today = getSaoPauloDateString()) {
   await ensureDesafioGymTable();
   const weekStart = getDesafioGymWeekStart(today);
-  const [scoreResult, weekResult, todayResult, recentResult] = await Promise.all([
+  const [scoreResult, weekResult, todayResult, recentResult, bonusResult] = await Promise.all([
     pool.query(`
-      SELECT participant, COUNT(*)::integer AS points
-      FROM public.desafio_gym_entries
+      WITH totals AS (
+        SELECT participant, COUNT(*)::integer AS points
+        FROM public.desafio_gym_entries
+        GROUP BY participant
+        UNION ALL
+        SELECT participant, COUNT(*)::integer AS points
+        FROM public.desafio_gym_bonus_events
+        WHERE event_type = 'spent'
+        GROUP BY participant
+      )
+      SELECT participant, SUM(points)::integer AS points
+      FROM totals
       GROUP BY participant
     `),
     pool.query(`
-      SELECT participant, COUNT(*)::integer AS points
-      FROM public.desafio_gym_entries
-      WHERE week_start = $1::date
+      WITH totals AS (
+        SELECT participant, COUNT(*)::integer AS points
+        FROM public.desafio_gym_entries
+        WHERE week_start = $1::date
+        GROUP BY participant
+        UNION ALL
+        SELECT participant, COUNT(*)::integer AS points
+        FROM public.desafio_gym_bonus_events
+        WHERE event_type = 'spent' AND target_week_start = $1::date
+        GROUP BY participant
+      )
+      SELECT participant, SUM(points)::integer AS points
+      FROM totals
       GROUP BY participant
     `, [weekStart]),
     pool.query(`
-      SELECT participant
+      SELECT participant, 'point'::text AS kind
       FROM public.desafio_gym_entries
       WHERE training_date = $1::date
+      UNION ALL
+      SELECT participant, 'bonus'::text AS kind
+      FROM public.desafio_gym_bonus_events
+      WHERE event_type = 'earned' AND source_training_date = $1::date
     `, [today]),
     pool.query(`
       SELECT participant, training_date::text AS training_date, ai_model, created_at
       FROM public.desafio_gym_entries
       ORDER BY training_date DESC, created_at DESC
       LIMIT 8
+    `),
+    pool.query(`
+      SELECT participant,
+             GREATEST(0, SUM(CASE WHEN event_type = 'earned' THEN amount ELSE -amount END))::integer AS points
+      FROM public.desafio_gym_bonus_events
+      GROUP BY participant
     `)
   ]);
 
@@ -29502,15 +29581,29 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
     return result;
   }, { lucas: 0, kelly: 0 });
 
+  const scores = toPoints(scoreResult.rows);
+  const week = toPoints(weekResult.rows);
+  const bonus = toPoints(bonusResult.rows);
+  const todayKind = (participant) => todayResult.rows.find((row) => row.participant === participant)?.kind || '';
+
   return {
     today,
     weekStart,
     isSunday: false,
-    scores: toPoints(scoreResult.rows),
-    week: toPoints(weekResult.rows),
+    scores,
+    week,
+    bonus,
+    bonusMode: {
+      lucas: week.lucas >= 5,
+      kelly: week.kelly >= 5
+    },
     markedToday: {
       lucas: todayResult.rows.some((row) => row.participant === 'lucas'),
       kelly: todayResult.rows.some((row) => row.participant === 'kelly')
+    },
+    todayKind: {
+      lucas: todayKind('lucas'),
+      kelly: todayKind('kelly')
     },
     recent: recentResult.rows.map((row) => ({
       participant: row.participant,
@@ -30264,13 +30357,24 @@ app.post(
       await ensureDesafioGymTable();
       const eligibilityResult = await pool.query(`
         SELECT
-          EXISTS (
-            SELECT 1 FROM public.desafio_gym_entries
-            WHERE participant = $1 AND training_date = $2::date
+          (
+            EXISTS (
+              SELECT 1 FROM public.desafio_gym_entries
+              WHERE participant = $1 AND training_date = $2::date
+            )
+            OR EXISTS (
+              SELECT 1 FROM public.desafio_gym_bonus_events
+              WHERE participant = $1
+                AND event_type = 'earned'
+                AND source_training_date = $2::date
+            )
           ) AS marked_today,
           (
-            SELECT COUNT(*)::integer FROM public.desafio_gym_entries
-            WHERE participant = $1 AND week_start = $3::date
+            (SELECT COUNT(*)::integer FROM public.desafio_gym_entries
+             WHERE participant = $1 AND week_start = $3::date)
+            +
+            (SELECT COUNT(*)::integer FROM public.desafio_gym_bonus_events
+             WHERE participant = $1 AND event_type = 'spent' AND target_week_start = $3::date)
           ) AS week_points
       `, [participant, today, weekStart]);
       const eligibility = eligibilityResult.rows[0] || {};
@@ -30278,10 +30382,7 @@ app.post(
         res.status(409).json({ success: false, message: 'O ponto de hoje já foi marcado.' });
         return;
       }
-      if (Number(eligibility.week_points) >= 5) {
-        res.status(409).json({ success: false, message: 'O limite de 5 pontos desta semana já foi atingido.' });
-        return;
-      }
+      const isBonusTraining = Number(eligibility.week_points) >= 5;
 
       let verificationContentType = 'application/x-no-photo';
       let verificationHash = sha256HexBuffer(Buffer.from(`no-photo:${participant}:${today}`));
@@ -30319,33 +30420,61 @@ app.post(
         verificationConfidence = verification.confidence;
         verificationReason = verification.reason;
       }
-      await pool.query(`
-        INSERT INTO public.desafio_gym_entries (
+      if (isBonusTraining) {
+        await pool.query(`
+          INSERT INTO public.desafio_gym_bonus_events (
+            participant,
+            event_type,
+            event_key,
+            source_training_date,
+            verification_object_key,
+            verification_content_type,
+            verification_sha256,
+            ai_model,
+            ai_confidence,
+            ai_reason
+          ) VALUES ($1, 'earned', $2, $3::date, $4, $5, $6, $7, $8, $9)
+        `, [
           participant,
-          training_date,
-          week_start,
-          verification_object_key,
-          verification_content_type,
-          verification_sha256,
-          ai_model,
-          ai_confidence,
-          ai_reason
-        ) VALUES ($1, $2::date, $3::date, $4, $5, $6, $7, $8, $9)
-      `, [
-        participant,
-        today,
-        weekStart,
-        storedObjectKey,
-        verificationContentType,
-        verificationHash,
-        verificationModel,
-        verificationConfidence,
-        verificationReason
-      ]);
+          `earned:${participant}:${today}`,
+          today,
+          storedObjectKey,
+          verificationContentType,
+          verificationHash,
+          verificationModel,
+          verificationConfidence,
+          verificationReason
+        ]);
+      } else {
+        await pool.query(`
+          INSERT INTO public.desafio_gym_entries (
+            participant,
+            training_date,
+            week_start,
+            verification_object_key,
+            verification_content_type,
+            verification_sha256,
+            ai_model,
+            ai_confidence,
+            ai_reason
+          ) VALUES ($1, $2::date, $3::date, $4, $5, $6, $7, $8, $9)
+        `, [
+          participant,
+          today,
+          weekStart,
+          storedObjectKey,
+          verificationContentType,
+          verificationHash,
+          verificationModel,
+          verificationConfidence,
+          verificationReason
+        ]);
+      }
 
       res.status(201).json({
         success: true,
-        message: 'Treino confirmado! +1 ponto.',
+        bonusEarned: isBonusTraining,
+        message: isBonusTraining ? 'Treino bônus confirmado! +1 bônus.' : 'Treino confirmado! +1 ponto.',
         ...(await readDesafioGymState(today))
       });
     } catch (error) {
@@ -30370,6 +30499,136 @@ app.post(
     }
   }
 );
+
+app.post('/api/desafiogym/bonus/redeem', async (req, res) => {
+  const participant = String(req.query?.participant || '').trim().toLowerCase();
+  if (!['lucas', 'kelly'].includes(participant)) {
+    res.status(400).json({ success: false, message: 'Escolha Lucas ou Kelly.' });
+    return;
+  }
+
+  let db;
+  try {
+    await ensureDesafioGymTable();
+    db = await pool.connect();
+    await db.query('BEGIN');
+    await db.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`desafio-gym-bonus:${participant}`]);
+
+    const balanceResult = await db.query(`
+      SELECT COALESCE(SUM(CASE WHEN event_type = 'earned' THEN amount ELSE -amount END), 0)::integer AS balance
+      FROM public.desafio_gym_bonus_events
+      WHERE participant = $1
+    `, [participant]);
+    if (Number(balanceResult.rows[0]?.balance || 0) < 1) {
+      await db.query('ROLLBACK');
+      res.status(409).json({ success: false, message: 'Nenhum ponto bônus disponível.' });
+      return;
+    }
+
+    const currentWeekStart = getDesafioGymWeekStart(getSaoPauloDateString());
+    const targetResult = await db.query(`
+      WITH week_totals AS (
+        SELECT week_start, SUM(points)::integer AS points
+        FROM (
+          SELECT week_start, COUNT(*)::integer AS points
+          FROM public.desafio_gym_entries
+          WHERE participant = $1 AND week_start < $2::date
+          GROUP BY week_start
+          UNION ALL
+          SELECT target_week_start AS week_start, COUNT(*)::integer AS points
+          FROM public.desafio_gym_bonus_events
+          WHERE participant = $1
+            AND event_type = 'spent'
+            AND target_week_start < $2::date
+          GROUP BY target_week_start
+        ) combined
+        GROUP BY week_start
+      )
+      SELECT week_start::text AS week_start, points
+      FROM week_totals
+      WHERE points BETWEEN 1 AND 4
+      ORDER BY week_start DESC
+      LIMIT 1
+    `, [participant, currentWeekStart]);
+    const targetWeekStart = String(targetResult.rows[0]?.week_start || '').slice(0, 10);
+    if (!targetWeekStart) {
+      await db.query('ROLLBACK');
+      res.status(409).json({ success: false, message: 'Não há semana anterior incompleta para receber o bônus.' });
+      return;
+    }
+
+    await db.query(`
+      INSERT INTO public.desafio_gym_bonus_events (
+        participant,
+        event_type,
+        event_key,
+        target_week_start,
+        ai_model,
+        ai_confidence,
+        ai_reason
+      ) VALUES ($1, 'spent', $2, $3::date, 'bonus-redemption', 100, 'Ponto bônus aplicado a uma semana incompleta.')
+    `, [participant, `spent:${participant}:${crypto.randomUUID()}`, targetWeekStart]);
+    await db.query('COMMIT');
+
+    res.status(201).json({
+      success: true,
+      message: 'Ponto bônus aplicado!',
+      targetWeekStart,
+      ...(await readDesafioGymState())
+    });
+  } catch (error) {
+    if (db) await db.query('ROLLBACK').catch(() => {});
+    console.error('Erro ao aplicar ponto bônus no Desafio Gym:', error);
+    res.status(500).json({ success: false, message: 'Não foi possível aplicar o bônus agora.' });
+  } finally {
+    db?.release();
+  }
+});
+
+app.post('/api/desafiogym/bonus/refund', async (req, res) => {
+  const participant = String(req.query?.participant || '').trim().toLowerCase();
+  if (!['lucas', 'kelly'].includes(participant)) {
+    res.status(400).json({ success: false, message: 'Escolha Lucas ou Kelly.' });
+    return;
+  }
+
+  let db;
+  try {
+    await ensureDesafioGymTable();
+    db = await pool.connect();
+    await db.query('BEGIN');
+    await db.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`desafio-gym-bonus:${participant}`]);
+    const spentResult = await db.query(`
+      SELECT id, target_week_start::text AS target_week_start
+      FROM public.desafio_gym_bonus_events
+      WHERE participant = $1 AND event_type = 'spent'
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+      FOR UPDATE
+    `, [participant]);
+    const spent = spentResult.rows[0];
+    if (!spent) {
+      await db.query('ROLLBACK');
+      res.status(409).json({ success: false, message: 'Nenhum ponto aplicado por bônus para devolver.' });
+      return;
+    }
+
+    await db.query(`DELETE FROM public.desafio_gym_bonus_events WHERE id = $1`, [spent.id]);
+    await db.query('COMMIT');
+    res.json({
+      success: true,
+      message: 'Ponto devolvido ao saldo de bônus.',
+      refundedWeekStart: String(spent.target_week_start || '').slice(0, 10),
+      ...(await readDesafioGymState())
+    });
+  } catch (error) {
+    if (db) await db.query('ROLLBACK').catch(() => {});
+    console.error('Erro ao devolver ponto bônus no Desafio Gym:', error);
+    res.status(500).json({ success: false, message: 'Não foi possível devolver o bônus agora.' });
+  } finally {
+    db?.release();
+  }
+});
 
 app.get('/', (req, res) => {
   res.redirect(302, '/entrar');

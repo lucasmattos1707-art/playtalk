@@ -7,7 +7,7 @@
   <meta name="description" content="Placar semanal do desafio de academia entre Kelly e Lucas.">
   <title>Kelly x Lucas — Desafio Gym</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23081224'/%3E%3Cpath d='M13 27h7v10h-7zm31 0h7v10h-7zM20 23h6v18h-6zm18 0h6v18h-6zM26 29h12v6H26z' fill='%23fff'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/desafiogym/styles.css?v=20261005-1">
+  <link rel="stylesheet" href="/desafiogym/styles.css?v=20261013-1">
 </head>
 <body>
   <div class="ambient ambient-blue" aria-hidden="true"></div>
@@ -38,10 +38,13 @@
         <article class="fighter fighter-kelly">
           <div class="photo-ring">
             <img src="/desafiogym/kelly.png" alt="Kelly" width="116" height="116">
-            <span class="status-dot" title="Kelly"></span>
+            <button class="bonus-orb" id="kelly-bonus" data-person="kelly" type="button" aria-label="Kelly tem 0 pontos bônus">
+              <span id="kelly-bonus-count">0</span>
+              <small>BÔNUS</small>
+            </button>
           </div>
           <div class="fighter-name">Kelly</div>
-          <div class="score-line"><strong id="kelly-score">0</strong></div>
+          <div class="score-line"><strong id="kelly-score" data-score-target="kelly" aria-label="Pontos da Kelly">0</strong></div>
         </article>
 
         <div class="versus" aria-label="versus">X</div>
@@ -49,10 +52,13 @@
         <article class="fighter fighter-lucas">
           <div class="photo-ring">
             <img src="/desafiogym/lucas.jpeg" alt="Lucas" width="116" height="116">
-            <span class="status-dot" title="Lucas"></span>
+            <button class="bonus-orb" id="lucas-bonus" data-person="lucas" type="button" aria-label="Lucas tem 0 pontos bônus">
+              <span id="lucas-bonus-count">0</span>
+              <small>BÔNUS</small>
+            </button>
           </div>
           <div class="fighter-name">Lucas</div>
-          <div class="score-line"><strong id="lucas-score">0</strong></div>
+          <div class="score-line"><strong id="lucas-score" data-score-target="lucas" aria-label="Pontos do Lucas">0</strong></div>
         </article>
       </div>
 
@@ -103,6 +109,8 @@
     </div>
   </main>
 
+  <div class="bonus-toast" id="bonus-toast" role="status" aria-live="polite"></div>
+
   <dialog class="camera-dialog" id="camera-dialog">
     <div class="dialog-shell">
       <button class="dialog-close" id="dialog-close" type="button" aria-label="Fechar">×</button>
@@ -142,6 +150,6 @@
     </div>
   </dialog>
 
-  <script src="/desafiogym/app.js?v=20261005-1" defer></script>
+  <script src="/desafiogym/app.js?v=20261013-1" defer></script>
 </body>
 </html>

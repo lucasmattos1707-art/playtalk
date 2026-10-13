@@ -18,6 +18,10 @@
   let holdTimer = null;
   let holdActivated = false;
   let ignorePointerClick = false;
+  let bonusDrag = null;
+  let refundBusy = false;
+  const bonusSound = new Audio('/desafiogym/bonus-success.mp3');
+  bonusSound.preload = 'auto';
 
   const people = {
     kelly: { name: 'Kelly', avatar: '/desafiogym/kelly.png', color: 'orange' },
@@ -57,7 +61,42 @@
 
   function canRegister(participant) {
     if (!state || state.markedToday?.[participant]) return false;
-    return Number(state.week?.[participant] || 0) < 5;
+    return true;
+  }
+
+  function orderFighters(kelly, lucas) {
+    const fighters = $('.fighters');
+    const versus = $('.versus');
+    const kellyFighter = $('.fighter-kelly');
+    const lucasFighter = $('.fighter-lucas');
+    const scoreBar = $('.score-bar');
+    const kellyBar = $('#kelly-bar');
+    const lucasBar = $('#lucas-bar');
+    const lucasLeads = lucas > kelly;
+    fighters.append(lucasLeads ? lucasFighter : kellyFighter, versus, lucasLeads ? kellyFighter : lucasFighter);
+    scoreBar.append(lucasLeads ? lucasBar : kellyBar, lucasLeads ? kellyBar : lucasBar);
+  }
+
+  function showBonusToast(message, isError = false) {
+    const toast = $('#bonus-toast');
+    toast.textContent = message;
+    toast.classList.toggle('error', isError);
+    toast.classList.add('show');
+    window.clearTimeout(showBonusToast.timer);
+    showBonusToast.timer = window.setTimeout(() => toast.classList.remove('show'), 2600);
+  }
+
+  function playBonusSound() {
+    bonusSound.currentTime = 0;
+    bonusSound.play().catch(() => {});
+  }
+
+  function animateScore(participant) {
+    const score = $(`#${participant}-score`);
+    score.classList.remove('bonus-pop');
+    void score.offsetWidth;
+    score.classList.add('bonus-pop');
+    window.setTimeout(() => score.classList.remove('bonus-pop'), 720);
   }
 
   function renderState(nextState) {
@@ -67,6 +106,7 @@
     const total = kelly + lucas;
     const kellyPercent = total ? (kelly / total) * 100 : 50;
     const lucasPercent = 100 - kellyPercent;
+    orderFighters(kelly, lucas);
     $('#kelly-score').textContent = kelly;
     $('#lucas-score').textContent = lucas;
     $('#kelly-bar').style.width = `${kellyPercent}%`;
@@ -75,18 +115,27 @@
 
     ['kelly', 'lucas'].forEach((person) => {
       const points = Math.min(5, Number(state.week?.[person] || 0));
+      const bonus = Math.max(0, Number(state.bonus?.[person] || 0));
       $(`#${person}-week-text`).textContent = `${points} de 5 treino${points === 1 ? '' : 's'}`;
       renderDots($(`#${person}-dots`), points, people[person].color);
+      $(`#${person}-bonus-count`).textContent = bonus;
+      const orb = $(`#${person}-bonus`);
+      orb.classList.toggle('empty', bonus < 1);
+      orb.setAttribute('aria-label', `${people[person].name} tem ${bonus} ponto${bonus === 1 ? '' : 's'} bônus`);
     });
 
     const kellySent = Boolean(state.markedToday?.kelly);
     const nobodyCanRegister = !canRegister('kelly') && !canRegister('lucas');
+    const kellyBonusMode = Boolean(state.bonusMode?.kelly);
     openButton.disabled = Boolean(nobodyCanRegister);
-    $('#submit-label').textContent = kellySent ? 'Treino enviado' : 'Enviar treino';
-    openButton.querySelector('small').textContent = kellySent ? 'hoje' : '+1 ponto';
+    openButton.classList.toggle('bonus-mode', !kellySent && kellyBonusMode);
+    $('#submit-label').textContent = kellySent ? 'Treino enviado' : (kellyBonusMode ? 'Treino bônus' : 'Enviar treino');
+    openButton.querySelector('small').textContent = kellySent ? 'hoje' : (kellyBonusMode ? '+1 bônus' : '+1 ponto');
     $('#send-hint').textContent = kellySent
       ? 'Seu treino de hoje já entrou no placar.'
-      : 'Toque para abrir a câmera. A foto é opcional.';
+      : (kellyBonusMode
+        ? 'Você completou 5 treinos. O próximo vale um bônus.'
+        : 'Toque para abrir a câmera. A foto é opcional.');
 
     const history = $('#history-list');
     const recent = Array.isArray(state.recent) ? state.recent : [];
@@ -134,8 +183,11 @@
     statusLine.textContent = '';
     $('#selected-avatar').src = people[participant].avatar;
     $('#selected-name').textContent = people[participant].name;
-    $('#dialog-title').textContent = 'Foto de verificação';
-    $('#dialog-copy').textContent = 'Mostre os aparelhos ou pesos ao fundo e toque no botão branco.';
+    const isBonus = Boolean(state?.bonusMode?.[participant]);
+    $('#dialog-title').textContent = isBonus ? 'Treino bônus' : 'Foto de verificação';
+    $('#dialog-copy').textContent = isBonus
+      ? 'Mostre a academia e ganhe +1 bônus para completar outra semana.'
+      : 'Mostre os aparelhos ou pesos ao fundo e toque no botão branco.';
     setVisible(cameraFlow, true);
 
     try {
@@ -198,7 +250,11 @@
         dialog.close();
         return;
       }
-      showResult(true, 'Treino enviado', 'Seu ponto já entrou no placar.');
+      showResult(
+        true,
+        payload.bonusEarned ? 'Bônus conquistado!' : 'Treino enviado',
+        payload.bonusEarned ? 'Seu bônus está pronto para completar outra semana.' : 'Seu ponto já entrou no placar.'
+      );
       window.setTimeout(() => { if (dialog.open) dialog.close(); }, 1200);
     } catch (error) {
       showResult(false, blob ? 'Foto não confirmada' : 'Treino não registrado', error.message);
@@ -222,6 +278,116 @@
       return;
     }
     await sendRegistration(blob);
+  }
+
+  async function redeemBonus(participant) {
+    try {
+      const response = await fetch(`/api/desafiogym/bonus/redeem?participant=${encodeURIComponent(participant)}`, { method: 'POST' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) throw new Error(payload.message || 'Não foi possível aplicar o bônus.');
+      renderState(payload);
+      animateScore(participant);
+      playBonusSound();
+      showBonusToast(`+1 para ${people[participant].name} na semana ${formatWeek(payload.targetWeekStart)}`);
+    } catch (error) {
+      showBonusToast(error.message, true);
+    }
+  }
+
+  function updateBonusDrag(event) {
+    if (!bonusDrag || event.pointerId !== bonusDrag.pointerId) return;
+    bonusDrag.token.style.left = `${event.clientX}px`;
+    bonusDrag.token.style.top = `${event.clientY + 28}px`;
+    const rect = bonusDrag.target.getBoundingClientRect();
+    const overTarget = event.clientX >= rect.left - 12 && event.clientX <= rect.right + 12
+      && event.clientY >= rect.top - 12 && event.clientY <= rect.bottom + 12;
+    bonusDrag.overTarget = overTarget;
+    bonusDrag.target.classList.toggle('bonus-drop-ready', overTarget);
+  }
+
+  function finishBonusDrag(event, cancelled = false) {
+    if (!bonusDrag || event.pointerId !== bonusDrag.pointerId) return;
+    const { orb, token, target, participant, overTarget } = bonusDrag;
+    orb.classList.remove('dragging');
+    target.classList.remove('bonus-drop-ready');
+    token.remove();
+    bonusDrag = null;
+    if (!cancelled && overTarget) redeemBonus(participant);
+  }
+
+  function startBonusDrag(event) {
+    if (event.button !== 0) return;
+    const orb = event.currentTarget;
+    const participant = orb.dataset.person;
+    const balance = Number(state?.bonus?.[participant] || 0);
+    if (balance < 1) {
+      showBonusToast(`${people[participant].name} ainda não tem bônus disponível.`, true);
+      return;
+    }
+    event.preventDefault();
+    const token = document.createElement('span');
+    token.className = 'bonus-drag-token';
+    token.textContent = '1';
+    document.body.append(token);
+    orb.classList.add('dragging');
+    bonusDrag = {
+      participant,
+      pointerId: event.pointerId,
+      orb,
+      token,
+      target: $(`#${participant}-score`),
+      overTarget: false
+    };
+    orb.setPointerCapture?.(event.pointerId);
+    updateBonusDrag(event);
+  }
+
+  async function refundBonus(participant) {
+    if (refundBusy) return;
+    refundBusy = true;
+    try {
+      const response = await fetch(`/api/desafiogym/bonus/refund?participant=${encodeURIComponent(participant)}`, { method: 'POST' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) throw new Error(payload.message || 'Não foi possível devolver o bônus.');
+      renderState(payload);
+      animateScore(participant);
+      playBonusSound();
+      showBonusToast(`1 ponto voltou para os bônus de ${people[participant].name}.`);
+    } catch (error) {
+      showBonusToast(error.message, true);
+    } finally {
+      refundBusy = false;
+    }
+  }
+
+  function installScoreHold(participant) {
+    const score = $(`#${participant}-score`);
+    let timer = null;
+    let startX = 0;
+    let startY = 0;
+    const cancel = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = null;
+      score.classList.remove('bonus-refund-holding');
+    };
+    score.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 || refundBusy) return;
+      startX = event.clientX;
+      startY = event.clientY;
+      score.setPointerCapture?.(event.pointerId);
+      score.classList.add('bonus-refund-holding');
+      timer = window.setTimeout(() => {
+        timer = null;
+        score.classList.remove('bonus-refund-holding');
+        refundBonus(participant);
+      }, 3000);
+    });
+    score.addEventListener('pointermove', (event) => {
+      if (timer && Math.hypot(event.clientX - startX, event.clientY - startY) > 14) cancel();
+    });
+    score.addEventListener('pointerup', cancel);
+    score.addEventListener('pointercancel', cancel);
+    score.addEventListener('lostpointercapture', cancel);
   }
 
   function clearHold() {
@@ -263,6 +429,13 @@
     }
     if (event.detail === 0) beginCheckin('kelly');
   });
+
+  document.querySelectorAll('.bonus-orb').forEach((orb) => orb.addEventListener('pointerdown', startBonusDrag));
+  window.addEventListener('pointermove', updateBonusDrag);
+  window.addEventListener('pointerup', (event) => finishBonusDrag(event));
+  window.addEventListener('pointercancel', (event) => finishBonusDrag(event, true));
+  installScoreHold('kelly');
+  installScoreHold('lucas');
 
   closeButton.addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', resetDialog);
