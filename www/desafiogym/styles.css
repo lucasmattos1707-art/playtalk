@@ -104,7 +104,9 @@ button { font: inherit; }
 .week-dots { grid-column: 3 / 10; display: grid; grid-template-columns: repeat(7, minmax(14px, 1fr)); justify-items: center; align-items: center; }
 .week-dots i { position: relative; display: block; width: 18px; height: 18px; border: 1px solid #38567f; border-radius: 50%; background: #0b1d3b; }
 .week-dots i.on { border-color: #22d663; background: linear-gradient(145deg, #27ed68, #00ae47); box-shadow: 0 0 12px rgba(17,221,91,.48); }
-.week-dots i.on::after { content: ""; position: absolute; left: 5px; top: 4px; width: 5px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.week-dots i.missed { display: grid; place-items: center; border-color: #ff5368; background: linear-gradient(145deg, #ff5368, #d91c3c); box-shadow: 0 0 10px rgba(255,48,78,.3); }
+.day-check { display: block; color: #fff; font-size: .78rem; font-style: normal; font-weight: 1000; line-height: 1; }
+.day-miss { display: block; width: 11px; height: 11px; fill: none; stroke: #fff; stroke-linecap: round; stroke-width: 2.5; }
 .week-count { grid-column: 10; justify-self: end; font-size: .78rem; font-weight: 950; }
 .week-count.orange { color: #ff921e; text-shadow: 0 0 10px rgba(255,128,22,.4); }
 .week-count.blue { color: #4d9aff; text-shadow: 0 0 10px rgba(40,119,255,.45); }
@@ -177,7 +179,7 @@ button { font: inherit; }
   .weekly-row img { width: 30px; height: 30px; }
   .week-grid-header { font-size: .44rem; }
   .week-dots i { width: 17px; height: 17px; }
-  .week-dots i.on::after { left: 5px; top: 3px; }
+  .day-miss { width: 10px; height: 10px; }
   .week-count { font-size: .72rem; }
   .fighter { column-gap: 4px; }
   .photo-ring { width: 84px; height: 84px; }

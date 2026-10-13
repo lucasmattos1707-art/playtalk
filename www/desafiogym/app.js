@@ -44,6 +44,12 @@
       .format(new Date(`${dateString}T12:00:00`)).replace('.', '');
   }
 
+  function dateForWeekday(startString, index) {
+    const date = new Date(`${startString}T12:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + index);
+    return date.toISOString().slice(0, 10);
+  }
+
   function formatWeek(startString) {
     if (!startString) return '';
     const start = new Date(`${startString}T12:00:00`);
@@ -55,13 +61,15 @@
 
   function renderDots(target, activityDates, weekStart) {
     const activeDates = new Set(activityDates || []);
-    const start = new Date(`${weekStart}T12:00:00Z`);
     target.innerHTML = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(start);
-      date.setUTCDate(date.getUTCDate() + index);
+      const date = new Date(dateForWeekday(weekStart, index) + 'T12:00:00Z');
       const dateString = date.toISOString().slice(0, 10);
       const dayLabel = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', timeZone: 'UTC' }).format(date);
-      return `<i class="${activeDates.has(dateString) ? 'on' : ''}" title="${dayLabel}${activeDates.has(dateString) ? ': treino registrado' : ''}"></i>`;
+      const completed = activeDates.has(dateString);
+      const icon = completed
+        ? '<span class="day-check" aria-hidden="true">✓</span>'
+        : '<svg class="day-miss" viewBox="0 0 18 18" aria-hidden="true"><path d="m6 6 6 6m0-6-6 6"/></svg>';
+      return `<i class="${completed ? 'on' : 'missed'}" title="${dayLabel}${completed ? ': treino registrado' : ': sem treino'}">${icon}</i>`;
     }).join('');
   }
 
@@ -292,10 +300,22 @@
       showBonusToast(`${people[participant].name} ainda não tem bônus disponível.`, true);
       return;
     }
+    if (state.markedToday?.[participant]) {
+      showBonusToast(`O ponto de hoje para ${people[participant].name} já está marcado.`, true);
+      return;
+    }
+
+    const today = state.today;
+    const weekActivity = [...(state.weekActivity?.[participant] || [])];
+    if (!weekActivity.includes(today)) weekActivity.push(today);
 
     const optimisticState = {
       ...state,
       scores: { ...state.scores, [participant]: Number(state.scores?.[participant] || 0) + 1 },
+      week: { ...state.week, [participant]: Number(state.week?.[participant] || 0) + 1 },
+      weekActivity: { ...state.weekActivity, [participant]: weekActivity },
+      markedToday: { ...state.markedToday, [participant]: true },
+      todayKind: { ...state.todayKind, [participant]: 'bonus' },
       bonus: { ...state.bonus, [participant]: Number(state.bonus?.[participant] || 0) - 1 }
     };
     renderState(optimisticState);
@@ -308,7 +328,7 @@
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.success) throw new Error(payload.message || 'Não foi possível aplicar o bônus.');
       renderState(payload);
-      showBonusToast(`+1 para ${people[participant].name} na semana ${formatWeek(payload.targetWeekStart)}`);
+      showBonusToast(`+1 para ${people[participant].name} no dia ${formatDate(payload.targetTrainingDate)}`);
     } catch (error) {
       await loadState();
       showBonusToast(`${error.message} O placar foi sincronizado.`, true);
@@ -343,6 +363,10 @@
     const balance = Number(state?.bonus?.[participant] || 0);
     if (balance < 1) {
       showBonusToast(`${people[participant].name} ainda não tem bônus disponível.`, true);
+      return;
+    }
+    if (state.markedToday?.[participant]) {
+      showBonusToast(`O ponto de hoje para ${people[participant].name} já está marcado.`, true);
       return;
     }
     event.preventDefault();
