@@ -126,6 +126,7 @@
       renderDots($(`#${person}-dots`), state.weekActivity?.[person], state.weekStart);
       $(`#${person}-bonus-count`).textContent = bonus;
       const orb = $(`#${person}-bonus`);
+      orb.hidden = bonus < 1;
       orb.classList.toggle('empty', bonus < 1);
       orb.setAttribute('aria-label', `${people[person].name} tem ${bonus} ponto${bonus === 1 ? '' : 's'} bônus`);
     });
