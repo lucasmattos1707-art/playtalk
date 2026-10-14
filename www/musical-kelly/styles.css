@@ -964,6 +964,8 @@ body.englishtraining-page .lyrics-chat__row {
   margin: 0 auto;
 }
 body.englishtraining-page .lyrics-chat__row.is-right { grid-template-columns: minmax(0, min(680px, 76%)) 66px; justify-content: end; }
+body.englishtraining-page .lyrics-chat__row.is-right > .lyrics-chat__avatar { grid-column: 2; grid-row: 1; }
+body.englishtraining-page .lyrics-chat__row.is-right > .lyrics-chat__bubble { grid-column: 1; grid-row: 1; }
 body.englishtraining-page .lyrics-chat__avatar {
   display: grid;
   width: 66px;
