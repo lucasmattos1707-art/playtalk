@@ -16,6 +16,7 @@
   const LYRICS_TIMING_KEY = 'playtalk-englishtraining-lyrics-timing-v1';
   const PRONUNCIATION_SCORES_KEY = 'playtalk-englishtraining-pronunciation-v1';
   const PRONUNCIATION_ROUNDS_KEY = 'playtalk-englishtraining-rounds-v1';
+  const LYRICS_THEME_KEY = 'playtalk-englishtraining-lyrics-theme-v1';
   const LONG_PRESS_MS = 500;
   const TIMED_COMMENT_HOLD_MS = 300;
   const CONTAINER_MENU_HOLD_MS = 300;
@@ -122,6 +123,7 @@
     lyricsLines: document.getElementById('lyricsLines'),
     lyricsFocus: document.getElementById('lyricsFocus'),
     lyricsFocusMedals: document.getElementById('lyricsFocusMedals'),
+    lyricsFocusConversation: document.getElementById('lyricsFocusConversation'),
     lyricsFocusContent: document.getElementById('lyricsFocusContent'),
     lyricsFocusAvatar: document.getElementById('lyricsFocusAvatar'),
     lyricsFocusText: document.getElementById('lyricsFocusText'),
@@ -132,6 +134,10 @@
     lyricsFocusNext: document.getElementById('lyricsFocusNext'),
     lyricsEmpty: document.getElementById('lyricsEmpty'),
     lyricsBackButton: document.getElementById('lyricsBackButton'),
+    lyricsThemeButton: document.getElementById('lyricsThemeButton'),
+    lyricsThemeMenu: document.getElementById('lyricsThemeMenu'),
+    lyricsSealsProgressLabel: document.getElementById('lyricsSealsProgressLabel'),
+    lyricsSealsProgressFill: document.getElementById('lyricsSealsProgressFill'),
     lyricsEditButton: document.getElementById('lyricsEditButton'),
     lyricsLanguageToggle: document.getElementById('lyricsLanguageToggle'),
     lyricsMicrophoneButton: document.getElementById('lyricsMicrophoneButton'),
@@ -329,6 +335,26 @@
     return `${state.viewerUserId || 'guest'}:${cardId}:${language}`;
   }
 
+  function applyLyricsTheme(theme = null) {
+    if (APP_SLUG !== 'englishtraining' || !elements.lyricsScreen) return;
+    let selected = theme;
+    if (!selected) {
+      try { selected = localStorage.getItem(LYRICS_THEME_KEY); } catch (_error) {}
+    }
+    selected = selected === 'azul' ? 'azul' : 'preto';
+    elements.lyricsScreen.classList.toggle('is-theme-azul', selected === 'azul');
+    elements.lyricsThemeMenu?.querySelectorAll('[data-lyrics-theme]').forEach((item) => {
+      item.setAttribute('aria-checked', String(item.dataset.lyricsTheme === selected));
+    });
+    try { localStorage.setItem(LYRICS_THEME_KEY, selected); } catch (_error) {}
+  }
+
+  function closeLyricsThemeMenu() {
+    if (!elements.lyricsThemeMenu || !elements.lyricsThemeButton) return;
+    elements.lyricsThemeMenu.hidden = true;
+    elements.lyricsThemeButton.setAttribute('aria-expanded', 'false');
+  }
+
   function readPronunciationRounds() {
     try {
       const stored = JSON.parse(localStorage.getItem(PRONUNCIATION_ROUNDS_KEY) || '{}');
@@ -374,7 +400,7 @@
     const lines = displayedLyricsLines(card);
     const counts = { white: 0, platina: 0, ouro: 0, diamante: 0 };
     lines.forEach((line) => {
-      const kind = pronunciationSealKind(round?.scores?.[line.id]);
+      const kind = pronunciationSealKind(pronunciationScoreFor(card?.id, line.id) ?? round?.scores?.[line.id]);
       if (kind) counts[kind] += 1;
     });
     const scored = Object.values(counts).reduce((sum, count) => sum + count, 0);
@@ -397,6 +423,13 @@
       elements.lyricsFocusMedals.appendChild(item);
     });
     elements.lyricsFocusMedals.classList.toggle('is-complete', Boolean(round?.completed));
+    const total = lines.length;
+    const progressPercent = total ? Math.round((scored / total) * 100) : 0;
+    if (elements.lyricsSealsProgressLabel) {
+      elements.lyricsSealsProgressLabel.textContent = `Selos ${scored}/${total}`;
+      elements.lyricsSealsProgressLabel.parentElement?.setAttribute('aria-label', `${scored} selos de ${total} trechos`);
+    }
+    if (elements.lyricsSealsProgressFill) elements.lyricsSealsProgressFill.style.width = `${progressPercent}%`;
   }
 
   async function submitPronunciationRound(round) {
@@ -511,6 +544,7 @@
     elements.lyricsFocus.hidden = state.lyricsViewMode !== 'focus' || !line;
     elements.lyricsLines.hidden = state.lyricsViewMode === 'focus' || !lines.length;
     if (!line) return;
+    renderFocusedConversation(card, lines, animate);
     const sourceLine = characterSourceLine(card, line);
     const character = characterForLyricLine(sourceLine);
     elements.lyricsFocusAvatar.replaceChildren();
@@ -545,6 +579,93 @@
       elements.lyricsFocusContent.classList.add('is-changing');
     }
     updateLyricsMicrophone();
+  }
+
+  function renderFocusedConversation(card, lines, animate = false) {
+    const conversation = elements.lyricsFocusConversation;
+    if (!conversation) return;
+    const fragment = document.createDocumentFragment();
+    lines.forEach((line, index) => {
+      const sourceLine = characterSourceLine(card, line);
+      const character = characterForLyricLine(sourceLine);
+      const row = document.createElement('article');
+      row.className = `lyrics-chat__row${index % 2 ? ' is-right' : ''}${index === state.lyricsFocusedIndex ? ' is-current' : ''}`;
+      const speakerKey = String(character?.name || sourceLine?.speaker || '').toLocaleLowerCase('en');
+      const speakerColors = { chandler: '#ff8b38', joey: '#08b9ff', rachel: '#ed4fc1', monica: '#bb68e8' };
+      row.style.setProperty('--chat-accent', speakerColors[speakerKey] || ['#ff8b38', '#08b9ff', '#ed4fc1', '#bb68e8'][index % 4]);
+      row.dataset.lineId = line.id;
+      const avatar = document.createElement('span');
+      avatar.className = 'lyrics-chat__avatar';
+      avatar.setAttribute('aria-hidden', 'true');
+      if (character?.imageUrl) {
+        const image = document.createElement('img');
+        image.src = absoluteUrl(String(character.imageUrl));
+        image.alt = '';
+        image.loading = 'lazy';
+        image.decoding = 'async';
+        avatar.appendChild(image);
+      } else {
+        avatar.classList.add('is-empty');
+        const initial = document.createElement('span');
+        initial.textContent = String(character?.name || sourceLine?.speaker || '?').charAt(0).toLocaleUpperCase('pt-BR');
+        avatar.appendChild(initial);
+      }
+      const bubble = document.createElement('div');
+      bubble.className = 'lyrics-chat__bubble';
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.className = 'lyrics-chat__copy';
+      copy.setAttribute('aria-label', `Selecionar fala ${index + 1}`);
+      const speaker = String(character?.name || sourceLine?.speaker || '').trim();
+      if (speaker) {
+        const name = document.createElement('span');
+        name.className = 'lyrics-chat__speaker';
+        name.textContent = speaker;
+        copy.appendChild(name);
+      }
+      const englishText = line?.language === 'pt' ? sourceLine?.text : line?.text;
+      const portugueseText = line?.language === 'pt' ? line?.text : (line?.textPt || sourceLine?.textPt);
+      const primary = document.createElement('span');
+      primary.className = 'lyrics-chat__primary';
+      primary.textContent = String((state.lyricsLanguage === 'pt' ? portugueseText : englishText) || line?.text || '');
+      copy.appendChild(primary);
+      const translated = state.lyricsLanguage === 'pt' ? englishText : portugueseText;
+      if (String(translated || '').trim()) {
+        const secondary = document.createElement('span');
+        secondary.className = 'lyrics-chat__secondary';
+        secondary.textContent = String(translated);
+        copy.appendChild(secondary);
+      }
+      const score = pronunciationScoreFor(card.id, line.id);
+      const sealKind = pronunciationSealKind(score);
+      if (sealKind) {
+        const seal = document.createElement('img');
+        seal.className = 'lyrics-chat__seal';
+        seal.src = absoluteUrl(`/medalhas/${sealKind}.png`);
+        seal.alt = `Selo ${sealKind}`;
+        copy.appendChild(seal);
+      }
+      const play = document.createElement('button');
+      play.type = 'button';
+      play.className = 'lyrics-chat__play';
+      play.setAttribute('aria-label', `Reproduzir fala ${index + 1}`);
+      play.title = 'Reproduzir este trecho';
+      play.disabled = card.lyrics?.mode !== 'timesync' || !card.audio
+        || !Number.isFinite(Number(line.start)) || !Number.isFinite(Number(line.end));
+      play.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l4 3V7l-4 3H4Z"/><path d="M15 9a4 4 0 0 1 0 6m2-8a7 7 0 0 1 0 10"/></svg>';
+      copy.addEventListener('click', () => selectFocusedLyric(index));
+      play.addEventListener('click', (event) => {
+        event.stopPropagation();
+        if (index !== state.lyricsFocusedIndex) selectFocusedLyric(index);
+        playFocusedLyric().catch((error) => showToast(error.message, true));
+      });
+      bubble.append(copy, play);
+      row.append(avatar, bubble);
+      fragment.appendChild(row);
+    });
+    conversation.replaceChildren(fragment);
+    const current = conversation.querySelector('.lyrics-chat__row.is-current');
+    if (current) current.scrollIntoView({ block: animate ? 'nearest' : 'start', behavior: animate ? 'smooth' : 'auto' });
   }
 
   function stopFocusedPlayback() {
@@ -2190,6 +2311,7 @@
     cancelPovPlayback({ pause: true });
     const current = state.current;
     elements.lyricsScreen.hidden = true;
+    closeLyricsThemeMenu();
     elements.lyricsAdminPanel.hidden = true;
     elements.characterMenu.hidden = true;
     closeTimedCommentPanel();
@@ -2223,7 +2345,9 @@
     const playableIndex = playableCards.findIndex((entry) => entry.id === card.id);
     const trackNumber = playableIndex >= 0 ? playableIndex + 1 : 1;
     const trackTotal = Math.max(1, playableCards.length);
-    elements.lyricsScreenTitle.textContent = `Faixa ${trackNumber} de ${trackTotal}`;
+    elements.lyricsScreenTitle.textContent = APP_SLUG === 'englishtraining'
+      ? (String(card.title || '').trim() || 'Episódio')
+      : `Faixa ${trackNumber} de ${trackTotal}`;
     setCardBackground(elements.lyricsTrackLabelBackground, card);
     elements.lyricsTrackLabel.classList.toggle('has-image', cardHasImage(card));
     elements.lyricsTrackLabelTitle.textContent = cardHasImage(card) ? '' : card.title;
@@ -2234,6 +2358,7 @@
     elements.lyricsEditButton.hidden = !state.canEdit;
     const showLanguageToggle = APP_SLUG === 'englishtraining';
     elements.lyricsScreen.classList.toggle('is-focus-view', showLanguageToggle && state.lyricsViewMode === 'focus');
+    applyLyricsTheme();
     const translatingPortuguese = state.lyricsTranslationBusyCardId === card.id;
     elements.lyricsLanguageToggle.hidden = !showLanguageToggle;
     elements.lyricsTimingButton.hidden = !showLanguageToggle;
@@ -5513,6 +5638,30 @@
       state.downloadPromptCardId = '';
     });
     elements.lyricsBackButton.addEventListener('click', closeLyrics);
+    elements.lyricsThemeButton?.addEventListener('click', () => {
+      const opening = elements.lyricsThemeMenu.hidden;
+      elements.lyricsThemeMenu.hidden = !opening;
+      elements.lyricsThemeButton.setAttribute('aria-expanded', String(opening));
+      if (opening) elements.lyricsThemeMenu.querySelector('[aria-checked="true"]')?.focus();
+    });
+    elements.lyricsThemeMenu?.addEventListener('click', (event) => {
+      const item = event.target.closest('[data-lyrics-theme]');
+      if (!item) return;
+      applyLyricsTheme(item.dataset.lyricsTheme);
+      closeLyricsThemeMenu();
+      elements.lyricsThemeButton?.focus();
+    });
+    document.addEventListener('click', (event) => {
+      if (!elements.lyricsThemeMenu?.hidden
+        && !elements.lyricsThemeMenu.contains(event.target)
+        && !elements.lyricsThemeButton?.contains(event.target)) closeLyricsThemeMenu();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !elements.lyricsThemeMenu?.hidden) {
+        closeLyricsThemeMenu();
+        elements.lyricsThemeButton?.focus();
+      }
+    });
     elements.lyricsEditButton.addEventListener('click', openLyricsEditor);
     elements.lyricsCloseEditor.addEventListener('click', () => {
       elements.lyricsAdminPanel.hidden = true;
