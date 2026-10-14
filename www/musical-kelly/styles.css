@@ -5249,6 +5249,110 @@ body.englishtraining-page .lyrics-screen.is-focus-view:not(.is-theme-azul) {
   background: #030405;
 }
 
+body.englishtraining-page .track-card {
+  min-height: 96px;
+  aspect-ratio: auto;
+  border: 1px solid rgba(68, 204, 235, .38);
+  border-radius: 17px;
+  background: linear-gradient(112deg, #071321, #030811 74%);
+  box-shadow: 0 9px 26px rgba(0, 0, 0, .22);
+}
+body.englishtraining-page .track-card:nth-child(4n + 1) { border-color: rgba(31, 219, 175, .48); }
+body.englishtraining-page .track-card:nth-child(4n + 2) { border-color: rgba(50, 174, 255, .42); }
+body.englishtraining-page .track-card:nth-child(4n + 3) { border-color: rgba(155, 99, 255, .42); }
+body.englishtraining-page .track-card:nth-child(4n) { border-color: rgba(65, 116, 255, .42); }
+body.englishtraining-page .track-card::after { border-radius: inherit; }
+body.englishtraining-page .track-card .track-background,
+body.englishtraining-page .track-card .track-shade { display: none; }
+body.englishtraining-page .track-card .track-title,
+body.englishtraining-page .track-card.has-image .track-title,
+body.englishtraining-page .track-card.is-playing .track-title {
+  top: 14px;
+  right: 74px;
+  left: 16px;
+  display: block;
+  overflow: hidden;
+  margin: 0;
+  transform: none;
+  color: #f7f9fc;
+  font: 700 clamp(.92rem, 3.5vw, 1.08rem)/1.2 system-ui, sans-serif;
+  letter-spacing: -.015em;
+  text-overflow: ellipsis;
+  text-shadow: none;
+  white-space: nowrap;
+}
+body.englishtraining-page .track-card .track-title-flourish { display: none; }
+body.englishtraining-page .englishtraining-track-summary { display: contents; }
+body.englishtraining-page .englishtraining-track-pronunciation {
+  position: absolute;
+  top: 40px;
+  left: 16px;
+  margin: 0;
+  color: #b6c7db;
+  font: 500 .75rem/1 system-ui, sans-serif;
+}
+body.englishtraining-page .englishtraining-track-pronunciation strong { color: #e9f1fc; font-weight: 700; }
+body.englishtraining-page .englishtraining-track-meta {
+  position: absolute;
+  bottom: 13px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #a9bfd3;
+  font: 500 .68rem/1 system-ui, sans-serif;
+}
+body.englishtraining-page .englishtraining-track-meta svg { width: 13px; height: 13px; fill: #20c4e8; }
+body.englishtraining-page .englishtraining-track-progress {
+  position: absolute;
+  right: 72px;
+  bottom: 14px;
+  display: grid;
+  grid-template-columns: minmax(35px, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  width: min(30%, 126px);
+  color: #e7edf6;
+  font: 650 .68rem/1 system-ui, sans-serif;
+}
+body.englishtraining-page .englishtraining-track-progress__bar {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(84, 119, 151, .28);
+}
+body.englishtraining-page .englishtraining-track-progress__bar > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #168ff4, #13ddb0);
+  transition: width 220ms ease;
+}
+body.englishtraining-page .track-card:nth-child(4n + 3) .englishtraining-track-progress__bar > span { background: linear-gradient(90deg, #8837f1, #bd44e8); }
+body.englishtraining-page .track-center-controls,
+body.englishtraining-page .track-card .lyrics-button,
+body.englishtraining-page .track-card .comment-button,
+body.englishtraining-page .track-card .download-button { display: none !important; }
+
+body.englishtraining-page .lyrics-focus__medals,
+body.englishtraining-page .lyrics-focus__medals[hidden],
+body.englishtraining-page .lyrics-chat__seal { display: none !important; }
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions .lyrics-microphone-button {
+  display: grid;
+  visibility: visible;
+  opacity: 1;
+  grid-column: auto;
+}
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions .lyrics-microphone-icon { display: block; }
+
+@media (max-width: 560px) {
+  body.englishtraining-page .track-card { min-height: 94px; }
+  body.englishtraining-page .englishtraining-track-progress { right: 66px; width: min(29%, 108px); gap: 6px; }
+  body.englishtraining-page .englishtraining-track-meta { gap: 5px; font-size: .63rem; }
+}
+
 /* EnglishTraining focus footer: five compact controls and a seal-only progress bar. */
 body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-track-heading {
   grid-column: 1 / -1;
@@ -5286,6 +5390,9 @@ body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions {
 body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions > button { grid-column: auto; justify-self: center; }
 body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions button[hidden] { display: none; }
 body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions .lyrics-microphone-button {
+  display: grid;
+  visibility: visible;
+  opacity: 1;
   width: 42px;
   height: 42px;
   padding: 8px;

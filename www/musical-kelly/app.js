@@ -494,6 +494,7 @@
       });
     });
     savePronunciationScores();
+    render();
     if (state.lyricsCardId && !elements.lyricsScreen.hidden) renderLyricsScreen();
   }
 
@@ -900,6 +901,9 @@
       renderPronunciationBadge(elements.lyricsFocusScore, score, false, false, true);
     }
     recordPronunciationRoundScore(cardId, line, score, language);
+    const card = getCard(cardId);
+    const cardNode = elements.trackList.querySelector(`[data-card-id="${CSS.escape(String(cardId))}"]`);
+    if (card && cardNode) renderEnglishTrainingCardSummary(cardNode, card, cardAudioDuration(card));
     if (state.lyricsCardId === cardId && state.lyricsViewMode === 'focus') {
       const row = [...(elements.lyricsFocusConversation?.querySelectorAll('.lyrics-chat__row') || [])]
         .find((entry) => entry.dataset.lineId === String(line.id));
@@ -1692,9 +1696,52 @@
   }
 
   function cardPublicLabel(card) {
+    if (APP_SLUG === 'englishtraining') return String(card?.title || 'Episódio');
     if (!cardHasImage(card)) return card?.title || 'Faixa';
     const index = state.project.cards.findIndex((entry) => entry.id === card?.id);
     return `Faixa ${index >= 0 ? index + 1 : 1}`;
+  }
+
+  function pronunciationSummaryForCard(card) {
+    const lines = Array.isArray(card?.lyrics?.lines) ? card.lyrics.lines : [];
+    const entries = pronunciationState.scores?.[card?.id] || {};
+    const scoredValues = [];
+    let scoredLines = 0;
+    lines.forEach((line) => {
+      const english = entries[`en:${line.id}`] || entries[line.id];
+      const portuguese = entries[`pt:${line.id}`];
+      const lineValues = [english, portuguese]
+        .map((entry) => Number(entry?.score))
+        .filter((score) => Number.isFinite(score) && score >= 0 && score <= 100);
+      if (lineValues.length) scoredLines += 1;
+      scoredValues.push(...lineValues);
+    });
+    return {
+      average: scoredValues.length
+        ? Math.round(scoredValues.reduce((sum, score) => sum + score, 0) / scoredValues.length)
+        : null,
+      progress: lines.length ? Math.round((scoredLines / lines.length) * 100) : 0,
+      scoredLines,
+      totalLines: lines.length
+    };
+  }
+
+  function renderEnglishTrainingCardSummary(node, card, audioDuration = 0) {
+    if (APP_SLUG !== 'englishtraining') return;
+    const summary = pronunciationSummaryForCard(card);
+    const average = node.querySelector('.track-pronunciation-average');
+    const progressLabel = node.querySelector('.track-progress-label');
+    const progressFill = node.querySelector('.englishtraining-track-progress__bar > span');
+    const progress = node.querySelector('.englishtraining-track-progress');
+    const practiceTime = node.querySelector('.track-practice-time');
+    if (average) average.textContent = summary.average == null ? '—' : `${summary.average}%`;
+    if (progressLabel) progressLabel.textContent = `${summary.progress}%`;
+    if (progressFill) progressFill.style.width = `${summary.progress}%`;
+    if (progress) progress.setAttribute('aria-label', `Progresso: ${summary.scoredLines} de ${summary.totalLines} trechos avaliados`);
+    if (practiceTime) {
+      const estimateMinutes = audioDuration > 0 ? Math.max(1, Math.round(audioDuration / 30)) : 0;
+      practiceTime.textContent = estimateMinutes ? `~${estimateMinutes} min` : '— min';
+    }
   }
 
   function setCardBackground(element, card) {
@@ -1826,7 +1873,7 @@
       node.classList.toggle('is-color-full', isPlaying && state.colorMode === 'full');
       node.classList.toggle('is-fading-out', isFadingOut);
       node.classList.toggle('is-fading-in', isFadingIn);
-      node.classList.toggle('has-image', cardHasImage(card));
+      node.classList.toggle('has-image', APP_SLUG !== 'englishtraining' && cardHasImage(card));
       const isUnread = !state.canEdit && state.unreadCardIds.has(card.id);
       node.classList.toggle('has-new-audio', isUnread);
       if (isFadingOut || isFadingIn) {
@@ -1835,11 +1882,14 @@
       const publicLabel = cardPublicLabel(card);
       node.setAttribute('aria-label', `${publicLabel}. ${APP_SLUG === 'englishtraining'
         ? 'Toque para abrir as letras.' : (card.audio ? 'Toque para reproduzir.' : 'Sem música.')}`);
-      setCardBackground(node.querySelector('.track-background'), card);
-      node.querySelector('.track-title-text').textContent = cardHasImage(card) ? '' : card.title;
+      if (APP_SLUG !== 'englishtraining') setCardBackground(node.querySelector('.track-background'), card);
+      node.querySelector('.track-title-text').textContent = APP_SLUG === 'englishtraining' || !cardHasImage(card)
+        ? card.title : '';
 
       const durationLabel = node.querySelector('.track-duration');
-      const knownDuration = card.audio ? cardAudioDuration(card) : 0;
+      const hasAudioTracks = cardAudioTracks(card).length > 0;
+      const knownDuration = hasAudioTracks ? cardAudioDuration(card) : 0;
+      renderEnglishTrainingCardSummary(node, card, knownDuration);
       durationLabel.textContent = isPlaying
         ? formatDuration(currentPosition(state.current))
         : (knownDuration ? formatDuration(knownDuration) : '--');
@@ -1851,11 +1901,13 @@
         event.stopPropagation();
         seekCardRelative(card.id, 5);
       });
-      if (card.audio && !knownDuration) {
+      if (hasAudioTracks && !knownDuration) {
         loadCardDuration(card).then((duration) => {
-          const currentLabel = elements.trackList.querySelector(`[data-card-id="${CSS.escape(card.id)}"] .track-duration`);
+          const currentCard = elements.trackList.querySelector(`[data-card-id="${CSS.escape(card.id)}"]`);
+          const currentLabel = currentCard?.querySelector('.track-duration');
           const isCurrent = state.current?.cardId === card.id && !state.current.paused;
           if (currentLabel && duration && !isCurrent) currentLabel.textContent = formatDuration(duration);
+          if (currentCard && duration) renderEnglishTrainingCardSummary(currentCard, card, duration);
         });
       }
 
