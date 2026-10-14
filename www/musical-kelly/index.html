@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#07110d">
+  <meta name="theme-color" content="#030405">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=53">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=55">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -85,7 +85,7 @@
           <span class="track-practice-time">— min</span>
         </div>
         <div class="englishtraining-track-progress" aria-label="Trechos avaliados">
-          <span class="englishtraining-track-progress__bar" aria-hidden="true"><span></span></span>
+          <span class="englishtraining-track-progress__ring" aria-hidden="true"></span>
           <strong class="track-progress-label">0%</strong>
         </div>
       </div>
@@ -275,15 +275,23 @@
         </div>
       </div>
       <div class="lyrics-header-actions">
-        <button class="lyrics-theme-button" id="lyricsThemeButton" type="button" aria-label="Opções de tema" aria-haspopup="menu" aria-expanded="false" title="Tema">
+        <button class="lyrics-theme-button" id="lyricsThemeButton" type="button" aria-label="Opções de estudo" aria-haspopup="menu" aria-expanded="false" title="Opções de estudo">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
         </button>
-        <div class="lyrics-theme-menu" id="lyricsThemeMenu" role="menu" aria-label="Tema das legendas" hidden>
+        <div class="lyrics-theme-menu" id="lyricsThemeMenu" role="menu" aria-label="Opções de estudo" hidden>
           <button type="button" role="menuitemradio" aria-checked="false" data-lyrics-theme="azul">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4m0-12.8L17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="4"/></svg><span>Tema Azul</span><svg class="lyrics-theme-menu__check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
           </button>
           <button type="button" role="menuitemradio" aria-checked="true" data-lyrics-theme="preto">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.1A8.5 8.5 0 0 1 9.9 3.5 8.5 8.5 0 1 0 20.5 14.1Z"/></svg><span>Preto</span><svg class="lyrics-theme-menu__check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+          </button>
+          <div class="lyrics-theme-menu__speed" role="none">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17a9 9 0 1 1 16 0M12 13l4-5M6 17h12"/><circle cx="12" cy="13" r="1"/></svg>
+            <span>Velocidade</span>
+            <button type="button" role="menuitem" id="lyricsTimingMenuValue" aria-label="Velocidade do texto: 1.00. Toque para alterar.">1.00</button>
+          </div>
+          <button type="button" role="menuitemcheckbox" aria-checked="false" id="lyricsViewModeMenuItem" data-lyrics-action="toggle-view">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.2-6 9-6 9 6 9 6-3.2 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.7"/></svg><span>Imersivo</span><svg class="lyrics-theme-menu__check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
           </button>
         </div>
         <button class="lyrics-play-button lyrics-header-play-button" id="lyricsHeaderPlayButton" type="button" aria-label="Reproduzir" title="Reproduzir ou pausar" hidden>
@@ -602,6 +610,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <script src="/arquivos-codex/vendor/lamejs/lame.min.js" defer></script>
-  <script src="/musical-kelly/app.js?v=59" defer></script>
+  <script src="/musical-kelly/app.js?v=61" defer></script>
 </body>
 </html>

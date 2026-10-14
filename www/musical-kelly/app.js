@@ -138,6 +138,8 @@
     lyricsBackButton: document.getElementById('lyricsBackButton'),
     lyricsThemeButton: document.getElementById('lyricsThemeButton'),
     lyricsThemeMenu: document.getElementById('lyricsThemeMenu'),
+    lyricsTimingMenuValue: document.getElementById('lyricsTimingMenuValue'),
+    lyricsViewModeMenuItem: document.getElementById('lyricsViewModeMenuItem'),
     lyricsSealsProgressLabel: document.getElementById('lyricsSealsProgressLabel'),
     lyricsSealsProgressFill: document.getElementById('lyricsSealsProgressFill'),
     lyricsEditButton: document.getElementById('lyricsEditButton'),
@@ -351,6 +353,21 @@
     try { localStorage.setItem(LYRICS_THEME_KEY, selected); } catch (_error) {}
   }
 
+  function updateLyricsViewModeMenu() {
+    const item = elements.lyricsViewModeMenuItem;
+    if (!item) return;
+    const immersive = state.lyricsViewMode === 'immersive';
+    const label = item.querySelector('span');
+    if (label) label.textContent = immersive ? 'Modo Texto' : 'Imersivo';
+    item.setAttribute('aria-checked', String(immersive));
+  }
+
+  function toggleLyricsViewMode() {
+    if (APP_SLUG !== 'englishtraining') return;
+    state.lyricsViewMode = state.lyricsViewMode === 'immersive' ? 'focus' : 'immersive';
+    renderLyricsScreen();
+  }
+
   function closeLyricsThemeMenu() {
     if (!elements.lyricsThemeMenu || !elements.lyricsThemeButton) return;
     elements.lyricsThemeMenu.hidden = true;
@@ -510,7 +527,7 @@
 
   function currentMicrophoneLine(card) {
     const lines = displayedLyricsLines(card);
-    if (APP_SLUG === 'englishtraining' && state.lyricsViewMode === 'focus') return lines[state.lyricsFocusedIndex] || null;
+    if (APP_SLUG === 'englishtraining' && state.lyricsViewMode !== 'list') return lines[state.lyricsFocusedIndex] || null;
     if (state.povTurn?.cardId === card?.id) return lines.find((line) => line.id === state.povTurn.lineId) || null;
     if (hasSpecificPovCharacter()) return null;
     return lines.find((line) => line.id === state.lyricsMicLineId) || lines[state.lyricsActiveLineIndex] || null;
@@ -544,8 +561,8 @@
     const lines = displayedLyricsLines(card);
     state.lyricsFocusedIndex = Math.max(0, Math.min(state.lyricsFocusedIndex, Math.max(0, lines.length - 1)));
     const line = lines[state.lyricsFocusedIndex];
-    elements.lyricsFocus.hidden = state.lyricsViewMode !== 'focus' || !line;
-    elements.lyricsLines.hidden = state.lyricsViewMode === 'focus' || !lines.length;
+    elements.lyricsFocus.hidden = state.lyricsViewMode === 'list' || !line;
+    elements.lyricsLines.hidden = state.lyricsViewMode !== 'list' || !lines.length;
     if (!line) return;
     renderFocusedConversation(card, lines, animate);
     const sourceLine = characterSourceLine(card, line);
@@ -556,14 +573,15 @@
       image.src = absoluteUrl(String(character.imageUrl));
       image.alt = '';
       elements.lyricsFocusAvatar.appendChild(image);
-    } else if (character?.name || sourceLine?.speaker) {
+    } else if (state.lyricsViewMode !== 'immersive' && (character?.name || sourceLine?.speaker)) {
       const initial = document.createElement('span');
       initial.textContent = String(character?.name || sourceLine.speaker).charAt(0).toLocaleUpperCase('pt-BR');
       elements.lyricsFocusAvatar.appendChild(initial);
     } else {
       elements.lyricsFocusAvatar.classList.add('is-empty');
     }
-    elements.lyricsFocusAvatar.classList.toggle('is-empty', !character?.imageUrl && !character?.name && !sourceLine?.speaker);
+    elements.lyricsFocusAvatar.classList.toggle('is-empty', !character?.imageUrl
+      && (state.lyricsViewMode === 'immersive' || (!character?.name && !sourceLine?.speaker)));
     elements.lyricsFocusText.textContent = lyricLineText(line);
     const listening = pronunciationState.activeCardId === card.id && pronunciationState.activeLineId === line.id;
     renderPronunciationBadge(elements.lyricsFocusScore, pronunciationScoreFor(card.id, line.id), listening);
@@ -636,11 +654,13 @@
       play.disabled = card.lyrics?.mode !== 'timesync' || !card.audio
         || !Number.isFinite(Number(line.start)) || !Number.isFinite(Number(line.end));
       play.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l4 3V7l-4 3H4Z"/><path d="M15 9a4 4 0 0 1 0 6m2-8a7 7 0 0 1 0 10"/></svg>';
-      copy.addEventListener('click', () => selectFocusedLyric(index));
+      copy.addEventListener('click', () => {
+        selectFocusedLyric(index)
+          .catch((error) => showToast(error.message || 'Não foi possível mudar para esta fala.', true));
+      });
       play.addEventListener('click', (event) => {
         event.stopPropagation();
-        if (index !== state.lyricsFocusedIndex) selectFocusedLyric(index);
-        playFocusedLyric().catch((error) => showToast(error.message, true));
+        playFocusedTextLine(index).catch((error) => showToast(error.message, true));
       });
       bubble.append(copy, play);
       if (avatar) row.append(avatar);
@@ -649,7 +669,9 @@
     });
     conversation.replaceChildren(fragment);
     const current = conversation.querySelector('.lyrics-chat__row.is-current');
-    if (current) current.scrollIntoView({ block: animate ? 'nearest' : 'start', behavior: animate ? 'smooth' : 'auto' });
+    if (current && state.lyricsViewMode === 'focus') {
+      current.scrollIntoView({ block: animate ? 'center' : 'start', behavior: animate ? 'smooth' : 'auto' });
+    }
   }
 
   function stopFocusedPlayback() {
@@ -677,18 +699,28 @@
     elements.lyricsFocusRecord?.setAttribute('aria-label', 'Gravar e ouvir minha voz');
   }
 
-  function selectFocusedLyric(index) {
+  async function selectFocusedLyric(index, { continuePlayback = true } = {}) {
     const card = getCard(state.lyricsCardId);
     const lines = displayedLyricsLines(card);
     if (!lines.length) return;
     const next = Math.max(0, Math.min(lines.length - 1, index));
     if (next === state.lyricsFocusedIndex) return;
     cancelPronunciationAttempt();
-    stopFocusedPlayback();
+    const keepPlaying = continuePlayback && state.current?.cardId === card.id && !state.current.paused;
+    if (keepPlaying) {
+      state.focusPlaybackToken += 1;
+      state.focusPlaybackLineId = 'continuous';
+    } else {
+      stopFocusedPlayback();
+    }
     cancelSelfRecording();
     state.lyricsFocusedIndex = next;
     state.lyricsMicLineId = lines[next].id;
     renderFocusedLyric(card, true);
+    if (keepPlaying) {
+      const started = await ensureLyricsCardAt(card, Number(lines[next].start) || 0, { play: true });
+      if (started) updateLyricsPlayer();
+    }
   }
 
   async function playFocusedLyric() {
@@ -718,6 +750,26 @@
     }
   }
 
+  async function playFocusedTextLine(index) {
+    const card = getCard(state.lyricsCardId);
+    const lines = displayedLyricsLines(card);
+    const next = Math.max(0, Math.min(lines.length - 1, index));
+    const line = lines[next];
+    if (!card || !line || card.lyrics?.mode !== 'timesync' || !card.audio
+      || !Number.isFinite(Number(line.start)) || !Number.isFinite(Number(line.end))) return;
+    if (next !== state.lyricsFocusedIndex) await selectFocusedLyric(next, { continuePlayback: false });
+    const token = ++state.focusPlaybackToken;
+    state.focusPlaybackLineId = `line:${line.id}`;
+    try {
+      await replayOriginalLyricLine(card, line, false, () => token === state.focusPlaybackToken);
+    } finally {
+      if (token === state.focusPlaybackToken) {
+        state.focusPlaybackLineId = '';
+        updateLyricsPlayer();
+      }
+    }
+  }
+
   async function recordSelfForPlayback() {
     const active = state.focusRecorder;
     if (active?.recorder?.state === 'recording') {
@@ -739,7 +791,7 @@
     const cardId = state.lyricsCardId;
     const lineId = displayedLyricsLines(getCard(cardId))[state.lyricsFocusedIndex]?.id;
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    if (elements.lyricsScreen.hidden || state.lyricsViewMode !== 'focus' || state.lyricsCardId !== cardId
+    if (elements.lyricsScreen.hidden || state.lyricsViewMode === 'list' || state.lyricsCardId !== cardId
       || displayedLyricsLines(getCard(cardId))[state.lyricsFocusedIndex]?.id !== lineId) {
       stream.getTracks().forEach((track) => track.stop());
       return;
@@ -904,7 +956,7 @@
     const card = getCard(cardId);
     const cardNode = elements.trackList.querySelector(`[data-card-id="${CSS.escape(String(cardId))}"]`);
     if (card && cardNode) renderEnglishTrainingCardSummary(cardNode, card, cardAudioDuration(card));
-    if (state.lyricsCardId === cardId && state.lyricsViewMode === 'focus') {
+    if (state.lyricsCardId === cardId && state.lyricsViewMode !== 'list') {
       const row = [...(elements.lyricsFocusConversation?.querySelectorAll('.lyrics-chat__row') || [])]
         .find((entry) => entry.dataset.lineId === String(line.id));
       const copy = row?.querySelector('.lyrics-chat__copy');
@@ -1248,27 +1300,30 @@
     if (APP_SLUG !== 'englishtraining') return 1;
     try {
       const rate = Number(localStorage.getItem(LYRICS_TIMING_KEY));
-      return [1, 0.5, 0.75, 1.5].includes(rate) ? rate : 1;
+      return [0.5, 0.75, 1, 1.25, 1.5].includes(rate) ? rate : 1;
     } catch (_error) { return 1; }
   }
 
   function formatLyricsTimingRate(rate) {
-    if (rate === 1) return '1x';
-    if (rate === 0.5) return '0.50x';
-    return `${rate}x`;
+    return (Number(rate) || 1).toFixed(2);
   }
 
   function updateLyricsTimingControl() {
-    if (!elements.lyricsTimingButton) return;
     const label = formatLyricsTimingRate(state.lyricsTimingRate);
-    elements.lyricsTimingButton.textContent = label;
-    elements.lyricsTimingButton.setAttribute('aria-label', `Ritmo do texto: ${label}`);
-    elements.lyricsTimingButton.title = `Ritmo do texto: ${label}. Toque para alterar.`;
+    if (elements.lyricsTimingButton) {
+      elements.lyricsTimingButton.textContent = label;
+      elements.lyricsTimingButton.setAttribute('aria-label', `Velocidade do texto: ${label}`);
+      elements.lyricsTimingButton.title = `Velocidade do texto: ${label}. Toque para alterar.`;
+    }
+    if (elements.lyricsTimingMenuValue) {
+      elements.lyricsTimingMenuValue.textContent = label;
+      elements.lyricsTimingMenuValue.setAttribute('aria-label', `Velocidade do texto: ${label}. Toque para alterar.`);
+    }
   }
 
   async function cycleLyricsTimingRate() {
     if (APP_SLUG !== 'englishtraining') return;
-    const rates = [1, 0.5, 0.75, 1.5];
+    const rates = [0.5, 0.75, 1, 1.25, 1.5];
     const index = rates.indexOf(state.lyricsTimingRate);
     state.lyricsTimingRate = rates[(index + 1) % rates.length];
     try { localStorage.setItem(LYRICS_TIMING_KEY, String(state.lyricsTimingRate)); } catch (_error) {}
@@ -1731,13 +1786,14 @@
     const summary = pronunciationSummaryForCard(card);
     const average = node.querySelector('.track-pronunciation-average');
     const progressLabel = node.querySelector('.track-progress-label');
-    const progressFill = node.querySelector('.englishtraining-track-progress__bar > span');
     const progress = node.querySelector('.englishtraining-track-progress');
     const practiceTime = node.querySelector('.track-practice-time');
     if (average) average.textContent = summary.average == null ? '—' : `${summary.average}%`;
     if (progressLabel) progressLabel.textContent = `${summary.progress}%`;
-    if (progressFill) progressFill.style.width = `${summary.progress}%`;
-    if (progress) progress.setAttribute('aria-label', `Progresso: ${summary.scoredLines} de ${summary.totalLines} trechos avaliados`);
+    if (progress) {
+      progress.style.setProperty('--progress-value', `${summary.progress}%`);
+      progress.setAttribute('aria-label', `Progresso: ${summary.scoredLines} de ${summary.totalLines} trechos avaliados`);
+    }
     if (practiceTime) {
       const estimateMinutes = audioDuration > 0 ? Math.max(1, Math.round(audioDuration / 30)) : 0;
       practiceTime.textContent = estimateMinutes ? `~${estimateMinutes} min` : '— min';
@@ -2408,8 +2464,9 @@
       || playableIndex >= playableCards.length - 1;
     elements.lyricsEditButton.hidden = !state.canEdit;
     const showLanguageToggle = APP_SLUG === 'englishtraining';
-    const focusView = showLanguageToggle && state.lyricsViewMode === 'focus';
+    const focusView = showLanguageToggle && state.lyricsViewMode !== 'list';
     elements.lyricsScreen.classList.toggle('is-focus-view', focusView);
+    elements.lyricsScreen.classList.toggle('is-immersive', showLanguageToggle && state.lyricsViewMode === 'immersive');
     if (focusView && elements.lyricsFocusActions) {
       elements.lyricsFocusActions.insertBefore(elements.lyricsMicrophoneButton, elements.lyricsFocusNext);
       elements.lyricsFocusActions.insertBefore(elements.lyricsLanguageToggle, elements.lyricsFocusNext);
@@ -2420,16 +2477,17 @@
     applyLyricsTheme();
     const translatingPortuguese = state.lyricsTranslationBusyCardId === card.id;
     elements.lyricsLanguageToggle.hidden = !showLanguageToggle;
-    elements.lyricsTimingButton.hidden = !showLanguageToggle;
+    elements.lyricsTimingButton.hidden = true;
     elements.lyricsHeaderPlayButton.hidden = !showLanguageToggle;
     elements.lyricsRepeatToggle.hidden = !showLanguageToggle;
     updateLyricsMicrophone();
     elements.lyricsRepeatToggle.classList.toggle('is-disabled', state.lyricsViewMode === 'list');
-    elements.lyricsRepeatToggle.setAttribute('aria-pressed', String(state.lyricsViewMode === 'focus'));
-    elements.lyricsRepeatToggle.setAttribute('aria-label', state.lyricsViewMode === 'focus'
+    elements.lyricsRepeatToggle.setAttribute('aria-pressed', String(state.lyricsViewMode !== 'list'));
+    elements.lyricsRepeatToggle.setAttribute('aria-label', state.lyricsViewMode !== 'list'
       ? 'Mostrar lista de trechos' : 'Mostrar um trecho por vez');
-    elements.lyricsRepeatToggle.title = state.lyricsViewMode === 'focus' ? 'Mostrar lista' : 'Mostrar trecho grande';
+    elements.lyricsRepeatToggle.title = state.lyricsViewMode !== 'list' ? 'Mostrar lista' : 'Mostrar trecho grande';
     updateLyricsTimingControl();
+    updateLyricsViewModeMenu();
     const portugueseSelected = state.lyricsLanguage === 'pt';
     elements.lyricsLanguageFlag.src = portugueseSelected
       ? '/arquivos-codex/icones/portugues.svg'
@@ -2451,7 +2509,7 @@
       : '';
     const lines = displayedLyricsLines(card);
     elements.lyricsEmpty.hidden = lines.length > 0;
-    elements.lyricsLines.hidden = lines.length === 0 || (APP_SLUG === 'englishtraining' && state.lyricsViewMode === 'focus');
+    elements.lyricsLines.hidden = lines.length === 0 || (APP_SLUG === 'englishtraining' && state.lyricsViewMode !== 'list');
     elements.lyricsLines.replaceChildren();
     lines.forEach((line, index) => {
       const sourceLine = characterSourceLine(card, line);
@@ -2646,7 +2704,7 @@
     elements.lyricsLines.querySelectorAll('.lyric-line').forEach((line, lineIndex) => {
       line.classList.toggle('is-active', lineIndex === index);
     });
-    if (index >= 0 && changed && !(APP_SLUG === 'englishtraining' && state.lyricsViewMode === 'focus')) {
+    if (index >= 0 && changed && !(APP_SLUG === 'englishtraining' && state.lyricsViewMode !== 'list')) {
       elements.lyricsLines.querySelector(`[data-line-index="${index}"]`)
         ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
@@ -2867,7 +2925,7 @@
     elements.lyricsPlayButton.setAttribute('aria-label', isPlaying ? 'Pausar' : 'Reproduzir');
     elements.lyricsHeaderPlayButton.hidden = APP_SLUG !== 'englishtraining';
     elements.lyricsHeaderPlayButton.disabled = !card.audio || (APP_SLUG === 'englishtraining'
-      && state.lyricsViewMode === 'focus' && card.lyrics?.mode !== 'timesync');
+      && state.lyricsViewMode !== 'list' && card.lyrics?.mode !== 'timesync');
     elements.lyricsHeaderPlayButton.classList.toggle('is-playing', isPlaying);
     elements.lyricsHeaderPlayButton.setAttribute('aria-label', isPlaying ? 'Pausar' : 'Reproduzir');
     elements.lyricsRewindButton.disabled = Boolean(state.manualSync) || !isCurrent || duration <= 0;
@@ -2884,7 +2942,7 @@
         if (position < Number(lines[index].end)) activeIndex = index;
       }
       setActiveLyricLine(activeIndex);
-      if (APP_SLUG === 'englishtraining' && state.lyricsViewMode === 'focus' && activeIndex >= 0
+      if (APP_SLUG === 'englishtraining' && state.lyricsViewMode !== 'list' && activeIndex >= 0
         && state.lyricsFocusedIndex !== activeIndex) {
         state.lyricsFocusedIndex = activeIndex;
         renderFocusedLyric(card, true);
@@ -3574,7 +3632,7 @@
 
   async function toggleLyricsPlayback() {
     const card = getCard(state.lyricsCardId);
-    if (APP_SLUG === 'englishtraining' && state.lyricsViewMode === 'focus') {
+    if (APP_SLUG === 'englishtraining' && state.lyricsViewMode !== 'list') {
       await playFocusedLyric();
       return;
     }
@@ -5722,10 +5780,18 @@
     });
     elements.lyricsThemeMenu?.addEventListener('click', (event) => {
       const item = event.target.closest('[data-lyrics-theme]');
-      if (!item) return;
-      applyLyricsTheme(item.dataset.lyricsTheme);
-      closeLyricsThemeMenu();
-      elements.lyricsThemeButton?.focus();
+      if (item) {
+        applyLyricsTheme(item.dataset.lyricsTheme);
+        closeLyricsThemeMenu();
+        elements.lyricsThemeButton?.focus();
+        return;
+      }
+      const action = event.target.closest('[data-lyrics-action]');
+      if (action?.dataset.lyricsAction === 'toggle-view') {
+        toggleLyricsViewMode();
+        closeLyricsThemeMenu();
+        elements.lyricsThemeButton?.focus();
+      }
     });
     document.addEventListener('click', (event) => {
       if (!elements.lyricsThemeMenu?.hidden
@@ -5770,12 +5836,16 @@
       }
       const line = currentMicrophoneLine(card);
       if (!line || !card) return;
-      const badge = state.lyricsViewMode === 'focus' ? elements.lyricsFocusScore
+      const badge = state.lyricsViewMode !== 'list' ? elements.lyricsFocusScore
         : elements.lyricsLines.querySelector(`[data-line-id="${CSS.escape(line.id)}"] .pronunciation-score`);
       if (badge) startPronunciationRecognition(card, line, badge);
     });
-    elements.lyricsFocusPrevious.addEventListener('click', () => selectFocusedLyric(state.lyricsFocusedIndex - 1));
-    elements.lyricsFocusNext.addEventListener('click', () => selectFocusedLyric(state.lyricsFocusedIndex + 1));
+    elements.lyricsFocusPrevious.addEventListener('click', () => {
+      selectFocusedLyric(state.lyricsFocusedIndex - 1).catch((error) => showToast(error.message, true));
+    });
+    elements.lyricsFocusNext.addEventListener('click', () => {
+      selectFocusedLyric(state.lyricsFocusedIndex + 1).catch((error) => showToast(error.message, true));
+    });
     elements.lyricsFocusPlay.addEventListener('click', () => {
       playFocusedLyric().catch((error) => showToast(error.message, true));
     });
@@ -5783,6 +5853,9 @@
       recordSelfForPlayback().catch((error) => showToast(error.message || 'Microfone indisponível.', true));
     });
     elements.lyricsTimingButton.addEventListener('click', () => {
+      cycleLyricsTimingRate().catch((error) => showToast(error.message, true));
+    });
+    elements.lyricsTimingMenuValue?.addEventListener('click', () => {
       cycleLyricsTimingRate().catch((error) => showToast(error.message, true));
     });
     let manualSyncPointerHandled = false;
@@ -5810,7 +5883,7 @@
       stopFocusedPlayback();
       cancelSelfRecording();
       cancelPovPlayback({ pause: true });
-      state.lyricsViewMode = state.lyricsViewMode === 'focus' ? 'list' : 'focus';
+      state.lyricsViewMode = state.lyricsViewMode === 'list' ? 'focus' : 'list';
       renderLyricsScreen();
     });
     elements.closeCharacterDialog.addEventListener('click', () => closeDialog(elements.characterDialog));
