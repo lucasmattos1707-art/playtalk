@@ -132,6 +132,8 @@
     lyricsFocusPlay: document.getElementById('lyricsFocusPlay'),
     lyricsFocusRecord: document.getElementById('lyricsFocusRecord'),
     lyricsFocusNext: document.getElementById('lyricsFocusNext'),
+    lyricsFocusActions: document.querySelector('.lyrics-focus__actions'),
+    lyricsHeaderActions: document.querySelector('.lyrics-header-actions'),
     lyricsEmpty: document.getElementById('lyricsEmpty'),
     lyricsBackButton: document.getElementById('lyricsBackButton'),
     lyricsThemeButton: document.getElementById('lyricsThemeButton'),
@@ -526,8 +528,8 @@
     button.disabled = sending || (!recording && !ready);
     button.classList.toggle('is-recording', recording);
     button.classList.toggle('is-turn-ready', Boolean(state.povTurn && ready && !recording));
-    button.setAttribute('aria-label', sending ? 'Enviando gravação' : recording ? 'Enviar gravação para avaliação' : 'Gravar a fala atual');
-    button.title = sending ? 'Enviando…' : recording ? 'Enviar a fala' : ready ? 'Gravar a fala' : 'Aguarde sua vez ou selecione uma fala';
+    button.setAttribute('aria-label', sending ? 'Avaliando pronúncia' : recording ? 'Finalizar avaliação da pronúncia' : 'Avaliar pronúncia');
+    button.title = sending ? 'Avaliando pronúncia…' : recording ? 'Finalizar avaliação' : ready ? 'Avaliar esta fala e conquistar um selo' : 'Aguarde sua vez ou selecione uma fala';
   }
 
   function displayedLyricsLines(card) {
@@ -589,26 +591,22 @@
       const sourceLine = characterSourceLine(card, line);
       const character = characterForLyricLine(sourceLine);
       const row = document.createElement('article');
-      row.className = `lyrics-chat__row${index % 2 ? ' is-right' : ''}${index === state.lyricsFocusedIndex ? ' is-current' : ''}`;
+      row.className = `lyrics-chat__row${index % 2 ? ' is-right' : ''}${index === state.lyricsFocusedIndex ? ' is-current' : ''}${character?.imageUrl ? '' : ' is-no-avatar'}`;
       const speakerKey = String(character?.name || sourceLine?.speaker || '').toLocaleLowerCase('en');
       const speakerColors = { chandler: '#ff8b38', joey: '#08b9ff', rachel: '#ed4fc1', monica: '#bb68e8' };
       row.style.setProperty('--chat-accent', speakerColors[speakerKey] || ['#ff8b38', '#08b9ff', '#ed4fc1', '#bb68e8'][index % 4]);
       row.dataset.lineId = line.id;
-      const avatar = document.createElement('span');
-      avatar.className = 'lyrics-chat__avatar';
-      avatar.setAttribute('aria-hidden', 'true');
+      let avatar = null;
       if (character?.imageUrl) {
+        avatar = document.createElement('span');
+        avatar.className = 'lyrics-chat__avatar';
+        avatar.setAttribute('aria-hidden', 'true');
         const image = document.createElement('img');
         image.src = absoluteUrl(String(character.imageUrl));
         image.alt = '';
         image.loading = 'lazy';
         image.decoding = 'async';
         avatar.appendChild(image);
-      } else {
-        avatar.classList.add('is-empty');
-        const initial = document.createElement('span');
-        initial.textContent = String(character?.name || sourceLine?.speaker || '?').charAt(0).toLocaleUpperCase('pt-BR');
-        avatar.appendChild(initial);
       }
       const bubble = document.createElement('div');
       bubble.className = 'lyrics-chat__bubble';
@@ -616,26 +614,10 @@
       copy.type = 'button';
       copy.className = 'lyrics-chat__copy';
       copy.setAttribute('aria-label', `Selecionar fala ${index + 1}`);
-      const speaker = String(character?.name || sourceLine?.speaker || '').trim();
-      if (speaker) {
-        const name = document.createElement('span');
-        name.className = 'lyrics-chat__speaker';
-        name.textContent = speaker;
-        copy.appendChild(name);
-      }
-      const englishText = line?.language === 'pt' ? sourceLine?.text : line?.text;
-      const portugueseText = line?.language === 'pt' ? line?.text : (line?.textPt || sourceLine?.textPt);
       const primary = document.createElement('span');
       primary.className = 'lyrics-chat__primary';
-      primary.textContent = String((state.lyricsLanguage === 'pt' ? portugueseText : englishText) || line?.text || '');
+      primary.textContent = lyricLineText(line);
       copy.appendChild(primary);
-      const translated = state.lyricsLanguage === 'pt' ? englishText : portugueseText;
-      if (String(translated || '').trim()) {
-        const secondary = document.createElement('span');
-        secondary.className = 'lyrics-chat__secondary';
-        secondary.textContent = String(translated);
-        copy.appendChild(secondary);
-      }
       const score = pronunciationScoreFor(card.id, line.id);
       const sealKind = pronunciationSealKind(score);
       if (sealKind) {
@@ -660,7 +642,8 @@
         playFocusedLyric().catch((error) => showToast(error.message, true));
       });
       bubble.append(copy, play);
-      row.append(avatar, bubble);
+      if (avatar) row.append(avatar);
+      row.append(bubble);
       fragment.appendChild(row);
     });
     conversation.replaceChildren(fragment);
@@ -711,25 +694,26 @@
     const card = getCard(state.lyricsCardId);
     const line = displayedLyricsLines(card)[state.lyricsFocusedIndex];
     if (!card || !line || card.lyrics?.mode !== 'timesync' || !card.audio) return;
-    if (state.focusPlaybackLineId === line.id && state.current && !state.current.paused) {
-      stopFocusedPlayback();
+    if (state.current?.cardId === card.id && !state.current.paused) {
+      state.focusPlaybackToken += 1;
+      state.focusPlaybackLineId = '';
+      pauseCurrent();
       return;
     }
     stopFocusedPlayback();
     const token = state.focusPlaybackToken;
-    state.focusPlaybackLineId = line.id;
-    elements.lyricsFocusPlay.classList.add('is-playing');
-    elements.lyricsFocusPlay.setAttribute('aria-label', 'Pausar este trecho');
+    state.focusPlaybackLineId = 'continuous';
     try {
-      await replayOriginalLyricLine(card, line, false,
-        () => token === state.focusPlaybackToken && state.lyricsCardId === card.id
-          && state.lyricsFocusedIndex === displayedLyricsLines(card).findIndex((entry) => entry.id === line.id));
-    } finally {
+      const started = await ensureLyricsCardAt(card, Number(line.start) || 0, { play: true });
+      if (!started) return;
+      if (token === state.focusPlaybackToken) updateLyricsPlayer();
+    } catch (error) {
       if (token === state.focusPlaybackToken) {
         state.focusPlaybackLineId = '';
         elements.lyricsFocusPlay.classList.remove('is-playing');
         elements.lyricsFocusPlay.setAttribute('aria-label', 'Reproduzir este trecho');
       }
+      throw error;
     }
   }
 
@@ -916,6 +900,21 @@
       renderPronunciationBadge(elements.lyricsFocusScore, score, false, false, true);
     }
     recordPronunciationRoundScore(cardId, line, score, language);
+    if (state.lyricsCardId === cardId && state.lyricsViewMode === 'focus') {
+      const row = [...(elements.lyricsFocusConversation?.querySelectorAll('.lyrics-chat__row') || [])]
+        .find((entry) => entry.dataset.lineId === String(line.id));
+      const copy = row?.querySelector('.lyrics-chat__copy');
+      const previousSeal = copy?.querySelector('.lyrics-chat__seal');
+      const sealKind = pronunciationSealKind(score);
+      if (previousSeal && !sealKind) previousSeal.remove();
+      if (copy && sealKind) {
+        const seal = previousSeal || document.createElement('img');
+        seal.className = 'lyrics-chat__seal';
+        seal.src = absoluteUrl(`/medalhas/${sealKind}.png`);
+        seal.alt = `Selo ${sealKind}`;
+        if (!previousSeal) copy.appendChild(seal);
+      }
+    }
     if (navigator.vibrate) navigator.vibrate(score >= 85 ? [20, 35, 25] : 20);
   }
 
@@ -2357,7 +2356,15 @@
       || playableIndex >= playableCards.length - 1;
     elements.lyricsEditButton.hidden = !state.canEdit;
     const showLanguageToggle = APP_SLUG === 'englishtraining';
-    elements.lyricsScreen.classList.toggle('is-focus-view', showLanguageToggle && state.lyricsViewMode === 'focus');
+    const focusView = showLanguageToggle && state.lyricsViewMode === 'focus';
+    elements.lyricsScreen.classList.toggle('is-focus-view', focusView);
+    if (focusView && elements.lyricsFocusActions) {
+      elements.lyricsFocusActions.insertBefore(elements.lyricsMicrophoneButton, elements.lyricsFocusNext);
+      elements.lyricsFocusActions.insertBefore(elements.lyricsLanguageToggle, elements.lyricsFocusNext);
+    } else if (elements.lyricsHeaderActions) {
+      elements.lyricsHeaderActions.insertBefore(elements.lyricsLanguageToggle, elements.lyricsBackButton);
+      elements.lyricsHeaderActions.insertBefore(elements.lyricsMicrophoneButton, elements.lyricsBackButton);
+    }
     applyLyricsTheme();
     const translatingPortuguese = state.lyricsTranslationBusyCardId === card.id;
     elements.lyricsLanguageToggle.hidden = !showLanguageToggle;
@@ -2792,6 +2799,18 @@
     elements.lyricsCurrentTime.textContent = formatTime(state.lyricsScrubbing ? elements.lyricsSeekSlider.value : position);
     elements.lyricsDuration.textContent = formatTime(duration);
     const isPlaying = isCurrent && !state.current.paused;
+    if (elements.lyricsFocusPlay) {
+      elements.lyricsFocusPlay.classList.toggle('is-playing', isPlaying);
+      const playingState = String(isPlaying);
+      if (elements.lyricsFocusPlay.dataset.playing !== playingState) {
+        elements.lyricsFocusPlay.dataset.playing = playingState;
+        elements.lyricsFocusPlay.innerHTML = isPlaying
+          ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM15 5h4v14h-4z"/></svg>'
+          : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5 19 12 8 19z"/></svg>';
+      }
+      elements.lyricsFocusPlay.setAttribute('aria-label', isPlaying ? 'Pausar reprodução contínua' : 'Reproduzir episódio');
+      elements.lyricsFocusPlay.title = isPlaying ? 'Pausar reprodução contínua' : 'Reproduzir episódio desde este trecho';
+    }
     elements.lyricsPlayButton.classList.toggle('is-playing', isPlaying);
     elements.lyricsPlayButton.setAttribute('aria-label', isPlaying ? 'Pausar' : 'Reproduzir');
     elements.lyricsHeaderPlayButton.hidden = APP_SLUG !== 'englishtraining';
@@ -2813,6 +2832,11 @@
         if (position < Number(lines[index].end)) activeIndex = index;
       }
       setActiveLyricLine(activeIndex);
+      if (APP_SLUG === 'englishtraining' && state.lyricsViewMode === 'focus' && activeIndex >= 0
+        && state.lyricsFocusedIndex !== activeIndex) {
+        state.lyricsFocusedIndex = activeIndex;
+        renderFocusedLyric(card, true);
+      }
     } else if (!isCurrent) {
       setActiveLyricLine(-1);
     }

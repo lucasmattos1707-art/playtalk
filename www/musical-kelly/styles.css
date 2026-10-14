@@ -5248,3 +5248,80 @@ body.englishtraining-page .pronunciation-score__seal[hidden] {
 body.englishtraining-page .lyrics-screen.is-focus-view:not(.is-theme-azul) {
   background: #030405;
 }
+
+/* EnglishTraining focus footer: five compact controls and a seal-only progress bar. */
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-track-heading {
+  grid-column: 1 / -1;
+  justify-items: center;
+  width: 100%;
+  padding-left: 0;
+  text-align: center;
+}
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-track-navigation {
+  justify-items: center;
+  width: 100%;
+}
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-track-heading h1 {
+  max-width: min(78vw, 620px);
+  text-align: center;
+}
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-seals-progress {
+  grid-template-columns: minmax(0, 1fr);
+  justify-self: center;
+  width: min(42vw, 190px);
+  margin-inline: auto;
+}
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-seals-progress__label { display: none; }
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-seals-progress__track { width: 100%; }
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-theme-button svg {
+  fill: currentColor;
+  stroke: none;
+}
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-edit-button { right: 58px; }
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  width: min(100%, 420px);
+  gap: 2px;
+}
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions > button { grid-column: auto; justify-self: center; }
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions button[hidden] { display: none; }
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions .lyrics-microphone-button {
+  width: 42px;
+  height: 42px;
+  padding: 8px;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions .lyrics-microphone-button svg { width: 26px; height: 26px; }
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions .lyrics-language-toggle {
+  position: static;
+  grid-column: auto;
+  width: 42px;
+  height: 42px;
+  min-height: 0;
+  padding: 5px;
+  transform: none;
+}
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions .lyrics-language-toggle img { width: 27px; height: 27px; }
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-chat__row {
+  align-items: center;
+  opacity: .8;
+  transition: opacity 180ms ease;
+}
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-chat__row.is-current { opacity: 1; }
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-chat__row.is-no-avatar {
+  grid-template-columns: minmax(0, min(680px, 76%));
+  justify-content: center;
+}
+body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-chat__row.is-no-avatar > .lyrics-chat__bubble { grid-column: 1; }
+
+@media (max-width: 560px) {
+  body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-track-heading { padding-left: 0; }
+  body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-track-heading h1 { max-width: 78vw; }
+  body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-seals-progress { grid-template-columns: minmax(0, 1fr); width: min(42vw, 150px); }
+  body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-chat__row.is-no-avatar { grid-template-columns: minmax(0, 82%); }
+  body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions { width: min(100%, 360px); }
+  body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions .lyrics-microphone-button,
+  body.englishtraining-page .lyrics-screen.is-focus-view .lyrics-focus__actions .lyrics-language-toggle { width: 38px; height: 38px; }
+}
