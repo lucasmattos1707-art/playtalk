@@ -5514,7 +5514,12 @@ body.musical-kelly-page:not(.musical-kelly-admin-view) .ambient {
 
 body.musical-kelly-page:not(.musical-kelly-admin-view) main {
   width: min(100% - 32px, 980px);
-  margin: 22px auto 56px;
+  margin: 18px auto 56px;
+}
+
+body.musical-kelly-page:not(.musical-kelly-admin-view) .topbar,
+body.musical-kelly-page:not(.musical-kelly-admin-view) .status-line {
+  display: none !important;
 }
 
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-list {
@@ -5522,8 +5527,12 @@ body.musical-kelly-page:not(.musical-kelly-admin-view) .track-list {
 }
 
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card {
-  min-height: 68px;
-  aspect-ratio: auto;
+  box-sizing: border-box;
+  width: 100%;
+  height: 68px !important;
+  min-height: 68px !important;
+  max-height: 68px !important;
+  aspect-ratio: auto !important;
   overflow: hidden;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -5553,6 +5562,7 @@ body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card.is-playing::a
 
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-background,
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-shade,
+body.musical-kelly-page:not(.musical-kelly-admin-view) .englishtraining-track-summary,
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-center-controls,
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .lyrics-button,
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .comment-button,
