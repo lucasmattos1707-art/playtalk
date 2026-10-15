@@ -5653,8 +5653,39 @@ body.musical-kelly-page:not(.musical-kelly-admin-view) .lyrics-header h1 {
 }
 
 body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-line {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  align-items: center;
+  min-height: 62px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: clamp(.98rem, 1.65vw, 1.2rem);
   font-weight: 500;
   line-height: 1.55;
+}
+
+body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-line:hover,
+body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-line.is-active {
+  border-color: transparent;
+  background: transparent;
+  transform: none;
+  text-shadow: none;
+}
+
+body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-line.is-active {
+  color: #55e68a;
+}
+
+body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-character-avatar,
+body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-copy small,
+body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-line .pronunciation-score {
+  display: none !important;
+}
+
+body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-copy {
+  display: block;
+  align-self: center;
 }

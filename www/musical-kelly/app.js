@@ -2543,7 +2543,7 @@
 
       const avatar = document.createElement('span');
       avatar.className = `lyric-character-avatar${character?.imageUrl ? '' : ' is-empty'}`;
-      if (character?.imageUrl) {
+      if (character?.imageUrl && !minimalMusicalKellyLyrics) {
         const portrait = document.createElement('img');
         portrait.src = absoluteUrl(String(character.imageUrl));
         portrait.alt = '';
@@ -2551,7 +2551,7 @@
         portrait.decoding = 'async';
         portrait.setAttribute('aria-hidden', 'true');
         avatar.appendChild(portrait);
-      } else if (character?.name) {
+      } else if (character?.name && !minimalMusicalKellyLyrics) {
         const initial = document.createElement('span');
         initial.className = 'lyric-character-avatar__initial';
         initial.textContent = character.name.charAt(0).toLocaleUpperCase('pt-BR');
