@@ -1915,6 +1915,7 @@
     updateBulkAudioAccess();
     elements.trackList.replaceChildren();
     const fragment = document.createDocumentFragment();
+    const minimalMusicalKellyHome = APP_SLUG === 'musical-kelly' && !state.canEdit;
     state.project.cards.forEach((card) => {
       const node = elements.trackTemplate.content.firstElementChild.cloneNode(true);
       node.dataset.cardId = card.id;
@@ -1929,7 +1930,8 @@
       node.classList.toggle('is-color-full', isPlaying && state.colorMode === 'full');
       node.classList.toggle('is-fading-out', isFadingOut);
       node.classList.toggle('is-fading-in', isFadingIn);
-      node.classList.toggle('has-image', APP_SLUG !== 'englishtraining' && cardHasImage(card));
+      node.classList.toggle('has-image', !minimalMusicalKellyHome && APP_SLUG !== 'englishtraining' && cardHasImage(card));
+      node.classList.toggle('has-audio', Boolean(card.audio));
       const isUnread = !state.canEdit && state.unreadCardIds.has(card.id);
       node.classList.toggle('has-new-audio', isUnread);
       if (isFadingOut || isFadingIn) {
@@ -1938,8 +1940,8 @@
       const publicLabel = cardPublicLabel(card);
       node.setAttribute('aria-label', `${publicLabel}. ${APP_SLUG === 'englishtraining'
         ? 'Toque para abrir as letras.' : (card.audio ? 'Toque para reproduzir.' : 'Sem música.')}`);
-      if (APP_SLUG !== 'englishtraining') setCardBackground(node.querySelector('.track-background'), card);
-      node.querySelector('.track-title-text').textContent = APP_SLUG === 'englishtraining' || !cardHasImage(card)
+      if (APP_SLUG !== 'englishtraining' && !minimalMusicalKellyHome) setCardBackground(node.querySelector('.track-background'), card);
+      node.querySelector('.track-title-text').textContent = minimalMusicalKellyHome || APP_SLUG === 'englishtraining' || !cardHasImage(card)
         ? card.title : '';
 
       const durationLabel = node.querySelector('.track-duration');
@@ -1980,6 +1982,10 @@
       }
       downloadButton.addEventListener('click', (event) => {
         event.stopPropagation();
+        if (minimalMusicalKellyHome && card.audio) {
+          openLyricsAndPlay(card.id).catch((error) => showToast(error.message, true));
+          return;
+        }
         if (!card.audio) {
           deleteEmptyCard(card.id, downloadButton).catch((error) => showToast(error.message, true));
           return;
@@ -2029,6 +2035,8 @@
       fragment.appendChild(node);
     });
     elements.trackList.appendChild(fragment);
+    document.body.classList.toggle('musical-kelly-page', APP_SLUG === 'musical-kelly');
+    document.body.classList.toggle('musical-kelly-admin-view', APP_SLUG === 'musical-kelly' && state.canEdit);
     document.body.classList.toggle('has-playing-track', Boolean(state.current && !state.current.paused));
     document.body.classList.toggle('is-sorting', state.sortMode);
     elements.topbar.hidden = false;
@@ -2452,12 +2460,18 @@
     const playableIndex = playableCards.findIndex((entry) => entry.id === card.id);
     const trackNumber = playableIndex >= 0 ? playableIndex + 1 : 1;
     const trackTotal = Math.max(1, playableCards.length);
+    const minimalMusicalKellyLyrics = APP_SLUG === 'musical-kelly' && !state.canEdit;
     elements.lyricsScreenTitle.textContent = APP_SLUG === 'englishtraining'
       ? (String(card.title || '').trim() || 'Episódio')
-      : `Faixa ${trackNumber} de ${trackTotal}`;
-    setCardBackground(elements.lyricsTrackLabelBackground, card);
-    elements.lyricsTrackLabel.classList.toggle('has-image', cardHasImage(card));
-    elements.lyricsTrackLabelTitle.textContent = cardHasImage(card) ? '' : card.title;
+      : (minimalMusicalKellyLyrics ? card.title : `Faixa ${trackNumber} de ${trackTotal}`);
+    if (minimalMusicalKellyLyrics) {
+      elements.lyricsTrackLabelBackground.style.backgroundImage = 'none';
+      elements.lyricsTrackLabelBackground.style.removeProperty('--track-image');
+    } else {
+      setCardBackground(elements.lyricsTrackLabelBackground, card);
+    }
+    elements.lyricsTrackLabel.classList.toggle('has-image', !minimalMusicalKellyLyrics && cardHasImage(card));
+    elements.lyricsTrackLabelTitle.textContent = minimalMusicalKellyLyrics || !cardHasImage(card) ? card.title : '';
     elements.lyricsPreviousTrackButton.disabled = Boolean(state.manualSync) || playableIndex <= 0;
     elements.lyricsNextTrackButton.disabled = Boolean(state.manualSync)
       || playableIndex < 0
