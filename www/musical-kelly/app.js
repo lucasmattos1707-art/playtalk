@@ -22,9 +22,11 @@
   const CONTAINER_MENU_HOLD_MS = 300;
   const USE_NATIVE_AUDIO_ON_APPLE = isAppleTouchDevice();
   let commentOutboxDbPromise = null;
+  let playlistDurationGeneration = 0;
 
   const elements = {
     topbar: document.getElementById('topbar'),
+    playlistTotalDuration: document.getElementById('playlistTotalDuration'),
     newAudioNotice: document.getElementById('newAudioNotice'),
     newAudioNoticeText: document.getElementById('newAudioNoticeText'),
     trackList: document.getElementById('trackList'),
@@ -1828,6 +1830,33 @@
     return `${minutes} min ${remainder} seg`;
   }
 
+  function formatPlaylistDuration(seconds) {
+    const totalSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const remainder = totalSeconds % 60;
+    if (hours) return `${hours}h ${minutes}min${remainder ? ` ${remainder}s` : ''}`;
+    if (minutes) return `${minutes}min${remainder ? ` ${remainder}s` : ''}`;
+    return `${remainder}s`;
+  }
+
+  function refreshPlaylistTotalDuration() {
+    if (!elements.playlistTotalDuration || APP_SLUG !== 'musical-kelly' || state.canEdit) return;
+    const generation = ++playlistDurationGeneration;
+    const cards = state.project.cards.slice();
+    const cardsWithAudio = cards.filter((card) => cardAudioTracks(card).length);
+    if (!cardsWithAudio.length) {
+      elements.playlistTotalDuration.textContent = 'Tempo total · 0min';
+      return;
+    }
+    elements.playlistTotalDuration.textContent = 'Calculando duração…';
+    Promise.all(cardsWithAudio.map((card) => loadCardDuration(card))).then((durations) => {
+      if (generation !== playlistDurationGeneration || !elements.playlistTotalDuration) return;
+      const total = durations.reduce((sum, duration) => sum + (Number(duration) || 0), 0);
+      elements.playlistTotalDuration.textContent = `Tempo total · ${formatPlaylistDuration(total)}`;
+    });
+  }
+
   function loadCardDuration(card) {
     const tracks = cardAudioTracks(card);
     if (!tracks.length) return Promise.resolve(0);
@@ -2037,6 +2066,7 @@
     elements.trackList.appendChild(fragment);
     document.body.classList.toggle('musical-kelly-page', APP_SLUG === 'musical-kelly');
     document.body.classList.toggle('musical-kelly-admin-view', APP_SLUG === 'musical-kelly' && state.canEdit);
+    refreshPlaylistTotalDuration();
     document.body.classList.toggle('has-playing-track', Boolean(state.current && !state.current.paused));
     document.body.classList.toggle('is-sorting', state.sortMode);
     elements.topbar.hidden = false;
