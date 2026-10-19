@@ -2303,6 +2303,18 @@
 
   async function ensureCardDownloadedForPlayback(card) {
     if (!card?.audio) return false;
+    if (APP_SLUG === 'musical-kelly') {
+      if (navigator.onLine === false) {
+        const audioTracks = cardAudioTracks(card);
+        const audioAvailable = audioTracks.length > 0
+          && (await Promise.all(audioTracks.map((track) => isAssetCached(track).catch(() => false))).then((values) => values.every(Boolean)));
+        if (!audioAvailable) {
+          showToast('Esta faixa não está baixada e este aparelho está sem conexão.', true);
+          return false;
+        }
+      }
+      return true;
+    }
     const downloaded = await isCardCached(card).catch(() => false);
     state.downloadStates.set(card.id, downloaded ? 'done' : 'idle');
     if (downloaded) return true;
