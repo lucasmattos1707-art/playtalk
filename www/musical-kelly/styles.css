@@ -5591,7 +5591,6 @@ body.musical-kelly-page:not(.musical-kelly-admin-view) .track-shade,
 body.musical-kelly-page:not(.musical-kelly-admin-view) .englishtraining-track-summary,
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-center-controls,
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .lyrics-button,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .comment-button,
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .new-audio-badge {
   display: none !important;
 }
@@ -5600,7 +5599,7 @@ body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .track-title,
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card.has-image .track-title,
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card.is-playing .track-title {
   top: 50%;
-  right: 80px;
+  right: 118px;
   left: 18px;
   display: block;
   overflow: hidden;
@@ -5641,6 +5640,29 @@ body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-but
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button:hover {
   background: #75f0a2;
   transform: translateY(-50%) scale(1.04);
+}
+
+body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .comment-button {
+  top: 50%;
+  right: 68px;
+  width: 36px;
+  height: 36px;
+  border-color: rgba(255, 255, 255, .1);
+  color: #b3b3b3;
+  background: transparent;
+  backdrop-filter: none;
+  transform: translateY(-50%);
+}
+
+body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .comment-button:hover {
+  color: #fff;
+  background: #303030;
+  transform: translateY(-50%);
+}
+
+body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .comment-button svg {
+  width: 19px;
+  height: 19px;
 }
 
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button .icon-download,
