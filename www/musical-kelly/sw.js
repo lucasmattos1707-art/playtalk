@@ -3,14 +3,13 @@
 const APP_PATH = new URL(self.registration.scope).pathname.replace(/\/+$/g, '') || '/musical-kelly';
 const APP_SLUG = APP_PATH.split('/').filter(Boolean).at(-1) || 'musical-kelly';
 const API_ROOT = `/api/${APP_SLUG}`;
-const SHELL_CACHE = `playtalk-${APP_SLUG}-shell-v62`;
+const SHELL_CACHE = `playtalk-${APP_SLUG}-shell-v63`;
 const SHELL_CACHE_PREFIX = `playtalk-${APP_SLUG}-shell-`;
 const MEDIA_CACHE = `playtalk-${APP_SLUG}-media-v1`;
 const SHELL_URLS = [
   `${APP_PATH}/`,
-  '/musical-kelly/styles.css?v=62',
-  '/musical-kelly/app.js?v=66',
-  '/musical-kelly/wicked-mundo-oz.png',
+  '/musical-kelly/styles.css?v=63',
+  '/musical-kelly/app.js?v=67',
   '/arquivos-codex/vendor/lamejs/lame.min.js',
   '/arquivos-codex/icones/ingles.svg',
   '/arquivos-codex/icones/portugues.svg',

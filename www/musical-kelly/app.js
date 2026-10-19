@@ -1907,7 +1907,7 @@
     button.title = button.disabled
       ? 'Faixa ainda não configurada'
       : value === 'done'
-      ? (isPlaying ? 'Pausar faixa' : 'Reproduzir faixa')
+      ? (state.canEdit ? (isPlaying ? 'Pausar faixa' : 'Reproduzir faixa') : 'Faixa baixada — abrir letra e reproduzir')
       : (value === 'busy' ? 'Baixando faixa' : 'Baixar faixa para este aparelho');
     button.setAttribute('aria-label', button.title);
   }
