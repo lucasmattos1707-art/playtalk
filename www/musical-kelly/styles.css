@@ -5503,26 +5503,13 @@ body.englishtraining-page .lyrics-screen.is-immersive .lyrics-focus__content {
 }
 body.englishtraining-page .lyrics-screen.is-immersive .lyrics-focus__avatar.is-empty { display: none; }
 
-/* Public Musical Kelly home: compact song rows with one clear play action. */
-body.musical-kelly-page:not(.musical-kelly-admin-view) {
-  background: #121212;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .ambient {
-  display: none;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) main {
-  width: min(100% - 32px, 980px);
-  margin: 18px auto 56px;
-}
-
+/* Public Musical Kelly keeps the full player layout while duration loads. */
 body.musical-kelly-page:not(.musical-kelly-admin-view) .playlist-intro {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  margin: 0 auto 18px;
+  margin: 0 auto 24px;
   text-align: center;
 }
 
@@ -5543,217 +5530,18 @@ body.musical-kelly-page:not(.musical-kelly-admin-view) .playlist-intro__duration
   letter-spacing: .015em;
 }
 
-body.musical-kelly-page:not(.musical-kelly-admin-view) .topbar,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .status-line {
+body.musical-kelly-page .playlist-intro__duration.is-calculating {
+  animation: playlistDurationPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes playlistDurationPulse {
+  0%, 100% { opacity: .52; }
+  50% { opacity: 1; }
+}
+
+body.musical-kelly-page .englishtraining-track-summary,
+body.musical-kelly-page .lyrics-microphone-button {
   display: none !important;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-list {
-  gap: 6px;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card {
-  box-sizing: border-box;
-  width: 100%;
-  height: 68px !important;
-  min-height: 68px !important;
-  max-height: 68px !important;
-  aspect-ratio: auto !important;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, .035);
-  border-radius: 10px;
-  background: #1b1b1b;
-  box-shadow: none;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card:hover {
-  transform: none;
-  border-color: rgba(255, 255, 255, .07);
-  background: #242424;
-  box-shadow: none;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card:focus-visible::after {
-  border-color: rgba(255, 255, 255, .7);
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card.is-playing {
-  background: #202820;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card.is-playing::after {
-  border-color: transparent;
-  box-shadow: none;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-background,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-shade,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .englishtraining-track-summary,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-center-controls,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .lyrics-button,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .new-audio-badge {
-  display: none !important;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .track-title,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card.has-image .track-title,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card.is-playing .track-title {
-  top: 50%;
-  right: 118px;
-  left: 18px;
-  display: block;
-  overflow: hidden;
-  margin: 0;
-  color: #f2f2f2;
-  font: 500 1rem/1.3 Inter, ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: 0;
-  text-overflow: ellipsis;
-  text-shadow: none;
-  transform: translateY(-50%);
-  white-space: nowrap;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card.is-playing .track-title {
-  color: #55e68a;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .track-title-flourish {
-  display: none;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button {
-  top: 50%;
-  right: 16px;
-  bottom: auto;
-  width: 42px;
-  height: 42px;
-  min-height: 42px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  color: #07110c;
-  background: #55e68a;
-  box-shadow: none;
-  transform: translateY(-50%);
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button:hover {
-  background: #75f0a2;
-  transform: translateY(-50%) scale(1.04);
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .comment-button {
-  top: 50%;
-  right: 68px;
-  width: 36px;
-  height: 36px;
-  border-color: rgba(255, 255, 255, .1);
-  color: #b3b3b3;
-  background: transparent;
-  backdrop-filter: none;
-  transform: translateY(-50%);
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .comment-button:hover {
-  color: #fff;
-  background: #303030;
-  transform: translateY(-50%);
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .comment-button svg {
-  width: 19px;
-  height: 19px;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button .icon-download,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button .icon-delete {
-  display: none !important;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button .icon-play,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button .icon-pause {
-  display: none !important;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button::before {
-  content: "▶";
-  display: block;
-  font: 700 16px/1 Arial, sans-serif;
-  transform: translateX(1px);
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button.is-playing-control::before {
-  content: "Ⅱ";
-  font-size: 18px;
-  transform: none;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button.is-busy::before {
-  content: none;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button.is-busy .icon-play,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button.is-busy .icon-pause {
-  display: none;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button.is-busy .icon-loading {
-  display: block;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card:not(.has-audio) .download-button {
-  display: none;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .lyrics-track-label {
-  display: none;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .lyrics-header h1 {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: clamp(1.05rem, 2.6vw, 1.55rem);
-  font-weight: 700;
-  letter-spacing: -.025em;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-line {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-  align-items: center;
-  min-height: 62px;
-  padding: 12px 16px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: clamp(.98rem, 1.65vw, 1.2rem);
-  font-weight: 500;
-  line-height: 1.55;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-line:hover,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-line.is-active {
-  border-color: transparent;
-  background: transparent;
-  transform: none;
-  text-shadow: none;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-line.is-active {
-  color: #55e68a;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-character-avatar,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-copy small,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-line .pronunciation-score,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .lyrics-focus__score,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .lyrics-microphone-button {
-  display: none !important;
-}
-
-body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-copy {
-  display: block;
-  align-self: center;
 }
 
 body.musical-kelly-admin-view .playlist-intro {

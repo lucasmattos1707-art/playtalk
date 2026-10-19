@@ -1846,13 +1846,19 @@
     const cards = state.project.cards.slice();
     const cardsWithAudio = cards.filter((card) => cardAudioTracks(card).length);
     if (!cardsWithAudio.length) {
+      elements.playlistTotalDuration.classList.remove('is-calculating');
+      elements.playlistTotalDuration.setAttribute('aria-busy', 'false');
       elements.playlistTotalDuration.textContent = 'Tempo total · 0min';
       return;
     }
-    elements.playlistTotalDuration.textContent = 'Calculando duração…';
+    elements.playlistTotalDuration.classList.add('is-calculating');
+    elements.playlistTotalDuration.setAttribute('aria-busy', 'true');
+    elements.playlistTotalDuration.textContent = 'Carregando duração';
     Promise.all(cardsWithAudio.map((card) => loadCardDuration(card))).then((durations) => {
       if (generation !== playlistDurationGeneration || !elements.playlistTotalDuration) return;
       const total = durations.reduce((sum, duration) => sum + (Number(duration) || 0), 0);
+      elements.playlistTotalDuration.classList.remove('is-calculating');
+      elements.playlistTotalDuration.setAttribute('aria-busy', 'false');
       elements.playlistTotalDuration.textContent = `Tempo total · ${formatPlaylistDuration(total)}`;
     });
   }
@@ -1944,7 +1950,6 @@
     updateBulkAudioAccess();
     elements.trackList.replaceChildren();
     const fragment = document.createDocumentFragment();
-    const minimalMusicalKellyHome = APP_SLUG === 'musical-kelly' && !state.canEdit;
     state.project.cards.forEach((card) => {
       const node = elements.trackTemplate.content.firstElementChild.cloneNode(true);
       node.dataset.cardId = card.id;
@@ -1959,7 +1964,7 @@
       node.classList.toggle('is-color-full', isPlaying && state.colorMode === 'full');
       node.classList.toggle('is-fading-out', isFadingOut);
       node.classList.toggle('is-fading-in', isFadingIn);
-      node.classList.toggle('has-image', !minimalMusicalKellyHome && APP_SLUG !== 'englishtraining' && cardHasImage(card));
+      node.classList.toggle('has-image', APP_SLUG !== 'englishtraining' && cardHasImage(card));
       node.classList.toggle('has-audio', Boolean(card.audio));
       const isUnread = !state.canEdit && state.unreadCardIds.has(card.id);
       node.classList.toggle('has-new-audio', isUnread);
@@ -1969,8 +1974,8 @@
       const publicLabel = cardPublicLabel(card);
       node.setAttribute('aria-label', `${publicLabel}. ${APP_SLUG === 'englishtraining'
         ? 'Toque para abrir as letras.' : (card.audio ? 'Toque para reproduzir.' : 'Sem música.')}`);
-      if (APP_SLUG !== 'englishtraining' && !minimalMusicalKellyHome) setCardBackground(node.querySelector('.track-background'), card);
-      node.querySelector('.track-title-text').textContent = minimalMusicalKellyHome || APP_SLUG === 'englishtraining' || !cardHasImage(card)
+      if (APP_SLUG !== 'englishtraining') setCardBackground(node.querySelector('.track-background'), card);
+      node.querySelector('.track-title-text').textContent = APP_SLUG === 'englishtraining' || !cardHasImage(card)
         ? card.title : '';
 
       const durationLabel = node.querySelector('.track-duration');
@@ -2011,10 +2016,6 @@
       }
       downloadButton.addEventListener('click', (event) => {
         event.stopPropagation();
-        if (minimalMusicalKellyHome && card.audio) {
-          openLyricsAndPlay(card.id).catch((error) => showToast(error.message, true));
-          return;
-        }
         if (!card.audio) {
           deleteEmptyCard(card.id, downloadButton).catch((error) => showToast(error.message, true));
           return;
