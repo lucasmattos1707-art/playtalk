@@ -5717,7 +5717,9 @@ body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-line.is-active {
 
 body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-character-avatar,
 body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-copy small,
-body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-line .pronunciation-score {
+body.musical-kelly-page:not(.musical-kelly-admin-view) .lyric-line .pronunciation-score,
+body.musical-kelly-page:not(.musical-kelly-admin-view) .lyrics-focus__score,
+body.musical-kelly-page:not(.musical-kelly-admin-view) .lyrics-microphone-button {
   display: none !important;
 }
 
