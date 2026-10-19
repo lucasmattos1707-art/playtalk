@@ -26,7 +26,6 @@
 
   const elements = {
     topbar: document.getElementById('topbar'),
-    playlistIntro: document.getElementById('playlistIntro'),
     playlistTotalDuration: document.getElementById('playlistTotalDuration'),
     newAudioNotice: document.getElementById('newAudioNotice'),
     newAudioNoticeText: document.getElementById('newAudioNoticeText'),
@@ -1848,16 +1847,13 @@
     const cardsWithAudio = cards.filter((card) => cardAudioTracks(card).length);
     if (!cardsWithAudio.length) {
       elements.playlistTotalDuration.textContent = 'Tempo total · 0min';
-      elements.playlistTotalDuration.setAttribute('aria-busy', 'false');
       return;
     }
-    elements.playlistTotalDuration.setAttribute('aria-busy', 'true');
     elements.playlistTotalDuration.textContent = 'Calculando duração…';
     Promise.all(cardsWithAudio.map((card) => loadCardDuration(card))).then((durations) => {
       if (generation !== playlistDurationGeneration || !elements.playlistTotalDuration) return;
       const total = durations.reduce((sum, duration) => sum + (Number(duration) || 0), 0);
       elements.playlistTotalDuration.textContent = `Tempo total · ${formatPlaylistDuration(total)}`;
-      elements.playlistTotalDuration.setAttribute('aria-busy', 'false');
     });
   }
 
@@ -2070,7 +2066,6 @@
     elements.trackList.appendChild(fragment);
     document.body.classList.toggle('musical-kelly-page', APP_SLUG === 'musical-kelly');
     document.body.classList.toggle('musical-kelly-admin-view', APP_SLUG === 'musical-kelly' && state.canEdit);
-    if (elements.playlistIntro) elements.playlistIntro.hidden = APP_SLUG !== 'musical-kelly' || state.canEdit;
     refreshPlaylistTotalDuration();
     document.body.classList.toggle('has-playing-track', Boolean(state.current && !state.current.paused));
     document.body.classList.toggle('is-sorting', state.sortMode);
