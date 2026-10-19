@@ -5549,7 +5549,7 @@ body.musical-kelly-page:not(.musical-kelly-admin-view) .status-line {
 }
 
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-list {
-  gap: 4px;
+  gap: 6px;
 }
 
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card {
@@ -5560,15 +5560,15 @@ body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card {
   max-height: 68px !important;
   aspect-ratio: auto !important;
   overflow: hidden;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
+  border: 1px solid rgba(255, 255, 255, .035);
+  border-radius: 10px;
+  background: #1b1b1b;
   box-shadow: none;
 }
 
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card:hover {
   transform: none;
-  border-color: transparent;
+  border-color: rgba(255, 255, 255, .07);
   background: #242424;
   box-shadow: none;
 }
