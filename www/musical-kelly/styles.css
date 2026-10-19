@@ -5648,20 +5648,26 @@ body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-but
   display: none !important;
 }
 
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button .icon-play {
-  display: block;
-  width: 20px;
-  height: 20px;
-  fill: currentColor;
-  stroke: currentColor;
+body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button .icon-play,
+body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button .icon-pause {
+  display: none !important;
 }
 
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button.is-playing-control .icon-play {
-  display: none;
+body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button::before {
+  content: "▶";
+  display: block;
+  font: 700 16px/1 Arial, sans-serif;
+  transform: translateX(1px);
 }
 
-body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button.is-playing-control .icon-pause {
-  display: block;
+body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button.is-playing-control::before {
+  content: "Ⅱ";
+  font-size: 18px;
+  transform: none;
+}
+
+body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button.is-busy::before {
+  content: none;
 }
 
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button.is-busy .icon-play,
