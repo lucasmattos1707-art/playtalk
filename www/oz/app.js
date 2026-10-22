@@ -227,6 +227,7 @@
         sourceUpdatedAt: String(musicalTrackAudio(track)?.updatedAt || ''),
         cuts: musicalLocalCuts.slice(0, 5),
         referenceCuts: musicalReferenceCuts.slice(0, 5),
+        history: musicalReferenceCuts.slice(0, 5),
         sourceWasEdited: musicalSourceWasEdited,
         pendingStartSeconds: Number.isFinite(musicalLocalPendingCut) ? musicalLocalPendingCut : null,
         pendingReferenceSeconds: Number.isFinite(musicalLocalPendingReferenceCut) ? musicalLocalPendingReferenceCut : null
@@ -251,7 +252,9 @@
       .map((entry) => ({ startSeconds: Number(entry?.startSeconds), endSeconds: Number(entry?.endSeconds), timestamp: String(entry?.timestamp || '') }))
       .filter((entry) => Number.isFinite(entry.startSeconds) && Number.isFinite(entry.endSeconds) && entry.endSeconds > entry.startSeconds)
       .sort((left, right) => left.startSeconds - right.startSeconds);
-    const references = Array.isArray(storedValue?.referenceCuts) ? storedValue.referenceCuts : stored;
+    const references = Array.isArray(storedValue?.history)
+      ? storedValue.history
+      : (Array.isArray(storedValue?.referenceCuts) ? storedValue.referenceCuts : stored);
     musicalReferenceCuts = references
       .map((entry) => ({ startSeconds: Number(entry?.startSeconds), endSeconds: Number(entry?.endSeconds), timestamp: String(entry?.timestamp || '') }))
       .filter((entry) => Number.isFinite(entry.startSeconds) && Number.isFinite(entry.endSeconds) && entry.endSeconds > entry.startSeconds)
@@ -458,14 +461,18 @@
 
   function renderMusicalNoteMarkers() {
     const duration = musicalEditedDuration(Number.isFinite(musicalAudio.duration) ? musicalAudio.duration : 0);
+    const visibleNotes = musicalNotes.filter((note) => {
+      const isCut = Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim());
+      return !isCut || String(note.id || '').startsWith('local-cut-');
+    });
     musicalNoteMarkers.innerHTML = duration > 0
-      ? musicalNotes.map((note) => {
+      ? visibleNotes.map((note) => {
         const position = Math.min(100, Math.max(0, (musicalOriginalToEdited(Number(note.positionSeconds)) / duration) * 100));
         const isCut = Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim());
         return `<button class="oz-musical-note-marker ${isCut ? 'is-cut' : ''}" type="button" data-musical-note-id="${escapeHtml(note.id)}" style="left:${position}%" aria-label="Abrir nota em ${musicalTime(note.positionSeconds)}" title="${isCut ? 'Corte' : 'Nota'} em ${musicalTime(note.positionSeconds)}"></button>`;
       }).join('')
       : '';
-    musicalNotesButton.classList.toggle('has-notes', musicalNotes.length > 0);
+    musicalNotesButton.classList.toggle('has-notes', visibleNotes.length > 0);
   }
 
   async function loadMusicalNotes(trackId) {
