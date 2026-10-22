@@ -54,6 +54,8 @@
   const musicalNoteEmpty = document.getElementById('ozMusicalNoteEmpty');
   const musicalNoteActions = document.getElementById('ozMusicalNoteActions');
   const musicalCutDialog = document.getElementById('ozMusicalCutDialog');
+  const musicalCutTitle = document.getElementById('ozMusicalCutTitle');
+  const musicalCutMessage = document.getElementById('ozMusicalCutMessage');
   const addMenu = document.getElementById('addMenu');
   const accountMenu = document.getElementById('accountMenu');
   const headerOptionsButton = document.getElementById('headerOptionsButton');
@@ -351,7 +353,12 @@
       ? `/api/oz/musical/notes/${encodeURIComponent(musicalNotesTrackId)}/${encodeURIComponent(noteId)}`
       : `/api/oz/musical/notes/${encodeURIComponent(musicalNotesTrackId)}`;
     const isCutNote = /^corte$/i.test(text);
-    if (isCutNote && !musicalCutDialog.open) musicalCutDialog.showModal();
+    const isUndoNote = /^desfazer$/i.test(text);
+    if ((isCutNote || isUndoNote) && !musicalCutDialog.open) {
+      musicalCutTitle.textContent = isUndoNote ? 'Desfazendo o último corte' : 'Cortando seu áudio';
+      musicalCutMessage.textContent = isUndoNote ? 'Restaurando a versão anterior para todos.' : 'Salvando a nova versão para todos.';
+      musicalCutDialog.showModal();
+    }
     try {
       const response = await fetch(endpoint, {
         method,

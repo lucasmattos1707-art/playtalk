@@ -16370,6 +16370,7 @@ const musicalKellyProjectMutationQueues = new Map();
 const musicalKellyNotificationMutationQueues = new Map();
 const musicalKellyProjectCaches = new Map();
 const ozMusicalCutQueues = new Map();
+const ozMusicalCutHistory = new Map();
 let ozMp3DecoderModulePromise = null;
 const musicalKellyCharacterSchemaReadyPromises = new Map();
 let musicalKellyTimedCommentSchemaReadyPromise = null;
@@ -29834,6 +29835,17 @@ async function cutOzMp3Buffer(sourceBuffer, startSeconds, endSeconds) {
   return encodeOzMp3(outputChannels, sampleRate);
 }
 
+function cloneOzMusicalValue(value) {
+  if (value === undefined || value === null) return value;
+  return JSON.parse(JSON.stringify(value));
+}
+
+function rememberOzMusicalCut(cardId, snapshot) {
+  const entries = ozMusicalCutHistory.get(cardId) || [];
+  entries.unshift({ ...snapshot, timestamp: new Date().toISOString() });
+  ozMusicalCutHistory.set(cardId, entries.slice(0, 5));
+}
+
 async function applyPendingOzMusicalCut(cardId) {
   const pending = await pool.query(`
     SELECT id, position_seconds
@@ -29847,6 +29859,12 @@ async function applyPendingOzMusicalCut(cardId) {
   const second = pending.rows[1];
   const startSeconds = Math.min(Number(first.position_seconds) || 0, Number(second.position_seconds) || 0);
   const endSeconds = Math.max(Number(first.position_seconds) || 0, Number(second.position_seconds) || 0);
+  const previousNotes = await pool.query(`
+    SELECT id, card_id, position_seconds, text, author_member_id, created_at, updated_at
+      FROM public.oz_musical_notes
+     WHERE card_id = $1
+     ORDER BY position_seconds, created_at, id
+  `, [cardId]);
   const cutResult = await queueMusicalKellyProjectMutation(async () => {
     const project = await readMusicalKellyGlobalProject();
     const card = project.cards.find((entry) => entry.id === cardId);
@@ -29862,6 +29880,13 @@ async function applyPendingOzMusicalCut(cardId) {
     }
     const sourceKey = `${musicalKellyGlobalRoot()}/audio/${card.audio.fileName}`;
     const sourceBuffer = await fetchR2ObjectBuffer(sourceKey);
+    const previousState = {
+      audioBuffer: Buffer.from(sourceBuffer),
+      audio: cloneOzMusicalValue(card.audio),
+      audioTracks: cloneOzMusicalValue(card.audioTracks),
+      lyrics: cloneOzMusicalValue(card.lyrics),
+      notes: previousNotes.rows.map((row) => ({ ...row }))
+    };
     const editedBuffer = await cutOzMp3Buffer(sourceBuffer, startSeconds, endSeconds);
     const updatedAt = new Date().toISOString();
     const nextAsset = {
@@ -29894,7 +29919,7 @@ async function applyPendingOzMusicalCut(cardId) {
       card.lyrics.updatedAt = updatedAt;
     }
     const savedProject = await writeMusicalKellyGlobalProject(project);
-    return { audio: nextAsset, project: savedProject };
+    return { audio: nextAsset, project: savedProject, previousState };
   });
   await pool.query(`
     DELETE FROM public.oz_musical_notes
@@ -29905,6 +29930,7 @@ async function applyPendingOzMusicalCut(cardId) {
        SET position_seconds = round(position_seconds - $3::numeric, 3), updated_at = now()
      WHERE card_id = $1 AND position_seconds > $2
   `, [cardId, endSeconds, endSeconds - startSeconds]);
+  rememberOzMusicalCut(cardId, cutResult.previousState);
   return {
     audio: {
       ...cutResult.audio,
@@ -29916,6 +29942,48 @@ async function applyPendingOzMusicalCut(cardId) {
       removedSeconds: endSeconds - startSeconds
     }
   };
+}
+
+async function undoLastOzMusicalCut(cardId) {
+  const entries = ozMusicalCutHistory.get(cardId) || [];
+  const snapshot = entries[0];
+  if (!snapshot) {
+    const error = new Error('Não há um corte recente para desfazer nesta faixa.');
+    error.statusCode = 409;
+    throw error;
+  }
+  const result = await queueMusicalKellyProjectMutation(async () => {
+    const project = await readMusicalKellyGlobalProject();
+    const card = project.cards.find((entry) => entry.id === cardId);
+    if (!card?.audio?.fileName || card.audio.fileName !== snapshot.audio?.fileName) {
+      const error = new Error('A faixa mudou desde o último corte; não é seguro desfazer automaticamente.');
+      error.statusCode = 409;
+      throw error;
+    }
+    const updatedAt = new Date().toISOString();
+    const sourceKey = `${musicalKellyGlobalRoot()}/audio/${snapshot.audio.fileName}`;
+    await putR2Object(sourceKey, snapshot.audioBuffer, 'audio/mpeg', { timeoutMs: 30000, retries: 1 });
+    const restoreAsset = (asset) => asset?.fileName === snapshot.audio.fileName
+      ? { ...asset, contentType: snapshot.audio.contentType || 'audio/mpeg', size: snapshot.audioBuffer.length, updatedAt }
+      : asset;
+    card.audio = restoreAsset(snapshot.audio);
+    card.audioTracks = cloneOzMusicalValue(snapshot.audioTracks || []).map(restoreAsset);
+    card.lyrics = cloneOzMusicalValue(snapshot.lyrics);
+    const savedProject = await writeMusicalKellyGlobalProject(project);
+    return { audio: { ...card.audio, url: musicalKellyAssetUrl('audio', card.audio.fileName) }, project: savedProject };
+  });
+  await pool.query('DELETE FROM public.oz_musical_notes WHERE card_id = $1', [cardId]);
+  for (const note of snapshot.notes || []) {
+    await pool.query(`
+      INSERT INTO public.oz_musical_notes
+        (id, card_id, position_seconds, text, author_member_id, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `, [note.id, note.card_id, note.position_seconds, note.text, note.author_member_id, note.created_at, note.updated_at || note.created_at]);
+  }
+  entries.shift();
+  if (entries.length) ozMusicalCutHistory.set(cardId, entries);
+  else ozMusicalCutHistory.delete(cardId);
+  return { ...result, undo: { timestamp: snapshot.timestamp } };
 }
 
 app.get('/api/oz/team/session', async (req, res) => {
@@ -29966,10 +30034,16 @@ app.post('/api/oz/musical/notes/:cardId', async (req, res) => {
     const cardId = String(req.params.cardId || '').trim().slice(0, 160);
     const text = typeof req.body?.text === 'string' ? req.body.text.trim().slice(0, 1200) : '';
     const positionSeconds = Number(req.body?.positionSeconds);
-    if (!cardId || !text || !Number.isFinite(positionSeconds) || positionSeconds < 0 || positionSeconds > 86400) {
+    const isUndo = /^desfazer$/i.test(text);
+    if (!cardId || !text || (!isUndo && (!Number.isFinite(positionSeconds) || positionSeconds < 0 || positionSeconds > 86400))) {
       return res.status(400).json({ success: false, message: 'Informe a nota e um tempo válido.' });
     }
     await ensureOzChecklistSchema();
+    if (isUndo) {
+      const result = await queueOzMusicalCut(cardId, () => undoLastOzMusicalCut(cardId));
+      res.json({ success: true, notes: await readOzMusicalNotes(member, cardId), ...result });
+      return;
+    }
     const result = await queueOzMusicalCut(cardId, async () => {
       await pool.query(`
         INSERT INTO public.oz_musical_notes (id, card_id, position_seconds, text, author_member_id)
