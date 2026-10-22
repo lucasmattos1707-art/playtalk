@@ -7,12 +7,7 @@ const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const sharp = require('sharp');
-// lamejs ships a browser-oriented bundle whose Node modules reference these
-// constructors as globals. Expose them before creating an encoder.
-global.MPEGMode = require('lamejs/src/js/MPEGMode.js');
-global.Lame = require('lamejs/src/js/Lame.js');
-global.BitStream = require('lamejs/src/js/BitStream.js');
-const lamejs = require('lamejs');
+const { Worker } = require('node:worker_threads');
 const { AsyncLocalStorage } = require('node:async_hooks');
 const {
   S3Client,
@@ -16371,7 +16366,6 @@ const musicalKellyNotificationMutationQueues = new Map();
 const musicalKellyProjectCaches = new Map();
 const ozMusicalCutQueues = new Map();
 const ozMusicalCutHistory = new Map();
-let ozMp3DecoderModulePromise = null;
 const musicalKellyCharacterSchemaReadyPromises = new Map();
 let musicalKellyTimedCommentSchemaReadyPromise = null;
 let englishTrainingPronunciationRoundsReadyPromise = null;
@@ -29782,57 +29776,24 @@ function queueOzMusicalCut(cardId, callback) {
   return operation;
 }
 
-async function encodeOzMp3(channelData, sampleRate) {
-  const channels = Math.max(1, Math.min(2, Array.isArray(channelData) ? channelData.length : 0));
-  const length = Number(channelData?.[0]?.length) || 0;
-  if (!length || !sampleRate || !channels) throw new Error('Não foi possível preparar o áudio para o corte.');
-  const encoder = new lamejs.Mp3Encoder(channels, sampleRate, 128);
-  const chunks = [];
-  const frameSize = 1152;
-  const toInt16 = (source, start, end) => {
-    const result = new Int16Array(end - start);
-    for (let index = start; index < end; index += 1) {
-      const value = Math.max(-1, Math.min(1, Number(source[index]) || 0));
-      result[index - start] = value < 0 ? Math.round(value * 32768) : Math.round(value * 32767);
-    }
-    return result;
-  };
-  for (let start = 0; start < length; start += frameSize) {
-    const end = Math.min(length, start + frameSize);
-    const left = toInt16(channelData[0], start, end);
-    const right = channels > 1 ? toInt16(channelData[1], start, end) : undefined;
-    const encoded = right ? encoder.encodeBuffer(left, right) : encoder.encodeBuffer(left);
-    if (encoded.length) chunks.push(Buffer.from(encoded));
-  }
-  const flushed = encoder.flush();
-  if (flushed.length) chunks.push(Buffer.from(flushed));
-  return Buffer.concat(chunks);
-}
-
 async function cutOzMp3Buffer(sourceBuffer, startSeconds, endSeconds) {
-  if (!ozMp3DecoderModulePromise) ozMp3DecoderModulePromise = import('@audio/decode-mp3');
-  const decoderModule = await ozMp3DecoderModulePromise;
-  const decoded = await decoderModule.default(new Uint8Array(sourceBuffer));
-  const sampleRate = Number(decoded?.sampleRate) || 0;
-  const sourceChannels = Array.isArray(decoded?.channelData) ? decoded.channelData : [];
-  const channels = sourceChannels.slice(0, 2);
-  const totalFrames = Number(channels[0]?.length) || 0;
-  if (!sampleRate || !totalFrames || !channels.length) throw new Error('Não foi possível ler o MP3 para o corte.');
-  const startFrame = Math.max(0, Math.min(totalFrames, Math.round(startSeconds * sampleRate)));
-  const endFrame = Math.max(startFrame, Math.min(totalFrames, Math.round(endSeconds * sampleRate)));
-  if (endFrame - startFrame < Math.max(1, Math.round(sampleRate * 0.05))) {
-    const error = new Error('Os dois pontos de corte precisam estar separados por pelo menos 0,05 segundo.');
-    error.statusCode = 400;
-    throw error;
-  }
-  const keptFrames = totalFrames - (endFrame - startFrame);
-  const outputChannels = channels.map((source) => {
-    const output = new Float32Array(keptFrames);
-    output.set(source.subarray(0, startFrame), 0);
-    output.set(source.subarray(endFrame), startFrame);
-    return output;
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(path.join(__dirname, 'lib', 'oz-mp3-cut-worker.js'));
+    const source = new Uint8Array(sourceBuffer);
+    const cleanup = () => worker.terminate().catch(() => {});
+    worker.once('message', (result) => {
+      cleanup();
+      if (!result?.ok) {
+        const error = new Error(result?.message || 'Não foi possível preparar o áudio para o corte.');
+        if (result?.statusCode) error.statusCode = result.statusCode;
+        reject(error);
+        return;
+      }
+      resolve(Buffer.from(result.buffer));
+    });
+    worker.once('error', (error) => { cleanup(); reject(error); });
+    worker.postMessage({ sourceBuffer: source.buffer, startSeconds, endSeconds }, [source.buffer]);
   });
-  return encodeOzMp3(outputChannels, sampleRate);
 }
 
 function cloneOzMusicalValue(value) {
@@ -29930,7 +29891,11 @@ async function applyPendingOzMusicalCut(cardId) {
        SET position_seconds = round(position_seconds - $3::numeric, 3), updated_at = now()
      WHERE card_id = $1 AND position_seconds > $2
   `, [cardId, endSeconds, endSeconds - startSeconds]);
-  rememberOzMusicalCut(cardId, cutResult.previousState);
+  rememberOzMusicalCut(cardId, {
+    ...cutResult.previousState,
+    cutStartSeconds: startSeconds,
+    cutEndSeconds: endSeconds
+  });
   return {
     audio: {
       ...cutResult.audio,
@@ -29979,6 +29944,13 @@ async function undoLastOzMusicalCut(cardId) {
         (id, card_id, position_seconds, text, author_member_id, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
     `, [note.id, note.card_id, note.position_seconds, note.text, note.author_member_id, note.created_at, note.updated_at || note.created_at]);
+  }
+  const endpointMarker = (snapshot.notes || [])
+    .filter((note) => /^corte$/i.test(String(note.text || '').trim()))
+    .filter((note) => Math.abs((Number(note.position_seconds) || 0) - Number(snapshot.cutEndSeconds || 0)) < 0.05)
+    .sort((left, right) => Number(right.position_seconds) - Number(left.position_seconds))[0];
+  if (endpointMarker) {
+    await pool.query('DELETE FROM public.oz_musical_notes WHERE id = $1 AND card_id = $2', [endpointMarker.id, cardId]);
   }
   entries.shift();
   if (entries.length) ozMusicalCutHistory.set(cardId, entries);
@@ -30040,18 +30012,18 @@ app.post('/api/oz/musical/notes/:cardId', async (req, res) => {
     }
     await ensureOzChecklistSchema();
     if (isUndo) {
-      const result = await queueOzMusicalCut(cardId, () => undoLastOzMusicalCut(cardId));
-      res.json({ success: true, notes: await readOzMusicalNotes(member, cardId), ...result });
+      queueOzMusicalCut(cardId, () => undoLastOzMusicalCut(cardId))
+        .catch((error) => console.error('Erro ao restaurar o áudio do musical em segundo plano:', error));
+      res.json({ success: true, queued: true, notes: await readOzMusicalNotes(member, cardId) });
       return;
     }
-    const result = await queueOzMusicalCut(cardId, async () => {
-      await pool.query(`
-        INSERT INTO public.oz_musical_notes (id, card_id, position_seconds, text, author_member_id)
-        VALUES ($1, $2, $3, $4, $5)
-      `, [`oz-note-${crypto.randomUUID()}`, cardId, Math.round(positionSeconds * 1000) / 1000, text, member.id]);
-      return applyPendingOzMusicalCut(cardId);
-    });
-    res.status(201).json({ success: true, notes: await readOzMusicalNotes(member, cardId), ...(result || {}) });
+    await pool.query(`
+      INSERT INTO public.oz_musical_notes (id, card_id, position_seconds, text, author_member_id)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [`oz-note-${crypto.randomUUID()}`, cardId, Math.round(positionSeconds * 1000) / 1000, text, member.id]);
+    queueOzMusicalCut(cardId, () => applyPendingOzMusicalCut(cardId))
+      .catch((error) => console.error('Erro ao atualizar o áudio do musical em segundo plano:', error));
+    res.status(201).json({ success: true, queued: true, notes: await readOzMusicalNotes(member, cardId) });
   } catch (error) {
     console.error('Erro ao salvar nota privada do musical:', error);
     res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível salvar a nota.' });
@@ -30071,21 +30043,16 @@ app.patch('/api/oz/musical/notes/:cardId/:noteId', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Nota inválida.' });
     }
     await ensureOzChecklistSchema();
-    const result = await queueOzMusicalCut(cardId, async () => {
-      const updateResult = await pool.query(`
-        UPDATE public.oz_musical_notes
-           SET position_seconds = $3, text = $4, updated_at = now()
-         WHERE id = $1 AND card_id = $2 AND author_member_id = $5
-         RETURNING id
-      `, [noteId, cardId, Math.round(positionSeconds * 1000) / 1000, text, member.id]);
-      if (!updateResult.rows.length) {
-        const error = new Error('Esta nota não existe mais.');
-        error.statusCode = 404;
-        throw error;
-      }
-      return applyPendingOzMusicalCut(cardId);
-    });
-    res.json({ success: true, notes: await readOzMusicalNotes(member, cardId), ...(result || {}) });
+    const updateResult = await pool.query(`
+      UPDATE public.oz_musical_notes
+         SET position_seconds = $3, text = $4, updated_at = now()
+       WHERE id = $1 AND card_id = $2 AND author_member_id = $5
+       RETURNING id
+    `, [noteId, cardId, Math.round(positionSeconds * 1000) / 1000, text, member.id]);
+    if (!updateResult.rows.length) return res.status(404).json({ success: false, message: 'Esta nota não existe mais.' });
+    queueOzMusicalCut(cardId, () => applyPendingOzMusicalCut(cardId))
+      .catch((error) => console.error('Erro ao atualizar o áudio do musical em segundo plano:', error));
+    res.json({ success: true, queued: true, notes: await readOzMusicalNotes(member, cardId) });
   } catch (error) {
     console.error('Erro ao editar nota privada do musical:', error);
     res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível editar a nota.' });

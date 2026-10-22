@@ -4,6 +4,7 @@
   const STORAGE_KEY = 'fluentlevelup:oz:opened-categories:v1';
   const MEMBER_KEY = 'fluentlevelup:oz:member:v1';
   const COUNTDOWN_KEY_PREFIX = 'fluentlevelup:oz:show-countdown:v1';
+  const MUSICAL_LOCAL_CUTS_KEY = 'fluentlevelup:oz:musical-local-cuts:v1';
   const loginScreen = document.getElementById('loginScreen');
   const checklistApp = document.getElementById('checklistApp');
   const pageLoginForm = document.getElementById('pageLoginForm');
@@ -53,9 +54,6 @@
   const musicalNoteEditor = document.getElementById('ozMusicalNoteEditor');
   const musicalNoteEmpty = document.getElementById('ozMusicalNoteEmpty');
   const musicalNoteActions = document.getElementById('ozMusicalNoteActions');
-  const musicalCutDialog = document.getElementById('ozMusicalCutDialog');
-  const musicalCutTitle = document.getElementById('ozMusicalCutTitle');
-  const musicalCutMessage = document.getElementById('ozMusicalCutMessage');
   const addMenu = document.getElementById('addMenu');
   const accountMenu = document.getElementById('accountMenu');
   const headerOptionsButton = document.getElementById('headerOptionsButton');
@@ -89,6 +87,7 @@
   let musicalProjectLoading = false;
   let musicalNotes = [];
   let musicalNotesTrackId = '';
+  let musicalLocalCuts = [];
   let musicalNoteId = '';
   let musicalNoteMode = 'view';
   let musicalNoteDraftPosition = 0;
@@ -168,6 +167,111 @@
     return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
   }
 
+  function musicalLocalCutStorage() {
+    try {
+      const value = JSON.parse(localStorage.getItem(MUSICAL_LOCAL_CUTS_KEY) || '{}');
+      return value && typeof value === 'object' ? value : {};
+    } catch (_error) { return {}; }
+  }
+
+  function musicalLocalCutKey(trackId) {
+    return `${activeMember?.id || 'local'}:${trackId || ''}`;
+  }
+
+  function saveMusicalLocalCuts(trackId) {
+    try {
+      const storage = musicalLocalCutStorage();
+      const track = musicalTracks.find((entry) => entry?.id === trackId);
+      storage[musicalLocalCutKey(trackId)] = {
+        sourceUpdatedAt: String(musicalTrackAudio(track)?.updatedAt || ''),
+        cuts: musicalLocalCuts.slice(0, 5)
+      };
+      localStorage.setItem(MUSICAL_LOCAL_CUTS_KEY, JSON.stringify(storage));
+    } catch (_error) {}
+  }
+
+  function loadMusicalLocalCuts(trackId) {
+    const storage = musicalLocalCutStorage();
+    const storedValue = storage[musicalLocalCutKey(trackId)];
+    const track = musicalTracks.find((entry) => entry?.id === trackId);
+    const sourceUpdatedAt = String(musicalTrackAudio(track)?.updatedAt || '');
+    const stored = (Array.isArray(storedValue)
+      ? storedValue
+      : (storedValue?.sourceUpdatedAt && sourceUpdatedAt && storedValue.sourceUpdatedAt !== sourceUpdatedAt ? [] : storedValue?.cuts)) || [];
+    musicalLocalCuts = stored
+      .map((entry) => ({ startSeconds: Number(entry?.startSeconds), endSeconds: Number(entry?.endSeconds), timestamp: String(entry?.timestamp || '') }))
+      .filter((entry) => Number.isFinite(entry.startSeconds) && Number.isFinite(entry.endSeconds) && entry.endSeconds > entry.startSeconds)
+      .sort((left, right) => left.startSeconds - right.startSeconds);
+  }
+
+  function musicalEditedDuration(originalDuration) {
+    return Math.max(0, Number(originalDuration) - musicalLocalCuts.reduce((total, cut) => total + (cut.endSeconds - cut.startSeconds), 0));
+  }
+
+  function musicalOriginalToEdited(seconds) {
+    const original = Math.max(0, Number(seconds) || 0);
+    let edited = original;
+    for (const cut of musicalLocalCuts) {
+      if (original <= cut.startSeconds) break;
+      if (original < cut.endSeconds) return Math.max(0, cut.startSeconds - musicalLocalCuts.slice(0, musicalLocalCuts.indexOf(cut)).reduce((sum, item) => sum + (item.endSeconds - item.startSeconds), 0));
+      edited -= cut.endSeconds - cut.startSeconds;
+    }
+    return Math.max(0, edited);
+  }
+
+  function musicalEditedToOriginal(seconds) {
+    let remaining = Math.max(0, Number(seconds) || 0);
+    let original = 0;
+    for (const cut of musicalLocalCuts) {
+      const segment = Math.max(0, cut.startSeconds - original);
+      if (remaining <= segment) return original + remaining;
+      remaining -= segment;
+      original = cut.endSeconds;
+    }
+    return original + remaining;
+  }
+
+  function musicalSkipLocalCut() {
+    const current = Number(musicalAudio.currentTime) || 0;
+    const cut = musicalLocalCuts.find((entry) => current >= entry.startSeconds && current < entry.endSeconds);
+    if (cut) musicalAudio.currentTime = cut.endSeconds;
+  }
+
+  function registerMusicalLocalCutsFromNotes() {
+    const cutNotes = musicalNotes
+      .filter((note) => Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim()))
+      .sort((left, right) => Number(left.positionSeconds) - Number(right.positionSeconds));
+    let changed = false;
+    for (let index = 0; index + 1 < cutNotes.length; index += 2) {
+      const startSeconds = Math.min(Number(cutNotes[index].positionSeconds) || 0, Number(cutNotes[index + 1].positionSeconds) || 0);
+      const endSeconds = Math.max(Number(cutNotes[index].positionSeconds) || 0, Number(cutNotes[index + 1].positionSeconds) || 0);
+      if (endSeconds - startSeconds < 0.05) continue;
+      if (musicalLocalCuts.some((cut) => Math.abs(cut.startSeconds - startSeconds) < 0.01 && Math.abs(cut.endSeconds - endSeconds) < 0.01)) continue;
+      musicalLocalCuts.push({ startSeconds, endSeconds, timestamp: new Date().toISOString() });
+      changed = true;
+    }
+    if (changed) {
+      musicalLocalCuts.sort((left, right) => left.startSeconds - right.startSeconds);
+      musicalLocalCuts = musicalLocalCuts.slice(-5);
+      saveMusicalLocalCuts(musicalNotesTrackId);
+    }
+    return changed;
+  }
+
+  function undoMusicalLocalCut(trackId) {
+    if (!musicalLocalCuts.length) return false;
+    const lastCut = musicalLocalCuts.pop();
+    const matchingMarkers = musicalNotes
+      .filter((note) => Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim()))
+      .sort((left, right) => Number(right.positionSeconds) - Number(left.positionSeconds));
+    const markerToRemove = matchingMarkers.find((note) => Math.abs(Number(note.positionSeconds) - lastCut.endSeconds) < 0.05);
+    if (markerToRemove) musicalNotes = musicalNotes.filter((note) => note.id !== markerToRemove.id);
+    saveMusicalLocalCuts(trackId);
+    renderMusicalNoteMarkers();
+    updateMusicalPlayer();
+    return true;
+  }
+
   function musicalAssetUrl(url, fallback = '') {
     const value = String(url || fallback || '').trim();
     if (!value) return '';
@@ -212,8 +316,10 @@
 
   function updateMusicalPlayer() {
     const track = musicalTracks[musicalTrackIndex];
-    const duration = Number.isFinite(musicalAudio.duration) ? musicalAudio.duration : 0;
-    const position = Number(musicalAudio.currentTime) || 0;
+    musicalSkipLocalCut();
+    const originalDuration = Number.isFinite(musicalAudio.duration) ? musicalAudio.duration : 0;
+    const duration = musicalEditedDuration(originalDuration);
+    const position = musicalOriginalToEdited(Number(musicalAudio.currentTime) || 0);
     musicalSeek.max = String(Math.max(0, duration));
     musicalSeek.value = String(Math.min(position, duration || position));
     musicalCurrentTime.textContent = musicalTime(position);
@@ -236,10 +342,10 @@
   }
 
   function renderMusicalNoteMarkers() {
-    const duration = Number.isFinite(musicalAudio.duration) ? musicalAudio.duration : 0;
+    const duration = musicalEditedDuration(Number.isFinite(musicalAudio.duration) ? musicalAudio.duration : 0);
     musicalNoteMarkers.innerHTML = duration > 0
       ? musicalNotes.map((note) => {
-        const position = Math.min(100, Math.max(0, (Number(note.positionSeconds) / duration) * 100));
+        const position = Math.min(100, Math.max(0, (musicalOriginalToEdited(Number(note.positionSeconds)) / duration) * 100));
         const isCut = Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim());
         return `<button class="oz-musical-note-marker ${isCut ? 'is-cut' : ''}" type="button" data-musical-note-id="${escapeHtml(note.id)}" style="left:${position}%" aria-label="Abrir nota em ${musicalTime(note.positionSeconds)}" title="${isCut ? 'Corte' : 'Nota'} em ${musicalTime(note.positionSeconds)}"></button>`;
       }).join('')
@@ -261,6 +367,7 @@
       if (!response.ok || payload.success === false) throw new Error(payload.message || 'Não foi possível carregar as notas.');
       if (musicalNotesTrackId !== trackId) return;
       musicalNotes = Array.isArray(payload.notes) ? payload.notes : [];
+      registerMusicalLocalCutsFromNotes();
       renderMusicalNoteMarkers();
     } catch (_error) {
       musicalNotes = [];
@@ -280,7 +387,7 @@
     musicalNoteCurrent.hidden = !selected && !editing;
     musicalNoteEmpty.textContent = 'Toque em um tracinho amarelo para ver a nota.';
     musicalNoteEmpty.hidden = Boolean(selected || editing);
-    musicalNoteTime.textContent = selected ? `Marcada em ${musicalTime(selected.positionSeconds)}` : `Nova nota em ${musicalTime(musicalNoteDraftPosition)}`;
+    musicalNoteTime.textContent = selected ? `Marcada em ${musicalTime(musicalOriginalToEdited(selected.positionSeconds))}` : `Nova nota em ${musicalTime(musicalOriginalToEdited(musicalNoteDraftPosition))}`;
     musicalNoteText.textContent = selected?.text || '';
     musicalNoteText.hidden = editing;
     musicalNoteEditor.hidden = !editing;
@@ -310,75 +417,45 @@
     if (!musicalNoteDialog.open) musicalNoteDialog.showModal();
   }
 
-  function applyMusicalCutUpdate(audio, cut) {
-    if (!audio?.fileName || !musicalTracks[musicalTrackIndex]) return;
-    const activeTrack = musicalTracks[musicalTrackIndex];
-    const previousTime = Number(musicalAudio.currentTime) || 0;
-    const wasPlaying = !musicalAudio.paused;
-    const cacheVersion = encodeURIComponent(audio.updatedAt || Date.now());
-    const nextAudio = { ...audio, url: `${audio.url || musicalAssetUrl(audio.url)}?v=${cacheVersion}` };
-    const replace = (track) => {
-      if (!track || track.id !== activeTrack.id) return track;
-      return {
-        ...track,
-        audio: track.audio?.fileName === audio.fileName ? { ...track.audio, ...nextAudio } : track.audio,
-        audioTracks: (Array.isArray(track.audioTracks) ? track.audioTracks : []).map((entry) => entry.fileName === audio.fileName ? { ...entry, ...nextAudio } : entry)
-      };
-    };
-    musicalTracks = musicalTracks.map(replace);
-    const nextTime = cut && Number.isFinite(Number(cut.startSeconds)) && Number.isFinite(Number(cut.endSeconds))
-      ? (previousTime >= Number(cut.endSeconds)
-        ? Math.max(0, previousTime - Number(cut.removedSeconds || 0))
-        : Math.min(previousTime, Number(cut.startSeconds)))
-      : previousTime;
-    musicalAudio.pause();
-    musicalAudio.src = musicalAssetUrl(nextAudio.url);
-    musicalAudio.load();
-    musicalAudio.addEventListener('loadedmetadata', () => {
-      musicalAudio.currentTime = Math.min(nextTime, Number(musicalAudio.duration) || nextTime);
-      updateMusicalPlayer();
-      renderMusicalNoteMarkers();
-      if (wasPlaying) musicalAudio.play().catch(() => {});
-    }, { once: true });
-    loadMusicalNotes(activeTrack.id).catch(() => {});
-  }
-
   async function saveMusicalNote() {
     if (!activeMember?.isKelly || !musicalNotesTrackId) return;
     const text = musicalNoteEditor.value.trim();
     if (!text) return;
+    const isCutNote = /^corte$/i.test(text);
+    const isUndoNote = /^desfazer$/i.test(text);
+    if (isUndoNote) {
+      if (!undoMusicalLocalCut(musicalNotesTrackId)) throw new Error('Não há um corte local recente para desfazer.');
+      fetch(`/api/oz/musical/notes/${encodeURIComponent(musicalNotesTrackId)}`, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'x-oz-member-id': activeMember.id },
+        body: JSON.stringify({ text: 'desfazer', positionSeconds: Number(musicalAudio.currentTime) || 0 })
+      }).catch(() => {});
+      musicalNoteId = '';
+      musicalNoteMode = 'view';
+      musicalNoteDialog.close();
+      return;
+    }
     const noteId = musicalNoteId;
     const method = noteId ? 'PATCH' : 'POST';
     const endpoint = noteId
       ? `/api/oz/musical/notes/${encodeURIComponent(musicalNotesTrackId)}/${encodeURIComponent(noteId)}`
       : `/api/oz/musical/notes/${encodeURIComponent(musicalNotesTrackId)}`;
-    const isCutNote = /^corte$/i.test(text);
-    const isUndoNote = /^desfazer$/i.test(text);
-    if ((isCutNote || isUndoNote) && !musicalCutDialog.open) {
-      musicalCutTitle.textContent = isUndoNote ? 'Desfazendo o último corte' : 'Cortando seu áudio';
-      musicalCutMessage.textContent = isUndoNote ? 'Restaurando a versão anterior para todos.' : 'Salvando a nova versão para todos.';
-      musicalCutDialog.showModal();
-    }
-    try {
-      const response = await fetch(endpoint, {
-        method,
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'x-oz-member-id': activeMember.id },
-        body: JSON.stringify({ text, positionSeconds: noteId ? Number(musicalNoteById(noteId)?.positionSeconds || musicalNoteDraftPosition) : musicalNoteDraftPosition })
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || payload.success === false) throw new Error(payload.message || 'Não foi possível salvar a nota.');
-      musicalNotes = Array.isArray(payload.notes) ? payload.notes : musicalNotes;
-      const saved = noteId
-        ? musicalNoteById(noteId)
-        : musicalNotes.reduce((closest, note) => !closest || Math.abs(Number(note.positionSeconds) - musicalNoteDraftPosition) < Math.abs(Number(closest.positionSeconds) - musicalNoteDraftPosition) ? note : closest, null);
-      musicalNoteId = saved?.id || '';
-      musicalNoteMode = 'view';
-      renderMusicalNoteMarkers();
-      if (payload.audio) applyMusicalCutUpdate(payload.audio, payload.cut);
-      musicalNoteDialog.close();
-    } finally {
-      if (musicalCutDialog.open) musicalCutDialog.close();
-    }
+    const response = await fetch(endpoint, {
+      method,
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'x-oz-member-id': activeMember.id },
+      body: JSON.stringify({ text, positionSeconds: noteId ? Number(musicalNoteById(noteId)?.positionSeconds || musicalNoteDraftPosition) : musicalNoteDraftPosition })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.success === false) throw new Error(payload.message || 'Não foi possível salvar a nota.');
+    musicalNotes = Array.isArray(payload.notes) ? payload.notes : musicalNotes;
+    const saved = noteId
+      ? musicalNoteById(noteId)
+      : musicalNotes.reduce((closest, note) => !closest || Math.abs(Number(note.positionSeconds) - musicalNoteDraftPosition) < Math.abs(Number(closest.positionSeconds) - musicalNoteDraftPosition) ? note : closest, null);
+    musicalNoteId = saved?.id || '';
+    musicalNoteMode = 'view';
+    if (isCutNote) registerMusicalLocalCutsFromNotes();
+    renderMusicalNoteMarkers();
+    musicalNoteDialog.close();
   }
 
   async function deleteMusicalNote() {
@@ -400,6 +477,7 @@
     if (!musicalTracks.length) return;
     musicalTrackIndex = (Number(index) + musicalTracks.length) % musicalTracks.length;
     const track = musicalTracks[musicalTrackIndex];
+    loadMusicalLocalCuts(track.id);
     const audio = musicalTrackAudio(track);
     const title = getMusicalTrackTitle(track, musicalTrackIndex);
     musicalAudio.pause();
@@ -1291,7 +1369,7 @@
   musicalAudio.addEventListener('ended', updateMusicalPlayer);
   musicalSeek.addEventListener('input', () => {
     if (!Number.isFinite(musicalAudio.duration)) return;
-    musicalAudio.currentTime = Number(musicalSeek.value) || 0;
+    musicalAudio.currentTime = Math.min(Number(musicalAudio.duration), musicalEditedToOriginal(Number(musicalSeek.value) || 0));
     updateMusicalPlayer();
   });
   document.getElementById('ozMusicalPrevious').addEventListener('click', () => setMusicalTrack(musicalTrackIndex - 1, { autoplay: true }));
