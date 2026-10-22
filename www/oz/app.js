@@ -47,6 +47,9 @@
   const musicalNotesButton = document.getElementById('ozMusicalNotes');
   const musicalNoteMarkers = document.getElementById('ozMusicalNoteMarkers');
   const musicalCutDialog = document.getElementById('ozMusicalCutDialog');
+  const musicalSaveDialog = document.getElementById('ozMusicalSaveDialog');
+  const musicalSaveMessage = document.getElementById('ozMusicalSaveMessage');
+  const musicalSaveClose = document.getElementById('ozMusicalSaveClose');
   const musicalNoteDialog = document.getElementById('ozMusicalNoteDialog');
   const musicalNoteList = document.getElementById('ozMusicalNoteList');
   const musicalNoteCurrent = document.getElementById('ozMusicalNoteCurrent');
@@ -94,6 +97,7 @@
   let musicalLocalPendingReferenceCut = null;
   let musicalSourceWasEdited = false;
   let musicalCutDialogTimer = 0;
+  let musicalPublishBusy = false;
   let musicalNoteId = '';
   let musicalNoteMode = 'view';
   let musicalNoteDraftPosition = 0;
@@ -224,10 +228,11 @@
       const storage = musicalLocalCutStorage();
       const track = musicalTracks.find((entry) => entry?.id === trackId);
       storage[musicalLocalCutKey(trackId)] = {
+        sourceFileName: String(musicalTrackAudio(track)?.fileName || ''),
         sourceUpdatedAt: String(musicalTrackAudio(track)?.updatedAt || ''),
         cuts: musicalLocalCuts.slice(0, 5),
-        referenceCuts: musicalReferenceCuts.slice(0, 5),
-        history: musicalReferenceCuts.slice(0, 5),
+        referenceCuts: musicalReferenceCuts,
+        history: musicalReferenceCuts,
         sourceWasEdited: musicalSourceWasEdited,
         pendingStartSeconds: Number.isFinite(musicalLocalPendingCut) ? musicalLocalPendingCut : null,
         pendingReferenceSeconds: Number.isFinite(musicalLocalPendingReferenceCut) ? musicalLocalPendingReferenceCut : null
@@ -240,11 +245,11 @@
     const storage = musicalLocalCutStorage();
     const storedValue = storage[musicalLocalCutKey(trackId)];
     const track = musicalTracks.find((entry) => entry?.id === trackId);
+    const sourceFileName = String(musicalTrackAudio(track)?.fileName || '');
     const sourceUpdatedAt = String(musicalTrackAudio(track)?.updatedAt || '');
     const sourceChanged = !Array.isArray(storedValue)
-      && storedValue?.sourceUpdatedAt
-      && sourceUpdatedAt
-      && storedValue.sourceUpdatedAt !== sourceUpdatedAt;
+      && ((storedValue?.sourceFileName && sourceFileName && storedValue.sourceFileName !== sourceFileName)
+        || (storedValue?.sourceUpdatedAt && sourceUpdatedAt && storedValue.sourceUpdatedAt !== sourceUpdatedAt));
     const stored = (Array.isArray(storedValue)
       ? storedValue
       : (sourceChanged ? [] : storedValue?.cuts)) || [];
@@ -258,14 +263,15 @@
     musicalReferenceCuts = references
       .map((entry) => ({ startSeconds: Number(entry?.startSeconds), endSeconds: Number(entry?.endSeconds), timestamp: String(entry?.timestamp || '') }))
       .filter((entry) => Number.isFinite(entry.startSeconds) && Number.isFinite(entry.endSeconds) && entry.endSeconds > entry.startSeconds)
-      .sort((left, right) => left.startSeconds - right.startSeconds)
-      .slice(-5);
+      .sort((left, right) => left.startSeconds - right.startSeconds);
     musicalSourceWasEdited = Boolean(sourceChanged || storedValue?.sourceWasEdited);
-    const pending = storedValue && !Array.isArray(storedValue) ? Number(storedValue.pendingStartSeconds) : NaN;
-    const pendingReference = storedValue && !Array.isArray(storedValue) ? Number(storedValue.pendingReferenceSeconds) : NaN;
-    musicalLocalPendingCut = Number.isFinite(pending) && pending >= 0 ? pending : null;
+    const pending = storedValue && !Array.isArray(storedValue) && storedValue.pendingStartSeconds != null
+      ? Number(storedValue.pendingStartSeconds) : NaN;
+    const pendingReference = storedValue && !Array.isArray(storedValue) && storedValue.pendingReferenceSeconds != null
+      ? Number(storedValue.pendingReferenceSeconds) : NaN;
+    musicalLocalPendingCut = !sourceChanged && Number.isFinite(pending) && pending >= 0 ? pending : null;
     musicalLocalPendingReferenceCut = Number.isFinite(pendingReference) && pendingReference >= 0
-      ? pendingReference
+      && !sourceChanged ? pendingReference
       : musicalLocalPendingCut;
   }
 
@@ -330,6 +336,9 @@
 
   function registerMusicalLocalCutMarker(positionSeconds) {
     const position = Math.max(0, Number(positionSeconds) || 0);
+    if (!Number.isFinite(musicalLocalPendingCut) && musicalLocalCuts.length >= 5) {
+      throw new Error('Você já marcou cinco cortes. Escreva “salvar” para publicar antes de continuar.');
+    }
     const referencePosition = musicalSourceWasEdited
       ? musicalEditedToOriginal(position, musicalAppliedReferenceCuts())
       : position;
@@ -343,7 +352,11 @@
     const startSeconds = Math.min(musicalLocalPendingCut, position);
     const endSeconds = Math.max(musicalLocalPendingCut, position);
     if (endSeconds - startSeconds < 0.05) return false;
-    const timestamp = new Date().toISOString();
+    if (musicalLocalCuts.some((cut) => startSeconds < cut.endSeconds && endSeconds > cut.startSeconds)) {
+      throw new Error('Esse intervalo cruza outro corte. Escolha dois pontos fora dos cortes já marcados.');
+    }
+    const latestCutTime = musicalLocalCuts.reduce((latest, cut) => Math.max(latest, Date.parse(cut.timestamp) || 0), 0);
+    const timestamp = new Date(Math.max(Date.now(), latestCutTime + 1)).toISOString();
     musicalLocalCuts.push({ startSeconds, endSeconds, timestamp });
     musicalLocalCuts.sort((left, right) => left.startSeconds - right.startSeconds);
     musicalLocalCuts = musicalLocalCuts.slice(-5);
@@ -351,7 +364,6 @@
     const referenceEnd = Math.max(musicalLocalPendingReferenceCut, referencePosition);
     musicalReferenceCuts.push({ startSeconds: referenceStart, endSeconds: referenceEnd, timestamp });
     musicalReferenceCuts.sort((left, right) => left.startSeconds - right.startSeconds);
-    musicalReferenceCuts = musicalReferenceCuts.slice(-5);
     musicalLocalPendingCut = null;
     musicalLocalPendingReferenceCut = null;
     musicalNotes = musicalNotes.filter((note) => {
@@ -363,26 +375,22 @@
   }
 
   function undoMusicalLocalCut(trackId) {
-    if (!musicalLocalCuts.length && !musicalReferenceCuts.length) return false;
-    const lastCut = musicalLocalCuts.length ? musicalLocalCuts.pop() : null;
-    const referenceIndex = lastCut
-      ? musicalReferenceCuts.findIndex((entry) => entry.timestamp && entry.timestamp === lastCut.timestamp)
-      : musicalReferenceCuts.length - 1;
+    if (!musicalLocalCuts.length) return false;
+    const lastCut = musicalLocalCuts.reduce((latest, cut) =>
+      !latest || String(cut.timestamp) > String(latest.timestamp) ? cut : latest, null);
+    musicalLocalCuts = musicalLocalCuts.filter((cut) => cut !== lastCut);
+    const referenceIndex = musicalReferenceCuts.findIndex((entry) => entry.timestamp && entry.timestamp === lastCut.timestamp);
     const referenceCut = referenceIndex >= 0 ? musicalReferenceCuts[referenceIndex] : null;
     if (referenceIndex >= 0) musicalReferenceCuts.splice(referenceIndex, 1);
+    musicalNotes = musicalNotes.filter((note) => !String(note.id || '').startsWith('local-cut-'));
     const matchingMarkers = musicalNotes
       .filter((note) => Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim()))
       .sort((left, right) => Number(right.positionSeconds) - Number(left.positionSeconds));
-    const markerToRemove = lastCut
-      ? matchingMarkers.find((note) => Math.abs(Number(note.positionSeconds) - lastCut.endSeconds) < 0.05)
-      : null;
+    const markerToRemove = matchingMarkers.find((note) => Math.abs(Number(note.positionSeconds) - lastCut.endSeconds) < 0.05);
     if (markerToRemove) musicalNotes = musicalNotes.filter((note) => note.id !== markerToRemove.id);
-    const pendingReference = referenceCut?.startSeconds ?? lastCut?.startSeconds;
-    if (!Number.isFinite(pendingReference)) return false;
+    const pendingReference = referenceCut?.startSeconds ?? lastCut.startSeconds;
     musicalLocalPendingReferenceCut = pendingReference;
-    musicalLocalPendingCut = lastCut
-      ? lastCut.startSeconds
-      : musicalOriginalToEditedWithCuts(pendingReference, musicalReferenceCuts);
+    musicalLocalPendingCut = lastCut.startSeconds;
     ensureMusicalLocalPendingMarker();
     saveMusicalLocalCuts(trackId);
     renderMusicalNoteMarkers();
@@ -529,7 +537,11 @@
   function openMusicalNotes(noteId = '') {
     const currentTime = Number(musicalAudio.currentTime) || 0;
     const nearby = !noteId && activeMember?.isKelly
-      ? musicalNotes.find((note) => Math.abs(Number(note.positionSeconds) - currentTime) < 1)
+      ? musicalNotes.find((note) => {
+        const isCut = Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim());
+        return (!isCut || String(note.id || '').startsWith('local-cut-'))
+          && Math.abs(Number(note.positionSeconds) - currentTime) < 1;
+      })
       : null;
     musicalNoteId = noteId || nearby?.id || '';
     musicalNoteDraftPosition = nearby ? Number(nearby.positionSeconds) : currentTime;
@@ -539,6 +551,59 @@
     if (!musicalNoteDialog.open) musicalNoteDialog.showModal();
   }
 
+  async function publishMusicalCuts() {
+    if (musicalPublishBusy) return;
+    if (!musicalLocalCuts.length) throw new Error('Marque um corte antes de escrever “salvar”.');
+    if (Number.isFinite(musicalLocalPendingCut)) throw new Error('Feche o ponto de corte aberto antes de salvar.');
+    const trackId = musicalNotesTrackId;
+    const track = musicalTracks.find((entry) => entry?.id === trackId);
+    const sourceAudio = musicalTrackAudio(track);
+    if (!sourceAudio?.fileName) throw new Error('O áudio desta faixa não está disponível para salvar.');
+    const cuts = musicalLocalCuts.map(({ startSeconds, endSeconds }) => ({ startSeconds, endSeconds }));
+    musicalNoteDialog.close();
+    musicalPublishBusy = true;
+    musicalSaveDialog.classList.remove('is-done', 'is-error');
+    musicalSaveMessage.textContent = 'Salvando globalmente…';
+    musicalSaveClose.hidden = true;
+    if (!musicalSaveDialog.open) musicalSaveDialog.showModal();
+    try {
+      const response = await fetch(`/api/oz/musical/notes/${encodeURIComponent(trackId)}`, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'x-oz-member-id': activeMember.id },
+        body: JSON.stringify({
+          text: 'salvar',
+          sourceFileName: sourceAudio.fileName,
+          sourceUpdatedAt: String(sourceAudio.updatedAt || ''),
+          cuts
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success === false) throw new Error(payload.message || 'Não foi possível publicar o áudio.');
+      const publishedAudio = payload.published?.audio;
+      if (!publishedAudio?.url) throw new Error('O servidor não devolveu o áudio publicado.');
+      track.audio = { ...sourceAudio, ...publishedAudio };
+      track.audioTracks = (Array.isArray(track.audioTracks) ? track.audioTracks : []).map((entry) =>
+        entry?.fileName === sourceAudio.fileName ? { ...entry, ...publishedAudio } : entry);
+      if (payload.published?.lyrics) track.lyrics = payload.published.lyrics;
+      musicalLocalCuts = [];
+      musicalLocalPendingCut = null;
+      musicalLocalPendingReferenceCut = null;
+      musicalSourceWasEdited = true;
+      saveMusicalLocalCuts(trackId);
+      if (musicalTracks[musicalTrackIndex]?.id === trackId) setMusicalTrack(musicalTrackIndex);
+      musicalSaveDialog.classList.add('is-done');
+      musicalSaveMessage.textContent = 'Áudio salvo para todos';
+      musicalSaveClose.hidden = false;
+      window.setTimeout(() => { if (musicalSaveDialog.open && musicalSaveDialog.classList.contains('is-done')) musicalSaveDialog.close(); }, 1400);
+    } catch (error) {
+      musicalSaveDialog.classList.add('is-error');
+      musicalSaveMessage.textContent = error.message || 'Não foi possível salvar o áudio.';
+      musicalSaveClose.hidden = false;
+    } finally {
+      musicalPublishBusy = false;
+    }
+  }
+
   async function saveMusicalNote() {
     if (!activeMember?.isKelly || !musicalNotesTrackId) return;
     const text = musicalNoteEditor.value.trim();
@@ -546,6 +611,7 @@
     const isCutNote = /^corte$/i.test(text);
     const isUndoNote = /^desfazer$/i.test(text);
     const isCopyCommand = /^copiar$/i.test(text);
+    const isPublishCommand = /^salvar$/i.test(text);
     if (isCopyCommand) {
       await copyMusicalCutMarks();
       musicalNoteId = '';
@@ -555,11 +621,26 @@
     }
     if (isUndoNote) {
       if (!undoMusicalLocalCut(musicalNotesTrackId)) throw new Error('Não há um corte local recente para desfazer.');
-      fetch(`/api/oz/musical/notes/${encodeURIComponent(musicalNotesTrackId)}`, {
-        method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'x-oz-member-id': activeMember.id },
-        body: JSON.stringify({ text: 'desfazer', positionSeconds: Number(musicalAudio.currentTime) || 0 })
-      }).catch(() => {});
+      musicalNoteId = '';
+      musicalNoteMode = 'view';
+      musicalNoteDialog.close();
+      return;
+    }
+    if (isPublishCommand) {
+      await publishMusicalCuts();
+      return;
+    }
+    if (isCutNote) {
+      const markerPosition = musicalNoteId
+        ? Number(musicalNoteById(musicalNoteId)?.positionSeconds ?? musicalNoteDraftPosition)
+        : musicalNoteDraftPosition;
+      const completed = registerMusicalLocalCutMarker(markerPosition);
+      ensureMusicalLocalPendingMarker();
+      if (completed) {
+        showMusicalCutProgress();
+        updateMusicalPlayer();
+      }
+      renderMusicalNoteMarkers();
       musicalNoteId = '';
       musicalNoteMode = 'view';
       musicalNoteDialog.close();
@@ -583,17 +664,6 @@
       : musicalNotes.reduce((closest, note) => !closest || Math.abs(Number(note.positionSeconds) - musicalNoteDraftPosition) < Math.abs(Number(closest.positionSeconds) - musicalNoteDraftPosition) ? note : closest, null);
     musicalNoteId = saved?.id || '';
     musicalNoteMode = 'view';
-    if (isCutNote) {
-      const markerPosition = noteId
-        ? Number(musicalNoteById(noteId)?.positionSeconds || musicalNoteDraftPosition)
-        : musicalNoteDraftPosition;
-      registerMusicalLocalCutMarker(markerPosition);
-      ensureMusicalLocalPendingMarker();
-      if (musicalLocalPendingCut === null) {
-        showMusicalCutProgress();
-        updateMusicalPlayer();
-      }
-    }
     renderMusicalNoteMarkers();
     musicalNoteDialog.close();
   }
@@ -655,9 +725,12 @@
   }
 
   async function loadMusicalProject() {
-    if (musicalProjectLoaded || musicalProjectLoading) return;
+    if (musicalProjectLoading) return;
     musicalProjectLoading = true;
-    musicalStatus.textContent = 'Carregando faixas…';
+    const selectedTrack = musicalTracks[musicalTrackIndex];
+    const selectedTrackId = selectedTrack?.id;
+    const selectedAudio = musicalTrackAudio(selectedTrack);
+    if (!musicalProjectLoaded) musicalStatus.textContent = 'Carregando faixas…';
     try {
       const response = await fetch('/api/musical-kelly/project', { headers: { Accept: 'application/json' }, cache: 'no-store' });
       const payload = await response.json().catch(() => ({}));
@@ -665,8 +738,13 @@
       musicalTracks = Array.isArray(payload.project?.cards)
         ? payload.project.cards.filter((track) => musicalTrackAudio(track)?.url)
         : [];
+      const selectedIndex = Math.max(0, musicalTracks.findIndex((track) => track.id === selectedTrackId));
+      const nextAudio = musicalTrackAudio(musicalTracks[selectedIndex]);
+      const audioChanged = !musicalProjectLoaded || selectedAudio?.fileName !== nextAudio?.fileName
+        || selectedAudio?.updatedAt !== nextAudio?.updatedAt;
       musicalProjectLoaded = true;
-      if (musicalTracks.length) setMusicalTrack(0);
+      if (musicalTracks.length && audioChanged) setMusicalTrack(selectedIndex);
+      else if (musicalTracks.length) renderMusicalTrackList();
       else musicalStatus.textContent = 'Nenhuma faixa disponível.';
     } catch (error) {
       musicalStatus.textContent = error.message || 'Não foi possível carregar o musical.';
@@ -1537,6 +1615,8 @@
   });
   document.getElementById('closeOzMusicalNote').addEventListener('click', () => musicalNoteDialog.close());
   musicalNoteDialog.addEventListener('click', (event) => { if (event.target === musicalNoteDialog) musicalNoteDialog.close(); });
+  musicalSaveClose.addEventListener('click', () => musicalSaveDialog.close());
+  musicalSaveDialog.addEventListener('cancel', (event) => { if (musicalPublishBusy) event.preventDefault(); });
   musicalNoteList.addEventListener('click', (event) => {
     const option = event.target.closest('[data-musical-note-select]');
     if (!option || musicalNoteMode === 'new' || musicalNoteMode === 'edit') return;

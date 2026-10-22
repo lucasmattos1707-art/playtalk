@@ -645,6 +645,16 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .oz-musical-cut-panel { display: flex; align-items: center; gap: 12px; padding: 20px 22px; font-size: 14px; }
 .oz-musical-cut-spinner { width: 18px; height: 18px; flex: 0 0 auto; border: 2px solid rgba(255,255,255,.2); border-top-color: #b78dff; border-right-color: #7aeca5; border-radius: 50%; animation: oz-musical-cut-spin .72s linear infinite; }
 @keyframes oz-musical-cut-spin { to { transform: rotate(360deg); } }
+.oz-musical-save-dialog { width: min(350px, calc(100vw - 36px)); margin: auto; padding: 0; border: 1px solid rgba(201, 164, 255, .32); border-radius: 20px; background: #171324; color: #f7f2ff; box-shadow: 0 25px 90px rgba(0,0,0,.7); }
+.oz-musical-save-dialog::backdrop { background: rgba(5, 3, 11, .76); backdrop-filter: blur(10px); }
+.oz-musical-save-panel { display: grid; justify-items: center; gap: 16px; padding: 29px 25px; text-align: center; font: 750 15px/1.4 var(--font); }
+.oz-musical-save-indicator { width: 34px; height: 34px; border: 3px solid rgba(194, 159, 255, .22); border-top-color: #cbaaff; border-right-color: #72e49a; border-radius: 50%; animation: oz-musical-cut-spin .75s linear infinite; }
+.oz-musical-save-dialog.is-done .oz-musical-save-indicator { display: grid; place-items: center; border-color: #72e49a; background: rgba(86, 207, 126, .14); animation: none; }
+.oz-musical-save-dialog.is-done .oz-musical-save-indicator::after { content: '✓'; color: #8cf4ad; font-size: 21px; line-height: 1; }
+.oz-musical-save-dialog.is-error .oz-musical-save-indicator { border-color: #ff8b9e; animation: none; }
+.oz-musical-save-dialog.is-error .oz-musical-save-indicator::after { content: '!'; display: block; color: #ff9dac; text-align: center; font-size: 22px; line-height: 28px; }
+.oz-musical-save-panel button { padding: 8px 16px; border: 1px solid rgba(201, 164, 255, .34); border-radius: 9px; background: rgba(169, 121, 238, .14); color: #f7f2ff; font: inherit; cursor: pointer; }
+.oz-musical-save-panel button[hidden] { display: none; }
 .oz-musical-progress-track { position: relative; min-width: 0; }
 .oz-musical-progress { gap: 12px; font-size: 11px; font-weight: 700; }
 .oz-musical-progress input { position: relative; z-index: 1; }
