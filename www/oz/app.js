@@ -275,15 +275,19 @@
     return musicalReferenceCuts.filter((cut) => !cut.timestamp || !localTimestamps.has(cut.timestamp));
   }
 
-  function musicalOriginalToEdited(seconds) {
+  function musicalOriginalToEditedWithCuts(seconds, cuts) {
     const original = Math.max(0, Number(seconds) || 0);
     let edited = original;
-    for (const cut of musicalLocalCuts) {
+    for (const cut of cuts) {
       if (original <= cut.startSeconds) break;
-      if (original < cut.endSeconds) return Math.max(0, cut.startSeconds - musicalLocalCuts.slice(0, musicalLocalCuts.indexOf(cut)).reduce((sum, item) => sum + (item.endSeconds - item.startSeconds), 0));
+      if (original < cut.endSeconds) return Math.max(0, cut.startSeconds - cuts.slice(0, cuts.indexOf(cut)).reduce((sum, item) => sum + (item.endSeconds - item.startSeconds), 0));
       edited -= cut.endSeconds - cut.startSeconds;
     }
     return Math.max(0, edited);
+  }
+
+  function musicalOriginalToEdited(seconds) {
+    return musicalOriginalToEditedWithCuts(seconds, musicalLocalCuts);
   }
 
   function musicalEditedToOriginal(seconds, cuts = musicalLocalCuts) {
@@ -356,20 +360,26 @@
   }
 
   function undoMusicalLocalCut(trackId) {
-    if (!musicalLocalCuts.length) return false;
-    const lastCut = musicalLocalCuts.pop();
-    const referenceIndex = musicalReferenceCuts.findIndex((entry) => entry.timestamp && entry.timestamp === lastCut.timestamp);
+    if (!musicalLocalCuts.length && !musicalReferenceCuts.length) return false;
+    const lastCut = musicalLocalCuts.length ? musicalLocalCuts.pop() : null;
+    const referenceIndex = lastCut
+      ? musicalReferenceCuts.findIndex((entry) => entry.timestamp && entry.timestamp === lastCut.timestamp)
+      : musicalReferenceCuts.length - 1;
     const referenceCut = referenceIndex >= 0 ? musicalReferenceCuts[referenceIndex] : null;
     if (referenceIndex >= 0) musicalReferenceCuts.splice(referenceIndex, 1);
     const matchingMarkers = musicalNotes
       .filter((note) => Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim()))
       .sort((left, right) => Number(right.positionSeconds) - Number(left.positionSeconds));
-    const markerToRemove = matchingMarkers.find((note) => Math.abs(Number(note.positionSeconds) - lastCut.endSeconds) < 0.05);
+    const markerToRemove = lastCut
+      ? matchingMarkers.find((note) => Math.abs(Number(note.positionSeconds) - lastCut.endSeconds) < 0.05)
+      : null;
     if (markerToRemove) musicalNotes = musicalNotes.filter((note) => note.id !== markerToRemove.id);
-    musicalLocalPendingCut = lastCut.startSeconds;
-    musicalLocalPendingReferenceCut = referenceCut
-      ? referenceCut.startSeconds
-      : (musicalSourceWasEdited ? musicalEditedToOriginal(lastCut.startSeconds, musicalAppliedReferenceCuts()) : lastCut.startSeconds);
+    const pendingReference = referenceCut?.startSeconds ?? lastCut?.startSeconds;
+    if (!Number.isFinite(pendingReference)) return false;
+    musicalLocalPendingReferenceCut = pendingReference;
+    musicalLocalPendingCut = lastCut
+      ? lastCut.startSeconds
+      : musicalOriginalToEditedWithCuts(pendingReference, musicalReferenceCuts);
     ensureMusicalLocalPendingMarker();
     saveMusicalLocalCuts(trackId);
     renderMusicalNoteMarkers();
