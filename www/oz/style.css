@@ -662,6 +662,7 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .oz-musical-note-marker { position: absolute; top: 50%; width: 5px; height: 13px; padding: 0; transform: translate(-50%, -50%); border: 0; border-radius: 2px; background: #ffd66b; box-shadow: 0 0 8px rgba(255, 207, 93, .7); cursor: pointer; pointer-events: auto; }
 .oz-musical-note-marker:hover { width: 7px; height: 17px; background: #fff0a7; }
 .oz-musical-note-marker.is-cut { background: #ff5f72; box-shadow: 0 0 8px rgba(255, 72, 94, .78); cursor: default; pointer-events: none; }
+.oz-musical-note-marker.is-cut.is-pending { cursor: pointer; pointer-events: auto; }
 .oz-musical-note-marker.is-cut:hover { background: #ff9aa5; }
 .oz-musical-controls { gap: 26px; justify-content: center; }
 .oz-musical-controls button { width: 28px; height: 34px; border-radius: 0; color: #fff; }

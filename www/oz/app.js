@@ -467,14 +467,17 @@
   function renderMusicalNoteMarkers() {
     const duration = musicalEditedDuration(Number.isFinite(musicalAudio.duration) ? musicalAudio.duration : 0);
     const visibleNotes = musicalNotes.filter((note) => !note.isCut && !/^corte$/i.test(String(note.text || '').trim()));
-    const cutPoints = musicalCutPreviewTrackId === musicalNotesTrackId && musicalCutPreviewPoints.length
+    const showingCutPreview = musicalCutPreviewTrackId === musicalNotesTrackId && musicalCutPreviewPoints.length > 0;
+    const cutPoints = showingCutPreview
       ? musicalCutPreviewPoints
       : (Number.isFinite(musicalLocalPendingCut) ? [Math.min(100, Math.max(0, musicalOriginalToEdited(musicalLocalPendingCut) / duration * 100))] : []);
     musicalNoteMarkers.innerHTML = duration > 0
       ? visibleNotes.map((note) => {
         const position = Math.min(100, Math.max(0, (musicalOriginalToEdited(Number(note.positionSeconds)) / duration) * 100));
         return `<button class="oz-musical-note-marker" type="button" data-musical-note-id="${escapeHtml(note.id)}" style="left:${position}%" aria-label="Abrir nota em ${musicalTime(note.positionSeconds)}" title="Nota em ${musicalTime(note.positionSeconds)}"></button>`;
-      }).join('') + cutPoints.map((position, index) => `<span class="oz-musical-note-marker is-cut" style="left:${position}%" title="Ponto ${index === 0 ? 'A' : 'B'} do corte" aria-hidden="true"></span>`).join('')
+      }).join('') + cutPoints.map((position, index) => showingCutPreview
+        ? `<span class="oz-musical-note-marker is-cut" style="left:${position}%" title="Ponto ${index === 0 ? 'A' : 'B'} do corte" aria-hidden="true"></span>`
+        : `<button class="oz-musical-note-marker is-cut is-pending" type="button" data-musical-pending-cut style="left:${position}%" aria-label="Abrir ponto A do corte" title="Ponto A do corte"></button>`).join('')
       : '';
     musicalNotesButton.classList.toggle('has-notes', visibleNotes.length > 0 || cutPoints.length > 0);
   }
@@ -507,18 +510,24 @@
   function renderMusicalNotesDialog() {
     const selected = musicalNoteById(musicalNoteId);
     const editing = musicalNoteMode === 'new' || musicalNoteMode === 'edit';
+    const pendingCut = musicalNoteMode === 'cut-point' && Number.isFinite(musicalLocalPendingCut);
     musicalNoteList.innerHTML = '';
     musicalNoteList.hidden = true;
-    musicalNoteCurrent.hidden = !selected && !editing;
+    musicalNoteCurrent.hidden = !selected && !editing && !pendingCut;
     musicalNoteEmpty.textContent = 'Toque em um tracinho amarelo para ver a nota.';
-    musicalNoteEmpty.hidden = Boolean(selected || editing);
-    musicalNoteTime.textContent = selected ? `Marcada em ${musicalTime(musicalOriginalToEdited(selected.positionSeconds))}` : `Nova nota em ${musicalTime(musicalOriginalToEdited(musicalNoteDraftPosition))}`;
-    musicalNoteText.textContent = selected?.text || '';
+    musicalNoteEmpty.hidden = Boolean(selected || editing || pendingCut);
+    musicalNoteTime.textContent = pendingCut
+      ? `Ponto A em ${musicalTime(musicalOriginalToEdited(musicalLocalPendingCut))}`
+      : selected ? `Marcada em ${musicalTime(musicalOriginalToEdited(selected.positionSeconds))}` : `Nova nota em ${musicalTime(musicalOriginalToEdited(musicalNoteDraftPosition))}`;
+    musicalNoteText.textContent = pendingCut ? 'Ponto de corte aguardando o segundo ponto.' : selected?.text || '';
     musicalNoteText.hidden = editing;
     musicalNoteEditor.hidden = !editing;
     musicalNoteEditor.value = editing ? (selected?.text || '') : '';
     if (editing) musicalNoteEditor.focus();
-    if (editing) {
+    if (pendingCut) {
+      musicalNoteActions.innerHTML = activeMember?.isKelly
+        ? '<button class="is-danger" type="button" data-musical-note-action="delete-cut-point">Apagar</button>' : '';
+    } else if (editing) {
       musicalNoteActions.innerHTML = '<button type="button" data-musical-note-action="cancel">Cancelar</button><button class="is-primary" type="button" data-musical-note-action="save" aria-label="Salvar nota" title="Salvar nota"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="m8 12.2 2.6 2.6 5.5-5.5"></path></svg></button>';
     } else if (selected && activeMember?.isKelly) {
       musicalNoteActions.innerHTML = '<button type="button" data-musical-note-action="edit">Editar</button><button class="is-danger" type="button" data-musical-note-action="delete">Apagar</button>';
@@ -544,6 +553,25 @@
     if (!musicalNoteId && activeMember?.isKelly) musicalNoteMode = 'new';
     renderMusicalNotesDialog();
     if (!musicalNoteDialog.open) musicalNoteDialog.showModal();
+  }
+
+  function openMusicalPendingCut() {
+    if (!Number.isFinite(musicalLocalPendingCut)) return;
+    musicalNoteId = '';
+    musicalNoteDraftPosition = musicalLocalPendingCut;
+    musicalNoteMode = 'cut-point';
+    renderMusicalNotesDialog();
+    if (!musicalNoteDialog.open) musicalNoteDialog.showModal();
+  }
+
+  function deleteMusicalPendingCut() {
+    if (!activeMember?.isKelly || !Number.isFinite(musicalLocalPendingCut)) return;
+    if (!window.confirm('Apagar este ponto de corte?')) return;
+    musicalLocalPendingCut = null;
+    musicalLocalPendingReferenceCut = null;
+    saveMusicalLocalCuts(musicalNotesTrackId);
+    renderMusicalNoteMarkers();
+    musicalNoteDialog.close();
   }
 
   async function publishMusicalCuts() {
@@ -1564,6 +1592,13 @@
   musicalDialog.addEventListener('close', () => { musicalAudio.pause(); });
   document.getElementById('ozMusicalNotes').addEventListener('click', () => openMusicalNotes());
   musicalNoteMarkers.addEventListener('click', (event) => {
+    const pendingCut = event.target.closest('[data-musical-pending-cut]');
+    if (pendingCut) {
+      event.preventDefault();
+      event.stopPropagation();
+      openMusicalPendingCut();
+      return;
+    }
     const marker = event.target.closest('[data-musical-note-id]');
     if (!marker) return;
     event.preventDefault();
@@ -1644,6 +1679,7 @@
     try {
       if (action === 'save') await saveMusicalNote();
       if (action === 'delete') await deleteMusicalNote();
+      if (action === 'delete-cut-point') deleteMusicalPendingCut();
     } catch (error) {
       musicalNoteText.textContent = error.message || 'Não foi possível atualizar a nota.';
       musicalNoteText.hidden = false;
