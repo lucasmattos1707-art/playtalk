@@ -640,6 +640,11 @@ body { background-color: #08090d; background-image: linear-gradient(180deg, rgba
 .oz-musical-caption { display: flex; min-height: 48px; max-height: 48px; align-items: center; justify-content: center; overflow: hidden; color: #f0ecf7; font-size: 16px; font-weight: 750; line-height: 1.5; text-align: center; }
 .oz-musical-caption.is-dissolving { animation: oz-musical-caption-dissolve 420ms ease both; }
 @keyframes oz-musical-caption-dissolve { 0% { opacity: 0; transform: translateY(3px); } 100% { opacity: 1; transform: translateY(0); } }
+.oz-musical-cut-dialog { width: min(310px, calc(100vw - 36px)); margin: auto; padding: 0; border: 1px solid rgba(201, 164, 255, .28); border-radius: 18px; background: rgba(21, 19, 33, .96); color: #f5f2fb; box-shadow: 0 22px 80px rgba(0,0,0,.64); }
+.oz-musical-cut-dialog::backdrop { background: rgba(6, 4, 12, .52); backdrop-filter: blur(7px); }
+.oz-musical-cut-panel { display: flex; align-items: center; gap: 12px; padding: 20px 22px; font-size: 14px; }
+.oz-musical-cut-spinner { width: 18px; height: 18px; flex: 0 0 auto; border: 2px solid rgba(255,255,255,.2); border-top-color: #b78dff; border-right-color: #7aeca5; border-radius: 50%; animation: oz-musical-cut-spin .72s linear infinite; }
+@keyframes oz-musical-cut-spin { to { transform: rotate(360deg); } }
 .oz-musical-progress-track { position: relative; min-width: 0; }
 .oz-musical-progress { gap: 12px; font-size: 11px; font-weight: 700; }
 .oz-musical-progress input { position: relative; z-index: 1; }

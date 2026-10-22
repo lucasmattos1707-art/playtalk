@@ -46,6 +46,7 @@
   const musicalListDialog = document.getElementById('ozMusicalListDialog');
   const musicalNotesButton = document.getElementById('ozMusicalNotes');
   const musicalNoteMarkers = document.getElementById('ozMusicalNoteMarkers');
+  const musicalCutDialog = document.getElementById('ozMusicalCutDialog');
   const musicalNoteDialog = document.getElementById('ozMusicalNoteDialog');
   const musicalNoteList = document.getElementById('ozMusicalNoteList');
   const musicalNoteCurrent = document.getElementById('ozMusicalNoteCurrent');
@@ -92,6 +93,7 @@
   let musicalReferenceCuts = [];
   let musicalLocalPendingReferenceCut = null;
   let musicalSourceWasEdited = false;
+  let musicalCutDialogTimer = 0;
   let musicalNoteId = '';
   let musicalNoteMode = 'view';
   let musicalNoteDraftPosition = 0;
@@ -169,6 +171,15 @@
   function musicalTime(seconds) {
     const total = Math.max(0, Math.floor(Number(seconds) || 0));
     return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+  }
+
+  function showMusicalCutProgress() {
+    if (!musicalCutDialog) return;
+    window.clearTimeout(musicalCutDialogTimer);
+    if (!musicalCutDialog.open) musicalCutDialog.showModal();
+    musicalCutDialogTimer = window.setTimeout(() => {
+      if (musicalCutDialog.open) musicalCutDialog.close();
+    }, 900);
   }
 
   async function copyMusicalCutMarks() {
@@ -558,6 +569,10 @@
         : musicalNoteDraftPosition;
       registerMusicalLocalCutMarker(markerPosition);
       ensureMusicalLocalPendingMarker();
+      if (musicalLocalPendingCut === null) {
+        showMusicalCutProgress();
+        updateMusicalPlayer();
+      }
     }
     renderMusicalNoteMarkers();
     musicalNoteDialog.close();
