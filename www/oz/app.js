@@ -88,6 +88,10 @@
   let musicalNotes = [];
   let musicalNotesTrackId = '';
   let musicalLocalCuts = [];
+  let musicalLocalPendingCut = null;
+  let musicalReferenceCuts = [];
+  let musicalLocalPendingReferenceCut = null;
+  let musicalSourceWasEdited = false;
   let musicalNoteId = '';
   let musicalNoteMode = 'view';
   let musicalNoteDraftPosition = 0;
@@ -167,6 +171,32 @@
     return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
   }
 
+  async function copyMusicalCutMarks() {
+    const lines = musicalReferenceCuts
+      .slice()
+      .sort((left, right) => left.startSeconds - right.startSeconds)
+      .map((cut, index) => `${index + 1}. ${musicalTime(cut.startSeconds)} - ${musicalTime(cut.endSeconds)}`);
+    if (Number.isFinite(musicalLocalPendingReferenceCut)) {
+      lines.push(`${lines.length + 1}. ${musicalTime(musicalLocalPendingReferenceCut)} - ponto aberto`);
+    }
+    const text = lines.length
+      ? `Cortes da faixa (tempo original)\n${lines.join('\n')}`
+      : 'Cortes da faixa (tempo original)\nNenhum corte marcado.';
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (_error) {
+      const helper = document.createElement('textarea');
+      helper.value = text;
+      helper.setAttribute('readonly', '');
+      helper.style.position = 'fixed';
+      helper.style.opacity = '0';
+      document.body.appendChild(helper);
+      helper.select();
+      document.execCommand('copy');
+      helper.remove();
+    }
+  }
+
   function musicalLocalCutStorage() {
     try {
       const value = JSON.parse(localStorage.getItem(MUSICAL_LOCAL_CUTS_KEY) || '{}');
@@ -184,7 +214,11 @@
       const track = musicalTracks.find((entry) => entry?.id === trackId);
       storage[musicalLocalCutKey(trackId)] = {
         sourceUpdatedAt: String(musicalTrackAudio(track)?.updatedAt || ''),
-        cuts: musicalLocalCuts.slice(0, 5)
+        cuts: musicalLocalCuts.slice(0, 5),
+        referenceCuts: musicalReferenceCuts.slice(0, 5),
+        sourceWasEdited: musicalSourceWasEdited,
+        pendingStartSeconds: Number.isFinite(musicalLocalPendingCut) ? musicalLocalPendingCut : null,
+        pendingReferenceSeconds: Number.isFinite(musicalLocalPendingReferenceCut) ? musicalLocalPendingReferenceCut : null
       };
       localStorage.setItem(MUSICAL_LOCAL_CUTS_KEY, JSON.stringify(storage));
     } catch (_error) {}
@@ -195,17 +229,39 @@
     const storedValue = storage[musicalLocalCutKey(trackId)];
     const track = musicalTracks.find((entry) => entry?.id === trackId);
     const sourceUpdatedAt = String(musicalTrackAudio(track)?.updatedAt || '');
+    const sourceChanged = !Array.isArray(storedValue)
+      && storedValue?.sourceUpdatedAt
+      && sourceUpdatedAt
+      && storedValue.sourceUpdatedAt !== sourceUpdatedAt;
     const stored = (Array.isArray(storedValue)
       ? storedValue
-      : (storedValue?.sourceUpdatedAt && sourceUpdatedAt && storedValue.sourceUpdatedAt !== sourceUpdatedAt ? [] : storedValue?.cuts)) || [];
+      : (sourceChanged ? [] : storedValue?.cuts)) || [];
     musicalLocalCuts = stored
       .map((entry) => ({ startSeconds: Number(entry?.startSeconds), endSeconds: Number(entry?.endSeconds), timestamp: String(entry?.timestamp || '') }))
       .filter((entry) => Number.isFinite(entry.startSeconds) && Number.isFinite(entry.endSeconds) && entry.endSeconds > entry.startSeconds)
       .sort((left, right) => left.startSeconds - right.startSeconds);
+    const references = Array.isArray(storedValue?.referenceCuts) ? storedValue.referenceCuts : stored;
+    musicalReferenceCuts = references
+      .map((entry) => ({ startSeconds: Number(entry?.startSeconds), endSeconds: Number(entry?.endSeconds), timestamp: String(entry?.timestamp || '') }))
+      .filter((entry) => Number.isFinite(entry.startSeconds) && Number.isFinite(entry.endSeconds) && entry.endSeconds > entry.startSeconds)
+      .sort((left, right) => left.startSeconds - right.startSeconds)
+      .slice(-5);
+    musicalSourceWasEdited = Boolean(sourceChanged || storedValue?.sourceWasEdited);
+    const pending = storedValue && !Array.isArray(storedValue) ? Number(storedValue.pendingStartSeconds) : NaN;
+    const pendingReference = storedValue && !Array.isArray(storedValue) ? Number(storedValue.pendingReferenceSeconds) : NaN;
+    musicalLocalPendingCut = Number.isFinite(pending) && pending >= 0 ? pending : null;
+    musicalLocalPendingReferenceCut = Number.isFinite(pendingReference) && pendingReference >= 0
+      ? pendingReference
+      : musicalLocalPendingCut;
   }
 
   function musicalEditedDuration(originalDuration) {
     return Math.max(0, Number(originalDuration) - musicalLocalCuts.reduce((total, cut) => total + (cut.endSeconds - cut.startSeconds), 0));
+  }
+
+  function musicalAppliedReferenceCuts() {
+    const localTimestamps = new Set(musicalLocalCuts.map((cut) => cut.timestamp).filter(Boolean));
+    return musicalReferenceCuts.filter((cut) => !cut.timestamp || !localTimestamps.has(cut.timestamp));
   }
 
   function musicalOriginalToEdited(seconds) {
@@ -219,10 +275,10 @@
     return Math.max(0, edited);
   }
 
-  function musicalEditedToOriginal(seconds) {
+  function musicalEditedToOriginal(seconds, cuts = musicalLocalCuts) {
     let remaining = Math.max(0, Number(seconds) || 0);
     let original = 0;
-    for (const cut of musicalLocalCuts) {
+    for (const cut of cuts) {
       const segment = Math.max(0, cut.startSeconds - original);
       if (remaining <= segment) return original + remaining;
       remaining -= segment;
@@ -237,35 +293,70 @@
     if (cut) musicalAudio.currentTime = cut.endSeconds;
   }
 
-  function registerMusicalLocalCutsFromNotes() {
-    const cutNotes = musicalNotes
-      .filter((note) => Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim()))
-      .sort((left, right) => Number(left.positionSeconds) - Number(right.positionSeconds));
-    let changed = false;
-    for (let index = 0; index + 1 < cutNotes.length; index += 2) {
-      const startSeconds = Math.min(Number(cutNotes[index].positionSeconds) || 0, Number(cutNotes[index + 1].positionSeconds) || 0);
-      const endSeconds = Math.max(Number(cutNotes[index].positionSeconds) || 0, Number(cutNotes[index + 1].positionSeconds) || 0);
-      if (endSeconds - startSeconds < 0.05) continue;
-      if (musicalLocalCuts.some((cut) => Math.abs(cut.startSeconds - startSeconds) < 0.01 && Math.abs(cut.endSeconds - endSeconds) < 0.01)) continue;
-      musicalLocalCuts.push({ startSeconds, endSeconds, timestamp: new Date().toISOString() });
-      changed = true;
+  function ensureMusicalLocalPendingMarker() {
+    if (!Number.isFinite(musicalLocalPendingCut)) return;
+    const exists = musicalNotes.some((note) => Math.abs(Number(note.positionSeconds) - musicalLocalPendingCut) < 0.05
+      && (Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim())));
+    if (!exists) {
+      musicalNotes.push({
+        id: `local-cut-${musicalNotesTrackId}-${musicalLocalPendingCut}`,
+        cardId: musicalNotesTrackId,
+        positionSeconds: musicalLocalPendingCut,
+        text: 'Corte',
+        isCut: true,
+        createdAt: '',
+        updatedAt: ''
+      });
     }
-    if (changed) {
-      musicalLocalCuts.sort((left, right) => left.startSeconds - right.startSeconds);
-      musicalLocalCuts = musicalLocalCuts.slice(-5);
+  }
+
+  function registerMusicalLocalCutMarker(positionSeconds) {
+    const position = Math.max(0, Number(positionSeconds) || 0);
+    const referencePosition = musicalSourceWasEdited
+      ? musicalEditedToOriginal(position, musicalAppliedReferenceCuts())
+      : position;
+    if (!Number.isFinite(musicalLocalPendingCut)) {
+      musicalLocalPendingCut = position;
+      musicalLocalPendingReferenceCut = referencePosition;
+      ensureMusicalLocalPendingMarker();
       saveMusicalLocalCuts(musicalNotesTrackId);
+      return false;
     }
-    return changed;
+    const startSeconds = Math.min(musicalLocalPendingCut, position);
+    const endSeconds = Math.max(musicalLocalPendingCut, position);
+    if (endSeconds - startSeconds < 0.05) return false;
+    const timestamp = new Date().toISOString();
+    musicalLocalCuts.push({ startSeconds, endSeconds, timestamp });
+    musicalLocalCuts.sort((left, right) => left.startSeconds - right.startSeconds);
+    musicalLocalCuts = musicalLocalCuts.slice(-5);
+    const referenceStart = Math.min(musicalLocalPendingReferenceCut, referencePosition);
+    const referenceEnd = Math.max(musicalLocalPendingReferenceCut, referencePosition);
+    musicalReferenceCuts.push({ startSeconds: referenceStart, endSeconds: referenceEnd, timestamp });
+    musicalReferenceCuts.sort((left, right) => left.startSeconds - right.startSeconds);
+    musicalReferenceCuts = musicalReferenceCuts.slice(-5);
+    musicalLocalPendingCut = null;
+    musicalLocalPendingReferenceCut = null;
+    musicalNotes = musicalNotes.filter((note) => !String(note.id || '').startsWith('local-cut-'));
+    saveMusicalLocalCuts(musicalNotesTrackId);
+    return true;
   }
 
   function undoMusicalLocalCut(trackId) {
     if (!musicalLocalCuts.length) return false;
     const lastCut = musicalLocalCuts.pop();
+    const referenceIndex = musicalReferenceCuts.findIndex((entry) => entry.timestamp && entry.timestamp === lastCut.timestamp);
+    const referenceCut = referenceIndex >= 0 ? musicalReferenceCuts[referenceIndex] : null;
+    if (referenceIndex >= 0) musicalReferenceCuts.splice(referenceIndex, 1);
     const matchingMarkers = musicalNotes
       .filter((note) => Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim()))
       .sort((left, right) => Number(right.positionSeconds) - Number(left.positionSeconds));
     const markerToRemove = matchingMarkers.find((note) => Math.abs(Number(note.positionSeconds) - lastCut.endSeconds) < 0.05);
     if (markerToRemove) musicalNotes = musicalNotes.filter((note) => note.id !== markerToRemove.id);
+    musicalLocalPendingCut = lastCut.startSeconds;
+    musicalLocalPendingReferenceCut = referenceCut
+      ? referenceCut.startSeconds
+      : (musicalSourceWasEdited ? musicalEditedToOriginal(lastCut.startSeconds, musicalAppliedReferenceCuts()) : lastCut.startSeconds);
+    ensureMusicalLocalPendingMarker();
     saveMusicalLocalCuts(trackId);
     renderMusicalNoteMarkers();
     updateMusicalPlayer();
@@ -367,7 +458,7 @@
       if (!response.ok || payload.success === false) throw new Error(payload.message || 'Não foi possível carregar as notas.');
       if (musicalNotesTrackId !== trackId) return;
       musicalNotes = Array.isArray(payload.notes) ? payload.notes : [];
-      registerMusicalLocalCutsFromNotes();
+      ensureMusicalLocalPendingMarker();
       renderMusicalNoteMarkers();
     } catch (_error) {
       musicalNotes = [];
@@ -423,6 +514,14 @@
     if (!text) return;
     const isCutNote = /^corte$/i.test(text);
     const isUndoNote = /^desfazer$/i.test(text);
+    const isCopyCommand = /^copiar$/i.test(text);
+    if (isCopyCommand) {
+      await copyMusicalCutMarks();
+      musicalNoteId = '';
+      musicalNoteMode = 'view';
+      musicalNoteDialog.close();
+      return;
+    }
     if (isUndoNote) {
       if (!undoMusicalLocalCut(musicalNotesTrackId)) throw new Error('Não há um corte local recente para desfazer.');
       fetch(`/api/oz/musical/notes/${encodeURIComponent(musicalNotesTrackId)}`, {
@@ -453,7 +552,13 @@
       : musicalNotes.reduce((closest, note) => !closest || Math.abs(Number(note.positionSeconds) - musicalNoteDraftPosition) < Math.abs(Number(closest.positionSeconds) - musicalNoteDraftPosition) ? note : closest, null);
     musicalNoteId = saved?.id || '';
     musicalNoteMode = 'view';
-    if (isCutNote) registerMusicalLocalCutsFromNotes();
+    if (isCutNote) {
+      const markerPosition = noteId
+        ? Number(musicalNoteById(noteId)?.positionSeconds || musicalNoteDraftPosition)
+        : musicalNoteDraftPosition;
+      registerMusicalLocalCutMarker(markerPosition);
+      ensureMusicalLocalPendingMarker();
+    }
     renderMusicalNoteMarkers();
     musicalNoteDialog.close();
   }
