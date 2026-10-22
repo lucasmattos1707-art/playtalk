@@ -347,7 +347,10 @@
     musicalReferenceCuts = musicalReferenceCuts.slice(-5);
     musicalLocalPendingCut = null;
     musicalLocalPendingReferenceCut = null;
-    musicalNotes = musicalNotes.filter((note) => !String(note.id || '').startsWith('local-cut-'));
+    musicalNotes = musicalNotes.filter((note) => {
+      const isCut = Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim());
+      return !isCut && !String(note.id || '').startsWith('local-cut-');
+    });
     saveMusicalLocalCuts(musicalNotesTrackId);
     return true;
   }
