@@ -97,6 +97,9 @@
   let musicalLocalPendingReferenceCut = null;
   let musicalSourceWasEdited = false;
   let musicalCutDialogTimer = 0;
+  let musicalCutPreviewTimer = 0;
+  let musicalCutPreviewPoints = [];
+  let musicalCutPreviewTrackId = '';
   let musicalPublishBusy = false;
   let musicalNoteId = '';
   let musicalNoteMode = 'view';
@@ -183,6 +186,8 @@
     if (!musicalCutDialog.open) musicalCutDialog.showModal();
     musicalCutDialogTimer = window.setTimeout(() => {
       if (musicalCutDialog.open) musicalCutDialog.close();
+      musicalCutPreviewPoints = [];
+      renderMusicalNoteMarkers();
     }, 900);
   }
 
@@ -242,6 +247,9 @@
   }
 
   function loadMusicalLocalCuts(trackId) {
+    window.clearTimeout(musicalCutPreviewTimer);
+    musicalCutPreviewPoints = [];
+    musicalCutPreviewTrackId = '';
     const storage = musicalLocalCutStorage();
     const storedValue = storage[musicalLocalCutKey(trackId)];
     const track = musicalTracks.find((entry) => entry?.id === trackId);
@@ -317,23 +325,6 @@
     if (cut) musicalAudio.currentTime = cut.endSeconds;
   }
 
-  function ensureMusicalLocalPendingMarker() {
-    if (!Number.isFinite(musicalLocalPendingCut)) return;
-    const exists = musicalNotes.some((note) => Math.abs(Number(note.positionSeconds) - musicalLocalPendingCut) < 0.05
-      && (Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim())));
-    if (!exists) {
-      musicalNotes.push({
-        id: `local-cut-${musicalNotesTrackId}-${musicalLocalPendingCut}`,
-        cardId: musicalNotesTrackId,
-        positionSeconds: musicalLocalPendingCut,
-        text: 'Corte',
-        isCut: true,
-        createdAt: '',
-        updatedAt: ''
-      });
-    }
-  }
-
   function registerMusicalLocalCutMarker(positionSeconds) {
     const position = Math.max(0, Number(positionSeconds) || 0);
     if (!Number.isFinite(musicalLocalPendingCut) && musicalLocalCuts.length >= 5) {
@@ -343,9 +334,10 @@
       ? musicalEditedToOriginal(position, musicalAppliedReferenceCuts())
       : position;
     if (!Number.isFinite(musicalLocalPendingCut)) {
+      window.clearTimeout(musicalCutPreviewTimer);
+      musicalCutPreviewPoints = [];
       musicalLocalPendingCut = position;
       musicalLocalPendingReferenceCut = referencePosition;
-      ensureMusicalLocalPendingMarker();
       saveMusicalLocalCuts(musicalNotesTrackId);
       return false;
     }
@@ -355,6 +347,10 @@
     if (musicalLocalCuts.some((cut) => startSeconds < cut.endSeconds && endSeconds > cut.startSeconds)) {
       throw new Error('Esse intervalo cruza outro corte. Escolha dois pontos fora dos cortes já marcados.');
     }
+    const previewDuration = musicalEditedDuration(Number.isFinite(musicalAudio.duration) ? musicalAudio.duration : 0);
+    musicalCutPreviewPoints = [musicalLocalPendingCut, position].map((point) =>
+      previewDuration > 0 ? Math.min(100, Math.max(0, musicalOriginalToEdited(point) / previewDuration * 100)) : 0);
+    musicalCutPreviewTrackId = musicalNotesTrackId;
     const latestCutTime = musicalLocalCuts.reduce((latest, cut) => Math.max(latest, Date.parse(cut.timestamp) || 0), 0);
     const timestamp = new Date(Math.max(Date.now(), latestCutTime + 1)).toISOString();
     musicalLocalCuts.push({ startSeconds, endSeconds, timestamp });
@@ -376,6 +372,8 @@
 
   function undoMusicalLocalCut(trackId) {
     if (!musicalLocalCuts.length) return false;
+    window.clearTimeout(musicalCutPreviewTimer);
+    musicalCutPreviewPoints = [];
     const lastCut = musicalLocalCuts.reduce((latest, cut) =>
       !latest || String(cut.timestamp) > String(latest.timestamp) ? cut : latest, null);
     musicalLocalCuts = musicalLocalCuts.filter((cut) => cut !== lastCut);
@@ -391,7 +389,6 @@
     const pendingReference = referenceCut?.startSeconds ?? lastCut.startSeconds;
     musicalLocalPendingReferenceCut = pendingReference;
     musicalLocalPendingCut = lastCut.startSeconds;
-    ensureMusicalLocalPendingMarker();
     saveMusicalLocalCuts(trackId);
     renderMusicalNoteMarkers();
     updateMusicalPlayer();
@@ -469,18 +466,17 @@
 
   function renderMusicalNoteMarkers() {
     const duration = musicalEditedDuration(Number.isFinite(musicalAudio.duration) ? musicalAudio.duration : 0);
-    const visibleNotes = musicalNotes.filter((note) => {
-      const isCut = Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim());
-      return !isCut || String(note.id || '').startsWith('local-cut-');
-    });
+    const visibleNotes = musicalNotes.filter((note) => !note.isCut && !/^corte$/i.test(String(note.text || '').trim()));
+    const cutPoints = musicalCutPreviewTrackId === musicalNotesTrackId && musicalCutPreviewPoints.length
+      ? musicalCutPreviewPoints
+      : (Number.isFinite(musicalLocalPendingCut) ? [Math.min(100, Math.max(0, musicalOriginalToEdited(musicalLocalPendingCut) / duration * 100))] : []);
     musicalNoteMarkers.innerHTML = duration > 0
       ? visibleNotes.map((note) => {
         const position = Math.min(100, Math.max(0, (musicalOriginalToEdited(Number(note.positionSeconds)) / duration) * 100));
-        const isCut = Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim());
-        return `<button class="oz-musical-note-marker ${isCut ? 'is-cut' : ''}" type="button" data-musical-note-id="${escapeHtml(note.id)}" style="left:${position}%" aria-label="Abrir nota em ${musicalTime(note.positionSeconds)}" title="${isCut ? 'Corte' : 'Nota'} em ${musicalTime(note.positionSeconds)}"></button>`;
-      }).join('')
+        return `<button class="oz-musical-note-marker" type="button" data-musical-note-id="${escapeHtml(note.id)}" style="left:${position}%" aria-label="Abrir nota em ${musicalTime(note.positionSeconds)}" title="Nota em ${musicalTime(note.positionSeconds)}"></button>`;
+      }).join('') + cutPoints.map((position, index) => `<span class="oz-musical-note-marker is-cut" style="left:${position}%" title="Ponto ${index === 0 ? 'A' : 'B'} do corte" aria-hidden="true"></span>`).join('')
       : '';
-    musicalNotesButton.classList.toggle('has-notes', visibleNotes.length > 0);
+    musicalNotesButton.classList.toggle('has-notes', visibleNotes.length > 0 || cutPoints.length > 0);
   }
 
   async function loadMusicalNotes(trackId) {
@@ -497,7 +493,6 @@
       if (!response.ok || payload.success === false) throw new Error(payload.message || 'Não foi possível carregar as notas.');
       if (musicalNotesTrackId !== trackId) return;
       musicalNotes = Array.isArray(payload.notes) ? payload.notes : [];
-      ensureMusicalLocalPendingMarker();
       renderMusicalNoteMarkers();
     } catch (_error) {
       musicalNotes = [];
@@ -539,7 +534,7 @@
     const nearby = !noteId && activeMember?.isKelly
       ? musicalNotes.find((note) => {
         const isCut = Boolean(note.isCut) || /^corte$/i.test(String(note.text || '').trim());
-        return (!isCut || String(note.id || '').startsWith('local-cut-'))
+        return !isCut
           && Math.abs(Number(note.positionSeconds) - currentTime) < 1;
       })
       : null;
@@ -635,15 +630,17 @@
         ? Number(musicalNoteById(musicalNoteId)?.positionSeconds ?? musicalNoteDraftPosition)
         : musicalNoteDraftPosition;
       const completed = registerMusicalLocalCutMarker(markerPosition);
-      ensureMusicalLocalPendingMarker();
       if (completed) {
-        showMusicalCutProgress();
         updateMusicalPlayer();
       }
       renderMusicalNoteMarkers();
       musicalNoteId = '';
       musicalNoteMode = 'view';
       musicalNoteDialog.close();
+      if (completed) {
+        window.clearTimeout(musicalCutPreviewTimer);
+        musicalCutPreviewTimer = window.setTimeout(showMusicalCutProgress, 450);
+      }
       return;
     }
     const noteId = musicalNoteId;
