@@ -139,14 +139,18 @@ body{background-color:var(--bg);background-image:linear-gradient(rgba(255,255,25
 .page-title-icon{display:inline-flex;align-items:center;justify-content:center;color:#efc5d2}
 .page-title-icon svg{width:24px;height:24px;stroke-width:1.9}
 .topbar .top-actions{position:absolute;right:clamp(18px,3.3vw,58px);top:50%;transform:translateY(-50%);z-index:2;flex-wrap:nowrap}
-.search-wrap{position:absolute;right:51px;top:50%;transform:translateY(-50%);width:0;opacity:0;overflow:hidden;pointer-events:none;transition:width .26s ease,opacity .18s ease;z-index:1}
-.topbar.search-open .search-wrap{width:min(260px,calc(100vw - 160px));opacity:1;pointer-events:auto}
-.topbar .search-wrap input{width:100%;border:1px solid #edcfda;background:#f5e7ed;color:#2d2630;border-radius:999px}
-.topbar .search-wrap input::placeholder{color:#755c6a}
-.topbar .search-wrap svg{color:#77596a}
-.search-toggle{border:1px solid #eac2d1!important;background:#eac2d1!important;color:#56334c!important;border-radius:50%!important;width:44px;min-width:44px;height:44px;padding:0!important;transition:background .18s ease,transform .18s ease}
-.search-toggle:hover{background:#f1d5df!important;transform:scale(1.05)}
-.search-toggle svg{width:20px;height:20px}
+.search-toggle{width:38px;min-width:38px;height:38px;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:#fff!important;box-shadow:none!important;transition:opacity .18s ease}
+.search-toggle:hover{background:transparent!important;opacity:.76}
+.search-toggle svg{width:21px;height:21px;stroke-width:1.7}
+.finance-search-panel{position:absolute;top:calc(100% + 8px);right:clamp(18px,3.3vw,58px);z-index:30;display:flex;align-items:center;gap:8px;width:min(340px,calc(100vw - 36px));padding:8px 10px 8px 13px;border:1px solid #ead6df;border-radius:14px;background:rgba(249,241,245,.97);box-shadow:0 12px 32px rgba(52,32,47,.16);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-7px);transition:opacity .18s ease,transform .2s ease,visibility .18s ease}
+.finance-search-panel.is-open{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
+.finance-search-panel>span{display:flex;color:#77596a}
+.finance-search-panel>span svg{width:18px;height:18px}
+.finance-search-panel input{flex:1;min-width:0;width:100%;padding:10px 3px;border:0!important;outline:0;background:transparent!important;box-shadow:none!important;color:#2d2630}
+.finance-search-panel input::placeholder{color:#806d78}
+.search-panel-close{display:flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:#77596a}
+.search-panel-close:hover{background:#ead9e1}
+.search-panel-close svg{width:17px;height:17px}
 #view>.section-head:first-child>div>h2,#view>.section-head:first-child>div>p{display:none}
 #view>.section-head:first-child{margin-top:0}
 .dashboard-stats{margin-bottom:32px}
@@ -156,13 +160,9 @@ body{background-color:var(--bg);background-image:linear-gradient(rgba(255,255,25
  .topbar>div:first-child{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:calc(100% - 92px)}
  .topbar .page-title{font-size:22px;gap:8px}
  .page-title-icon svg{width:21px;height:21px}
- .topbar .top-actions{position:absolute;left:auto;right:12px;top:50%;bottom:auto;transform:translateY(-50%);width:auto;justify-content:flex-end}
- .search-wrap{position:relative;left:auto;right:auto;top:auto;transform:none;width:0;max-width:none}
- .topbar.search-open{min-height:126px;align-items:flex-start;padding-top:17px}
- .topbar.search-open>div:first-child{top:17px;transform:translateX(-50%)}
- .topbar.search-open .top-actions{position:absolute;left:16px;right:16px;top:auto;bottom:12px;transform:none;width:auto}
- .topbar.search-open .search-wrap{width:calc(100% - 52px);opacity:1;pointer-events:auto}
- .search-toggle{width:42px;min-width:42px;height:42px}
+ .topbar .top-actions{position:absolute;left:auto;right:10px;top:50%;bottom:auto;transform:translateY(-50%);width:auto;justify-content:flex-end}
+ .finance-search-panel{right:12px;top:calc(100% + 7px);width:min(340px,calc(100vw - 24px))}
+ .search-toggle{width:36px;min-width:36px;height:38px}
  .dashboard-stats{margin-bottom:32px}
  .mobile-logout{display:inline-flex;align-items:center;border:0;background:none;color:var(--deep);font-weight:700;padding:5px 9px}
  .footer-note{display:flex;align-items:center;justify-content:center;gap:8px}
@@ -180,9 +180,9 @@ body{background-color:var(--bg);background-image:linear-gradient(rgba(255,255,25
     <header class="topbar">
       <div><h1 class="page-title" id="pageTitle"><span class="page-title-icon" id="pageTitleIcon"></span><span id="pageTitleText">Visão geral</span></h1></div>
       <div class="top-actions">
-        <div class="search-wrap"><span id="searchSvg"></span><input id="searchInput" type="search" aria-label="Pesquisar texto nesta seção" placeholder="Buscar nesta seção…" autocomplete="off"></div>
         <button class="btn icon-only search-toggle" id="searchToggle" type="button" data-action="searchToggle" aria-label="Abrir pesquisa por texto" aria-controls="searchInput" aria-expanded="false"><span id="searchToggleIcon"></span></button>
       </div>
+      <div class="finance-search-panel" id="financeSearchPanel" aria-hidden="true"><span id="searchSvg"></span><input id="searchInput" type="search" aria-label="Pesquisar texto nesta seção" placeholder="Buscar nesta seção…" autocomplete="off" tabindex="-1"><button class="search-panel-close" type="button" data-action="searchToggle" aria-label="Fechar pesquisa"><span id="searchCloseIcon"></span></button></div>
     </header>
     <div id="view"></div>
     <div class="footer-note">Studio Arabesque • Dados protegidos no Fluent LevelUp<button class="mobile-logout" type="button" data-action="financeLogout">Sair</button></div>
@@ -252,8 +252,8 @@ async function confirmFinanceProposal(){if(!assistantPending?.length)return;cons
 async function toggleFinanceVoice(){const button=$('#financeVoiceButton'),status=$('#financeAiStatus');if(!button)return;if(voiceRecorder?.state==='recording'){voiceRecorder.stop();button.disabled=true;if(status)status.textContent='Enviando áudio com segurança…';return}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});voiceChunks=[];voiceRecorder=new MediaRecorder(stream);voiceRecorder.ondataavailable=e=>{if(e.data?.size)voiceChunks.push(e.data)};voiceRecorder.onstop=async()=>{stream.getTracks().forEach(t=>t.stop());button.classList.remove('recording');button.innerHTML=I('mic')+' <span>Voz</span>';button.disabled=false;const blob=new Blob(voiceChunks,{type:voiceRecorder.mimeType||'audio/webm'});if(!blob.size){if(status)status.textContent='Não captei áudio. Tente novamente.';return}if(blob.size>10*1024*1024){if(status)status.textContent='A gravação passou de 10 MB. Faça uma instrução mais curta.';return}const encoded=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob)});await financeAssistantSend(encoded,'voice')};voiceRecorder.start();button.classList.add('recording');button.innerHTML=I('close')+' <span>Parar</span>';if(status)status.textContent='Gravando… toque em Parar para enviar.'}catch(error){if(status)status.textContent='Não consegui acessar o microfone. Verifique a permissão do navegador.'}}
 
 function toast(msg,error=false){$('#toastRoot').innerHTML=`<div class="toast ${error?'error':''}" role="status">${esc(msg)}</div>`;clearTimeout(toast._timer);toast._timer=setTimeout(()=>$('#toastRoot').innerHTML='',3900)}
-function setFinanceSearchOpen(open=!$('.topbar').classList.contains('search-open')){const header=$('.topbar'),input=$('#searchInput'),button=$('#searchToggle');header.classList.toggle('search-open',open);button.setAttribute('aria-expanded',String(open));if(open){setTimeout(()=>input.focus(),180);return}const hadValue=Boolean(input.value);input.value='';input.blur();search='';if(hadValue)render()}
-function goto(sec){section=sec;search='';statusFilter='Todos';$('#searchInput').value='';$('.topbar').classList.remove('search-open');$('#searchToggle').setAttribute('aria-expanded','false');$('#quickMenu').classList.add('hidden');closeStudentMenu();render();window.scrollTo({top:0,behavior:'instant'})}
+function setFinanceSearchOpen(open=!$('#financeSearchPanel').classList.contains('is-open')){const panel=$('#financeSearchPanel'),input=$('#searchInput'),button=$('#searchToggle');panel.classList.toggle('is-open',open);panel.setAttribute('aria-hidden',String(!open));input.tabIndex=open?0:-1;button.setAttribute('aria-expanded',String(open));button.setAttribute('aria-label',open?'Fechar pesquisa por texto':'Abrir pesquisa por texto');if(open){setTimeout(()=>input.focus(),180);return}const hadValue=Boolean(input.value);input.value='';input.blur();search='';if(hadValue)render()}
+function goto(sec){section=sec;search='';statusFilter='Todos';$('#searchInput').value='';setFinanceSearchOpen(false);$('#quickMenu').classList.add('hidden');closeStudentMenu();render();window.scrollTo({top:0,behavior:'instant'})}
 function renderNav(){const nav=([key,name,ic])=>`<button class="nav-btn ${section===key?'active':''}" data-action="nav" data-section="${key}" type="button">${I(ic)} ${name}</button>`;$('#desktopNav').innerHTML=NAV.map(nav).join('');$('#mobileNav').innerHTML=NAV.map(([key,name,ic])=>`<button type="button" class="${section===key?'active':''}" data-action="nav" data-section="${key}">${I(ic)}<span>${name==='Formas de pagamento'?'Métodos':name==='Contas a pagar'?'Contas':name}</span></button>`).join('')}
 function totals(){const received=sum(state.payments,x=>x.amount),fees=sum(state.payments,x=>x.fee),expenses=sum(state.expenses,x=>x.amount)+sum(state.billPayments,x=>x.amount),receivable=sum(state.students,x=>remaining(x.amount,studentPaid(x.id))),payable=sum(state.bills,x=>remaining(x.amount,billPaid(x.id))),pendingCard=sum(state.payments.filter(p=>hasCard(p.method)&&p.payoutStatus!=='settled'),p=>N(p.amount)-N(p.fee));return{received,spent:expenses+fees,fees,expenses,receivable,payable,pendingCard,balance:received-expenses-fees}}
 function metric(name,value,type,icon,foot=''){return `<article class="stat ${type}"><div class="stat-head"><span>${name}</span><span class="stat-icon">${I(icon)}</span></div><div class="stat-value">${fmt(value)}</div><div class="stat-foot">${foot}</div></article>`}
@@ -265,8 +265,7 @@ function studentsView(){
     .sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
   const paid=state.students.filter(s=>studentStatus(s)[1]==='paid').length;
   return `<div class="section-head"><div><h2>Alunas do espetáculo</h2><p>${state.students.length} cadastrada(s) • ${paid} quitada(s)</p></div></div>
-  <div class="toolbar"><div class="container-filter">${['Todos','Pago','Parcial','Pendente','Atrasado'].map(x=>`<button type="button" data-action="filter" data-status="${x}" class="pill-filter ${statusFilter===x?'selected':''}">${x}</button>`).join('')}</div>
-  <div class="toolbar-actions"><button type="button" class="btn light" data-action="modal" data-kind="bulk">${I('students')} Adicionar em massa</button><button type="button" class="btn primary" data-action="modal" data-kind="student">${I('plus')} Nova aluna</button></div></div>
+  <div class="toolbar"><div class="container-filter">${['Todos','Pago','Parcial','Pendente','Atrasado'].map(x=>`<button type="button" data-action="filter" data-status="${x}" class="pill-filter ${statusFilter===x?'selected':''}">${x}</button>`).join('')}</div></div>
   <section class="student-list" aria-label="Lista de alunas">${arr.map(s=>{
     const paid=studentPaid(s.id),total=N(s.amount),pct=total>0?Math.min(100,Math.max(0,Math.round(paid/total*100))):0;
     return `<article class="student-item"><div class="student-item-row"><button type="button" class="student-name" data-action="modal" data-kind="studentView" data-id="${esc(s.id)}" title="Visualizar informações de ${esc(s.name)}">${esc(s.name)}</button>
@@ -286,6 +285,7 @@ function toggleStudentMenu(sid,button){
   menu.innerHTML=`<div class="student-popover-title" title="${esc(s.name)}">${esc(s.name)}</div>
     <button role="menuitem" type="button" data-action="modal" data-kind="studentView" data-id="${esc(sid)}">${I('file')} Visualizar</button>
     <button role="menuitem" type="button" data-action="modal" data-kind="student" data-id="${esc(sid)}">${I('edit')} Editar</button>
+    <button role="menuitem" type="button" data-action="modal" data-kind="payment" data-student="${esc(sid)}">${I('money')} Registrar pagamento</button>
     <button role="menuitem" type="button" data-action="modal" data-kind="studentCharge" data-id="${esc(sid)}">${I('plus')} Adicionar valores</button>`;
   menu.classList.remove('hidden');button.setAttribute('aria-expanded','true');
   const rect=button.getBoundingClientRect(),mw=228,mh=menu.getBoundingClientRect().height;
@@ -410,8 +410,8 @@ document.addEventListener('click',e=>{if(e.target.closest('#financeVoiceButton')
 document.addEventListener('change',e=>{const f=e.target.closest('#editForm');if(!f||f.dataset.id)return;if(e.target.name==='studentId'){const s=findStudent(e.target.value);if(s&&f.elements.amount)f.elements.amount.value=remaining(s.amount,studentPaid(s.id))}if(e.target.name==='billId'){const b=findBill(e.target.value);if(b&&f.elements.amount)f.elements.amount.value=remaining(b.amount,billPaid(b.id))}});
 $('#searchInput').addEventListener('input',e=>{search=e.target.value.trim();render()});
 $('#importFile').addEventListener('change',e=>importData(e.target.files?.[0]));
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('.topbar').classList.contains('search-open'))setFinanceSearchOpen(false);closeStudentMenu();closeModal()}});
-$('#searchSvg').innerHTML=I('search');$('#searchToggleIcon').innerHTML=I('search');$('#addIcon').innerHTML=I('plus');
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('#financeSearchPanel').classList.contains('is-open'))setFinanceSearchOpen(false);closeStudentMenu();closeModal()}});
+$('#searchSvg').innerHTML=I('search');$('#searchToggleIcon').innerHTML=I('search');$('#searchCloseIcon').innerHTML=I('close');$('#addIcon').innerHTML=I('plus');
 $('#quickMenu').innerHTML=[['student','Nova aluna','students'],['bulk','Adicionar alunas em massa','layers'],['payment','Recebimento de aluna','money'],['expense','Registrar despesa/gasto','expenses'],['bill','Adicionar conta a pagar','bills'],['billPayment','Registrar pagamento de conta','check']].map(([kind,label,icon])=>`<button type="button" role="menuitem" data-action="modal" data-kind="${kind}">${I(icon)} ${label}</button>`).join('');
 (async()=>{await initStorage();render()})().catch(()=>{});
 </script>
