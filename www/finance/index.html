@@ -643,7 +643,7 @@ $('#searchInput').addEventListener('input',e=>{search=e.target.value.trim();rend
 $('#importFile').addEventListener('change',e=>importData(e.target.files?.[0]));
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('#financeSearchPanel').classList.contains('is-open'))setFinanceSearchOpen(false);closeStudentMenu();closeModal()}});
 $('#searchSvg').innerHTML=I('search');$('#searchToggleIcon').innerHTML=I('search');$('#searchCloseIcon').innerHTML=I('close');$('#addIcon').innerHTML=I('plus');
-$('#quickMenu').innerHTML=[['student','Nova aluna','students'],['bulk','Adicionar alunas em massa','layers'],['payment','Recebimento de aluna','money'],['expense','Registrar despesa/gasto','expenses'],['bill','Adicionar conta a pagar','bills'],['billPayment','Registrar pagamento de conta','check']].map(([kind,label,icon])=>`<button type="button" role="menuitem" data-action="modal" data-kind="${kind}">${I(icon)} ${label}</button>`).join('');
+$('#quickMenu').innerHTML=[['student','Adicionar alunas','students'],['bulk','Cadastro em massa','layers'],['payment','Receber pagamento','money'],['expense','Adicionar despesa','expenses'],['bill','Conta a pagar','bills'],['billPayment','Pagar conta','check']].map(([kind,label,icon])=>`<button type="button" role="menuitem" data-action="modal" data-kind="${kind}">${I(icon)} ${label}</button>`).join('');
 (async()=>{await initStorage();render()})().catch(()=>{});
 </script>
 </body>
