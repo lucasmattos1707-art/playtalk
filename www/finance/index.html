@@ -196,7 +196,7 @@ body{background-color:var(--bg);background-image:linear-gradient(rgba(255,255,25
 }
 /* Alunas em cartões roxos e modal Nova aluna com alto contraste. */
 .student-list{display:grid;gap:11px;padding:0;border:0;background:transparent;box-shadow:none}
-.student-item,.student-item:last-child{padding:14px 16px 15px;border:1px solid rgba(255,255,255,.16);border-radius:16px;background:rgba(86,51,76,.96);box-shadow:0 8px 25px rgba(52,32,47,.12)}
+.student-item,.student-item:last-child{padding:14px 16px 15px;border:1px solid rgba(255,255,255,.16);border-radius:16px;background:linear-gradient(110deg,#56334c 0%,#b85f88 100%);box-shadow:0 8px 25px rgba(52,32,47,.12)}
 .student-item-row{margin-bottom:10px}
 .student-name{color:#fff;font-size:18.75px;line-height:1.4}
 .student-name:hover{color:#f4dce8}
@@ -317,6 +317,13 @@ body{background-color:var(--bg);background-image:linear-gradient(rgba(255,255,25
 .expenses-stats .stat-head .stat-icon{display:inline-flex;order:-1;width:34px;height:34px;margin-right:10px;background:#ffffff24;color:#fff}
 .expenses-stats .stat-head .stat-icon svg{color:#fff}
 .expenses-stats .stat-value{order:2;margin:0;color:#fff;font-size:22px}
+.dashboard-stats:not(.expenses-stats) .stat{min-height:104px;padding:13px 15px}
+.dashboard-stats:not(.expenses-stats) .stat-head,.dashboard-stats:not(.expenses-stats) .stat-value,.dashboard-stats:not(.expenses-stats) .stat-foot{color:#fff}
+.dashboard-stats:not(.expenses-stats) .stat-icon{background:#ffffff24;color:#fff}
+.dashboard-stats:not(.expenses-stats) .stat-icon svg{color:#fff}
+.dashboard-stats:not(.expenses-stats) .stat:nth-child(4){background:#2878b8!important}
+.dashboard-stats:not(.expenses-stats) .stat-value{margin:9px 0 1px;font-size:clamp(20px,1.8vw,25px)}
+@media(max-width:760px){.dashboard-stats:not(.expenses-stats) .stat{min-height:86px;padding:10px 14px}.dashboard-stats:not(.expenses-stats) .stat-value{margin:6px 0 0;font-size:22px}}
 </style>
 </head>
 <body>
