@@ -375,6 +375,13 @@ body{background-color:var(--bg);background-image:linear-gradient(rgba(255,255,25
 .nav-kicker{display:flex;align-items:center;gap:8px}
 .finance-navicon{display:inline-flex;color:var(--rose)}
 .finance-navicon svg{width:18px;height:18px;stroke-width:2}
+.drawer.ai-magic .ai-compose{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.drawer.ai-magic .ai-compose input{display:block;width:100%;height:50px;min-height:50px;border:1px solid rgba(255,255,255,.38);border-radius:12px;padding:12px;background:rgba(0,0,0,.18);color:#fff;font-size:17.5px;outline:0}
+.drawer.ai-magic .ai-compose input::placeholder{color:rgba(255,255,255,.68)}
+.drawer.ai-magic .ai-compose input:focus{border-color:rgba(255,255,255,.75);box-shadow:0 0 0 3px rgba(255,255,255,.12)}
+.drawer.ai-magic .ai-actions{align-self:flex-end;flex-wrap:nowrap}
+.drawer.ai-magic .ai-messages{align-content:start;grid-auto-rows:max-content}
+.drawer.ai-magic .ai-bubble{height:max-content;align-self:start}
 </style>
 </head>
 <body>
@@ -609,8 +616,8 @@ else if(kind==='studentCharge'){
 }
 else if(kind==='aiInfo'){
   assistantConversation=[];assistantPending=null;
-  name='Peça ao mágico';
-  body=`<div class="ai-chat"><div id="financeChatMessages" class="ai-messages" aria-live="polite"><div class="ai-bubble">Oi, Kelly! ✨ Me conta o que você quer organizar no espetáculo e eu preparo uma proposta para você conferir.</div></div><div id="financeProposal"></div><div id="financeAiStatus" class="ai-status" role="status"></div><form id="financeChatForm"><div class="ai-compose"><textarea name="message" maxlength="1200" placeholder="Ex.: paguei R$ 280 para a costureira ontem..." aria-label="Mensagem para o assistente"></textarea><div class="ai-actions"><button class="btn light ai-mic" type="button" id="financeVoiceButton" aria-label="Gravar instrução por voz">${I('mic')} <span>Voz</span></button><button class="btn primary" type="submit">${I('arrow')} Enviar</button></div></div></form></div>`;
+  name='Peça ou pergunte qualquer coisa';
+  body=`<div class="ai-chat"><div id="financeChatMessages" class="ai-messages" aria-live="polite"><div class="ai-bubble">Oi, Kelly! ✨ Me conta o que você quer organizar no espetáculo e eu preparo uma proposta para você conferir.</div></div><div id="financeProposal"></div><div id="financeAiStatus" class="ai-status" role="status"></div><form id="financeChatForm"><div class="ai-compose"><div class="ai-actions"><button class="btn light ai-mic" type="button" id="financeVoiceButton" aria-label="Gravar instrução por voz">${I('mic')} <span>Voz</span></button><button class="btn primary" type="submit">${I('arrow')} Enviar</button></div><input type="text" name="message" maxlength="1200" placeholder="Ex.: quanto já entrou? · gastei R$ 280 com figurino" aria-label="Mensagem para o assistente" autocomplete="off"></div></form></div>`;
 }
 else if(kind==='bulk'){wide=true;name='Adicionar alunas em massa';submit='Cadastrar todas';body=`<div class="soft-panel"><strong>Uma aluna por linha.</strong> Cole uma lista de até centenas de nomes, sem vírgulas. O sistema ignora linhas vazias e nomes já cadastrados.</div><div class="form-grid" style="margin-top:18px">${textarea('names','Nomes das alunas *','','Ana Silva\nBeatriz Souza\nCamila Santos',10)}${input('amount','Valor padrão por aluna (R$)','0','number',false,'min="0" step="0.01"')}${input('guardian','Responsável padrão (opcional)','','text')}${input('installments','Quantidade de parcelas','1','number',true,'min="1" max="120"')}${input('dueDate','Próximo vencimento (opcional)','','date')}${notes('')}</div><p class="helper-line">É possível deixar o valor em zero e definir uma cobrança individual depois. Os nomes são salvos imediatamente neste navegador.</p>`}
 else if(kind==='student'){name=old?'Editar aluna':'Nova aluna';body=`<div class="form-grid">${full(input('name','Nome',old?.name||'','text',true,'maxlength="140"'))}${full(input('guardian','Responsável',old?.guardian||'','text',false,'maxlength="160"'))}${input('amount','Valor total (R$)',old?.amount??'','number',false,'min="0" step="0.01"')}${input('installments','Parcelas',old?.installments??'','number',false,'min="1" max="120" placeholder="1"')}${input('dueDate','Data',old?.dueDate||'','date')}${select('type','Natureza',[{value:'Kit',label:'Kit'},{value:'Taxa do espetáculo',label:'Taxa'},{value:'Kit + taxa',label:'Kit + taxa'},{value:'Outro',label:'Outro'}],old?.type||'Kit',true)}${textarea('notes','Notas',old?.notes||'','',3)}</div><p class="helper-line">Nome e natureza são obrigatórios. Valor, parcelas e data podem ficar em branco.</p>`}
