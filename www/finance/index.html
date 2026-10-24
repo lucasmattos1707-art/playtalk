@@ -372,13 +372,16 @@ body{background-color:var(--bg);background-image:linear-gradient(rgba(255,255,25
 .student-progress-fill{animation:none}
 .student-progress.is-animating .student-progress-fill{animation:paymentProgressGrow .65s cubic-bezier(.2,.75,.25,1) both}
 @media(prefers-reduced-motion:reduce){.student-progress.is-animating .student-progress-fill{animation:none}}
+.nav-kicker{display:flex;align-items:center;gap:8px}
+.finance-navicon{display:inline-flex;color:var(--rose)}
+.finance-navicon svg{width:18px;height:18px;stroke-width:2}
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="sidebar">
     <div class="brand"><div class="brand-icon">A</div><div><small>Studio</small><strong>Arabesque</strong></div></div>
-    <div class="nav-kicker">Financeiro do espetáculo</div>
+    <div class="nav-kicker"><span id="financeNavIcon" class="finance-navicon" aria-hidden="true"></span><span>Financeiro do espetáculo</span></div>
     <nav id="desktopNav" class="nav" aria-label="Seções"></nav>
     <div class="sidebar-foot"><div class="offline-indicator"><span class="dot"></span> Sincronizado com segurança</div><span>Os registros ficam vinculados ao acesso privado do Studio Arabesque.</span><div style="margin-top:14px;display:flex;gap:7px"><button class="btn light small" data-action="export" type="button">Exportar</button><button class="btn light small" data-action="import" type="button">Importar</button><button class="btn ghost small" data-action="financeLogout" type="button">Sair</button></div></div>
   </aside>
@@ -685,7 +688,7 @@ document.addEventListener('change',e=>{const f=e.target.closest('#editForm');if(
 $('#searchInput').addEventListener('input',e=>{search=e.target.value.trim();render()});
 $('#importFile').addEventListener('change',e=>importData(e.target.files?.[0]));
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('#financeSearchPanel').classList.contains('is-open'))setFinanceSearchOpen(false);closeStudentMenu();closeModal()}});
-$('#searchSvg').innerHTML=I('search');$('#searchToggleIcon').innerHTML=I('search');$('#searchCloseIcon').innerHTML=I('close');$('#aiHeaderMicIcon').innerHTML=I('mic');$('#addIcon').innerHTML=I('plus');
+$('#searchSvg').innerHTML=I('search');$('#searchToggleIcon').innerHTML=I('search');$('#searchCloseIcon').innerHTML=I('close');$('#financeNavIcon').innerHTML=I('money');$('#aiHeaderMicIcon').innerHTML=I('mic');$('#addIcon').innerHTML=I('plus');
 $('#quickMenu').innerHTML=[['student','Adicionar alunas','students'],['bulk','Cadastro em massa','layers'],['payment','Receber pagamento','money'],['expense','Adicionar despesa','expenses'],['bill','Conta a pagar','bills'],['billPayment','Pagar conta','check']].map(([kind,label,icon])=>`<button type="button" role="menuitem" data-action="modal" data-kind="${kind}">${I(icon)} ${label}</button>`).join('');
 (async()=>{await initStorage();render()})().catch(()=>{});
 </script>
