@@ -375,17 +375,17 @@ body{background-color:var(--bg);background-image:linear-gradient(rgba(255,255,25
 .nav-kicker{display:flex;align-items:center;gap:8px}
 .finance-navicon{display:inline-flex;color:var(--rose)}
 .finance-navicon svg{width:18px;height:18px;stroke-width:2}
-.drawer.ai-magic .ai-compose{display:flex;flex-direction:column;align-items:stretch;gap:8px}
-.drawer.ai-magic .ai-compose input{display:block;width:100%;height:50px;min-height:50px;border:1px solid rgba(255,255,255,.38);border-radius:12px;padding:12px;background:rgba(0,0,0,.18);color:#fff;font-size:17.5px;outline:0}
+.drawer.ai-magic .ai-compose{display:flex;flex-direction:row;align-items:center;gap:8px}
+.drawer.ai-magic .ai-compose input{display:block;order:0;flex:1;width:auto;min-width:0;height:48px;min-height:48px;border:1px solid rgba(255,255,255,.38);border-radius:12px;padding:10px 12px;background:rgba(0,0,0,.18);color:#fff;font-size:16px;outline:0}
 .drawer.ai-magic .ai-compose input::placeholder{color:rgba(255,255,255,.68)}
 .drawer.ai-magic .ai-compose input:focus{border-color:rgba(255,255,255,.75);box-shadow:0 0 0 3px rgba(255,255,255,.12)}
-.drawer.ai-magic .ai-actions{align-self:flex-end;flex-wrap:nowrap}
+.drawer.ai-magic .ai-actions{order:1;align-self:center;align-items:center;flex-wrap:nowrap;gap:6px}
 .drawer.ai-magic .ai-messages{align-content:start;grid-auto-rows:max-content}
 .drawer.ai-magic .ai-bubble{height:max-content;align-self:start}
-.drawer.ai-magic .ai-actions .btn.ai-round-action{width:52px;height:52px;min-width:52px;min-height:52px;padding:0!important;border-radius:50%!important;background:#fff!important;border:1px solid #fff!important;color:#126348!important;box-shadow:0 5px 16px rgba(0,0,0,.14);transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
-.drawer.ai-magic .ai-actions .btn.ai-round-action:hover{background:#f0fff7!important;border-color:#f0fff7!important;color:#126348!important;box-shadow:0 7px 20px rgba(0,0,0,.2);transform:translateY(-1px)}
+.drawer.ai-magic .ai-actions .btn.ai-round-action{width:40px;height:40px;min-width:40px;min-height:40px;padding:0!important;border-radius:50%!important;background:#258057!important;border:1px solid rgba(255,255,255,.32)!important;color:#fff!important;box-shadow:0 4px 12px rgba(0,0,0,.16);transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+.drawer.ai-magic .ai-actions .btn.ai-round-action:hover{background:#319269!important;border-color:rgba(255,255,255,.55)!important;color:#fff!important;box-shadow:0 6px 16px rgba(0,0,0,.2);transform:translateY(-1px)}
 .drawer.ai-magic .ai-actions .btn.ai-round-action:active{transform:scale(.94)}
-.drawer.ai-magic .ai-actions .ai-round-action svg{width:22px;height:22px;stroke-width:2.2}
+.drawer.ai-magic .ai-actions .ai-round-action svg{width:18px;height:18px;stroke-width:2.2}
 .drawer.ai-magic .ai-actions .ai-round-action.recording{animation:financeVoicePulse 1.2s ease-in-out infinite}
 @keyframes financeVoicePulse{50%{box-shadow:0 0 0 5px rgba(255,255,255,.22),0 5px 16px rgba(0,0,0,.14)}}
 @media(prefers-reduced-motion:reduce){.drawer.ai-magic .ai-actions .ai-round-action{transition:none;animation:none}}
