@@ -465,8 +465,8 @@ body{background-color:var(--bg);background-image:linear-gradient(rgba(255,255,25
 .whatsapp-dialog-intro .whatsapp-dialog-icon img{width:26px;height:26px}
 .whatsapp-dialog-intro strong{display:block;color:var(--ink);font-size:16px}
 .whatsapp-dialog-intro small{display:block;margin-top:3px;color:var(--soft);font-size:12px}
-.whatsapp-dialog-section{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:22px 0 11px}
-.whatsapp-dialog-section h3{margin:0;color:var(--ink);font-size:15px}
+.whatsapp-dialog-section{display:block;margin:26px 0 14px;text-align:center}
+.whatsapp-dialog-section h3{margin:0;color:var(--ink);font-size:24px;font-weight:800;line-height:1.2}
 .whatsapp-dialog-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:14px}
 .whatsapp-dialog-card{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff}
 .whatsapp-dialog-card-copy{min-width:0}
@@ -481,6 +481,8 @@ body{background-color:var(--bg);background-image:linear-gradient(rgba(255,255,25
 .whatsapp-dialog-start img{width:22px;height:22px;object-fit:contain}
 .whatsapp-dialog-toolbar{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
 .whatsapp-dialog-toolbar .btn{min-height:42px}
+.whatsapp-create-toolbar{justify-content:stretch;margin-top:20px}
+.whatsapp-create-toolbar .btn{width:100%;min-height:58px;justify-content:center;font-size:18px;font-weight:800}
 @media(max-width:680px){.drawer.whatsapp-dialog .drawer-head{padding:16px 18px}.drawer.whatsapp-dialog .drawer-body{padding:20px 18px 30px}.whatsapp-dialog-card{align-items:flex-start;padding:12px}.whatsapp-dialog-send{flex-basis:42px;width:42px;height:42px}.whatsapp-dialog-section{align-items:center}.whatsapp-template-card{min-height:130px;padding:15px}}
 .student-detail-head{align-items:center}
 .student-detail-avatar{display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 58px;width:58px;height:58px;padding:0;border:1px solid rgba(255,255,255,.4);border-radius:50%;background:rgba(255,255,255,.14);color:#fff;cursor:pointer;font:800 15px inherit}
@@ -799,7 +801,7 @@ else if(kind==='aiInfo'){
 }
 else if(kind==='studentWhatsApp'){
   const student=findStudent(ident);if(!student)return;whatsappStudentContext=student.id;wide=true;name=`WhatsApp · ${student.name}`;const startHref=studentWhatsappHref(student),templateCards=whatsappTemplates.map(template=>{const message=fillWhatsAppTemplate(template.body,student),href=studentWhatsappHref(student,message);return `<article class="whatsapp-dialog-card"><div class="whatsapp-dialog-card-copy"><strong>${esc(template.title)}</strong><p>${esc(message)}</p></div>${href?`<a class="whatsapp-dialog-send" href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="Enviar ${esc(template.title)} pelo WhatsApp" title="Enviar pelo WhatsApp">${I('send')}</a>`:`<button class="whatsapp-dialog-send" type="button" data-action="studentWhatsAppEdit" data-id="${esc(student.id)}" aria-label="Adicionar número de WhatsApp" title="Adicionar número">${I('edit')}</button>`}</article>`}).join('');
-  body=`<div class="whatsapp-dialog-intro"><span class="whatsapp-dialog-icon">${whatsAppIcon()}</span><div><strong>${esc(student.guardian||'Responsável não informado')}</strong><small>${student.guardianWhatsapp?esc(student.guardianWhatsapp):'Cadastre um número para iniciar a conversa'}</small></div></div><div class="whatsapp-dialog-toolbar">${startHref?`<a class="whatsapp-dialog-start" href="${esc(startHref)}" target="_blank" rel="noopener noreferrer">${whatsAppIcon()} Iniciar conversa</a>`:`<button class="btn primary" type="button" data-action="studentWhatsAppEdit" data-id="${esc(student.id)}">${I('edit')} Adicionar WhatsApp</button>`}</div><div class="whatsapp-dialog-section"><h3>Mensagens padrão</h3><button class="whatsapp-dialog-nav" type="button" data-action="whatsappTemplates">${I('edit')} Gerenciar mensagens</button></div>${templateCards?`<div class="whatsapp-dialog-list">${templateCards}</div>`:`<div class="soft-panel">Nenhuma mensagem padrão cadastrada. Adicione uma para enviar rapidamente pelo WhatsApp.</div>`}<div class="whatsapp-dialog-toolbar"><button class="btn primary" type="button" data-action="whatsappTemplates">${I('plus')} Cadastrar mensagem padrão</button></div>`;
+  body=`<div class="whatsapp-dialog-intro"><span class="whatsapp-dialog-icon">${whatsAppIcon()}</span><div><strong>${esc(student.guardian||'Responsável não informado')}</strong><small>${student.guardianWhatsapp?esc(student.guardianWhatsapp):'Cadastre um número para iniciar a conversa'}</small></div></div><div class="whatsapp-dialog-toolbar">${startHref?`<a class="whatsapp-dialog-start" href="${esc(startHref)}" target="_blank" rel="noopener noreferrer">${whatsAppIcon()} Iniciar conversa</a>`:`<button class="btn primary" type="button" data-action="studentWhatsAppEdit" data-id="${esc(student.id)}">${I('edit')} Adicionar WhatsApp</button>`}</div><div class="whatsapp-dialog-section"><h3>Mensagens padrão</h3></div>${templateCards?`<div class="whatsapp-dialog-list">${templateCards}</div>`:`<div class="soft-panel">Nenhuma mensagem padrão cadastrada. Adicione uma para enviar rapidamente pelo WhatsApp.</div>`}<div class="whatsapp-dialog-toolbar whatsapp-create-toolbar"><button class="btn primary" type="button" data-action="whatsappTemplates">${I('plus')} Criar mensagem</button></div>`;
 }
 else if(kind==='whatsappTemplates'){
   wide=true;name='Mensagens padrão';const student=findStudent(whatsappStudentContext);
