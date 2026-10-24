@@ -692,7 +692,7 @@ function toggleStudentMenu(sid,button){
     <button role="menuitem" type="button" data-action="modal" data-kind="studentView" data-id="${esc(sid)}">${I('file')} Visualizar</button>
     <button role="menuitem" type="button" data-action="modal" data-kind="student" data-id="${esc(sid)}">${I('edit')} Editar</button>
     <button role="menuitem" type="button" data-action="modal" data-kind="payment" data-student="${esc(sid)}">${I('money')} Adicionar pagamento</button>
-    <button role="menuitem" type="button" data-action="studentWhatsAppMenu" data-id="${esc(sid)}">${whatsAppIcon()} WhatsApp ${I('arrow')}</button>
+    <button role="menuitem" type="button" data-action="studentWhatsAppMenu" data-id="${esc(sid)}">${whatsAppIcon()} WhatsApp</button>
     <button role="menuitem" type="button" data-action="delete" data-type="student" data-id="${esc(sid)}">${I('trash')} Excluir</button>`;
   placeStudentMenu(button);button.setAttribute('aria-expanded','true');menu.querySelector('button')?.focus({preventScroll:true});
 }
