@@ -5588,3 +5588,31 @@ body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-but
 body.musical-kelly-page:not(.musical-kelly-admin-view) .track-card .download-button.is-downloaded .icon-check {
   display: block;
 }
+
+html:has(body.musical-kelly-page) {
+  --bg: #07111f;
+  background: var(--bg);
+}
+
+body.musical-kelly-page {
+  --bg: #07111f;
+  --panel: rgba(16, 29, 48, 0.84);
+  --panel-strong: rgba(13, 25, 42, 0.96);
+  --muted: #a8b8cc;
+  --white: #f8fbff;
+  background:
+    radial-gradient(circle at 50% -20%, rgba(47, 126, 210, 0.22), transparent 45%),
+    linear-gradient(180deg, #081322 0%, #07101c 55%, #03070d 100%);
+}
+
+body.musical-kelly-page .ambient-one {
+  background: #2877c9;
+}
+
+body.musical-kelly-page .topbar {
+  background: rgba(5, 12, 22, 0.82);
+}
+
+body.musical-kelly-page .track-card:not(.has-image) {
+  background: #111f33;
+}
