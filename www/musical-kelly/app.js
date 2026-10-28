@@ -106,8 +106,8 @@
     containerUploadMenu: document.getElementById('containerUploadMenu'),
     containerUploadAudio: document.getElementById('containerUploadAudio'),
     containerUploadImage: document.getElementById('containerUploadImage'),
-    containerDownloadAudio: document.getElementById('containerDownloadAudio'),
-    containerDownloadAudioHint: document.getElementById('containerDownloadAudioHint'),
+    containerDownloadWav: document.getElementById('containerDownloadWav'),
+    containerDownloadMp3: document.getElementById('containerDownloadMp3'),
     audioTracksDialog: document.getElementById('audioTracksDialog'),
     audioTracksList: document.getElementById('audioTracksList'),
     audioTracksCloseButton: document.getElementById('audioTracksCloseButton'),
@@ -2087,6 +2087,8 @@
     let startX = 0;
     let startY = 0;
     let longPressed = false;
+    const streamOnTap = APP_SLUG === 'musical-kelly' && state.viewerUserId === 0;
+    const canOpenMenuOnLongPress = state.canContribute && state.viewerUserId > 0;
 
     const cancelTimer = () => {
       window.clearTimeout(timer);
@@ -2099,7 +2101,7 @@
       startX = event.clientX;
       startY = event.clientY;
       longPressed = false;
-      if (state.canContribute) {
+      if (canOpenMenuOnLongPress) {
         timer = window.setTimeout(() => {
           longPressed = true;
           if (navigator.vibrate) navigator.vibrate(24);
@@ -2135,13 +2137,13 @@
         longPressed = false;
         return;
       }
-      openLyricsAndPlay(cardId).catch((error) => showToast(error.message, true));
+      openLyricsAndPlay(cardId, { streaming: streamOnTap }).catch((error) => showToast(error.message, true));
     });
     element.addEventListener('keydown', (event) => {
       if (state.sortMode) return;
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        openLyricsAndPlay(cardId).catch((error) => showToast(error.message, true));
+        openLyricsAndPlay(cardId, { streaming: streamOnTap }).catch((error) => showToast(error.message, true));
       }
     });
   }
@@ -2163,10 +2165,8 @@
     render();
     const menu = elements.containerUploadMenu;
     const card = getCard(cardId);
-    elements.containerDownloadAudio.disabled = !card.audio?.url;
-    elements.containerDownloadAudioHint.textContent = card.audio?.url
-      ? 'Gerenciar ou adicionar faixas'
-      : 'Áudio ainda não enviado';
+    elements.containerDownloadWav.disabled = !card.audio?.url;
+    elements.containerDownloadMp3.disabled = !card.audio?.url;
     menu.hidden = false;
     const width = Math.min(286, window.innerWidth - 24);
     const height = menu.getBoundingClientRect().height || 214;
@@ -2176,21 +2176,61 @@
     setStatus(`Escolha o arquivo para “${cardPublicLabel(getCard(cardId))}”.`);
   }
 
-  function downloadSelectedContainerAudio() {
+  function safeAudioDownloadName(title, extension) {
+    const baseName = String(title || 'faixa').replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim() || 'faixa';
+    return `${baseName}.${extension}`;
+  }
+
+  async function audioBufferToMp3(buffer) {
+    if (!window.lamejs?.Mp3Encoder) throw new Error('O codificador MP3 não carregou; atualize a página.');
+    const channels = Math.min(2, buffer.numberOfChannels);
+    const encoder = new window.lamejs.Mp3Encoder(channels, buffer.sampleRate, 192);
+    const channelData = Array.from({ length: channels }, (_value, channel) => buffer.getChannelData(channel));
+    const samples = channelData.map((data) => Int16Array.from(data, (value) => {
+      const sample = Math.max(-1, Math.min(1, value));
+      return sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+    }));
+    const chunks = [];
+    const framesPerChunk = 57600;
+    for (let base = 0; base < buffer.length; base += framesPerChunk) {
+      const limit = Math.min(buffer.length, base + framesPerChunk);
+      for (let offset = base; offset < limit; offset += 1152) {
+        const left = samples[0].subarray(offset, Math.min(limit, offset + 1152));
+        const data = channels > 1
+          ? encoder.encodeBuffer(left, samples[1].subarray(offset, Math.min(limit, offset + 1152)))
+          : encoder.encodeBuffer(left);
+        if (data.length) chunks.push(new Uint8Array(data));
+      }
+      setStatus(`Preparando MP3 · ${Math.round(limit / buffer.length * 100)}%`);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    const tail = encoder.flush();
+    if (tail.length) chunks.push(new Uint8Array(tail));
+    return new Blob(chunks, { type: 'audio/mpeg' });
+  }
+
+  async function downloadSelectedContainerAudio(format = 'wav') {
     if (!state.canContribute) return;
     const card = getCard(state.selectedId);
     if (!card?.audio?.url) {
       showToast('Este container ainda não tem áudio.', true);
       return;
     }
-    loadAudioBuffer(card).then((buffer) => {
-      const url = URL.createObjectURL(new Blob([audioBufferToWav(buffer)], { type: 'audio/wav' }));
+    try {
+      setStatus(`Preparando ${format.toUpperCase()}…`);
+      const buffer = await loadAudioBuffer(card);
+      const audioBlob = format === 'mp3'
+        ? await audioBufferToMp3(buffer)
+        : new Blob([audioBufferToWav(buffer)], { type: 'audio/wav' });
+      const url = URL.createObjectURL(audioBlob);
       const anchor = document.createElement('a'); anchor.href = url;
-      anchor.download = `${card.title || 'faixa'}.wav`;
+      anchor.download = safeAudioDownloadName(card.title, format);
       document.body.appendChild(anchor); anchor.click(); anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-      showToast('Download da música completa iniciado.');
-    }).catch((error) => showToast(error.message, true));
+      showToast(`Download ${format.toUpperCase()} da música completa iniciado.`);
+    } catch (error) {
+      showToast(error.message, true);
+    }
   }
 
   function renderAudioTracksDialog(cardId) {
@@ -2441,7 +2481,7 @@
     if (state.canEdit && !card.lyrics?.lines?.length) openLyricsEditor();
   }
 
-  async function openLyricsAndPlay(cardId) {
+  async function openLyricsAndPlay(cardId, { streaming = false } = {}) {
     const card = getCard(cardId);
     if (APP_SLUG === 'englishtraining' && card) {
       openLyrics(cardId);
@@ -2456,6 +2496,11 @@
     openLyrics(cardId);
     if (state.current?.cardId === card.id && !state.current.paused) {
       cancelAutoAdvance();
+      return;
+    }
+    if (streaming && navigator.onLine !== false) {
+      const offset = state.current?.cardId === card.id ? currentPosition(state.current) : 0;
+      await startNativeCard(card, offset);
       return;
     }
     await toggleLyricsPlayback();
@@ -6055,9 +6100,13 @@
       closeContainerUploadMenu();
       openPicker('image');
     });
-    elements.containerDownloadAudio.addEventListener('click', () => {
+    elements.containerDownloadWav.addEventListener('click', () => {
       closeContainerUploadMenu();
-      downloadSelectedContainerAudio();
+      downloadSelectedContainerAudio('wav');
+    });
+    elements.containerDownloadMp3.addEventListener('click', () => {
+      closeContainerUploadMenu();
+      downloadSelectedContainerAudio('mp3');
     });
     elements.removeCardButton.addEventListener('click', removeSelectedCard);
     elements.closeSelectionButton.addEventListener('click', () => {

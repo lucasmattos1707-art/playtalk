@@ -149,9 +149,13 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm-4 7 5-5 3 3 2-2 6 6"/></svg>
       <span><strong>Enviar imagem</strong><small>JPG, PNG, WebP, GIF ou AVIF</small></span>
     </button>
-    <button id="containerDownloadAudio" type="button" role="menuitem">
+    <button id="containerDownloadWav" type="button" role="menuitem">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18v2h14v-2"/></svg>
-      <span><strong>Baixar áudio</strong><small id="containerDownloadAudioHint">Salvar o arquivo original</small></span>
+      <span><strong>Baixar WAV</strong><small>Áudio sem compressão</small></span>
+    </button>
+    <button id="containerDownloadMp3" type="button" role="menuitem">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18v2h14v-2"/></svg>
+      <span><strong>Baixar MP3</strong><small>Arquivo menor e fácil de compartilhar</small></span>
     </button>
   </div>
 
@@ -617,6 +621,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <script src="/arquivos-codex/vendor/lamejs/lame.min.js" defer></script>
-  <script src="/musical-kelly/app.js?v=68" defer></script>
+  <script src="/musical-kelly/app.js?v=72" defer></script>
 </body>
 </html>
