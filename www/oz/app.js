@@ -115,7 +115,7 @@
     'Espantalho e Dorothy',
     'Homem de Lata',
     'Dorethy e o Leão',
-    'Bruxa do Oeste'
+    'derretimento'
   ];
 
   const readOpened = () => {
