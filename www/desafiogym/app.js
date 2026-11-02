@@ -1,25 +1,20 @@
 (() => {
   const $ = (selector) => document.querySelector(selector);
-  const dialog = $('#camera-dialog');
+  const dialog = $('#checkin-dialog');
   const openButton = $('#open-submit');
   const closeButton = $('#dialog-close');
-  const cameraFlow = $('#camera-flow');
-  const verificationStage = $('#verification-stage');
-  const resultStage = $('#result-stage');
-  const video = $('#camera-video');
-  const canvas = $('#camera-canvas');
-  const captureButton = $('#capture-photo');
-  const withoutPhotoButton = $('#register-without-photo');
-  const tryAgainButton = $('#try-again');
+  const workoutChoice = $('#mark-workout');
+  const creatineChoice = $('#mark-creatine');
   const statusLine = $('#dialog-status');
-  let stream = null;
   let selectedParticipant = '';
+  let selectedActivity = '';
   let state = null;
   let holdTimer = null;
   let holdActivated = false;
   let ignorePointerClick = false;
   let bonusDrag = null;
   let refundBusy = false;
+  let activityBusy = false;
   const bonusSound = new Audio('/desafiogym/bonus-success.mp3');
   bonusSound.preload = 'auto';
 
@@ -27,16 +22,6 @@
     kelly: { name: 'Kelly', avatar: '/desafiogym/kelly.png', color: 'orange' },
     lucas: { name: 'Lucas', avatar: '/desafiogym/lucas.jpeg', color: 'blue' }
   };
-
-  function setVisible(element, visible) {
-    element.hidden = !visible;
-  }
-
-  function stopCamera() {
-    if (stream) stream.getTracks().forEach((track) => track.stop());
-    stream = null;
-    video.srcObject = null;
-  }
 
   function formatDate(dateString) {
     if (!dateString) return '';
@@ -90,6 +75,14 @@
     return true;
   }
 
+  function canMarkCreatine(participant) {
+    return Boolean(state) && !state.creatineMarkedToday?.[participant];
+  }
+
+  function canMarkAnything(participant) {
+    return canRegister(participant) || canMarkCreatine(participant);
+  }
+
   function orderFighters(kelly, lucas) {
     const fighters = $('.fighters');
     const versus = $('.versus');
@@ -112,13 +105,13 @@
     showBonusToast.timer = window.setTimeout(() => toast.classList.remove('show'), 2600);
   }
 
-  function playBonusSound() {
+  function playSuccessSound() {
     bonusSound.currentTime = 0;
     bonusSound.play().catch(() => {});
   }
 
-  function animateScore(participant) {
-    const score = $(`#${participant}-score`);
+  function animateScore(participant, score = $(`#${participant}-score`)) {
+    if (!score) return;
     score.classList.remove('bonus-pop');
     void score.offsetWidth;
     score.classList.add('bonus-pop');
@@ -144,6 +137,13 @@
     $('#week-label').textContent = formatWeek(state.weekStart);
 
     ['kelly', 'lucas'].forEach((person) => {
+      const creatineScore = Number(state.creatineScores?.[person] || 0);
+      const score = $(`#${person}-creatine-score`);
+      score.textContent = creatineScore.toLocaleString('pt-BR');
+      score.setAttribute('aria-label', `Creatina da ${people[person].name}: ${creatineScore}`);
+    });
+
+    ['kelly', 'lucas'].forEach((person) => {
       const points = Math.min(5, Number(state.week?.[person] || 0));
       const bonus = Math.max(0, Number(state.bonus?.[person] || 0));
       $(`#${person}-week-text`).textContent = `${points}/5`;
@@ -155,28 +155,19 @@
       orb.setAttribute('aria-label', `${people[person].name} tem ${bonus} ponto${bonus === 1 ? '' : 's'} bônus`);
     });
 
-    const kellySent = Boolean(state.markedToday?.kelly);
-    const nobodyCanRegister = !canRegister('kelly') && !canRegister('lucas');
+    const nobodyCanRegister = !canMarkAnything('kelly') && !canMarkAnything('lucas');
     const kellyBonusMode = Boolean(state.bonusMode?.kelly);
     openButton.disabled = Boolean(nobodyCanRegister);
-    openButton.classList.toggle('bonus-mode', !kellySent && kellyBonusMode);
-    $('#submit-label').textContent = kellySent ? 'Treino enviado' : (kellyBonusMode ? 'Treino bônus' : 'Enviar treino');
-    openButton.querySelector('small').textContent = kellySent ? 'hoje' : (kellyBonusMode ? '+1 bônus' : '+1 ponto');
-    $('#send-hint').textContent = kellySent
-      ? 'Seu treino de hoje já entrou no placar.'
-      : (kellyBonusMode
-        ? 'Você completou 5 treinos. O próximo vale um bônus.'
-        : 'Toque para abrir a câmera. A foto é opcional.');
+    openButton.classList.toggle('bonus-mode', canRegister('kelly') && kellyBonusMode);
+    $('#submit-label').textContent = 'Enviar treino';
+    renderActivityChoices();
 
     const history = $('#history-list');
     const recent = Array.isArray(state.recent) ? state.recent : [];
     history.innerHTML = recent.length ? recent.map((entry) => {
       const person = people[entry.participant] || people.lucas;
-      const verifiedBadge = entry.verifiedByPhoto
-        ? '<span class="verified-badge" title="Foto verificada" aria-label="Foto verificada">✓</span>'
-        : '';
       return `<div class="history-item">
-        <div class="history-avatar"><img src="${person.avatar}" alt="">${verifiedBadge}</div>
+        <div class="history-avatar"><img src="${person.avatar}" alt=""></div>
         <div><strong>${person.name}</strong><small>${formatDate(entry.trainingDate)}</small></div>
         <b>+1 ponto</b>
       </div>`;
@@ -197,124 +188,92 @@
         score.setAttribute('aria-label', 'Placar indisponível');
       });
       $('#history-list').innerHTML = '<p class="empty">Não foi possível carregar o placar agora.</p>';
-      $('#send-hint').textContent = error.message;
+      showBonusToast(error.message, true);
     }
+  }
+
+  function renderActivityChoices() {
+    if (!selectedParticipant || !state) return;
+    const workoutMarked = !canRegister(selectedParticipant);
+    const creatineMarked = !canMarkCreatine(selectedParticipant);
+    workoutChoice.disabled = workoutMarked || activityBusy;
+    creatineChoice.disabled = creatineMarked || activityBusy;
+    workoutChoice.classList.toggle('is-marked', workoutMarked);
+    creatineChoice.classList.toggle('is-marked', creatineMarked);
+    workoutChoice.classList.toggle('is-loading', activityBusy && selectedActivity === 'workout');
+    creatineChoice.classList.toggle('is-loading', activityBusy && selectedActivity === 'creatine');
+    workoutChoice.setAttribute('aria-pressed', String(workoutMarked));
+    creatineChoice.setAttribute('aria-pressed', String(creatineMarked));
+    workoutChoice.setAttribute('aria-label', workoutMarked ? 'Treino já marcado hoje' : 'Marcar treino');
+    creatineChoice.setAttribute('aria-label', creatineMarked ? 'Creatina já marcada hoje' : 'Marcar creatina');
   }
 
   function resetDialog() {
-    stopCamera();
     selectedParticipant = '';
-    setVisible(cameraFlow, false);
-    setVisible(verificationStage, false);
-    setVisible(resultStage, false);
-    tryAgainButton.hidden = true;
-    statusLine.textContent = '';
-    $('#dialog-title').textContent = 'Enviar treino';
-    $('#dialog-copy').textContent = 'A câmera abre direto — sem galeria.';
-    captureButton.disabled = false;
-    withoutPhotoButton.disabled = false;
+    activityBusy = false;
+    selectedActivity = '';
+    statusLine.textContent = 'Toque em uma atividade para marcar.';
+    workoutChoice.classList.remove('is-loading', 'is-marked');
+    creatineChoice.classList.remove('is-loading', 'is-marked');
+    workoutChoice.disabled = false;
+    creatineChoice.disabled = false;
   }
 
-  async function openCameraFor(participant) {
+  function openCheckin(participant) {
+    if (!canMarkAnything(participant)) return;
     selectedParticipant = participant;
-    statusLine.textContent = '';
-    $('#selected-avatar').src = people[participant].avatar;
-    $('#selected-name').textContent = people[participant].name;
-    const isBonus = Boolean(state?.bonusMode?.[participant]);
-    $('#dialog-title').textContent = isBonus ? 'Treino bônus' : 'Foto de verificação';
-    $('#dialog-copy').textContent = isBonus
-      ? 'Mostre a academia e ganhe +1 bônus para completar outra semana.'
-      : 'Mostre os aparelhos ou pesos ao fundo e toque no botão branco.';
-    setVisible(cameraFlow, true);
-
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error('Câmera não disponível neste aparelho.');
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 1600 } }
-      });
-      video.srcObject = stream;
-      await video.play();
-    } catch (error) {
-      statusLine.textContent = error.name === 'NotAllowedError'
-        ? 'Permita a câmera ou use “Registrar sem foto”.'
-        : 'Câmera indisponível. Você ainda pode registrar sem foto.';
-    }
-  }
-
-  async function beginCheckin(participant) {
-    if (!canRegister(participant)) return;
-    resetDialog();
+    statusLine.textContent = 'Toque em uma atividade para marcar.';
+    renderActivityChoices();
     dialog.showModal();
-    await openCameraFor(participant);
   }
 
-  function showResult(success, title, copy) {
-    setVisible(verificationStage, false);
-    setVisible(resultStage, true);
-    $('#result-icon').textContent = success ? '✓' : '!';
-    $('#result-icon').classList.toggle('error', !success);
-    $('#result-title').textContent = title;
-    $('#result-copy').textContent = copy;
-    tryAgainButton.hidden = success;
-  }
-
-  async function sendRegistration(blob = null) {
-    const participant = selectedParticipant;
-    stopCamera();
-    setVisible(cameraFlow, false);
-    setVisible(verificationStage, true);
-    $('#dialog-title').textContent = blob ? 'Verificando treino' : 'Registrando treino';
-    $('#dialog-copy').textContent = blob
-      ? 'A IA está olhando apenas o ambiente da academia.'
-      : 'Só um instante para atualizar o placar.';
-    statusLine.textContent = '';
-    const previewUrl = blob ? URL.createObjectURL(blob) : people[participant].avatar;
-    $('#captured-preview').src = previewUrl;
-
+  async function markWorkout() {
+    if (!canRegister(selectedParticipant) || activityBusy) return;
+    activityBusy = true;
+    selectedActivity = 'workout';
+    statusLine.textContent = 'Marcando treino…';
+    renderActivityChoices();
     try {
-      const suffix = blob ? '' : '&withoutPhoto=1';
-      const options = { method: 'POST' };
-      if (blob) {
-        options.headers = { 'Content-Type': 'image/jpeg' };
-        options.body = blob;
-      }
-      const response = await fetch(`/api/desafiogym/entries?participant=${encodeURIComponent(participant)}${suffix}`, options);
+      const response = await fetch(`/api/desafiogym/entries?participant=${encodeURIComponent(selectedParticipant)}`, { method: 'POST' });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload.success) throw new Error(payload.message || 'Não foi possível confirmar o treino.');
+      if (!response.ok || !payload.success) throw new Error(payload.message || 'Não foi possível marcar o treino.');
       renderState(payload);
-      if (participant === 'lucas') {
-        dialog.close();
-        return;
-      }
-      showResult(
-        true,
-        payload.bonusEarned ? 'Bônus conquistado!' : 'Treino enviado',
-        payload.bonusEarned ? 'Seu bônus está pronto para completar outra semana.' : 'Seu ponto já entrou no placar.'
-      );
-      window.setTimeout(() => { if (dialog.open) dialog.close(); }, 1200);
+      animateScore(selectedParticipant);
+      if (payload.bonusEarned) animateScore(selectedParticipant, $(`#${selectedParticipant}-bonus`));
+      playSuccessSound();
+      statusLine.textContent = payload.bonusEarned ? 'Treino marcado · bônus conquistado!' : 'Treino marcado com sucesso!';
     } catch (error) {
-      showResult(false, blob ? 'Foto não confirmada' : 'Treino não registrado', error.message);
+      statusLine.textContent = error.message;
+      await loadState();
     } finally {
-      if (blob) URL.revokeObjectURL(previewUrl);
+      activityBusy = false;
+      selectedActivity = '';
+      renderActivityChoices();
     }
   }
 
-  async function capturePhoto() {
-    if (!stream || !video.videoWidth || !video.videoHeight) return;
-    captureButton.disabled = true;
-    const maxWidth = 1024;
-    const scale = Math.min(1, maxWidth / video.videoWidth);
-    canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
-    canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
-    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', .82));
-    captureButton.disabled = false;
-    if (!blob) {
-      statusLine.textContent = 'A foto não saiu. Tente novamente.';
-      return;
+  async function markCreatine() {
+    if (!canMarkCreatine(selectedParticipant) || activityBusy) return;
+    activityBusy = true;
+    selectedActivity = 'creatine';
+    statusLine.textContent = 'Marcando creatina…';
+    renderActivityChoices();
+    try {
+      const response = await fetch(`/api/desafiogym/creatine?participant=${encodeURIComponent(selectedParticipant)}`, { method: 'POST' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) throw new Error(payload.message || 'Não foi possível marcar a creatina.');
+      renderState(payload);
+      animateScore(selectedParticipant, $(`#${selectedParticipant}-creatine-score`));
+      playSuccessSound();
+      statusLine.textContent = 'Creatina marcada com sucesso!';
+    } catch (error) {
+      statusLine.textContent = error.message;
+      await loadState();
+    } finally {
+      activityBusy = false;
+      selectedActivity = '';
+      renderActivityChoices();
     }
-    await sendRegistration(blob);
   }
 
   async function redeemBonus(participant) {
@@ -341,8 +300,6 @@
       bonus: { ...state.bonus, [participant]: Number(state.bonus?.[participant] || 0) - 1 }
     };
     renderState(optimisticState);
-    animateScore(participant);
-    playBonusSound();
     showBonusToast(`+1 para ${people[participant].name} — salvando…`);
 
     try {
@@ -350,6 +307,8 @@
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.success) throw new Error(payload.message || 'Não foi possível aplicar o bônus.');
       renderState(payload);
+      animateScore(participant);
+      playSuccessSound();
       showBonusToast(`+1 para ${people[participant].name} no dia ${formatDate(payload.targetTrainingDate)}`);
     } catch (error) {
       await loadState();
@@ -418,7 +377,7 @@
       if (!response.ok || !payload.success) throw new Error(payload.message || 'Não foi possível devolver o bônus.');
       renderState(payload);
       animateScore(participant);
-      playBonusSound();
+      playSuccessSound();
       showBonusToast(`1 ponto voltou para os bônus de ${people[participant].name}.`);
     } catch (error) {
       showBonusToast(error.message, true);
@@ -472,7 +431,7 @@
       holdActivated = true;
       ignorePointerClick = true;
       clearHold();
-      beginCheckin('lucas');
+      openCheckin('lucas');
     }, 3000);
   });
 
@@ -481,7 +440,7 @@
     const shouldOpenKelly = !holdActivated;
     clearHold();
     ignorePointerClick = true;
-    if (shouldOpenKelly) beginCheckin('kelly');
+    if (shouldOpenKelly) openCheckin('kelly');
     window.setTimeout(() => { ignorePointerClick = false; }, 100);
   });
 
@@ -494,7 +453,7 @@
       event.preventDefault();
       return;
     }
-    if (event.detail === 0) beginCheckin('kelly');
+    if (event.detail === 0) openCheckin('kelly');
   });
 
   document.querySelectorAll('.bonus-orb').forEach((orb) => orb.addEventListener('pointerdown', startBonusDrag));
@@ -506,23 +465,15 @@
 
   closeButton.addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', resetDialog);
-  dialog.addEventListener('cancel', stopCamera);
-  captureButton.addEventListener('click', capturePhoto);
-  withoutPhotoButton.addEventListener('click', () => {
-    withoutPhotoButton.disabled = true;
-    sendRegistration();
-  });
-  tryAgainButton.addEventListener('click', () => {
-    setVisible(resultStage, false);
-    openCameraFor(selectedParticipant);
-  });
+  workoutChoice.addEventListener('click', markWorkout);
+  creatineChoice.addEventListener('click', markCreatine);
 
   if (document.modelContext?.registerTool) {
     try {
       document.modelContext.registerTool({
-        name: 'open_gym_checkin_camera',
-        title: 'Abrir câmera do treino',
-        description: 'Abre o fluxo visível para tirar uma foto da academia e solicitar um ponto.',
+        name: 'open_gym_checkin',
+        title: 'Marcar treino ou creatina',
+        description: 'Abre o modal para marcar treino ou creatina sem enviar foto.',
         inputSchema: {
           type: 'object',
           properties: { participant: { type: 'string', enum: ['kelly', 'lucas'] } },
@@ -532,8 +483,8 @@
         annotations: { readOnlyHint: false, untrustedContentHint: false },
         async execute(input) {
           if (!people[input?.participant]) throw new Error('Participante inválido.');
-          await beginCheckin(input.participant);
-          return { status: 'camera_opened', participant: input.participant };
+          openCheckin(input.participant);
+          return { status: 'checkin_opened', participant: input.participant };
         }
       });
     } catch (_error) {

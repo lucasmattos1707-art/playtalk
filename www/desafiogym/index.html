@@ -7,7 +7,7 @@
   <meta name="description" content="Placar semanal do desafio de academia entre Kelly e Lucas.">
   <title>Kelly x Lucas — Desafio Gym</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23081224'/%3E%3Cpath d='M13 27h7v10h-7zm31 0h7v10h-7zM20 23h6v18h-6zm18 0h6v18h-6zM26 29h12v6H26z' fill='%23fff'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/desafiogym/styles.css?v=20261013-4">
+  <link rel="stylesheet" href="/desafiogym/styles.css?v=20261102-diamond-checkin-v1">
 </head>
 <body>
   <div class="ambient ambient-blue" aria-hidden="true"></div>
@@ -20,7 +20,7 @@
       </div>
       <div>
         <p class="eyebrow">DESAFIO GYM</p>
-        <h1>Kelly <em>×</em> Lucas</h1>
+        <h1>Treinos e creatina</h1>
       </div>
       <div class="live-pill"><span></span> Semana ativa</div>
     </header>
@@ -42,7 +42,6 @@
               <span id="kelly-bonus-count">0</span>
             </button>
           </div>
-          <div class="fighter-name">Kelly</div>
           <div class="score-line"><strong id="kelly-score" class="is-loading" data-score-target="kelly" aria-label="Carregando placar da Kelly">0</strong></div>
         </article>
 
@@ -55,7 +54,6 @@
               <span id="lucas-bonus-count">0</span>
             </button>
           </div>
-          <div class="fighter-name">Lucas</div>
           <div class="score-line"><strong id="lucas-score" class="is-loading" data-score-target="lucas" aria-label="Carregando placar do Lucas">0</strong></div>
         </article>
       </div>
@@ -68,11 +66,18 @@
       </div>
 
       <button class="send-button" id="open-submit" type="button">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5.5 10 3h4l1.5 2.5H19A3 3 0 0 1 22 8v9a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V8a3 3 0 0 1 3-2.5h3.5ZM12 17a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0-2a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.2 11.3 20.5 3.8a.7.7 0 0 1 .92.92l-7.5 17.3a.7.7 0 0 1-1.31-.06l-2.05-6.58-6.58-2.05a.7.7 0 0 1-.78-.92ZM11.7 14l1.4 4.49 4.4-10.15L7.35 12.75 11.7 14Zm1.01-1.99 4.79-2.08-2.08 4.8-2.71-2.72Z"/></svg>
         <span id="submit-label">Enviar treino</span>
-        <small>+1 ponto</small>
       </button>
-      <p class="send-hint" id="send-hint">A câmera abre na hora. A foto é verificada automaticamente.</p>
+    </section>
+
+    <section class="creatine-card" aria-label="Placar da creatina">
+      <div class="creatine-title"><img src="/desafiogym/creatina.svg" alt="" width="58" height="58"><strong>Placar da creatina</strong></div>
+      <div class="creatine-score-pair" aria-label="Pontos de creatina">
+        <strong class="creatine-score orange" id="kelly-creatine-score" aria-label="Creatina da Kelly: 0">0</strong>
+        <span aria-hidden="true">×</span>
+        <strong class="creatine-score blue" id="lucas-creatine-score" aria-label="Creatina do Lucas: 0">0</strong>
+      </div>
     </section>
 
     <div class="lower-grid">
@@ -103,7 +108,7 @@
         <div class="rules">
           <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2v3m10-3v3M3.5 9h17M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z"/></svg>1 ponto por dia</span>
           <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 5 5L20 6"/></svg>Domingo liberado</span>
-          <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 5 5L20 6"/></svg>Foto verificada por IA</span>
+          <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 5 5L20 6"/></svg>Treino e creatina em placares separados</span>
         </div>
       </section>
 
@@ -118,45 +123,24 @@
 
   <div class="bonus-toast" id="bonus-toast" role="status" aria-live="polite"></div>
 
-  <dialog class="camera-dialog" id="camera-dialog">
-    <div class="dialog-shell">
-      <button class="dialog-close" id="dialog-close" type="button" aria-label="Fechar">×</button>
-      <div class="dialog-heading">
-        <div class="camera-badge" aria-hidden="true">
-          <svg viewBox="0 0 64 64"><path d="M21 16.5 25 10h14l4 6.5h8A7 7 0 0 1 58 23v25a7 7 0 0 1-7 7H13a7 7 0 0 1-7-7V23a7 7 0 0 1 7-6.5h8ZM32 47a12 12 0 1 0 0-24 12 12 0 0 0 0 24Zm0-5a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg>
-        </div>
-        <p class="kicker">FOTO DE VERIFICAÇÃO</p>
-        <h2 id="dialog-title">Enviar treino</h2>
-        <p id="dialog-copy">A câmera abre direto — sem galeria.</p>
+  <dialog class="checkin-dialog" id="checkin-dialog" aria-label="Marcar treino ou creatina">
+    <button class="dialog-close" id="dialog-close" type="button" aria-label="Fechar">×</button>
+    <div class="checkin-content">
+      <p class="kicker">MARCAÇÃO DO DIA</p>
+      <div class="activity-layers">
+        <button class="activity-choice workout-choice" id="mark-workout" type="button" aria-label="Marcar treino" aria-pressed="false">
+          <img src="/desafiogym/halteres.svg" alt="">
+          <span>Treino</span>
+        </button>
+        <button class="activity-choice creatine-choice" id="mark-creatine" type="button" aria-label="Marcar creatina" aria-pressed="false">
+          <img src="/desafiogym/creatina.svg" alt="">
+          <span>Creatina</span>
+        </button>
       </div>
-
-      <div class="camera-flow" id="camera-flow" hidden>
-        <div class="camera-stage">
-          <video id="camera-video" autoplay muted playsinline></video>
-          <canvas id="camera-canvas" hidden></canvas>
-          <div class="selected-person"><img id="selected-avatar" src="" alt=""><span id="selected-name"></span></div>
-          <button class="shutter" id="capture-photo" type="button" aria-label="Tirar foto"><span></span></button>
-        </div>
-        <button class="without-photo" id="register-without-photo" type="button">Registrar sem foto</button>
-      </div>
-
-      <div class="verification-stage" id="verification-stage" hidden>
-        <div class="scan-photo"><img id="captured-preview" src="" alt="Foto tirada pela câmera"><span></span></div>
-        <div class="loader" aria-hidden="true"></div>
-        <strong>Confirmando a academia...</strong>
-        <p>Isso leva só alguns segundos.</p>
-      </div>
-
-      <div class="result-stage" id="result-stage" hidden>
-        <div class="result-icon" id="result-icon">✓</div>
-        <h3 id="result-title">Ponto confirmado!</h3>
-        <p id="result-copy">Seu treino entrou no placar.</p>
-        <button type="button" id="try-again" hidden>Tentar novamente</button>
-      </div>
-      <p class="dialog-status" id="dialog-status" role="status" aria-live="polite"></p>
+      <p class="dialog-status" id="dialog-status" role="status" aria-live="polite">Toque em uma atividade para marcar.</p>
     </div>
   </dialog>
 
-  <script src="/desafiogym/app.js?v=20261013-6" defer></script>
+  <script src="/desafiogym/app.js?v=20261102-diamond-checkin-v1" defer></script>
 </body>
 </html>

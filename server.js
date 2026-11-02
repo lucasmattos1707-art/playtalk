@@ -88,7 +88,6 @@ const OPENAI_API_KEY = env(process.env.OPENAI_API_KEY);
 const OPENAI_IMAGE_MODEL = env(process.env.OPENAI_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_AVATAR_IMAGE_MODEL = env(process.env.OPENAI_AVATAR_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_TEXT_MODEL = env(process.env.OPENAI_TEXT_MODEL) || 'gpt-5.4-nano';
-const DESAFIO_GYM_VISION_MODEL = env(process.env.DESAFIO_GYM_VISION_MODEL) || 'gpt-6-luna';
 const OPENAI_FLASHCARD_ADMIN_TEXT_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_TEXT_MODEL) || 'gpt-5-nano';
 const OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL = env(process.env.OPENAI_FLASHCARD_ADMIN_IMAGE_MODEL) || 'gpt-image-1-mini';
 const OPENAI_STORY_MODEL = env(process.env.OPENAI_STORY_MODEL) || 'gpt-5.4-nano';
@@ -2957,6 +2956,19 @@ const ensureDesafioGymTable = async () => {
       await pool.query(`
         CREATE INDEX IF NOT EXISTS desafio_gym_entries_week_idx
         ON public.desafio_gym_entries (week_start, participant, training_date DESC)
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.desafio_gym_creatine_entries (
+          id bigserial PRIMARY KEY,
+          participant varchar(16) NOT NULL CHECK (participant IN ('lucas', 'kelly')),
+          intake_date date NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          UNIQUE (participant, intake_date)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS desafio_gym_creatine_participant_idx
+        ON public.desafio_gym_creatine_entries (participant, intake_date DESC)
       `);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.desafio_gym_bonus_events (
@@ -29538,7 +29550,7 @@ function getDesafioGymWeekStart(dateString) {
 async function readDesafioGymState(today = getSaoPauloDateString()) {
   await ensureDesafioGymTable();
   const weekStart = getDesafioGymWeekStart(today);
-  const [scoreResult, weekResult, todayResult, recentResult, bonusResult, weekActivityResult] = await Promise.all([
+  const [scoreResult, weekResult, todayResult, recentResult, bonusResult, weekActivityResult, creatineScoreResult, creatineTodayResult] = await Promise.all([
     pool.query(`
       WITH totals AS (
         SELECT participant, COUNT(*)::integer AS points
@@ -29609,7 +29621,17 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
       FROM public.desafio_gym_bonus_events
       WHERE event_type = 'spent' AND target_training_date >= $1::date
         AND target_training_date < ($1::date + INTERVAL '7 days')
-    `, [weekStart])
+    `, [weekStart]),
+    pool.query(`
+      SELECT participant, COUNT(*)::integer AS points
+      FROM public.desafio_gym_creatine_entries
+      GROUP BY participant
+    `),
+    pool.query(`
+      SELECT participant
+      FROM public.desafio_gym_creatine_entries
+      WHERE intake_date = $1::date
+    `, [today])
   ]);
 
   const toPoints = (rows) => rows.reduce((result, row) => {
@@ -29620,6 +29642,7 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
   const scores = toPoints(scoreResult.rows);
   const week = toPoints(weekResult.rows);
   const bonus = toPoints(bonusResult.rows);
+  const creatineScores = toPoints(creatineScoreResult.rows);
   const weekActivity = weekActivityResult.rows.reduce((result, row) => {
     result[row.participant].push(String(row.training_date || '').slice(0, 10));
     return result;
@@ -29634,6 +29657,11 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
     week,
     weekActivity,
     bonus,
+    creatineScores,
+    creatineMarkedToday: {
+      lucas: creatineTodayResult.rows.some((row) => row.participant === 'lucas'),
+      kelly: creatineTodayResult.rows.some((row) => row.participant === 'kelly')
+    },
     bonusMode: {
       lucas: week.lucas >= 5,
       kelly: week.kelly >= 5
@@ -29668,58 +29696,6 @@ function consumeDesafioGymAttempt(req) {
     : { startedAt: previous.startedAt, count: previous.count + 1 };
   desafioGymAttemptWindows.set(key, next);
   return next.count <= 8;
-}
-
-async function verifyDesafioGymPhoto(imageBuffer) {
-  const base64Image = imageBuffer.toString('base64');
-  const { parsed } = await requestOpenAiJsonPayload('', {
-    model: DESAFIO_GYM_VISION_MODEL,
-    store: false,
-    timeoutMs: 30000,
-    maxOutputTokens: 180,
-    input: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'input_text',
-            text: [
-              'Verifique somente se esta foto mostra claramente um ambiente real de academia ou treino indoor.',
-              'Considere aparelhos de musculação, pesos, esteiras, bicicletas, área funcional ou estúdio fitness como evidência.',
-              'Rejeite casa, rua, carro, tela, foto de outra foto e imagens ambíguas.',
-              'Não identifique a pessoa e não descreva atributos pessoais.'
-            ].join(' ')
-          },
-          {
-            type: 'input_image',
-            image_url: `data:image/jpeg;base64,${base64Image}`,
-            detail: 'low'
-          }
-        ]
-      }
-    ],
-    textFormat: {
-      type: 'json_schema',
-      name: 'desafio_gym_verification',
-      strict: true,
-      schema: {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          is_gym: { type: 'boolean' },
-          confidence: { type: 'integer', minimum: 0, maximum: 100 },
-          reason: { type: 'string', minLength: 1, maxLength: 180 }
-        },
-        required: ['is_gym', 'confidence', 'reason']
-      }
-    }
-  });
-
-  return {
-    isGym: parsed?.is_gym === true,
-    confidence: Math.max(0, Math.min(100, Number(parsed?.confidence) || 0)),
-    reason: String(parsed?.reason || 'Não foi possível confirmar o ambiente.').slice(0, 180)
-  };
 }
 
 app.get(['/oz', '/oz/', '/oz/index.html'], (_req, res) => {
@@ -30527,9 +30503,8 @@ app.post(
         res.status(400).json({ success: false, message: 'Escolha Lucas ou Kelly.' });
         return;
       }
-      const withoutPhoto = String(req.query?.withoutPhoto || '') === '1';
-      if (!withoutPhoto && (!Buffer.isBuffer(req.body) || req.body.length < 4_000)) {
-        res.status(400).json({ success: false, message: 'Tire uma foto nítida pela câmera.' });
+      if (Buffer.isBuffer(req.body) && req.body.length) {
+        res.status(400).json({ success: false, message: 'O treino agora é registrado sem foto.' });
         return;
       }
       if (!consumeDesafioGymAttempt(req)) {
@@ -30579,38 +30554,8 @@ app.post(
       let verificationHash = sha256HexBuffer(Buffer.from(`no-photo:${participant}:${today}`));
       let verificationModel = 'no-photo';
       let verificationConfidence = 0;
-      let verificationReason = 'Treino registrado sem foto.';
-
-      if (withoutPhoto) {
-        storedObjectKey = `desafiogym/no-photo/${participant}-${today}-${crypto.randomUUID()}`;
-      } else {
-        const imageBuffer = await sharp(req.body, { failOn: 'error', limitInputPixels: 24_000_000 })
-          .rotate()
-          .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 82, mozjpeg: true })
-          .toBuffer();
-        const verification = await verifyDesafioGymPhoto(imageBuffer);
-        if (!verification.isGym || verification.confidence < 60) {
-          res.status(422).json({
-            success: false,
-            message: 'Não consegui confirmar que a foto foi tirada em uma academia. Tente mostrar os aparelhos ou pesos.',
-            reason: verification.reason
-          });
-          return;
-        }
-        if (!isR2FluencyConfigured()) {
-          res.status(503).json({ success: false, message: 'O armazenamento da foto está indisponível agora.' });
-          return;
-        }
-
-        storedObjectKey = `desafiogym/${weekStart}/${participant}-${today}-${crypto.randomUUID()}.jpg`;
-        await putR2Object(storedObjectKey, imageBuffer, 'image/jpeg', { timeoutMs: 15000, retries: 1 });
-        verificationContentType = 'image/jpeg';
-        verificationHash = sha256HexBuffer(imageBuffer);
-        verificationModel = DESAFIO_GYM_VISION_MODEL;
-        verificationConfidence = verification.confidence;
-        verificationReason = verification.reason;
-      }
+      const verificationReason = 'Treino registrado manualmente, sem foto, por decisão dos participantes.';
+      storedObjectKey = `desafiogym/no-photo/${participant}-${today}-${crypto.randomUUID()}`;
       db = await pool.connect();
       await db.query('BEGIN');
       await db.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`desafio-gym-bonus:${participant}`]);
@@ -30701,17 +30646,11 @@ app.post(
         res.status(409).json({ success: false, message: 'O ponto de hoje já foi marcado.' });
         return;
       }
-      if (/input buffer contains unsupported image format|Input buffer/i.test(String(error?.message || ''))) {
-        res.status(400).json({ success: false, message: 'A câmera não gerou uma foto válida. Tente novamente.' });
-        return;
-      }
       console.error('Erro ao registrar treino no Desafio Gym:', error);
       const status = Number.isInteger(error?.statusCode) && error.statusCode >= 400 && error.statusCode < 600
         ? error.statusCode
         : 500;
-      res.status(status).json({ success: false, message: status === 503
-        ? 'A verificação por IA está indisponível agora.'
-        : 'Não foi possível confirmar o treino. Tente novamente.' });
+      res.status(status).json({ success: false, message: 'Não foi possível registrar o treino. Tente novamente.' });
     } finally {
       db?.release();
     }
@@ -30790,6 +30729,46 @@ app.post('/api/desafiogym/bonus/redeem', async (req, res) => {
     if (db) await db.query('ROLLBACK').catch(() => {});
     console.error('Erro ao aplicar ponto bônus no Desafio Gym:', error);
     res.status(500).json({ success: false, message: 'Não foi possível aplicar o bônus agora.' });
+  } finally {
+    db?.release();
+  }
+});
+
+app.post('/api/desafiogym/creatine', async (req, res) => {
+  const participant = String(req.query?.participant || '').trim().toLowerCase();
+  if (!['lucas', 'kelly'].includes(participant)) {
+    res.status(400).json({ success: false, message: 'Escolha o participante.' });
+    return;
+  }
+  if (!consumeDesafioGymAttempt(req)) {
+    res.status(429).json({ success: false, message: 'Muitas marcações seguidas. Aguarde alguns minutos.' });
+    return;
+  }
+
+  let db;
+  try {
+    await ensureDesafioGymTable();
+    const today = getSaoPauloDateString();
+    db = await pool.connect();
+    await db.query('BEGIN');
+    await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`desafio-gym-creatine:${participant}`]);
+    const inserted = await db.query(`
+      INSERT INTO public.desafio_gym_creatine_entries (participant, intake_date)
+      VALUES ($1, $2::date)
+      ON CONFLICT (participant, intake_date) DO NOTHING
+      RETURNING id
+    `, [participant, today]);
+    if (!inserted.rows[0]) {
+      await db.query('ROLLBACK');
+      res.status(409).json({ success: false, message: 'A creatina de hoje já foi marcada.' });
+      return;
+    }
+    await db.query('COMMIT');
+    res.status(201).json({ success: true, message: 'Creatina marcada!', ...(await readDesafioGymState(today)) });
+  } catch (error) {
+    if (db) await db.query('ROLLBACK').catch(() => {});
+    console.error('Erro ao registrar a creatina no Desafio Gym:', error);
+    res.status(500).json({ success: false, message: 'Não foi possível marcar a creatina agora.' });
   } finally {
     db?.release();
   }
