@@ -6584,6 +6584,32 @@
       transition: opacity 220ms ease, filter 220ms ease, transform 220ms ease;
     }
 
+    .stars.is-typing-round-lives {
+      gap: 8px;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .typing-round-heart {
+      color: #ff5c79;
+      opacity: 1;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .typing-round-heart.is-lost {
+      opacity: 0.5;
+    }
+
+    .typing-round-result-stat {
+      display: block;
+      margin-top: 8px;
+    }
+
+    .typing-round-result-stat strong {
+      color: #9cecff;
+      font-size: 1.2em;
+    }
+
     .game-card.is-listening {
       border-color: transparent;
       box-shadow: none;
@@ -15177,7 +15203,7 @@
         fourthStageTyping: ['off', 'on'],
         practiceNativeAudio: ['off', 'on'],
         babyMode: ['off', 'on'],
-        mode: ['training', 'journey'],
+        mode: ['journey'],
         targetLanguage: TARGET_LANGUAGE_DISPLAY_ORDER.slice(),
         nativeLanguage: ['portuguese', 'english', 'french', 'mandarin', 'spanish', 'german']
       };
@@ -15188,7 +15214,7 @@
         fourthStageTyping: 'off',
         practiceNativeAudio: 'off',
         babyMode: 'off',
-        mode: 'training',
+        mode: 'journey',
         targetLanguage: 'english',
         nativeLanguage: 'portuguese'
       };
@@ -15766,6 +15792,7 @@
           levelTypingMode: false,
           levelTextResponseLanguage: 'english',
           levelTextHitStreak: 0,
+          typingRound: { active: false, completed: false, correct: 0, errors: 0, characters: 0, startedAt: 0, endedAt: 0, level: 0, total: 0 },
           scaleBatchAttempts: 0,
           scaleBatchHits: 0,
           entries: new Map(),
@@ -16628,6 +16655,7 @@
       }
 
       function normalizeGameOptionValue(key, value) {
+        if (key === 'mode') return 'journey';
         const values = key === 'difficulty'
           ? availableDifficultyValues()
           : (Array.isArray(GAME_OPTION_VALUE_MAP[key]) ? GAME_OPTION_VALUE_MAP[key] : []);
@@ -24500,6 +24528,10 @@
         return Boolean(isFiveStarCardsModeActive() && selectedCardsModePracticeStage());
       }
 
+      function isTypingRoundStageFourActive() {
+        return Boolean(state.game.typingRound?.active);
+      }
+
       function isCardsModeCustomFourthStageEntry(entry) {
         return Boolean(
           entry
@@ -26084,14 +26116,6 @@
 
       function gameOptionSlideMeta() {
         return {
-          mode: {
-            name: 'Modo de jogo',
-            desc: 'Escolha para onde o botao Jogar leva voce.',
-            values: {
-              training: { label: 'Modo Explorador', desc: 'Navegue e jogue livremente qualquer nivel publicado.' },
-              journey: { label: 'Modo Cartas', desc: 'Conquiste cinco estrelas e acumule as cartas no album.' }
-            }
-          },
           difficulty: {
             name: nativeUiText('level'),
             desc: '',
@@ -29930,11 +29954,16 @@
       }
 
       function renderStars(stars) {
+        if (isTypingRoundStageFourActive()) {
+          renderTypingRoundHearts();
+          return;
+        }
         if (isTrainingMode()) {
           renderTrainingSequence();
           return;
         }
         els.gameStars.classList.remove('is-training-sequence');
+        els.gameStars.classList.remove('is-typing-round-lives');
         els.gameStars.innerHTML = '';
         const starTarget = currentGameStarTarget();
         for (let index = 0; index < starTarget; index += 1) {
@@ -29946,12 +29975,38 @@
         }
       }
 
+      function renderTypingRoundHearts() {
+        if (!els.gameStars) return;
+        const round = state.game.typingRound || {};
+        const errors = Math.max(0, Math.min(5, Number(round.errors) || 0));
+        els.gameStars.classList.remove('is-training-sequence');
+        els.gameStars.classList.add('is-typing-round-lives');
+        els.gameStars.innerHTML = Array.from({ length: 5 }, (_value, index) => (
+          `<span class="typing-round-heart${index >= 5 - errors ? ' is-lost' : ''}" aria-hidden="true">♥</span>`
+        )).join('');
+        els.gameStars.setAttribute('aria-label', `${5 - errors} de 5 vidas`);
+      }
+
+      function finishTypingRound() {
+        const round = state.game.typingRound;
+        if (!round?.active) return false;
+        round.active = false;
+        round.completed = true;
+        round.endedAt = Date.now();
+        state.game.entries.clear();
+        state.game.queue = [];
+        state.game.currentId = null;
+        renderCurrentCard();
+        return true;
+      }
+
       function renderStarsLossState(initialStars, lostCount) {
         if (isTrainingMode()) {
           renderTrainingSequence();
           return;
         }
         els.gameStars.classList.remove('is-training-sequence');
+        els.gameStars.classList.remove('is-typing-round-lives');
         els.gameStars.innerHTML = '';
         const starTarget = currentGameStarTarget();
         const safeInitialStars = Math.max(0, Math.min(starTarget, Number(initialStars) || 0));
@@ -29973,6 +30028,7 @@
         const cycleSize = Math.max(1, Number(training.sourceIds?.length) || Number(training.selectedCount) || 1);
         const position = Math.max(1, Math.min(cycleSize, Number(training.cycleIndex) || 1));
         els.gameStars.classList.add('is-training-sequence');
+        els.gameStars.classList.remove('is-typing-round-lives');
         els.gameStars.textContent = `${Math.max(0, Number(training.hitStreak) || 0)} acertos`;
         if (els.gameStarCopy) {
           els.gameStarCopy.textContent = `${position}/${cycleSize}`;
@@ -31756,6 +31812,10 @@
         }
         if (stageNumber === 4) {
           triggerOverlayDissolve();
+          if (options.skipPromptAudio) {
+            await wait(220);
+            return;
+          }
           const audioPlayback = playPromptAudio(card, { rate: 0.8, enableMicDuringPlayback: false });
           await wait(500);
           await audioPlayback;
@@ -32805,6 +32865,20 @@
         if (!els.gameEnd) return;
         const heading = els.gameEnd.querySelector('h3');
         const copy = els.gameEnd.querySelector('p');
+        const typingRound = state.game.typingRound;
+        if (typingRound?.completed) {
+          const elapsedSeconds = Math.max(1, (Number(typingRound.endedAt) - Number(typingRound.startedAt)) / 1000);
+          const charactersPerSecond = Math.max(0, Number(typingRound.characters) || 0) / elapsedSeconds;
+          if (heading) heading.textContent = 'Resumo do Modo 4';
+          if (copy) {
+            copy.innerHTML = `
+              <span class="typing-round-result-stat"><strong>${Math.max(0, Number(typingRound.correct) || 0)}</strong> acertos</span>
+              <span class="typing-round-result-stat"><strong>${Math.max(0, Number(typingRound.errors) || 0)}</strong> erros</span>
+              <span class="typing-round-result-stat"><strong>${charactersPerSecond.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> caracteres por segundo</span>
+            `;
+          }
+          return;
+        }
         if (heading) {
           heading.textContent = 'Sem cartas disponiveis para jogar.';
         }
@@ -33408,17 +33482,22 @@
         const isSecondStar = phaseKey === 'second-star';
         const nowMs = Date.now();
 
-        if (isSecondStar || isFourthStar) {
+        if ((isSecondStar || isFourthStar) && !isTypingRoundStageFourActive()) {
           void applyJumpDeckLevelPenalty();
         }
 
-        if (shouldPlayMistakeCue(nowMs)) {
+        if (!isTypingRoundStageFourActive() && shouldPlayMistakeCue(nowMs)) {
           playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
         }
 
         // Do not block the keyboard for a simple mistake flash.
         if (!isFourthStar) {
           triggerTypingMistakeFeedback(grid, 500);
+        }
+        if (isFourthStar && isTypingRoundStageFourActive()) {
+          triggerTypingMistakeFeedback(grid, 500);
+          await handleRecognitionResult('', 'typing');
+          return true;
         }
         if (isTrainingMode()) {
           await wait(180);
@@ -34328,6 +34407,10 @@
             ) return;
             const keyLetter = safeText(key.dataset.letter || key.textContent).toUpperCase();
             if (!keyLetter) return;
+            if (isTypingRoundStageFourActive() && !isStageSixBattleTyping) {
+              if (!Number(state.game.typingRound.startedAt)) state.game.typingRound.startedAt = Date.now();
+              state.game.typingRound.characters = Math.max(0, Number(state.game.typingRound.characters) || 0) + 1;
+            }
             if (isStageSixBattleTyping) {
               const expectedLetter = target[typed.length];
               const correct = keyLetter === expectedLetter;
@@ -34614,9 +34697,18 @@
           clearGameVisualTypingDisplays();
           updateGameChips();
           if (!state.game.entries.size) {
+            if (isTypingRoundStageFourActive()) {
+              state.game.typingRound.active = false;
+              state.game.typingRound.completed = true;
+              state.game.typingRound.endedAt = Date.now();
+            }
             clearGameSessionLocally();
             els.gameCard.style.display = 'none';
             updateGameEndMessageForCurrentLanguage();
+            if (state.game.typingRound?.completed) {
+              renderTypingRoundHearts();
+              if (els.gameStarCopy) els.gameStarCopy.textContent = 'Modo 4 · Digitação por palavras';
+            }
             els.gameEnd.classList.add('is-visible');
           }
           updateGuestFirstStarResultsBanner(null, false);
@@ -35071,6 +35163,10 @@
       function rotateLevelModeEntry(entry) {
         if (!entry) return false;
         removeGameEntry(entry.id);
+        if (isTypingRoundStageFourActive()) {
+          updateGameChips();
+          return state.game.entries.size > 0;
+        }
         if (!shouldUseLevelModeBufferedPool()) {
           return refillLevelModeEntries(entry.pool || 'base', state.game.contextLimit || DEFAULT_GAME_CONTEXT_LIMIT);
         }
@@ -38139,15 +38235,32 @@
 
         const level = selectedGameLevel();
         const sourceCards = buildLevelModeSourceCards(level);
-        const roundCount = isAllLevelsSelected()
+        const typingRoundActive = isFiveStarCardsModeActive() && selectedCardsModePracticeStage() === 4;
+        state.game.typingRound = {
+          active: typingRoundActive,
+          completed: false,
+          correct: 0,
+          errors: 0,
+          characters: 0,
+          startedAt: 0,
+          endedAt: 0,
+          level,
+          total: typingRoundActive ? sourceCards.length : 0
+        };
+        const roundCount = typingRoundActive
+          ? sourceCards.length
+          : isAllLevelsSelected()
           ? Math.min(sourceCards.length, LEVEL_MODE_BUFFER_SIZE)
           : Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount(level));
         state.game.contextLimit = isAllLevelsSelected()
           ? roundCount
           : currentGameActiveCardCap(level || currentUserLevel(), roundCount);
+        if (typingRoundActive) state.game.contextLimit = roundCount;
         state.game.selectedCount = roundCount;
 
-        const initialCards = isFiveStarCardsModeActive()
+        const initialCards = typingRoundActive
+          ? shuffleArray(sourceCards)
+          : isFiveStarCardsModeActive()
           ? sourceCards.slice(0, roundCount)
           : buildOrderedDeckSelection(sourceCards, roundCount);
         if (isFiveStarCardsModeActive()) {
@@ -38754,11 +38867,14 @@
           entry.typingMistakes = 0;
           const scaleModeActive = isLevelScaleModeActive();
           if (isHit) {
+            if (isTypingRoundStageFourActive()) {
+              state.game.typingRound.correct = Math.max(0, Number(state.game.typingRound.correct) || 0) + 1;
+            }
             if (isLevelTextModeActive()) {
               state.game.levelTextHitStreak = Math.max(0, Number(state.game.levelTextHitStreak) || 0) + 1;
             }
             setGameStatus('', 'hit');
-            playSuccessAudio();
+            if (!isTypingRoundStageFourActive()) playSuccessAudio();
             if (isLevelTypingModeActive()) {
               els.gameStarCopy.textContent = 'Typing';
               entry._removeAfterReward = true;
@@ -38785,9 +38901,14 @@
             }
             entry.missesWithoutStars = 0;
             setGameStatus('', 'miss');
+            if (isTypingRoundStageFourActive()) {
+              state.game.typingRound.errors = Math.max(0, Number(state.game.typingRound.errors) || 0) + 1;
+              renderTypingRoundHearts();
+              entry._removeAfterReward = true;
+            }
             if (scaleModeActive) {
               state.game.scaleBatchAttempts = Math.max(0, Number(state.game.scaleBatchAttempts) || 0) + 1;
-            } else {
+            } else if (!isTypingRoundStageFourActive()) {
               state.game.queue.push(entry.id);
             }
           }
@@ -38801,12 +38922,16 @@
           syncLevelTextModeControls();
           updateGameChips();
           await playStageResponseSequence(resolveLevelModeStage(), card, {
-            skipPromptAudio: scaleModeActive || isLevelTypingModeActive() || !isHit
+            skipPromptAudio: scaleModeActive || isLevelTypingModeActive() || isTypingRoundStageFourActive() || !isHit
           });
           await wait(isHit ? 260 : 520);
           if (entry._removeAfterReward) {
             entry._removeAfterReward = false;
             rotateLevelModeEntry(entry);
+          }
+          if (isTypingRoundStageFourActive() && Number(state.game.typingRound.errors) >= 5) {
+            finishTypingRound();
+            return;
           }
           if (scaleBatchCompleted && state.game.active && !state.game.paused) {
             await restartActiveLevelMode(selectedGameLevel());
@@ -39425,6 +39550,7 @@
         if (!state.game.active) syncWelcomeGate();
       }
       async function startConfiguredJourney(event, options = {}) {
+        if (!options.allowJourneyAuto) return false;
         if (journeyPhaseRuntime || !window.PlaytalkJourney) return false;
         event?.preventDefault?.();
         event?.stopPropagation?.();
@@ -39659,30 +39785,21 @@
         };
         els.welcomeStartBtn?.addEventListener('click', (event) => {
           void (async () => {
-            if (await startConfiguredJourney(event)) return;
-            playStatusCueAudio(WELCOME_PLAY_SOUND_PATH);
             event.preventDefault();
             event.stopPropagation();
+            playStatusCueAudio(WELCOME_PLAY_SOUND_PATH);
             state.entry.pendingPlayStart = false;
             state.entry.welcomeStartRequested = false;
             state.entry.flashStartInFlight = false;
             state.entry.welcomeFlashStartAt = 0;
             window.PlaytalkLoader?.hide?.('welcome-flash-start', { force: true });
             window.PlaytalkLoader?.hide?.('page-init', { force: true });
-            if (isBabyModeEnabled()) {
-              beginBabyModeGame();
-              return;
-            }
             if (!state.user?.id) {
               setAuthStatus('Entre para liberar treino e desafio.', 'error');
               return;
             }
-            if (isJourneyGameMode()) {
-              openWelcomeModeModal('cards');
-              return;
-            }
-            syncFinalChallengeLevelCopy();
-            openFinalChallengeModal();
+            state.options.mode = 'journey';
+            openWelcomeModeModal('cards');
           })();
         });
         els.welcomeMissionBtn?.addEventListener('click', () => {
@@ -40775,6 +40892,7 @@
         const journeyParams = new URLSearchParams(window.location.search);
         if (journeyParams.get('journeyAuto') === '1' && !isAdminUser()) {
           await startConfiguredJourney(null, {
+            allowJourneyAuto: true,
             stepId: journeyParams.get('journeyStep') || undefined,
             singleStep: journeyParams.get('journeySingle') === '1',
             skipStart: journeyParams.get('journeyStarted') === '1',
