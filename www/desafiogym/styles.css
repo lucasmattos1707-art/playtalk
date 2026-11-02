@@ -128,7 +128,6 @@ button { font: inherit; }
 .bonus-toast.show { opacity: 1; transform: translate(-50%, 0); }
 .bonus-toast.error { background: rgba(133,27,48,.96); }
 .dialog-close { position: absolute; z-index: 5; top: 14px; right: 16px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: #f0f2f6; color: #616a7c; font-size: 1.35rem; cursor: pointer; }
-.dialog-status { min-height: 20px; margin: 13px 0 0; text-align: center; color: #e34b5a; font-size: .72rem; font-weight: 700; }
 @keyframes hold-progress { from { width: 0; } to { width: 100%; } }
 @keyframes refund-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes bonus-pop { 0% { transform: scale(1); } 38% { transform: scale(1.35) rotate(-4deg); } 68% { transform: scale(.94) rotate(2deg); } 100% { transform: scale(1); } }
@@ -165,12 +164,9 @@ button { font: inherit; }
 .send-button { grid-template-columns: 32px minmax(0, 1fr) 32px; justify-items: center; }
 .send-button svg { grid-column: 1; justify-self: end; fill: currentColor; }
 .send-button span { grid-column: 2; justify-self: center; text-align: center; }
-.creatine-card { width: min(100%, 960px); min-height: 78px; box-sizing: border-box; margin: 12px auto 0; padding: 9px 17px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid rgba(70,220,235,.48); border-radius: 20px; color: #effcff; background: linear-gradient(110deg, rgba(14,111,137,.96), rgba(5,44,69,.98)); box-shadow: 0 14px 32px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.12); }
-.creatine-title { min-width: 0; display: flex; align-items: center; gap: 9px; }
-.creatine-title img { width: 55px; height: 55px; flex: 0 0 auto; }
-.creatine-title strong { font-size: .86rem; font-weight: 900; }
-.creatine-score-pair { display: flex; align-items: center; gap: clamp(8px, 3vw, 18px); }
-.creatine-score-pair > span { color: rgba(225,250,255,.7); font-size: .75rem; font-weight: 900; }
+.creatine-card { width: min(100%, 960px); min-height: 72px; box-sizing: border-box; margin: 12px auto 0; padding: 8px 17px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(70,220,235,.48); border-radius: 20px; color: #effcff; background: linear-gradient(110deg, rgba(14,111,137,.96), rgba(5,44,69,.98)); box-shadow: 0 14px 32px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.12); }
+.creatine-score-pair { width: 100%; display: flex; align-items: center; justify-content: center; gap: clamp(14px, 5vw, 32px); }
+.creatine-score-icon { width: 52px; height: 52px; flex: 0 0 auto; object-fit: contain; }
 .creatine-score { min-width: 1.1em; font-size: clamp(1.75rem, 6vw, 2.4rem); line-height: 1; font-weight: 1000; letter-spacing: -.06em; text-align: center; }
 .creatine-score.orange { color: #ffac51; text-shadow: 0 0 13px rgba(255,135,43,.38); }
 .creatine-score.blue { color: #93d4ff; text-shadow: 0 0 13px rgba(66,167,255,.42); }
@@ -178,8 +174,7 @@ button { font: inherit; }
 .bonus-orb.bonus-pop { animation: bonus-pop .68s cubic-bezier(.2,.9,.25,1.25); }
 .checkin-dialog { position: fixed; inset: 0; width: 100%; max-width: none; height: 100%; max-height: none; box-sizing: border-box; margin: 0; padding: max(22px, env(safe-area-inset-top)) 20px max(22px, env(safe-area-inset-bottom)); border: 0; border-radius: 0; overflow: hidden; color: white; background: radial-gradient(circle at 50% 43%, #172746 0, #0b172c 44%, #050b17 100%); }
 .checkin-dialog::backdrop { background: #050b17; }
-.checkin-content { width: min(100%, 480px); min-height: 100%; margin: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.checkin-content > .kicker { color: #aabbd8; margin-bottom: 28px; }
+.checkin-content { width: min(100%, 480px); min-height: 100%; margin: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(22px, 5vh, 42px); }
 .activity-layers { position: relative; width: min(84vw, 380px); aspect-ratio: 1; flex: 0 0 auto; }
 .activity-choice { position: absolute; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: white; cursor: pointer; opacity: .42; filter: saturate(.28); transition: opacity .22s ease, filter .22s ease, transform .22s ease; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .activity-choice img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
@@ -187,11 +182,10 @@ button { font: inherit; }
 .workout-choice { z-index: 1; top: 0; left: 0; width: 74%; aspect-ratio: 1; }
 .creatine-choice { z-index: 2; right: 0; bottom: 0; width: 47%; aspect-ratio: 1; }
 .activity-choice:active:not(:disabled) { transform: scale(.95); }
-.activity-choice.is-marked { opacity: 1; filter: saturate(1) drop-shadow(0 12px 22px rgba(0,0,0,.28)); }
-.activity-choice.is-marked > img { animation: bonus-pop .68s cubic-bezier(.2,.9,.25,1.25); }
-.activity-choice.is-loading { opacity: .78; animation: checkin-pulse .7s ease-in-out infinite alternate; }
+.activity-choice.is-marked, .activity-choice.is-selected { opacity: 1; filter: saturate(1) drop-shadow(0 12px 22px rgba(0,0,0,.28)); }
 .activity-choice:disabled:not(.is-marked) { cursor: default; opacity: .23; filter: saturate(.15); }
+.activity-submit { width: min(100%, 360px); min-height: 56px; padding: 13px 20px; border: 1px solid rgba(255,255,255,.28); border-radius: 17px; color: #fff; background: linear-gradient(105deg, #ff7a20, #ff4f45 52%, #187dff); box-shadow: 0 12px 30px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.22); font: inherit; font-size: .95rem; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; transition: transform .16s ease, opacity .16s ease, filter .16s ease; }
+.activity-submit:active:not(:disabled) { transform: scale(.97); }
+.activity-submit:disabled { cursor: default; opacity: .42; filter: saturate(.55); }
 .checkin-dialog .dialog-close { position: fixed; top: max(16px, env(safe-area-inset-top)); right: 16px; width: 42px; height: 42px; color: #f2f7ff; background: rgba(255,255,255,.1); font-size: 1.65rem; }
-.checkin-dialog .dialog-status { min-height: 24px; max-width: 92%; margin: 25px 0 0; color: #c3d2e8; font-size: .82rem; }
-@keyframes checkin-pulse { from { transform: scale(.98); } to { transform: scale(1.02); } }
-@media (max-width: 720px) { .creatine-card { min-height: 70px; padding: 7px 12px; border-radius: 17px; } .creatine-title img { width: 49px; height: 49px; } .creatine-title strong { font-size: .78rem; } .checkin-content > .kicker { margin-bottom: 20px; } }
+@media (max-width: 720px) { .creatine-card { min-height: 66px; padding: 6px 12px; border-radius: 17px; } .creatine-score-icon { width: 48px; height: 48px; } }
