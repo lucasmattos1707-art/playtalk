@@ -7,7 +7,7 @@
   const creatineChoice = $('#mark-creatine');
   const activitySubmitButton = $('#activity-submit');
   let selectedParticipant = '';
-  let selectedActivity = '';
+  let selectedActivities = new Set();
   let state = null;
   let holdTimer = null;
   let holdActivated = false;
@@ -149,6 +149,12 @@
       score.textContent = creatineScore.toLocaleString('pt-BR');
       score.setAttribute('aria-label', `Creatina da ${people[person].name}: ${creatineScore}`);
     });
+    const creatineKelly = Number(state.creatineScores?.kelly || 0);
+    const creatineLucas = Number(state.creatineScores?.lucas || 0);
+    const leadingPerson = creatineLucas > creatineKelly ? 'lucas' : 'kelly';
+    const trailingPerson = leadingPerson === 'kelly' ? 'lucas' : 'kelly';
+    $('#creatine-left-side').replaceChildren($(`#${leadingPerson}-creatine-avatar`), $(`#${leadingPerson}-creatine-score`));
+    $('#creatine-right-side').replaceChildren($(`#${trailingPerson}-creatine-score`), $(`#${trailingPerson}-creatine-avatar`));
 
     ['kelly', 'lucas'].forEach((person) => {
       const points = Math.min(5, Number(state.week?.[person] || 0));
@@ -207,25 +213,25 @@
     creatineChoice.disabled = creatineMarked || submissionPending;
     workoutChoice.classList.toggle('is-marked', workoutMarked);
     creatineChoice.classList.toggle('is-marked', creatineMarked);
-    workoutChoice.classList.toggle('is-selected', selectedActivity === 'workout' && !workoutMarked);
-    creatineChoice.classList.toggle('is-selected', selectedActivity === 'creatine' && !creatineMarked);
-    workoutChoice.setAttribute('aria-pressed', String(selectedActivity === 'workout' && !workoutMarked));
-    creatineChoice.setAttribute('aria-pressed', String(selectedActivity === 'creatine' && !creatineMarked));
+    workoutChoice.classList.toggle('is-selected', selectedActivities.has('workout') && !workoutMarked);
+    creatineChoice.classList.toggle('is-selected', selectedActivities.has('creatine') && !creatineMarked);
+    workoutChoice.setAttribute('aria-pressed', String(selectedActivities.has('workout') && !workoutMarked));
+    creatineChoice.setAttribute('aria-pressed', String(selectedActivities.has('creatine') && !creatineMarked));
     workoutChoice.setAttribute('aria-label', workoutMarked ? 'Treino já marcado hoje' : 'Marcar treino');
     creatineChoice.setAttribute('aria-label', creatineMarked ? 'Creatina já marcada hoje' : 'Marcar creatina');
-    const selectedIsAvailable = selectedActivity === 'workout'
-      ? !workoutMarked
-      : selectedActivity === 'creatine' && !creatineMarked;
-    activitySubmitButton.disabled = !selectedIsAvailable || submissionPending;
-    activitySubmitButton.textContent = selectedActivity === 'workout'
-      ? 'Enviar treino'
-      : selectedActivity === 'creatine' ? 'Enviar creatina' : 'Escolha uma atividade';
+    const canSubmit = selectedActivities.size > 0
+      && [...selectedActivities].every((activity) => activity === 'workout' ? !workoutMarked : !creatineMarked);
+    activitySubmitButton.disabled = !canSubmit || submissionPending;
+    activitySubmitButton.textContent = selectedActivities.size === 2
+      ? 'Creatina e treino'
+      : selectedActivities.has('workout') ? 'Enviar treino'
+        : selectedActivities.has('creatine') ? 'Enviar creatina' : 'Escolha uma atividade';
   }
 
   function resetDialog() {
     selectedParticipant = '';
     submissionPending = false;
-    selectedActivity = '';
+    selectedActivities.clear();
     workoutChoice.classList.remove('is-selected', 'is-marked');
     creatineChoice.classList.remove('is-selected', 'is-marked');
     workoutChoice.disabled = false;
@@ -237,7 +243,7 @@
   function openCheckin(participant) {
     if (!canMarkAnything(participant)) return;
     selectedParticipant = participant;
-    selectedActivity = '';
+    selectedActivities.clear();
     renderActivityChoices();
     dialog.showModal();
   }
@@ -247,12 +253,16 @@
       ? canRegister(selectedParticipant)
       : activity === 'creatine' && canMarkCreatine(selectedParticipant);
     if (!isAvailable || submissionPending) return;
-    selectedActivity = selectedActivity === activity ? '' : activity;
-    if (selectedActivity) playActivationSound();
+    if (selectedActivities.has(activity)) {
+      selectedActivities.delete(activity);
+    } else {
+      selectedActivities.add(activity);
+      playActivationSound();
+    }
     renderActivityChoices();
   }
 
-  function optimisticActivityState(participant, activity) {
+  function optimisticActivityState(participant, activities) {
     const next = {
       ...state,
       scores: { ...state.scores },
@@ -264,62 +274,67 @@
       creatineScores: { ...state.creatineScores },
       creatineMarkedToday: { ...state.creatineMarkedToday }
     };
-    if (activity === 'creatine') {
+    let bonusEarned = false;
+    if (activities.includes('creatine')) {
       next.creatineScores[participant] = Number(next.creatineScores[participant] || 0) + 1;
       next.creatineMarkedToday[participant] = true;
-      return { state: next, bonusEarned: false };
     }
 
-    const bonusEarned = Number(state.week?.[participant] || 0) >= 5;
-    next.markedToday[participant] = true;
-    next.todayKind[participant] = bonusEarned ? 'bonus' : 'point';
-    if (bonusEarned) {
-      next.bonus[participant] = Number(next.bonus[participant] || 0) + 1;
-    } else {
-      next.scores[participant] = Number(next.scores[participant] || 0) + 1;
-      next.week[participant] = Number(next.week[participant] || 0) + 1;
-      const dates = [...(next.weekActivity[participant] || [])];
-      if (!dates.includes(state.today)) dates.push(state.today);
-      next.weekActivity[participant] = dates;
+    if (activities.includes('workout')) {
+      bonusEarned = Number(state.week?.[participant] || 0) >= 5;
+      next.markedToday[participant] = true;
+      next.todayKind[participant] = bonusEarned ? 'bonus' : 'point';
+      if (bonusEarned) {
+        next.bonus[participant] = Number(next.bonus[participant] || 0) + 1;
+      } else {
+        next.scores[participant] = Number(next.scores[participant] || 0) + 1;
+        next.week[participant] = Number(next.week[participant] || 0) + 1;
+        const dates = [...(next.weekActivity[participant] || [])];
+        if (!dates.includes(state.today)) dates.push(state.today);
+        next.weekActivity[participant] = dates;
+      }
     }
     return { state: next, bonusEarned };
   }
 
-  async function persistActivity(participant, activity) {
-    try {
+  async function persistActivity(participant, activities) {
+    const results = await Promise.allSettled(activities.map(async (activity) => {
       const endpoint = activity === 'creatine' ? '/api/desafiogym/creatine' : '/api/desafiogym/entries';
       const response = await fetch(`${endpoint}?participant=${encodeURIComponent(participant)}`, { method: 'POST' });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.success) throw new Error(payload.message || 'Não foi possível salvar a marcação.');
-      renderState(payload);
-      if (payload.bonusEarned) showBonusToast(`Treino marcado · bônus conquistado para ${people[participant].name}!`);
-    } catch (error) {
-      await loadState();
-      showBonusToast(`${error.message} O placar foi sincronizado.`, true);
-    }
+      return { activity, payload };
+    }));
+    const failed = results.find((result) => result.status === 'rejected');
+    const bonusEarned = results.some((result) => result.status === 'fulfilled' && result.value.payload.bonusEarned);
+    await loadState();
+    if (bonusEarned) showBonusToast(`Treino marcado · bônus conquistado para ${people[participant].name}!`);
+    if (failed) showBonusToast(`${failed.reason?.message || 'Não foi possível salvar a marcação.'} O placar foi sincronizado.`, true);
   }
 
   function submitActivity() {
     const participant = selectedParticipant;
-    const activity = selectedActivity;
-    if (!participant || !activity || submissionPending) return;
-    if (activity === 'workout' ? !canRegister(participant) : !canMarkCreatine(participant)) return;
+    const activities = [...selectedActivities];
+    if (!participant || !activities.length || submissionPending) return;
+    if (activities.includes('workout') && !canRegister(participant)) return;
+    if (activities.includes('creatine') && !canMarkCreatine(participant)) return;
 
     submissionPending = true;
-    const optimistic = optimisticActivityState(participant, activity);
+    const optimistic = optimisticActivityState(participant, activities);
     renderState(optimistic.state);
     dialog.close();
     window.requestAnimationFrame(() => {
-      if (activity === 'creatine') {
+      if (activities.includes('creatine')) {
         animateScore(participant, $(`#${participant}-creatine-score`));
-      } else if (optimistic.bonusEarned) {
+      }
+      if (activities.includes('workout') && optimistic.bonusEarned) {
         animateScore(participant, $(`#${participant}-bonus`));
-      } else {
+      } else if (activities.includes('workout')) {
         animateScore(participant);
       }
       playSuccessSound();
     });
-    void persistActivity(participant, activity);
+    void persistActivity(participant, activities);
   }
 
   async function redeemBonus(participant) {

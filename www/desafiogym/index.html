@@ -7,7 +7,7 @@
   <meta name="description" content="Placar semanal do desafio de academia entre Kelly e Lucas.">
   <title>Kelly x Lucas — Desafio Gym</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23081224'/%3E%3Cpath d='M13 27h7v10h-7zm31 0h7v10h-7zM20 23h6v18h-6zm18 0h6v18h-6zM26 29h12v6H26z' fill='%23fff'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/desafiogym/styles.css?v=20261102-explicit-send-v2">
+  <link rel="stylesheet" href="/desafiogym/styles.css?v=20261102-creatine-score-v3">
 </head>
 <body>
   <div class="ambient ambient-blue" aria-hidden="true"></div>
@@ -73,9 +73,15 @@
 
     <section class="creatine-card" aria-label="Placar da creatina">
       <div class="creatine-score-pair" aria-label="Placar da creatina">
-        <strong class="creatine-score orange" id="kelly-creatine-score" aria-label="Creatina da Kelly: 0">0</strong>
+        <div class="creatine-side" id="creatine-left-side">
+          <img class="creatine-avatar" id="kelly-creatine-avatar" src="/desafiogym/kelly.png" alt="Kelly" width="36" height="36">
+          <strong class="creatine-score orange" id="kelly-creatine-score" aria-label="Creatina da Kelly: 0">0</strong>
+        </div>
         <img class="creatine-score-icon" src="/desafiogym/creatina.svg" alt="Creatina" width="58" height="58">
-        <strong class="creatine-score blue" id="lucas-creatine-score" aria-label="Creatina do Lucas: 0">0</strong>
+        <div class="creatine-side" id="creatine-right-side">
+          <strong class="creatine-score blue" id="lucas-creatine-score" aria-label="Creatina do Lucas: 0">0</strong>
+          <img class="creatine-avatar" id="lucas-creatine-avatar" src="/desafiogym/lucas.jpeg" alt="Lucas" width="36" height="36">
+        </div>
       </div>
     </section>
 
@@ -139,6 +145,6 @@
     </div>
   </dialog>
 
-  <script src="/desafiogym/app.js?v=20261102-explicit-send-v2" defer></script>
+  <script src="/desafiogym/app.js?v=20261102-creatine-score-v3" defer></script>
 </body>
 </html>
