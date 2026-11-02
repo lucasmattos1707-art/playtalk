@@ -89,14 +89,13 @@
 
   function orderFighters(kelly, lucas) {
     const fighters = $('.fighters');
-    const versus = $('.versus');
     const kellyFighter = $('.fighter-kelly');
     const lucasFighter = $('.fighter-lucas');
     const scoreBar = $('.score-bar');
     const kellyBar = $('#kelly-bar');
     const lucasBar = $('#lucas-bar');
     const lucasLeads = lucas > kelly;
-    fighters.append(lucasLeads ? lucasFighter : kellyFighter, versus, lucasLeads ? kellyFighter : lucasFighter);
+    fighters.append(lucasLeads ? lucasFighter : kellyFighter, lucasLeads ? kellyFighter : lucasFighter);
     scoreBar.append(lucasLeads ? lucasBar : kellyBar, lucasLeads ? kellyBar : lucasBar);
   }
 

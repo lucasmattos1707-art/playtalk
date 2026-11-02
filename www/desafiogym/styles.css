@@ -48,10 +48,10 @@ button { font: inherit; }
 .card-heading h2, .section-title h2 { margin: 0; letter-spacing: -.04em; }
 .card-heading h2 { font-size: clamp(1.15rem, 3.5vw, 1.55rem); color: #fff; }
 .week-label { flex: 0 0 auto; background: rgba(14,41,82,.85); color: #dbe8ff; border: 1px solid rgba(97,155,255,.3); border-radius: 999px; padding: 8px 11px; font-size: .68rem; font-weight: 800; }
-.fighters { display: grid; grid-template-columns: 1fr 30px 1fr; align-items: center; gap: 4px; max-width: 780px; margin: 16px auto 15px; }
+.fighters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: clamp(14px, 4vw, 36px); max-width: 780px; margin: 16px auto 15px; }
 .fighter { display: grid; align-items: center; justify-content: center; column-gap: clamp(6px, 2vw, 13px); text-align: center; }
-.fighters > .fighter:first-child { grid-template-areas: "photo score" "photo name"; grid-template-columns: auto auto; }
-.fighters > .fighter:last-child { grid-template-areas: "score photo" "name photo"; grid-template-columns: auto auto; }
+.fighters > .fighter:first-child { grid-template-areas: "photo score"; grid-template-columns: auto auto; }
+.fighters > .fighter:last-child { grid-template-areas: "score photo"; grid-template-columns: auto auto; }
 .photo-ring { grid-area: photo; position: relative; width: clamp(88px, 18vw, 125px); height: clamp(88px, 18vw, 125px); margin: auto; padding: 3px; border-radius: 50%; }
 .fighter-kelly .photo-ring { background: linear-gradient(145deg, #ffd18d, var(--orange-deep)); box-shadow: 0 0 0 3px rgba(255,129,43,.14), 0 0 30px rgba(255,107,22,.62); }
 .fighter-lucas .photo-ring { background: linear-gradient(145deg, #9ac4ff, var(--blue-deep)); box-shadow: 0 0 0 3px rgba(40,119,255,.14), 0 0 30px rgba(40,119,255,.62); }
@@ -71,7 +71,6 @@ button { font: inherit; }
 .score-line strong.bonus-drop-ready { transform: scale(1.15); filter: drop-shadow(0 0 18px #fff); }
 .score-line strong.bonus-refund-holding::after { content: ""; position: absolute; left: 5%; right: 0; bottom: -9px; height: 4px; border-radius: 99px; background: #55a5ff; transform-origin: left; animation: refund-progress 3s linear forwards; }
 .score-line strong.bonus-pop { animation: bonus-pop .68s cubic-bezier(.2,.9,.25,1.25); }
-.versus { align-self: center; justify-self: center; display: grid; place-content: center; height: 64px; color: #fff; font-size: 1.35rem; font-weight: 950; line-height: 1; text-shadow: 0 0 12px rgba(255,255,255,.55); }
 .score-bar-wrap { max-width: 720px; margin: 0 auto 20px; }
 .score-bar { display: flex; height: 17px; padding: 3px; gap: 3px; background: #051126; border: 1px solid rgba(121,165,255,.4); border-radius: 999px; overflow: hidden; box-shadow: inset 0 0 9px rgba(0,0,0,.65), 0 0 18px rgba(49,102,255,.13); }
 .bar-orange, .bar-blue { min-width: 8px; border-radius: 999px; transition: width .55s cubic-bezier(.2,.8,.2,1); }
@@ -135,8 +134,7 @@ button { font: inherit; }
   .shell { width: min(100% - 22px, 600px); padding-top: 20px; }
   .score-card { border-radius: 27px; padding: 21px 12px; }
   .lower-grid { grid-template-columns: 1fr; }
-  .fighters { grid-template-columns: 1fr 26px 1fr; gap: 2px; }
-  .versus { height: 60px; }
+  .fighters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .week-card, .history-card { padding: 21px 13px; }
   .live-pill { font-size: 0; padding: 11px; }
   .live-pill span { margin: 0; }
