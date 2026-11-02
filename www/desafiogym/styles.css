@@ -72,12 +72,12 @@ button { font: inherit; }
 .send-button small { padding: 5px 8px; border-radius: 9px; background: rgba(255,255,255,.14); font-weight: 900; }
 .lower-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; margin-top: 18px; }
 .week-card, .history-card { border-radius: 23px; padding: 22px; box-shadow: 0 22px 50px rgba(0,0,0,.24); }
+.week-card { padding: 14px 22px; }
 .section-title { margin-bottom: 15px; }
 .section-title h2 { color: #fff; font-size: 1.18rem; }
 .section-title > span { background: rgba(24,58,108,.75); border: 1px solid rgba(104,159,255,.28); border-radius: 999px; padding: 6px 9px; color: #caddff; font-size: .68rem; font-weight: 900; }
 .week-grid { display: grid; gap: 3px; }
-.week-grid-header, .weekly-row { display: grid; grid-template-columns: 32px 44px repeat(7, minmax(14px, 1fr)) 32px; align-items: center; column-gap: 5px; }
-.week-grid-header { min-height: 20px; color: #9aacc9; font-size: .48rem; font-weight: 850; text-align: center; letter-spacing: .01em; }
+.weekly-row { display: grid; grid-template-columns: 32px 44px repeat(7, minmax(14px, 1fr)) 32px; align-items: center; column-gap: 5px; }
 .weekly-row { padding: 7px 0; border-top: 1px solid rgba(127,159,211,.17); }
 .weekly-row img { grid-column: 1; width: 32px; height: 32px; border: 2px solid rgba(116,172,255,.8); border-radius: 50%; object-fit: cover; box-shadow: 0 0 11px rgba(53,134,255,.34); }
 .weekly-row:first-of-type img { object-position: center 34%; }
@@ -94,9 +94,6 @@ button { font: inherit; }
 .week-count { grid-column: 10; justify-self: end; font-size: .78rem; font-weight: 950; }
 .week-count.orange { color: #ff921e; text-shadow: 0 0 10px rgba(255,128,22,.4); }
 .week-count.blue { color: #4d9aff; text-shadow: 0 0 10px rgba(40,119,255,.45); }
-.rules { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 15px; }
-.rules span { display: inline-flex; align-items: center; gap: 5px; color: #a8b9d6; background: rgba(18,45,86,.7); padding: 7px 9px; border-radius: 9px; font-size: .66rem; font-weight: 750; }
-.rules svg { width: 13px; fill: none; stroke: currentColor; stroke-width: 2; }
 .history-list { display: grid; }
 .history-item { display: grid; grid-template-columns: 35px 1fr auto; align-items: center; gap: 9px; padding: 10px 0; border-top: 1px solid rgba(127,159,211,.17); }
 .history-avatar { position: relative; width: 35px; height: 35px; }
@@ -119,12 +116,12 @@ button { font: inherit; }
   .score-card { border-radius: 27px; padding: 21px 12px; }
   .lower-grid { grid-template-columns: 1fr; }
   .fighters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .week-card, .history-card { padding: 21px 13px; }
+  .week-card { padding: 12px 13px; }
+  .history-card { padding: 21px 13px; }
 }
 @media (max-width: 390px) {
-  .week-grid-header, .weekly-row { grid-template-columns: 30px 42px repeat(7, minmax(14px, 1fr)) 29px; column-gap: 3px; }
+  .weekly-row { grid-template-columns: 30px 42px repeat(7, minmax(14px, 1fr)) 29px; column-gap: 3px; }
   .weekly-row img { width: 30px; height: 30px; }
-  .week-grid-header { font-size: .44rem; }
   .week-dots i { width: 17px; height: 17px; }
   .day-miss { width: 10px; height: 10px; }
   .week-count { font-size: .72rem; }

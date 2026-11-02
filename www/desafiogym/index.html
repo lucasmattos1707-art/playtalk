@@ -7,7 +7,7 @@
   <meta name="description" content="Placar semanal do desafio de academia entre Kelly e Lucas.">
   <title>Kelly x Lucas — Desafio Gym</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23081224'/%3E%3Cpath d='M13 27h7v10h-7zm31 0h7v10h-7zM20 23h6v18h-6zm18 0h6v18h-6zM26 29h12v6H26z' fill='%23fff'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/desafiogym/styles.css?v=20261102-black-score-v6">
+  <link rel="stylesheet" href="/desafiogym/styles.css?v=20261102-compact-week-v7">
 </head>
 <body>
   <main class="shell">
@@ -63,17 +63,8 @@
     </section>
 
     <div class="lower-grid">
-      <section class="week-card">
-        <div class="section-title">
-          <div><p class="kicker">ESTA SEMANA</p><h2>Ritmo de Treinos</h2></div>
-          <span>máx. 5</span>
-        </div>
+      <section class="week-card" aria-label="Treinos semanais">
         <div class="week-grid" aria-label="Treinos por dia nesta semana">
-          <div class="week-grid-header" aria-hidden="true">
-            <span></span><span></span>
-            <span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span><span>DOM</span>
-            <span></span>
-          </div>
           <div class="weekly-row">
             <img src="/desafiogym/kelly.png" alt="" width="40" height="40">
             <div class="weekly-person"><strong>Kelly</strong></div>
@@ -86,11 +77,6 @@
             <div class="week-dots" id="lucas-dots" aria-label="Treinos de Lucas na semana"></div>
             <b class="week-count blue" id="lucas-week-text">0/5</b>
           </div>
-        </div>
-        <div class="rules">
-          <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2v3m10-3v3M3.5 9h17M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z"/></svg>1 ponto por dia</span>
-          <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 5 5L20 6"/></svg>Domingo liberado</span>
-          <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 5 5L20 6"/></svg>Treino e creatina em placares separados</span>
         </div>
       </section>
 
@@ -122,6 +108,6 @@
     </div>
   </dialog>
 
-  <script src="/desafiogym/app.js?v=20261102-black-score-v6" defer></script>
+  <script src="/desafiogym/app.js?v=20261102-compact-week-v7" defer></script>
 </body>
 </html>
