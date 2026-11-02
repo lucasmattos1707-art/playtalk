@@ -17,6 +17,8 @@
   let submissionPending = false;
   const bonusSound = new Audio('/desafiogym/bonus-success.mp3');
   bonusSound.preload = 'auto';
+  const workoutSuccessSound = new Audio('/desafiogym/success.mp3');
+  workoutSuccessSound.preload = 'auto';
   const activationSound = new Audio('/desafiogym/mododesbloqueado.mp3');
   activationSound.preload = 'auto';
 
@@ -115,6 +117,11 @@
   function playActivationSound() {
     activationSound.currentTime = 0;
     activationSound.play().catch(() => {});
+  }
+
+  function playWorkoutSuccessSound() {
+    workoutSuccessSound.currentTime = 0;
+    workoutSuccessSound.play().catch(() => {});
   }
 
   function animateScore(participant, score = $(`#${participant}-score`)) {
@@ -332,7 +339,8 @@
       } else if (activities.includes('workout')) {
         animateScore(participant);
       }
-      playSuccessSound();
+      if (activities.includes('workout')) playWorkoutSuccessSound();
+      else playSuccessSound();
     });
     void persistActivity(participant, activities);
   }
