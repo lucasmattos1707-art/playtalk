@@ -29596,7 +29596,7 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
       WHERE event_type = 'spent' AND target_training_date = $1::date
     `, [today]),
     pool.query(`
-      SELECT participant, training_date::text AS training_date, ai_model, created_at
+      SELECT id, participant, training_date::text AS training_date, ai_model, created_at
       FROM public.desafio_gym_entries
       ORDER BY training_date DESC, created_at DESC
       LIMIT 8
@@ -29675,6 +29675,7 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
       kelly: todayKind('kelly')
     },
     recent: recentResult.rows.map((row) => ({
+      id: String(row.id),
       participant: row.participant,
       trainingDate: String(row.training_date || '').slice(0, 10),
       verifiedByPhoto: !['manual-admin', 'no-photo'].includes(String(row.ai_model || '')),
@@ -30656,6 +30657,92 @@ app.post(
     }
   }
 );
+
+app.delete('/api/desafiogym/entries/:id', async (req, res) => {
+  const entryId = String(req.params?.id || '').trim();
+  if (!/^[1-9]\d{0,18}$/.test(entryId)) {
+    res.status(400).json({ success: false, message: 'Treino inválido.' });
+    return;
+  }
+  if (!consumeDesafioGymAttempt(req)) {
+    res.status(429).json({ success: false, message: 'Muitas alterações seguidas. Aguarde alguns minutos.' });
+    return;
+  }
+
+  let db;
+  let removedObjectKey = '';
+  let removedContentType = '';
+  try {
+    await ensureDesafioGymTable();
+    db = await pool.connect();
+    await db.query('BEGIN');
+    const candidate = await db.query(`
+      SELECT participant
+      FROM public.desafio_gym_entries
+      WHERE id = $1::bigint
+    `, [entryId]);
+    if (!candidate.rows[0]) {
+      await db.query('ROLLBACK');
+      res.status(404).json({ success: false, message: 'Esse treino não está mais no histórico.' });
+      return;
+    }
+
+    const participant = candidate.rows[0].participant;
+    await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`desafio-gym-bonus:${participant}`]);
+    const entryResult = await db.query(`
+      SELECT id, participant, training_date, verification_object_key, verification_content_type
+      FROM public.desafio_gym_entries
+      WHERE id = $1::bigint AND participant = $2
+      FOR UPDATE
+    `, [entryId, participant]);
+    const entry = entryResult.rows[0];
+    if (!entry) {
+      await db.query('ROLLBACK');
+      res.status(404).json({ success: false, message: 'Esse treino já foi removido.' });
+      return;
+    }
+
+    const recentResult = await db.query(`
+      SELECT id
+      FROM public.desafio_gym_entries
+      ORDER BY training_date DESC, created_at DESC
+      LIMIT 8
+    `);
+    if (!recentResult.rows.some((row) => String(row.id) === entryId)) {
+      await db.query('ROLLBACK');
+      res.status(409).json({ success: false, message: 'Só dá para remover treinos que aparecem em Últimos pontos.' });
+      return;
+    }
+
+    const deleted = await db.query(`
+      DELETE FROM public.desafio_gym_entries
+      WHERE id = $1::bigint AND participant = $2
+      RETURNING id
+    `, [entryId, participant]);
+    if (deleted.rowCount !== 1) throw new Error('Não foi possível confirmar a remoção exata do treino.');
+    removedObjectKey = String(entry.verification_object_key || '');
+    removedContentType = String(entry.verification_content_type || '');
+    await db.query('COMMIT');
+
+    if (removedObjectKey && removedContentType !== 'application/x-no-photo' && isR2FluencyConfigured()) {
+      try {
+        getR2Client().send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: removedObjectKey }))
+          .catch((error) => console.error('Não foi possível excluir a foto do treino removido:', error));
+      } catch (error) {
+        console.error('Não foi possível iniciar a exclusão da foto do treino removido:', error);
+      }
+    }
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, removedEntryId: entryId, ...(await readDesafioGymState()) });
+  } catch (error) {
+    if (db) await db.query('ROLLBACK').catch(() => {});
+    console.error('Erro ao remover treino do Desafio Gym:', error);
+    res.status(500).json({ success: false, message: 'Não foi possível remover o treino agora.' });
+  } finally {
+    db?.release();
+  }
+});
 
 app.post('/api/desafiogym/bonus/redeem', async (req, res) => {
   const participant = String(req.query?.participant || '').trim().toLowerCase();

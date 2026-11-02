@@ -6,6 +6,7 @@
   const workoutChoice = $('#mark-workout');
   const creatineChoice = $('#mark-creatine');
   const activitySubmitButton = $('#activity-submit');
+  const historyList = $('#history-list');
   let selectedParticipant = '';
   let selectedActivities = new Set();
   let state = null;
@@ -15,6 +16,8 @@
   let bonusDrag = null;
   let refundBusy = false;
   let submissionPending = false;
+  let historyHold = null;
+  const deletingHistoryEntries = new Set();
   const bonusSound = new Audio('/desafiogym/bonus-success.mp3');
   bonusSound.preload = 'auto';
   const workoutSuccessSound = new Audio('/desafiogym/success.mp3');
@@ -171,11 +174,10 @@
     $('#submit-label').textContent = 'Enviar treino';
     renderActivityChoices();
 
-    const history = $('#history-list');
     const recent = Array.isArray(state.recent) ? state.recent : [];
-    history.innerHTML = recent.length ? recent.map((entry) => {
+    historyList.innerHTML = recent.length ? recent.map((entry) => {
       const person = people[entry.participant] || people.lucas;
-      return `<div class="history-item">
+      return `<div class="history-item" data-entry-id="${entry.id || ''}" data-participant="${entry.participant}" data-training-date="${entry.trainingDate}" role="button" tabindex="0" aria-label="Treino de ${person.name} em ${formatDate(entry.trainingDate)}. Segure por 500 milissegundos para remover.">
         <div class="history-avatar"><img src="${person.avatar}" alt=""></div>
         <div><strong>${person.name}</strong><small>${formatDate(entry.trainingDate)}</small></div>
         <b>+1 ponto</b>
@@ -196,8 +198,83 @@
         score.classList.remove('is-loading');
         score.setAttribute('aria-label', 'Placar indisponível');
       });
-      $('#history-list').innerHTML = '<p class="empty">Não foi possível carregar o placar agora.</p>';
+      historyList.innerHTML = '<p class="empty">Não foi possível carregar o placar agora.</p>';
       showBonusToast(error.message, true);
+    }
+  }
+
+  function beginHistoryHold(row, pointerId, clientX, clientY) {
+    const entryId = String(row?.dataset?.entryId || '');
+    if (!entryId || deletingHistoryEntries.has(entryId) || historyHold) return;
+    const press = { row, entryId, pointerId, clientX, clientY, timer: null };
+    historyHold = press;
+    row.classList.add('is-holding');
+    press.timer = window.setTimeout(() => {
+      if (historyHold !== press) return;
+      historyHold = null;
+      row.classList.remove('is-holding');
+      row.classList.add('is-removing');
+      void removeRecentWorkout(row);
+    }, 500);
+  }
+
+  function cancelHistoryHold(pointerId) {
+    if (!historyHold || (pointerId !== undefined && historyHold.pointerId !== pointerId)) return;
+    window.clearTimeout(historyHold.timer);
+    historyHold.row.classList.remove('is-holding');
+    historyHold = null;
+  }
+
+  function updateHistoryHold(event) {
+    if (!historyHold || historyHold.pointerId !== event.pointerId) return;
+    if (Math.hypot(event.clientX - historyHold.clientX, event.clientY - historyHold.clientY) > 12) {
+      cancelHistoryHold(event.pointerId);
+    }
+  }
+
+  async function removeRecentWorkout(row) {
+    const entryId = String(row.dataset.entryId || '');
+    const participant = row.dataset.participant;
+    const trainingDate = row.dataset.trainingDate;
+    if (!entryId || !people[participant] || deletingHistoryEntries.has(entryId)) return;
+    deletingHistoryEntries.add(entryId);
+
+    const weekActivity = [...(state.weekActivity?.[participant] || [])];
+    const countedThisWeek = weekActivity.includes(trainingDate);
+    const optimisticState = {
+      ...state,
+      scores: { ...state.scores, [participant]: Math.max(0, Number(state.scores?.[participant] || 0) - 1) },
+      week: {
+        ...state.week,
+        [participant]: Math.max(0, Number(state.week?.[participant] || 0) - (countedThisWeek ? 1 : 0))
+      },
+      weekActivity: {
+        ...state.weekActivity,
+        [participant]: countedThisWeek ? weekActivity.filter((date) => date !== trainingDate) : weekActivity
+      },
+      recent: (state.recent || []).filter((entry) => String(entry.id) !== entryId)
+    };
+    if (trainingDate === state.today) {
+      optimisticState.markedToday = { ...state.markedToday, [participant]: false };
+      optimisticState.todayKind = { ...state.todayKind, [participant]: '' };
+    }
+    optimisticState.bonusMode = {
+      ...state.bonusMode,
+      [participant]: Number(optimisticState.week[participant] || 0) >= 5
+    };
+    renderState(optimisticState);
+
+    try {
+      const response = await fetch(`/api/desafiogym/entries/${encodeURIComponent(entryId)}`, { method: 'DELETE' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) throw new Error(payload.message || 'Não foi possível remover esse treino.');
+      renderState(payload);
+      showBonusToast(`Treino de ${people[participant].name} removido.`);
+    } catch (error) {
+      await loadState();
+      showBonusToast(error.message, true);
+    } finally {
+      deletingHistoryEntries.delete(entryId);
     }
   }
 
@@ -515,9 +592,37 @@
   });
 
   document.querySelectorAll('.bonus-orb').forEach((orb) => orb.addEventListener('pointerdown', startBonusDrag));
-  window.addEventListener('pointermove', updateBonusDrag);
-  window.addEventListener('pointerup', (event) => finishBonusDrag(event));
-  window.addEventListener('pointercancel', (event) => finishBonusDrag(event, true));
+  historyList.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    const row = event.target.closest('.history-item');
+    if (row) beginHistoryHold(row, event.pointerId, event.clientX, event.clientY);
+  });
+  historyList.addEventListener('keydown', (event) => {
+    if (event.code !== 'Space' || event.repeat) return;
+    const row = event.target.closest('.history-item');
+    if (!row) return;
+    event.preventDefault();
+    beginHistoryHold(row, 'keyboard', 0, 0);
+  });
+  historyList.addEventListener('keyup', (event) => {
+    if (event.code === 'Space') cancelHistoryHold('keyboard');
+  });
+  historyList.addEventListener('contextmenu', (event) => {
+    if (event.target.closest('.history-item')) event.preventDefault();
+  });
+  window.addEventListener('pointermove', (event) => {
+    updateHistoryHold(event);
+    updateBonusDrag(event);
+  });
+  window.addEventListener('pointerup', (event) => {
+    cancelHistoryHold(event.pointerId);
+    finishBonusDrag(event);
+  });
+  window.addEventListener('pointercancel', (event) => {
+    cancelHistoryHold(event.pointerId);
+    finishBonusDrag(event, true);
+  });
+  window.addEventListener('blur', () => cancelHistoryHold());
   installScoreHold('kelly');
   installScoreHold('lucas');
 

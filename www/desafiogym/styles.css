@@ -95,7 +95,11 @@ button { font: inherit; }
 .week-count.orange { color: #ff921e; text-shadow: 0 0 10px rgba(255,128,22,.4); }
 .week-count.blue { color: #4d9aff; text-shadow: 0 0 10px rgba(40,119,255,.45); }
 .history-list { display: grid; }
-.history-item { display: grid; grid-template-columns: 35px 1fr auto; align-items: center; gap: 9px; padding: 10px 0; border-top: 1px solid rgba(127,159,211,.17); }
+.history-item { position: relative; display: grid; grid-template-columns: 35px 1fr auto; align-items: center; gap: 9px; padding: 10px 0; border-top: 1px solid rgba(127,159,211,.17); cursor: pointer; touch-action: pan-y; user-select: none; -webkit-touch-callout: none; transition: background .18s ease, opacity .18s ease, transform .18s ease; }
+.history-item::after { content: ""; position: absolute; left: 0; right: auto; bottom: 0; width: 0; height: 3px; border-radius: 3px; background: #ff5368; opacity: 0; pointer-events: none; }
+.history-item.is-holding { background: rgba(255,83,104,.08); }
+.history-item.is-holding::after { opacity: 1; animation: history-hold-progress .5s linear forwards; }
+.history-item.is-removing { opacity: .28; transform: scale(.99); pointer-events: none; }
 .history-avatar { position: relative; width: 35px; height: 35px; }
 .history-avatar img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
 .verified-badge { position: absolute; right: -2px; bottom: -2px; display: grid; place-items: center; width: 15px; height: 15px; border: 2px solid white; border-radius: 50%; color: white; background: #26b96f; font-size: .55rem; font-weight: 1000; }
@@ -110,6 +114,7 @@ button { font: inherit; }
 .dialog-close { position: absolute; z-index: 5; top: 14px; right: 16px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: #f0f2f6; color: #616a7c; font-size: 1.35rem; cursor: pointer; }
 @keyframes hold-progress { from { width: 0; } to { width: 100%; } }
 @keyframes refund-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes history-hold-progress { to { width: 100%; } }
 @keyframes bonus-pop { 0% { transform: scale(1); } 38% { transform: scale(1.35) rotate(-4deg); } 68% { transform: scale(.94) rotate(2deg); } 100% { transform: scale(1); } }
 @media (max-width: 720px) {
   .shell { width: min(100% - 22px, 600px); padding-top: 20px; }
