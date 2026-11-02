@@ -8914,6 +8914,20 @@
       backdrop-filter: none;
     }
 
+    .game[data-phase-key="fourth-star"] .typing-round-success-translation {
+      width: min(100%, 520px);
+      margin: 0;
+      padding: 0 14px;
+      color: #ffffff;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(22px, 5.5vw, 32px);
+      font-weight: 700;
+      line-height: 1.2;
+      text-align: center;
+      text-transform: none;
+      text-shadow: 0 2px 10px rgba(0, 18, 58, 0.68);
+    }
+
     .game[data-phase-key="second-star"] #gameVisual {
       opacity: 1;
       transform: scale(1);
@@ -9322,6 +9336,11 @@
     .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen .flashcards-typing__grid.is-word-blocks .flashcards-typing__key {
       font-size: 40px !important;
       line-height: 1.02 !important;
+    }
+
+    .game[data-phase-key="fourth-star"][data-cards-fixed-stage="4"] .textscreen .flashcards-typing__key.is-single-letter-word-block {
+      min-width: 1.5em !important;
+      padding-inline: 0.25em !important;
     }
 
     /* Stage 6 mirrors the current Battle phase 1 instead of Stage 4's legacy keyboard. */
@@ -29992,6 +30011,26 @@
         els.gameStars.setAttribute('aria-label', `${5 - errors} de 5 vidas`);
       }
 
+      function showTypingRoundSuccessTranslation(card) {
+        if (!els.gameKeyboardHost || !els.gameTypingKeyboard) return;
+        const nativePhrase = safeText(
+          resolveSourceLanguageText(card, currentNativeLanguage())
+          || card?.portuguese
+          || card?.english
+          || card?.deckTitle
+        ).trim();
+        clearGameVisualTypingDisplays();
+        els.gameTypingKeyboard.innerHTML = '';
+        els.gameTypingKeyboard.classList.remove('is-visible');
+        els.gameTypingKeyboard.setAttribute('aria-hidden', 'true');
+        els.gameKeyboardHost.querySelector('.typing-round-success-translation')?.remove();
+        if (!nativePhrase) return;
+        const translation = document.createElement('p');
+        translation.className = 'typing-round-success-translation';
+        translation.textContent = nativePhrase;
+        els.gameKeyboardHost.appendChild(translation);
+      }
+
       function finishTypingRound() {
         const round = state.game.typingRound;
         if (!round?.active) return false;
@@ -33255,12 +33294,15 @@
 
       function gateCustomFourthStageInputUntilEnglishAudio(entry, card, grid, advanceBtn = null) {
         if (!shouldPlayCustomFourthStageEnglishBeforeInput(entry) || !grid) return false;
+        const allowInputDuringPlayback = isTypingRoundStageFourActive();
         const earnedStars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(entry?.stars) || 0));
         const promptKey = `${entry.id}:${earnedStars}:stage-4-english`;
         if (entry._customFourthStagePromptPlayedKey === promptKey) return false;
 
-        setTypingKeysDisabled(grid, true);
-        if (advanceBtn && !isTrainingMode()) advanceBtn.disabled = true;
+        if (!allowInputDuringPlayback) {
+          setTypingKeysDisabled(grid, true);
+          if (advanceBtn && !isTrainingMode()) advanceBtn.disabled = true;
+        }
 
         if (
           entry._customFourthStagePromptPendingKey !== promptKey
@@ -33287,8 +33329,10 @@
             || state.game.currentId !== entry.id
             || safeText(els.game?.dataset?.phaseKey || '') !== 'fourth-star'
           ) return;
-          setTypingKeysDisabled(grid, false);
-          if (advanceBtn && !isTrainingMode()) syncGameAdvanceButton(entry);
+          if (!allowInputDuringPlayback) {
+            setTypingKeysDisabled(grid, false);
+            if (advanceBtn && !isTrainingMode()) syncGameAdvanceButton(entry);
+          }
         });
         return true;
       }
@@ -34067,6 +34111,11 @@
 
       async function handleSecondStageWordBlockMistake(entry, card, grid, selectedButtons) {
         entry.typingMistakes = (entry.typingMistakes || 0) + 1;
+        if (isTypingRoundStageFourActive()) {
+          triggerTypingMistakeFeedback(grid, 500);
+          await handleRecognitionResult('', 'typing');
+          return true;
+        }
         void applyJumpDeckLevelPenalty();
         setTypingKeysDisabled(grid, true);
         triggerTypingMistakeFeedback(grid, 2000);
@@ -34088,6 +34137,7 @@
 
       function renderTypingKeyboard(entry, card) {
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+        els.gameKeyboardHost?.querySelector('.typing-round-success-translation')?.remove();
         const isTypingLayoutPhase = phaseKey === 'second-star' || phaseKey === 'fourth-star';
         const keyboardTarget = isTypingLayoutPhase && els.gameKeyboardHost
           ? els.gameKeyboardHost
@@ -34175,7 +34225,7 @@
 
           const grid = document.createElement('div');
           grid.className = 'flashcards-typing__grid is-word-blocks';
-          const fourthStarBlocksTranslationText = phaseKey === 'fourth-star'
+          const fourthStarBlocksTranslationText = phaseKey === 'fourth-star' && !isTypingRoundStageFourActive()
             ? capitalizeWords(card?.portuguese || card?.english || card?.deckTitle || '')
             : '';
           const fourthStarBlocksTranslationDisplay = fourthStarBlocksTranslationText
@@ -34205,12 +34255,18 @@
             const key = document.createElement('button');
             key.type = 'button';
             key.className = 'flashcards-typing__key is-word-block-key';
+            if (isTypingRoundStageFourActive() && countSecondStageBlockChars(block) === 1) {
+              key.classList.add('is-single-letter-word-block');
+            }
             key.textContent = block.word;
             const blockGrow = Math.max(1, countSecondStageBlockChars(block));
             key.style.setProperty('--word-block-grow', String(blockGrow));
             key.setAttribute('aria-label', `Bloco ${block.word}`);
             key.addEventListener('click', async () => {
-              if (!state.game.active || state.game.paused || state.game.listening || resolving || state.game.typingSkipActive || state.game.currentId !== entry.id) return;
+              if (!state.game.active || state.game.paused || (state.game.listening && !isTypingRoundStageFourActive()) || resolving || state.game.typingSkipActive || state.game.currentId !== entry.id) return;
+              if (isTypingRoundStageFourActive() && !Number(state.game.typingRound.startedAt)) {
+                state.game.typingRound.startedAt = Date.now();
+              }
               const nextWords = [...selectedWords, block.normalized];
             if (!wordBlockSequenceMatchesPrefix(blockState.targetSequences, nextWords)) {
               resolving = true;
@@ -34252,7 +34308,10 @@
           });
 
           skipBtn.addEventListener('click', async () => {
-            if (!state.game.active || state.game.paused || state.game.listening || resolving || state.game.currentId !== entry.id || state.game.typingSkipActive) return;
+            if (!state.game.active || state.game.paused || (state.game.listening && !isTypingRoundStageFourActive()) || resolving || state.game.currentId !== entry.id || state.game.typingSkipActive) return;
+            if (isTypingRoundStageFourActive() && !Number(state.game.typingRound.startedAt)) {
+              state.game.typingRound.startedAt = Date.now();
+            }
             resolving = true;
             clearSecondStarIdleHintTimers();
             skipBtn.disabled = true;
@@ -34342,6 +34401,10 @@
             return;
           }
           if (useSmartKeyboard && !fourthStarShowingCorrection) {
+            if (isTypingRoundStageFourActive()) {
+              display.remove();
+              return;
+            }
             display.classList.add('is-second-star-translation');
             renderSecondStageTranslationDisplay(
               display,
@@ -34414,7 +34477,6 @@
             if (!keyLetter) return;
             if (isTypingRoundStageFourActive() && !isStageSixBattleTyping) {
               if (!Number(state.game.typingRound.startedAt)) state.game.typingRound.startedAt = Date.now();
-              state.game.typingRound.characters = Math.max(0, Number(state.game.typingRound.characters) || 0) + 1;
             }
             if (isStageSixBattleTyping) {
               const expectedLetter = target[typed.length];
@@ -38874,6 +38936,10 @@
           clearStageTwoHintTimer();
           if (isHit) {
             state.game.typingRound.correct = Math.max(0, Number(state.game.typingRound.correct) || 0) + 1;
+            const solvedTypingState = resolveTypingStageState(entry, card);
+            state.game.typingRound.characters = Math.max(0, Number(state.game.typingRound.characters) || 0)
+              + countTypingDisplayCharacters(solvedTypingState.sourceText || solvedTypingState.acceptedAnswer);
+            showTypingRoundSuccessTranslation(card);
             setGameStatus('', 'hit');
           } else {
             state.game.typingRound.errors = Math.max(0, Number(state.game.typingRound.errors) || 0) + 1;
@@ -38881,7 +38947,11 @@
             setGameStatus('', 'miss');
           }
           updateGameChips();
-          await wait(260);
+          if (isHit) {
+            await playStageResponseSequence(4, card);
+          } else {
+            await wait(260);
+          }
           if (!state.game.active || state.game.paused || state.game.currentId !== entry.id) return;
           rotateLevelModeEntry(entry);
           if (Number(state.game.typingRound.errors) >= 5) {
