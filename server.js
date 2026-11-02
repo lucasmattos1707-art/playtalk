@@ -8377,6 +8377,27 @@ const insonicDir = path.join(__dirname, 'wilton');
 const FINAL_CHALLENGE_GENERAL_LEVELS_FILE_NAME = 'final-challenge-general-levels.json';
 const FINAL_CHALLENGE_GENERAL_LEVELS_PATH = path.join(staticDir, 'data', FINAL_CHALLENGE_GENERAL_LEVELS_FILE_NAME);
 const FINAL_CHALLENGE_GENERAL_LEVEL_CARD_COUNT = 25;
+let finalChallengeGeneralLevelsTableReadyPromise = null;
+
+async function ensureFinalChallengeGeneralLevelsTable() {
+  if (!pool) return false;
+  if (!finalChallengeGeneralLevelsTableReadyPromise) {
+    finalChallengeGeneralLevelsTableReadyPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.final_challenge_general_levels (
+          singleton boolean PRIMARY KEY DEFAULT true,
+          payload jsonb NOT NULL,
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+    })().catch((error) => {
+      finalChallengeGeneralLevelsTableReadyPromise = null;
+      throw error;
+    });
+  }
+  await finalChallengeGeneralLevelsTableReadyPromise;
+  return true;
+}
 
 const IMAGES_ROOT = (() => {
   const candidateDirs = [
@@ -13735,6 +13756,26 @@ function buildGeneralLevelsTrackedCardsSummary(sequenceState, countPerLevel = FI
 }
 
 async function readFinalChallengeGeneralLevelsPayload() {
+  if (pool) {
+    await ensureFinalChallengeGeneralLevelsTable();
+    const result = await pool.query(`
+      SELECT payload
+      FROM public.final_challenge_general_levels
+      WHERE singleton = true
+      LIMIT 1
+    `);
+    const storedPayload = result.rows[0]?.payload;
+    if (storedPayload && typeof storedPayload === 'object') return storedPayload;
+
+    // Import a legacy file once so existing generated levels are retained after migration.
+    const legacyPayload = await readLegacyFinalChallengeGeneralLevelsPayload();
+    if (!legacyPayload) return null;
+    return writeFinalChallengeGeneralLevelsPayload(legacyPayload);
+  }
+  return readLegacyFinalChallengeGeneralLevelsPayload();
+}
+
+async function readLegacyFinalChallengeGeneralLevelsPayload() {
   try {
     const raw = await fs.promises.readFile(FINAL_CHALLENGE_GENERAL_LEVELS_PATH, 'utf8');
     const parsed = JSON.parse(raw);
@@ -13745,6 +13786,18 @@ async function readFinalChallengeGeneralLevelsPayload() {
 }
 
 async function writeFinalChallengeGeneralLevelsPayload(payload) {
+  if (pool) {
+    await ensureFinalChallengeGeneralLevelsTable();
+    const result = await pool.query(`
+      INSERT INTO public.final_challenge_general_levels (singleton, payload, updated_at)
+      VALUES (true, $1::jsonb, now())
+      ON CONFLICT (singleton) DO UPDATE
+      SET payload = EXCLUDED.payload,
+          updated_at = now()
+      RETURNING payload
+    `, [JSON.stringify(payload || {})]);
+    return result.rows[0]?.payload || payload;
+  }
   await fs.promises.mkdir(path.dirname(FINAL_CHALLENGE_GENERAL_LEVELS_PATH), { recursive: true });
   await fs.promises.writeFile(
     FINAL_CHALLENGE_GENERAL_LEVELS_PATH,
