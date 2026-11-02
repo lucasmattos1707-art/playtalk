@@ -47,15 +47,6 @@
     return `${values.year}-${values.month}-${values.day}`;
   }
 
-  function formatWeek(startString) {
-    if (!startString) return '';
-    const start = new Date(`${startString}T12:00:00`);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    const short = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' });
-    return `${short.format(start).replace('.', '')} — ${short.format(end).replace('.', '')}`;
-  }
-
   function renderDots(target, activityDates, weekStart) {
     const activeDates = new Set(activityDates || []);
     const today = todayInSaoPaulo();
@@ -147,7 +138,6 @@
     $('#lucas-score').setAttribute('aria-label', `Pontos do Lucas: ${lucas}`);
     $('#kelly-bar').style.width = `${kellyPercent}%`;
     $('#lucas-bar').style.width = `${lucasPercent}%`;
-    $('#week-label').textContent = formatWeek(state.weekStart);
 
     ['kelly', 'lucas'].forEach((person) => {
       const creatineScore = Number(state.creatineScores?.[person] || 0);

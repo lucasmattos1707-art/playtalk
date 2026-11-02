@@ -12,42 +12,26 @@
 }
 
 * { box-sizing: border-box; }
-html { min-width: 320px; background: var(--navy); }
+html { min-width: 320px; background: #000; }
 body {
   margin: 0;
   min-height: 100vh;
   color: var(--ink);
-  background: radial-gradient(circle at 50% -20%, #1a315e 0, #0d1a32 34%, var(--navy) 68%), var(--navy);
+  background: #000;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 button { font: inherit; }
 [hidden] { display: none !important; }
-.ambient { position: fixed; width: 38rem; height: 38rem; border-radius: 50%; filter: blur(120px); opacity: .2; pointer-events: none; }
-.ambient-blue { left: -24rem; top: 8rem; background: var(--blue); }
-.ambient-orange { right: -25rem; top: 18rem; background: var(--orange); }
 .shell { position: relative; width: min(100% - 24px, 960px); margin: 0 auto; padding: 22px 0 52px; }
-.topbar { display: flex; align-items: center; gap: 12px; color: white; margin-bottom: 14px; padding: 0 5px; }
-.brand-mark { display: flex; align-items: center; gap: 2px; height: 40px; }
-.brand-mark span, .brand-mark b, .brand-mark i { display: block; background: linear-gradient(135deg, var(--blue), var(--orange)); border-radius: 3px; }
-.brand-mark span { width: 5px; height: 16px; }
-.brand-mark b { width: 5px; height: 27px; }
-.brand-mark i { width: 20px; height: 7px; }
-.topbar .eyebrow { margin: 0 0 1px; color: #9aa8c2; font-size: .68rem; letter-spacing: .18em; font-weight: 800; }
-.topbar h1 { margin: 0; font-size: clamp(1.05rem, 3vw, 1.35rem); letter-spacing: -.035em; }
-.topbar h1 em { color: #8090ae; font-style: normal; padding: 0 .12em; }
-.live-pill { margin-left: auto; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.07); padding: 9px 13px; border-radius: 999px; color: #cad3e3; font-size: .76rem; font-weight: 700; backdrop-filter: blur(12px); }
-.live-pill span { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #58dc96; box-shadow: 0 0 0 5px rgba(88,220,150,.12); }
 .score-card, .week-card, .history-card { color: #f7f9ff; background: linear-gradient(145deg, rgba(12,31,63,.98), rgba(5,17,39,.99)); border: 1px solid rgba(72,137,255,.35); box-shadow: 0 24px 64px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.05); }
 .score-card { position: relative; overflow: hidden; border-radius: 28px; padding: clamp(17px, 3vw, 25px); }
 .score-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, var(--orange), #8c63e9 50%, var(--blue)); box-shadow: 0 0 18px rgba(94,105,255,.72); }
 .score-card::after { content: ""; position: absolute; z-index: 0; inset: 58px 0 auto; height: 190px; pointer-events: none; background: radial-gradient(circle at 18% 48%, rgba(255,116,26,.2), transparent 31%), radial-gradient(circle at 82% 48%, rgba(30,113,255,.24), transparent 31%); }
 .score-card > * { position: relative; z-index: 1; }
-.card-heading, .section-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.section-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 .kicker { margin: 0 0 5px; font-size: .66rem; font-weight: 900; letter-spacing: .17em; color: #91a8d0; }
-.card-heading h2, .section-title h2 { margin: 0; letter-spacing: -.04em; }
-.card-heading h2 { font-size: clamp(1.15rem, 3.5vw, 1.55rem); color: #fff; }
-.week-label { flex: 0 0 auto; background: rgba(14,41,82,.85); color: #dbe8ff; border: 1px solid rgba(97,155,255,.3); border-radius: 999px; padding: 8px 11px; font-size: .68rem; font-weight: 800; }
+.section-title h2 { margin: 0; letter-spacing: -.04em; }
 .fighters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: clamp(14px, 4vw, 36px); max-width: 780px; margin: 16px auto 15px; }
 .fighter { display: grid; align-items: center; justify-content: center; column-gap: clamp(6px, 2vw, 13px); text-align: center; }
 .fighters > .fighter:first-child { grid-template-areas: "photo score"; grid-template-columns: auto auto; }
@@ -136,12 +120,8 @@ button { font: inherit; }
   .lower-grid { grid-template-columns: 1fr; }
   .fighters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .week-card, .history-card { padding: 21px 13px; }
-  .live-pill { font-size: 0; padding: 11px; }
-  .live-pill span { margin: 0; }
 }
 @media (max-width: 390px) {
-  .card-heading { align-items: center; }
-  .week-label { font-size: .62rem; padding: 8px; }
   .week-grid-header, .weekly-row { grid-template-columns: 30px 42px repeat(7, minmax(14px, 1fr)) 29px; column-gap: 3px; }
   .weekly-row img { width: 30px; height: 30px; }
   .week-grid-header { font-size: .44rem; }
