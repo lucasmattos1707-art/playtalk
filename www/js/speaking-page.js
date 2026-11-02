@@ -170,6 +170,8 @@
     battleCardsTypingTarget: [],
     battleCardsTypingResults: [],
     battleCardsTypingIndex: 0,
+    battleCardsTypingStartedAtMs: 0,
+    battleCardsTypingResolved: false,
     battleCardsKeyboardLetters: [],
     battleCardsKeyboardQueue: [],
     battleCardsKeyboardStates: [],
@@ -201,6 +203,9 @@
       phaseScore: 0,
       phaseMaxScore: 0,
       phaseSamples: 0,
+      phaseCharacters: 0,
+      phaseElapsedMs: 0,
+      typingStartedAtMs: 0,
       waitingForPhase: false,
       gameplayReady: false,
       meScore: 0,
@@ -1024,13 +1029,18 @@
 
   function renderBattleCardsPhaseWord(text, language) {
     if (!els.battleCardsPhaseWord) return;
-    els.battleCardsPhaseWord.textContent = safeText(text) || 'FluentCards';
+    els.battleCardsPhaseWord.textContent = safeText(text);
     els.battleCardsPhaseWord.classList.remove('is-english', 'is-portuguese');
     els.battleCardsPhaseWord.classList.add(language === 'portuguese' ? 'is-portuguese' : 'is-english');
   }
 
+  function showBattleCardsNativeFeedback(card) {
+    els.game?.classList.add('is-battle-native-feedback');
+    renderBattleCardsPhaseWord(safeText(card?.nativeText || card?.portuguese || ''), 'portuguese');
+  }
+
   function getBattlePhaseTitle(phase) {
-    if (Number(phase) === 1) return 'Fase 1 · Digitação';
+    if (Number(phase) === 1) return 'Rodada 1 · Modo 4 · caracteres por minuto';
     if (Number(phase) === 2) return 'Fase 2 · Ouvir e repetir';
     return 'Fase 3 · Meaning';
   }
@@ -1038,7 +1048,7 @@
   function updateBattlePhaseHeader() {
     const phase = Math.max(1, Math.min(3, Number(state.duel.currentPhase) || 1));
     if (els.battleCardsPhaseLabel) {
-      els.battleCardsPhaseLabel.textContent = `Fase ${phase}`;
+      els.battleCardsPhaseLabel.textContent = `Rodada ${phase}`;
       els.battleCardsPhaseLabel.title = getBattlePhaseTitle(phase);
     }
     if (els.battleCardsPhaseWins) {
@@ -1074,18 +1084,10 @@
 
   function renderBattleTypingSlots() {
     if (!els.battleCardsTypingSlots) return;
-    els.battleCardsTypingSlots.innerHTML = state.battleCardsTypingTarget.map((character, index) => {
-      const isSpace = /\s/u.test(character);
-      const result = state.battleCardsTypingResults[index];
-      const className = [
-        'battle-cards-typing__slot',
-        isSpace ? 'is-space' : '',
-        result === 'correct' ? 'is-correct' : '',
-        result === 'wrong' ? 'is-wrong' : ''
-      ].filter(Boolean).join(' ');
-      const visible = isSpace ? '&nbsp;' : result ? escapeHtml(character) : '•';
-      return `<span class="${className}">${visible}</span>`;
-    }).join('');
+    els.battleCardsTypingSlots.innerHTML = state.battleCardsTypingTarget
+      .slice(0, state.battleCardsTypingIndex)
+      .map((word) => `<span class="battle-cards-typing__slot is-correct">${escapeHtml(word)}</span>`)
+      .join('');
   }
 
   function renderBattleTypingKeyboard() {
@@ -1098,64 +1100,16 @@
         keyState === 'correct' ? 'is-correct' : '',
         keyState === 'wrong' ? 'is-wrong' : ''
       ].filter(Boolean).join(' ');
-      return `<button class="${className}" type="button" data-key-index="${index}" data-letter="${escapeHtml(character)}">${escapeHtml(character)}</button>`;
+      const used = keyState === 'correct';
+      return `<button class="${className}" type="button" data-key-index="${index}" data-letter="${escapeHtml(character)}"${used ? ' disabled' : ''}>${escapeHtml(character)}</button>`;
     }).join('');
   }
 
   function refreshBattleTypingKeyboard() {
     if (!els.battleCardsTypingKeys) return;
-    const remaining = state.battleCardsTypingTarget
-      .slice(state.battleCardsTypingIndex)
-      .filter((character) => !/\s/u.test(character));
-    const needed = Array.from(new Set(remaining));
-    const visible = needed.slice(0, 9);
-    state.battleCardsKeyboardQueue = needed.slice(9);
-    const pool = Array.from(new Set([...Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'"), ...needed]));
-    for (const character of pool) {
-      if (visible.length >= 9) break;
-      if (!visible.includes(character)) visible.push(character);
-    }
-    state.battleCardsKeyboardLetters = visible
-      .slice(0, 9)
-      .sort((left, right) => left.localeCompare(right, 'pt-BR', { sensitivity: 'base' }));
+    state.battleCardsKeyboardLetters = shuffleBattleKeyboard(state.battleCardsTypingTarget.slice());
     state.battleCardsKeyboardStates = Array(state.battleCardsKeyboardLetters.length).fill('');
     renderBattleTypingKeyboard();
-  }
-
-  function replaceBattleTypingObsoleteKey(preferredCharacter, preferredIndex = -1) {
-    const remaining = state.battleCardsTypingTarget
-      .slice(state.battleCardsTypingIndex)
-      .filter((character) => !/\s/u.test(character));
-    const remainingSet = new Set(remaining);
-    state.battleCardsKeyboardQueue = state.battleCardsKeyboardQueue.filter((character) => remainingSet.has(character));
-    const visibleSet = new Set(state.battleCardsKeyboardLetters);
-    const nextCharacter = state.battleCardsKeyboardQueue.find((character) => !visibleSet.has(character));
-    if (!nextCharacter) return -1;
-
-    let replaceIndex = -1;
-    if (preferredCharacter && !remainingSet.has(preferredCharacter)) {
-      const normalizedPreferredIndex = Number.parseInt(preferredIndex, 10);
-      replaceIndex = Number.isInteger(normalizedPreferredIndex)
-        && state.battleCardsKeyboardLetters[normalizedPreferredIndex] === preferredCharacter
-        ? normalizedPreferredIndex
-        : state.battleCardsKeyboardLetters.indexOf(preferredCharacter);
-    }
-    if (replaceIndex < 0) {
-      replaceIndex = state.battleCardsKeyboardLetters.findIndex((character) => !remainingSet.has(character));
-    }
-    if (replaceIndex < 0) return -1;
-
-    state.battleCardsKeyboardLetters[replaceIndex] = nextCharacter;
-    state.battleCardsKeyboardStates[replaceIndex] = '';
-    state.battleCardsKeyboardQueue = state.battleCardsKeyboardQueue.filter((character) => character !== nextCharacter);
-    const button = els.battleCardsTypingKeys?.querySelector(`[data-key-index="${replaceIndex}"]`);
-    if (!button) return replaceIndex;
-    button.dataset.letter = nextCharacter;
-    button.textContent = nextCharacter;
-    button.classList.remove('is-correct', 'is-wrong', 'is-replaced');
-    void button.offsetWidth;
-    button.classList.add('is-replaced');
-    return replaceIndex;
   }
 
   function setBattleTypingKeyState(index, keyState = '') {
@@ -1166,6 +1120,7 @@
     if (!button) return;
     button.classList.toggle('is-correct', keyState === 'correct');
     button.classList.toggle('is-wrong', keyState === 'wrong');
+    button.disabled = keyState === 'correct' || state.battleCardsTypingLocked || !state.battleCardsReadyToSpeak;
   }
 
   function setBattleTypingErrorFlash(active) {
@@ -1250,18 +1205,20 @@
   }
 
   function startBattleTypingCard(card) {
-    const target = normalizeBattleTypingText(card?.targetText || card?.english);
-    state.battleCardsTypingTarget = Array.from(target);
+    state.battleCardsTypingTarget = safeText(card?.targetText || card?.english)
+      .normalize('NFKC')
+      .match(/[\p{L}\p{N}'’]+/gu) || [];
     state.battleCardsTypingResults = Array(state.battleCardsTypingTarget.length).fill('');
     state.battleCardsTypingIndex = 0;
     state.battleCardsKeyboardLetters = [];
     state.battleCardsKeyboardQueue = [];
     state.battleCardsKeyboardStates = [];
     state.battleCardsTypingLocked = false;
+    state.battleCardsTypingResolved = false;
+    state.battleCardsTypingStartedAtMs = 0;
     setBattleTypingErrorFlash(false);
     state.battleCardsCardScore = 0;
-    state.battleCardsCardMaxScore = state.battleCardsTypingTarget.length;
-    advanceBattleTypingSpaces();
+    state.battleCardsCardMaxScore = safeText(card?.targetText || card?.english).trim().length;
     renderBattleTypingSlots();
     refreshBattleTypingKeyboard();
   }
@@ -1271,47 +1228,67 @@
       !isBattleCardsMode()
       || state.duel.currentPhase !== 1
       || state.battleCardsTypingLocked
+      || state.battleCardsTypingResolved
       || state.duel.waitingForPhase
       || state.battleCardsTypingIndex >= state.battleCardsTypingTarget.length
     ) return;
-    const expected = state.battleCardsTypingTarget[state.battleCardsTypingIndex];
-    const correct = character === expected;
-    state.battleCardsTypingResults[state.battleCardsTypingIndex] = correct ? 'correct' : 'wrong';
-    if (correct) state.battleCardsCardScore += 1;
-    state.battleCardsTypingIndex += 1;
-    advanceBattleTypingSpaces();
-    renderBattleTypingSlots();
-    const replacedKeyIndex = replaceBattleTypingObsoleteKey(character, keyIndex);
     const normalizedKeyIndex = Number.parseInt(keyIndex, 10);
-    const clickedKeyWasReplaced = Number.isInteger(normalizedKeyIndex) && replacedKeyIndex === normalizedKeyIndex;
-    if (!clickedKeyWasReplaced) {
-      const remainingCharacters = new Set(
-        state.battleCardsTypingTarget
-          .slice(state.battleCardsTypingIndex)
-          .filter((remainingCharacter) => !/\s/u.test(remainingCharacter))
-      );
-      if (correct && !remainingCharacters.has(character)) setBattleTypingKeyState(keyIndex, 'correct');
-      else if (!remainingCharacters.has(character)) setBattleTypingKeyState(keyIndex, 'wrong');
+    if (!state.battleCardsTypingStartedAtMs) state.battleCardsTypingStartedAtMs = Date.now();
+    if (!state.duel.typingStartedAtMs) {
+      state.duel.typingStartedAtMs = Date.now() - Math.max(0, Number(state.duel.phaseElapsedMs) || 0);
     }
-    playBattleTypingFeedbackSound(correct);
+    const expected = normalizeBattleTypingText(state.battleCardsTypingTarget[state.battleCardsTypingIndex]);
+    const correct = normalizeBattleTypingText(character) === expected;
     if (!correct) {
       state.battleCardsTypingLocked = true;
+      state.battleCardsTypingResolved = true;
+      setBattleTypingKeyState(normalizedKeyIndex, 'wrong');
       setBattleTypingErrorFlash(true);
       syncBattleCardsReadyState();
+      stopBattleCardsPromptAudio();
+      await playBattleTypingErrorSound();
       const card = state.activeCards[state.currentIndex % Math.max(1, state.activeCards.length)];
-      window.setTimeout(() => {
-        if (state.duel.currentPhase === 1 && !state.duel.waitingForPhase && !state.duel.completed) {
-          playBattleTypingMistakeReplay(card);
-        }
-      }, 90);
-      await waitMs(500);
+      showBattleCardsNativeFeedback(card);
+      await waitMs(800);
       setBattleTypingErrorFlash(false);
-      state.battleCardsTypingLocked = false;
-      syncBattleCardsReadyState();
+      await completeBattleCardsTypingCard({ correct: false });
+      return;
     }
+
+    state.battleCardsTypingResults[state.battleCardsTypingIndex] = 'correct';
+    state.battleCardsTypingIndex += 1;
+    setBattleTypingKeyState(normalizedKeyIndex, 'correct');
+    renderBattleTypingSlots();
+    playBattleTypingFeedbackSound(true);
     if (state.battleCardsTypingIndex >= state.battleCardsTypingTarget.length) {
-      await completeBattleCardsTypingCard();
+      state.battleCardsTypingLocked = true;
+      state.battleCardsTypingResolved = true;
+      syncBattleCardsReadyState();
+      const card = state.activeCards[state.currentIndex % Math.max(1, state.activeCards.length)];
+      state.battleCardsCardScore = state.battleCardsCardMaxScore;
+      await playBattleCardsTargetReveal(card);
+      showBattleCardsNativeFeedback(card);
+      await waitMs(500);
+      await completeBattleCardsTypingCard({ correct: true });
     }
+  }
+
+  function playBattleTypingErrorSound() {
+    const soundUrl = resolveRouteHref('/accesskey/error.mp3');
+    return new Promise((resolve) => {
+      const audio = new Audio(soundUrl);
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        window.clearTimeout(timeoutId);
+        resolve();
+      };
+      const timeoutId = window.setTimeout(finish, 3000);
+      audio.onended = finish;
+      audio.onerror = finish;
+      audio.play().catch(finish);
+    });
   }
   function renderBattleCardsVisual(card) {
     const imageUrl = safeText(card?.imageUrl);
@@ -1439,24 +1416,32 @@
       els.battleCardsVisualBtn.disabled = !state.battleCardsReadyToSpeak || interactionFinished;
     }
     els.battleCardsTypingKeys?.querySelectorAll('button').forEach((button) => {
-      button.disabled = state.battleCardsTypingLocked
+      button.disabled = !state.battleCardsReadyToSpeak
+        || state.battleCardsTypingLocked
         || interactionFinished
         || state.duel.currentPhase !== 1;
     });
   }
 
-  function playBattleCardsTargetReveal(card) {
+  function playBattleCardsTargetReveal(card, options = {}) {
     const targetText = safeText(card?.targetText || card?.english);
     const audioUrl = safeText(card?.audioUrl || card?.audio);
     const speechCode = safeText(card?.speechCode) || 'en-US';
     const token = (Number(state.battleCardsPromptToken) || 0) + 1;
     state.battleCardsPromptToken = token;
-    state.battleCardsReadyToSpeak = false;
+    const keepTypingInteractive = options.keepTypingInteractive === true && state.duel.currentPhase === 1;
+    state.battleCardsReadyToSpeak = keepTypingInteractive;
     syncBattleCardsReadyState();
 
     return new Promise((resolve) => {
       const finish = () => {
-        if (token === state.battleCardsPromptToken) state.battleCardsPromptAudio = null;
+        if (token === state.battleCardsPromptToken) {
+          state.battleCardsPromptAudio = null;
+          if (keepTypingInteractive && !state.battleCardsTypingLocked) {
+            state.battleCardsReadyToSpeak = true;
+            syncBattleCardsReadyState();
+          }
+        }
         resolve();
       };
 
@@ -1497,15 +1482,13 @@
 
   async function beginBattleCardsTurn(card) {
     if (!card || !isBattleCardsMode()) return;
+    els.game?.classList.remove('is-battle-native-feedback');
     stopBattleCardsPromptAudio();
     updateBattlePhaseHeader();
     renderBattleCardsVisual(card);
-    renderBattleCardsPhaseWord(
-      safeText(card?.nativeText || card?.portuguese || card?.targetText || card?.english) || 'FluentCards',
-      'portuguese'
-    );
+    renderBattleCardsPhaseWord(state.duel.currentPhase === 1 ? '' : safeText(card?.nativeText || card?.portuguese || card?.targetText || card?.english), 'portuguese');
     updateBattleCardsBuffer();
-    state.battleCardsReadyToSpeak = false;
+    state.battleCardsReadyToSpeak = state.duel.currentPhase === 1;
     if (state.duel.currentPhase === 1) {
       startBattleTypingCard(card);
     } else {
@@ -1514,7 +1497,12 @@
       if (els.battleCardsTypingKeys) els.battleCardsTypingKeys.innerHTML = '';
     }
     syncBattleCardsReadyState();
-    if (state.duel.currentPhase === 1 || state.duel.currentPhase === 2) {
+    if (state.duel.currentPhase === 1) {
+      await Promise.race([
+        playBattleCardsTargetReveal(card, { keepTypingInteractive: true }),
+        new Promise((resolve) => window.setTimeout(resolve, 4200))
+      ]);
+    } else if (state.duel.currentPhase === 2) {
       await Promise.race([
         playBattleCardsTargetReveal(card),
         new Promise((resolve) => window.setTimeout(resolve, 4200))
@@ -1707,7 +1695,7 @@
     if (els.meAvatarPercent) {
       els.meAvatarPercent.textContent = battleCardsMode
         ? typingPhase
-          ? `${Math.max(0, Number(state.duel.phaseScore) || 0)} pts`
+          ? `${Math.max(0, Number(state.duel.phaseScore) || 0)} caract./min`
           : `${myPercent}%`
         : showPoints
           ? String(Math.max(0, Number(state.duel.meScore) || 0))
@@ -1716,7 +1704,7 @@
     if (els.enemyAvatarPercent) {
       els.enemyAvatarPercent.textContent = battleCardsMode
         ? typingPhase
-          ? `${Math.max(0, Number(state.duel.rivalScore) || 0)} pts`
+          ? `${Math.max(0, Number(state.duel.rivalScore) || 0)} caract./min`
           : `${rivalPercent}%`
         : showPoints
           ? String(Math.max(0, Number(state.duel.rivalScore) || 0))
@@ -2373,7 +2361,7 @@
       if (els.speakingPercent) {
         els.speakingPercent.textContent = battleCardsMode
           ? typingPhase
-            ? `Voce ${Math.max(0, Number(state.duel.phaseScore) || 0)} pts`
+            ? `Voce ${Math.max(0, Number(state.duel.phaseScore) || 0)} caracteres por minuto`
             : `Voce ${Math.max(0, Math.min(100, Number(state.duel.mePercent) || 0))}%`
           : showPoints
             ? `Pontos ${Math.max(0, Number(state.duel.meScore) || 0)}`
@@ -2382,7 +2370,7 @@
       if (els.enemySpeakingPercent) {
         els.enemySpeakingPercent.textContent = battleCardsMode
           ? typingPhase
-            ? `Rival ${Math.max(0, Number(state.duel.rivalScore) || 0)} pts`
+            ? `Rival ${Math.max(0, Number(state.duel.rivalScore) || 0)} caracteres por minuto`
             : `Rival ${Math.max(0, Math.min(100, Number(state.duel.rivalPercent) || 0))}%`
           : showPoints
             ? `Rival ${Math.max(0, Number(state.duel.rivalScore) || 0)}`
@@ -3022,6 +3010,17 @@
     state.duel.phaseScore = Math.max(0, Number(battleState.meScore) || 0);
     state.duel.phaseMaxScore = Math.max(0, Number(battleState.meMaxScore) || 0);
     state.duel.phaseSamples = Math.max(0, Number(battleState.meSamples) || 0);
+    state.duel.phaseCharacters = Math.max(0, Number(battleState.meCharacters) || 0);
+    const serverElapsedMs = Math.max(0, Number(battleState.meElapsedMs) || 0);
+    const localElapsedMs = !phaseChanged && state.duel.typingStartedAtMs
+      ? Math.max(0, Date.now() - state.duel.typingStartedAtMs)
+      : 0;
+    state.duel.phaseElapsedMs = Math.max(serverElapsedMs, localElapsedMs);
+    if (phaseChanged) {
+      state.duel.typingStartedAtMs = serverElapsedMs > 0 ? Date.now() - serverElapsedMs : 0;
+    } else if (!state.duel.typingStartedAtMs && serverElapsedMs > 0) {
+      state.duel.typingStartedAtMs = Date.now() - serverElapsedMs;
+    }
     state.duel.meScore = state.duel.phaseScore;
     state.duel.rivalScore = Math.max(0, Number(battleState.rivalScore) || 0);
     state.duel.mePercent = Math.max(0, Math.min(100, Number(battleState.mePercent) || 0));
@@ -3494,7 +3493,9 @@
           phaseProgress: battleCardsMode ? completed : undefined,
           phaseScore: battleCardsMode ? state.duel.phaseScore : undefined,
           phaseMaxScore: battleCardsMode ? state.duel.phaseMaxScore : undefined,
-          phaseSamples: battleCardsMode ? state.duel.phaseSamples : undefined
+          phaseSamples: battleCardsMode ? state.duel.phaseSamples : undefined,
+          phaseCharacters: battleCardsMode ? state.duel.phaseCharacters : undefined,
+          phaseElapsedMs: battleCardsMode ? state.duel.phaseElapsedMs : undefined
         })
       });
       const payload = await response.json().catch(() => ({}));
@@ -3718,17 +3719,29 @@
     });
   }
 
-  async function completeBattleCardsPhaseCard({ score, maxScore = 0, pronunciation = false, card = null } = {}) {
+  async function completeBattleCardsPhaseCard({ score, maxScore = 0, pronunciation = false, card = null, typingCorrect = false } = {}) {
     const phaseBefore = state.duel.currentPhase;
     const requiredBefore = state.duel.requiredCards;
     const normalizedScore = Math.max(0, Number(score) || 0);
-    state.duel.phaseScore += normalizedScore;
     if (phaseBefore === 1) {
       state.duel.phaseMaxScore += Math.max(0, Number(maxScore) || 0);
+      if (typingCorrect) state.duel.phaseCharacters += Math.max(0, Number(maxScore) || 0);
+      const now = Date.now();
+      if (!state.duel.typingStartedAtMs) state.duel.typingStartedAtMs = now;
+      state.duel.phaseElapsedMs = Math.max(
+        Number(state.duel.phaseElapsedMs) || 0,
+        Math.min(3600000, now - Number(state.duel.typingStartedAtMs))
+      );
+      state.duel.phaseScore = Math.round(
+        (Math.max(0, Number(state.duel.phaseCharacters) || 0) * 60000)
+        / Math.max(1000, Number(state.duel.phaseElapsedMs) || 0)
+        * 10
+      ) / 10;
       state.duel.mePercent = state.duel.phaseMaxScore > 0
-        ? Math.round((state.duel.phaseScore / state.duel.phaseMaxScore) * 100)
+        ? Math.round((state.duel.phaseCharacters / state.duel.phaseMaxScore) * 100)
         : 0;
     } else {
+      state.duel.phaseScore += normalizedScore;
       state.duel.phaseSamples += 1;
       state.duel.mePercent = Math.round(state.duel.phaseScore / Math.max(1, state.duel.phaseSamples));
       state.scores.push(normalizedScore);
@@ -3758,14 +3771,15 @@
     window.setTimeout(renderCard, 140);
   }
 
-  async function completeBattleCardsTypingCard() {
+  async function completeBattleCardsTypingCard({ correct = false } = {}) {
     if (state.duel.currentPhase !== 1 || state.duel.waitingForPhase) return;
     state.battleCardsReadyToSpeak = false;
     syncBattleCardsReadyState();
     await completeBattleCardsPhaseCard({
-      score: state.battleCardsCardScore,
+      score: 0,
       maxScore: state.battleCardsCardMaxScore,
-      pronunciation: false
+      pronunciation: false,
+      typingCorrect: correct
     });
   }
   async function handleSendSpeaking() {
@@ -4046,7 +4060,7 @@
       if (!isBattleCardsMode()) return;
       if (state.duel.currentPhase === 1) {
         const card = state.activeCards[state.currentIndex % Math.max(1, state.activeCards.length)];
-        void playBattleCardsTargetReveal(card).finally(() => {
+        void playBattleCardsTargetReveal(card, { keepTypingInteractive: true }).finally(() => {
           if (!state.duel.waitingForPhase && !state.duel.completed) {
             state.battleCardsReadyToSpeak = true;
             syncBattleCardsReadyState();

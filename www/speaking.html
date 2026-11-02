@@ -2368,6 +2368,66 @@
       animation: battleKeyReplace 180ms ease-out;
     }
 
+    .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-typing__slot {
+      min-width: 0;
+      height: auto;
+      padding: 6px 11px;
+      border: 1px solid rgba(121, 243, 170, 0.78);
+      border-radius: 12px;
+      background: rgba(12, 98, 53, 0.48);
+      font-size: clamp(15px, 2.4dvh, 22px);
+      line-height: 1.05;
+    }
+
+    .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-typing__keys {
+      width: min(470px, calc(100vw - 32px));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-typing__key {
+      aspect-ratio: auto;
+      min-height: clamp(48px, 8dvh, 68px);
+      padding: 7px 9px;
+      border-radius: 14px;
+      font-size: clamp(14px, 2.35dvh, 22px);
+      line-height: 1.05;
+      overflow-wrap: anywhere;
+    }
+
+    .speaking-game.is-battle-cards[data-battle-phase="1"] .battle-cards-typing__keys.is-error-flash .battle-cards-typing__key {
+      animation: battleTypingErrorShake 150ms ease-in-out infinite;
+    }
+
+    .speaking-game.is-battle-cards.is-battle-native-feedback .battle-cards-stage {
+      display: flex !important;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .speaking-game.is-battle-cards.is-battle-native-feedback .battle-cards-visual,
+    .speaking-game.is-battle-cards.is-battle-native-feedback .battle-cards-typing {
+      display: none !important;
+    }
+
+    .speaking-game.is-battle-cards.is-battle-native-feedback .battle-cards-translation {
+      width: min(100%, 760px);
+      margin: 0;
+      text-align: center;
+    }
+
+    .speaking-game.is-battle-cards.is-battle-native-feedback .battle-cards-phase-word {
+      max-width: 100%;
+      font-size: clamp(24px, 5vw, 40px);
+      line-height: 1.12;
+    }
+
+    @keyframes battleTypingErrorShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px); }
+      75% { transform: translateX(3px); }
+    }
+
     .speaking-game.is-battle-cards.is-prestart .battle-cards-hud {
       visibility: hidden;
     }
@@ -2628,8 +2688,8 @@
           <h2 class="battle-cards-phase-word is-english" id="battleCardsPhaseWord">FluentCards</h2>
         </div>
         <div class="battle-cards-typing" id="battleCardsTyping" hidden>
-          <div class="battle-cards-typing__slots" id="battleCardsTypingSlots" aria-label="Texto digitado"></div>
-          <div class="battle-cards-typing__keys" id="battleCardsTypingKeys" aria-label="Teclado dinâmico de nove letras"></div>
+          <div class="battle-cards-typing__slots" id="battleCardsTypingSlots" aria-label="Palavras escolhidas"></div>
+          <div class="battle-cards-typing__keys" id="battleCardsTypingKeys" aria-label="Palavras para montar a frase"></div>
         </div>
       </section>
       <h2 class="card-word" id="cardEnglishWord">-</h2>

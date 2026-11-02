@@ -32959,13 +32959,13 @@
         const typingRound = state.game.typingRound;
         if (typingRound?.completed) {
           const elapsedSeconds = Math.max(1, (Number(typingRound.endedAt) - Number(typingRound.startedAt)) / 1000);
-          const charactersPerSecond = Math.max(0, Number(typingRound.characters) || 0) / elapsedSeconds;
+          const charactersPerMinute = (Math.max(0, Number(typingRound.characters) || 0) / elapsedSeconds) * 60;
           if (heading) heading.textContent = 'Resumo do Modo 4';
           if (copy) {
             copy.innerHTML = `
               <span class="typing-round-result-stat"><strong>${Math.max(0, Number(typingRound.correct) || 0)}</strong> acertos</span>
               <span class="typing-round-result-stat"><strong>${Math.max(0, Number(typingRound.errors) || 0)}</strong> erros</span>
-              <span class="typing-round-result-stat"><strong>${charactersPerSecond.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> caracteres por segundo</span>
+              <span class="typing-round-result-stat"><strong>${charactersPerMinute.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> caracteres por minuto</span>
             `;
           }
           return;

@@ -12919,7 +12919,7 @@ function normalizeSpeakingBattleTypingText(value) {
 }
 
 function countSpeakingBattleTypingCharacters(card) {
-  return Array.from(normalizeSpeakingBattleTypingText(card?.targetText || card?.english)).length;
+  return Array.from(String(card?.targetText || card?.english || '').trim()).length;
 }
 
 function normalizeSpeakingBattleCardsParticipant(value) {
@@ -12932,9 +12932,17 @@ function normalizeSpeakingBattleCardsParticipant(value) {
     progress: Math.max(0, Number(raw.progress) || 0),
     score,
     maxScore,
+    characters: Math.max(0, Math.min(1000000, Number(raw.characters) || 0)),
+    elapsedMs: Math.max(0, Math.min(3600000, Number(raw.elapsedMs) || 0)),
     samples,
     percent: Math.max(0, Math.min(100, Number(raw.percent) || 0))
   };
+}
+
+function computeSpeakingBattleTypingCharactersPerMinute(participant) {
+  const entry = normalizeSpeakingBattleCardsParticipant(participant);
+  if (!entry.elapsedMs || !entry.characters) return 0;
+  return Math.round(((entry.characters * 60000) / Math.max(1000, entry.elapsedMs)) * 10) / 10;
 }
 
 function normalizeSpeakingBattleCardsState(session) {
@@ -12959,7 +12967,7 @@ function normalizeSpeakingBattleCardsState(session) {
 function computeSpeakingBattlePhasePercent(participant, phase) {
   const entry = normalizeSpeakingBattleCardsParticipant(participant);
   if (phase === 1) {
-    return entry.maxScore > 0 ? clampPercent(Math.round((entry.score / entry.maxScore) * 100)) : 0;
+    return entry.maxScore > 0 ? clampPercent(Math.round((entry.characters / entry.maxScore) * 100)) : 0;
   }
   return entry.samples > 0 ? clampPercent(Math.round(entry.score / entry.samples)) : 0;
 }
@@ -12969,11 +12977,38 @@ function resolveSpeakingBattleCardsPhase(state) {
   const requiredCards = Math.max(SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS, Number(state.requiredCards) || SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS);
   if (state.challenger.progress < requiredCards || state.opponent.progress < requiredCards) return state;
 
-  const challengerMetric = Number(state.challenger.score) || 0;
-  const opponentMetric = Number(state.opponent.score) || 0;
+  const challengerMetric = state.currentPhase === 1
+    ? computeSpeakingBattleTypingCharactersPerMinute(state.challenger)
+    : Number(state.challenger.score) || 0;
+  const opponentMetric = state.currentPhase === 1
+    ? computeSpeakingBattleTypingCharactersPerMinute(state.opponent)
+    : Number(state.opponent.score) || 0;
   if (challengerMetric === opponentMetric) {
-    state.requiredCards = requiredCards + 1;
+    if (state.currentPhase !== 1) {
+      state.requiredCards = requiredCards + 1;
+      state.revision += 1;
+      return state;
+    }
     state.revision += 1;
+    state.phaseResults.push({
+      phase: state.currentPhase,
+      winnerRole: '',
+      tied: true,
+      cardsPlayed: requiredCards,
+      challengerScore: challengerMetric,
+      opponentScore: opponentMetric,
+      challengerPercent: computeSpeakingBattlePhasePercent(state.challenger, state.currentPhase),
+      opponentPercent: computeSpeakingBattlePhasePercent(state.opponent, state.currentPhase),
+      challengerCharactersPerMinute: computeSpeakingBattleTypingCharactersPerMinute(state.challenger),
+      opponentCharactersPerMinute: computeSpeakingBattleTypingCharactersPerMinute(state.opponent)
+    });
+    state.currentPhase += 1;
+    state.requiredCards = SPEAKING_DUEL_CARDS_MODE_TOTAL_CARDS;
+    state.phaseStartedAt = new Date().toISOString();
+    const challengerWins = state.challenger.phaseWins;
+    const opponentWins = state.opponent.phaseWins;
+    state.challenger = normalizeSpeakingBattleCardsParticipant({ phaseWins: challengerWins });
+    state.opponent = normalizeSpeakingBattleCardsParticipant({ phaseWins: opponentWins });
     return state;
   }
 
@@ -12986,7 +13021,9 @@ function resolveSpeakingBattleCardsPhase(state) {
     challengerScore: challengerMetric,
     opponentScore: opponentMetric,
     challengerPercent: computeSpeakingBattlePhasePercent(state.challenger, state.currentPhase),
-    opponentPercent: computeSpeakingBattlePhasePercent(state.opponent, state.currentPhase)
+    opponentPercent: computeSpeakingBattlePhasePercent(state.opponent, state.currentPhase),
+    challengerCharactersPerMinute: computeSpeakingBattleTypingCharactersPerMinute(state.challenger),
+    opponentCharactersPerMinute: computeSpeakingBattleTypingCharactersPerMinute(state.opponent)
   });
   state.revision += 1;
 
@@ -13028,10 +13065,20 @@ function mapSpeakingBattleCardsStateForRole(session, role) {
     rivalPhaseWins: state[rivalRole].phaseWins,
     meProgress: state[meRole].progress,
     rivalProgress: state[rivalRole].progress,
-    meScore: state[meRole].score,
-    rivalScore: state[rivalRole].score,
+    meScore: state.currentPhase === 1
+      ? computeSpeakingBattleTypingCharactersPerMinute(state[meRole])
+      : state[meRole].score,
+    rivalScore: state.currentPhase === 1
+      ? computeSpeakingBattleTypingCharactersPerMinute(state[rivalRole])
+      : state[rivalRole].score,
     meMaxScore: state[meRole].maxScore,
     rivalMaxScore: state[rivalRole].maxScore,
+    meCharacters: state[meRole].characters,
+    rivalCharacters: state[rivalRole].characters,
+    meElapsedMs: state[meRole].elapsedMs,
+    rivalElapsedMs: state[rivalRole].elapsedMs,
+    meCharactersPerMinute: computeSpeakingBattleTypingCharactersPerMinute(state[meRole]),
+    rivalCharactersPerMinute: computeSpeakingBattleTypingCharactersPerMinute(state[rivalRole]),
     meSamples: state[meRole].samples,
     rivalSamples: state[rivalRole].samples,
     mePercent: computeSpeakingBattlePhasePercent(state[meRole], state.currentPhase),
@@ -13111,20 +13158,25 @@ function fillSpeakingBattleBotParticipant(session, state, role, botConfig) {
   const cards = Array.isArray(session.cards) ? session.cards : [];
   let score = 0;
   let maxScore = 0;
+  let characters = 0;
   for (let index = 0; index < completed; index += 1) {
     const card = cards.length ? cards[index % cards.length] : null;
     const simulatedPercent = computeBotPronunciationPercent(botConfig, `${session.id}:phase:${state.currentPhase}`, index);
     if (state.currentPhase === 1) {
       const available = countSpeakingBattleTypingCharacters(card);
       maxScore += available;
-      score += Math.max(0, Math.min(available, Math.round((available * simulatedPercent) / 100)));
+      characters += Math.max(0, Math.min(available, Math.round((available * simulatedPercent) / 100)));
     } else {
       score += simulatedPercent;
     }
   }
   participant.progress = completed;
-  participant.score = score;
+  participant.score = state.currentPhase === 1
+    ? Math.round((characters * 60000) / Math.max(1000, accumulatedMs))
+    : score;
   participant.maxScore = maxScore;
+  participant.characters = characters;
+  participant.elapsedMs = state.currentPhase === 1 ? Math.min(3600000, accumulatedMs) : 0;
   participant.samples = state.currentPhase === 1 ? 0 : completed;
   participant.percent = computeSpeakingBattlePhasePercent(participant, state.currentPhase);
   return true;
@@ -25803,13 +25855,19 @@ app.post('/api/speaking/sessions/:sessionId/progress', async (req, res) => {
           const nextScore = Math.max(0, Number(req.body?.phaseScore) || 0);
           const nextMaxScore = Math.max(0, Number(req.body?.phaseMaxScore) || 0);
           const nextSamples = Math.max(0, Number.parseInt(req.body?.phaseSamples, 10) || 0);
+          const nextCharacters = Math.max(0, Math.min(1000000, Number(req.body?.phaseCharacters) || 0));
+          const nextElapsedMs = Math.max(0, Math.min(3600000, Number(req.body?.phaseElapsedMs) || 0));
           if (nextProgress >= participant.progress) {
             participant.progress = nextProgress;
             participant.maxScore = state.currentPhase === 1 ? nextMaxScore : 0;
             participant.samples = state.currentPhase === 1 ? 0 : Math.min(nextProgress, nextSamples);
-            participant.score = state.currentPhase === 1
-              ? Math.min(nextMaxScore, nextScore)
-              : Math.min(participant.samples * 100, nextScore);
+            if (state.currentPhase === 1) {
+              participant.characters = Math.min(nextMaxScore || nextCharacters, nextCharacters);
+              participant.elapsedMs = Math.max(participant.elapsedMs, nextElapsedMs);
+              participant.score = computeSpeakingBattleTypingCharactersPerMinute(participant);
+            } else {
+              participant.score = Math.min(participant.samples * 100, nextScore);
+            }
             participant.percent = computeSpeakingBattlePhasePercent(participant, state.currentPhase);
           }
           resolveSpeakingBattleCardsPhase(state);
