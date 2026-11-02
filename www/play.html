@@ -6585,12 +6585,17 @@
     }
 
     .stars.is-typing-round-lives {
-      gap: 8px;
-      font-size: 22px;
+      gap: 10px;
+      font-size: 30px;
       line-height: 1;
     }
 
     .typing-round-heart {
+      display: inline-flex;
+      width: 1.15em;
+      height: 1em;
+      align-items: center;
+      justify-content: center;
       color: #ff5c79;
       opacity: 1;
       transition: opacity 180ms ease, transform 180ms ease;
@@ -34400,7 +34405,7 @@
             if (
               !state.game.active
               || state.game.paused
-              || (!isStageSixBattleTyping && state.game.listening)
+              || (!isStageSixBattleTyping && state.game.listening && !isTypingRoundStageFourActive())
               || state.game.typingSkipActive
               || stageSixErrorLocked
               || state.game.currentId !== entry.id
@@ -34475,6 +34480,11 @@
             const expectedLetter = target[typed.length];
             if (keyLetter !== expectedLetter) {
               const typedLengthBeforeReset = typed.length;
+              if (isTypingRoundStageFourActive()) {
+                triggerTypingMistakeFeedback(grid, 500);
+                await handleRecognitionResult('', 'typing');
+                return;
+              }
               if (useSmartKeyboard) {
                 typed = '';
                 fourthStarResolved = false;
@@ -38855,6 +38865,32 @@
           if (!state.game.active || state.game.paused || state.game.currentId !== entry.id) return;
           removeGameEntry(entry.id);
           await advanceToNextCard();
+          return;
+        }
+
+        if (isTypingRoundStageFourActive()) {
+          clearStageHintLoop({ clearStatus: true });
+          clearFirstStageMicHint({ clearStatus: true });
+          clearStageTwoHintTimer();
+          if (isHit) {
+            state.game.typingRound.correct = Math.max(0, Number(state.game.typingRound.correct) || 0) + 1;
+            setGameStatus('', 'hit');
+          } else {
+            state.game.typingRound.errors = Math.max(0, Number(state.game.typingRound.errors) || 0) + 1;
+            renderTypingRoundHearts();
+            setGameStatus('', 'miss');
+          }
+          updateGameChips();
+          await wait(260);
+          if (!state.game.active || state.game.paused || state.game.currentId !== entry.id) return;
+          rotateLevelModeEntry(entry);
+          if (Number(state.game.typingRound.errors) >= 5) {
+            finishTypingRound();
+            return;
+          }
+          if (state.game.active && !state.game.paused) {
+            advanceToNextCard();
+          }
           return;
         }
 
