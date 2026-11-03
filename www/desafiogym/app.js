@@ -17,6 +17,9 @@
   let refundBusy = false;
   let submissionPending = false;
   let historyHold = null;
+  let activationDigits = '';
+  let activationResetTimer = null;
+  let activationPending = false;
   const deletingHistoryEntries = new Set();
   const bonusSound = new Audio('/desafiogym/bonus-success.mp3');
   bonusSound.preload = 'auto';
@@ -78,7 +81,7 @@
   }
 
   function canMarkAnything(participant) {
-    return canRegister(participant) || canMarkCreatine(participant);
+    return canRegister(participant) || (Boolean(state?.creatineEnabled) && canMarkCreatine(participant));
   }
 
   function orderFighters(kelly, lucas) {
@@ -127,6 +130,9 @@
 
   function renderState(nextState) {
     state = nextState;
+    const creatineEnabled = Boolean(state.creatineEnabled);
+    $('.creatine-card').hidden = !creatineEnabled;
+    creatineChoice.hidden = !creatineEnabled;
     const kelly = Number(state.scores?.kelly || 0);
     const lucas = Number(state.scores?.lucas || 0);
     const total = kelly + lucas;
@@ -169,7 +175,7 @@
 
     const nobodyCanRegister = !canMarkAnything('kelly') && !canMarkAnything('lucas');
     const kellyBonusMode = Boolean(state.bonusMode?.kelly);
-    openButton.disabled = Boolean(nobodyCanRegister);
+    openButton.disabled = Boolean(nobodyCanRegister || submissionPending);
     openButton.classList.toggle('bonus-mode', canRegister('kelly') && kellyBonusMode);
     $('#submit-label').textContent = 'Enviar treino';
     renderActivityChoices();
@@ -315,6 +321,10 @@
 
   function openCheckin(participant) {
     if (!canMarkAnything(participant)) return;
+    if (!state?.creatineEnabled) {
+      submitWorkoutDirect(participant);
+      return;
+    }
     selectedParticipant = participant;
     selectedActivities.clear();
     renderActivityChoices();
@@ -383,6 +393,8 @@
     await loadState();
     if (bonusEarned) showBonusToast(`Treino marcado · bônus conquistado para ${people[participant].name}!`);
     if (failed) showBonusToast(`${failed.reason?.message || 'Não foi possível salvar a marcação.'} O placar foi sincronizado.`, true);
+    submissionPending = false;
+    openButton.disabled = !canMarkAnything('kelly') && !canMarkAnything('lucas');
   }
 
   function submitActivity() {
@@ -410,6 +422,70 @@
     });
     void persistActivity(participant, activities);
   }
+
+  function submitWorkoutDirect(participant) {
+    if (!canRegister(participant) || submissionPending) return;
+    submissionPending = true;
+    const activities = ['workout'];
+    const optimistic = optimisticActivityState(participant, activities);
+    renderState(optimistic.state);
+    window.requestAnimationFrame(() => {
+      if (optimistic.bonusEarned) animateScore(participant, $(`#${participant}-bonus`));
+      else animateScore(participant);
+      playWorkoutSuccessSound();
+    });
+    void persistActivity(participant, activities);
+  }
+
+  async function activateCreatineFeature() {
+    if (activationPending || state?.creatineEnabled) return;
+    activationPending = true;
+    try {
+      const response = await fetch('/api/desafiogym/creatine/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: '8888' })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success) throw new Error(payload.message || 'Não foi possível ativar a creatina agora.');
+      renderState(payload);
+      playActivationSound();
+      showBonusToast('Creatina ativada para todos!');
+    } catch (error) {
+      showBonusToast(error.message, true);
+    } finally {
+      activationPending = false;
+    }
+  }
+
+  function isEditableTarget(target) {
+    return Boolean(target?.closest?.('input, textarea, select, [contenteditable="true"]'));
+  }
+
+  window.addEventListener('keydown', (event) => {
+    if (state?.creatineEnabled || !window.matchMedia('(pointer: fine)').matches || isEditableTarget(event.target)) return;
+    if (event.ctrlKey || event.altKey || event.metaKey || !/^\d$/.test(event.key)) {
+      activationDigits = '';
+      window.clearTimeout(activationResetTimer);
+      return;
+    }
+    activationDigits = `${activationDigits}${event.key}`.slice(-4);
+    window.clearTimeout(activationResetTimer);
+    activationResetTimer = window.setTimeout(() => { activationDigits = ''; }, 1500);
+    if (activationDigits === '8888') {
+      activationDigits = '';
+      window.clearTimeout(activationResetTimer);
+      event.preventDefault();
+      void activateCreatineFeature();
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') void loadState();
+  });
+  window.setInterval(() => {
+    if (document.visibilityState === 'visible') void loadState();
+  }, 12000);
 
   async function redeemBonus(participant) {
     if (Number(state?.bonus?.[participant] || 0) < 1) {
@@ -566,7 +642,8 @@
       holdActivated = true;
       ignorePointerClick = true;
       clearHold();
-      openCheckin('lucas');
+      if (state?.creatineEnabled) openCheckin('lucas');
+      else submitWorkoutDirect('lucas');
     }, 3000);
   });
 
@@ -575,7 +652,10 @@
     const shouldOpenKelly = !holdActivated;
     clearHold();
     ignorePointerClick = true;
-    if (shouldOpenKelly) openCheckin('kelly');
+    if (shouldOpenKelly) {
+      if (state?.creatineEnabled) openCheckin('kelly');
+      else submitWorkoutDirect('kelly');
+    }
     window.setTimeout(() => { ignorePointerClick = false; }, 100);
   });
 
@@ -588,7 +668,10 @@
       event.preventDefault();
       return;
     }
-    if (event.detail === 0) openCheckin('kelly');
+    if (event.detail === 0) {
+      if (state?.creatineEnabled) openCheckin('kelly');
+      else submitWorkoutDirect('kelly');
+    }
   });
 
   document.querySelectorAll('.bonus-orb').forEach((orb) => orb.addEventListener('pointerdown', startBonusDrag));

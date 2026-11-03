@@ -2971,6 +2971,18 @@ const ensureDesafioGymTable = async () => {
         ON public.desafio_gym_creatine_entries (participant, intake_date DESC)
       `);
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.desafio_gym_feature_flags (
+          feature_key varchar(80) PRIMARY KEY,
+          enabled boolean NOT NULL DEFAULT false,
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        INSERT INTO public.desafio_gym_feature_flags (feature_key, enabled)
+        VALUES ('creatine', false)
+        ON CONFLICT (feature_key) DO NOTHING
+      `);
+      await pool.query(`
         CREATE TABLE IF NOT EXISTS public.desafio_gym_bonus_events (
           id bigserial PRIMARY KEY,
           participant varchar(16) NOT NULL CHECK (participant IN ('lucas', 'kelly')),
@@ -29661,7 +29673,7 @@ function getDesafioGymWeekStart(dateString) {
 async function readDesafioGymState(today = getSaoPauloDateString()) {
   await ensureDesafioGymTable();
   const weekStart = getDesafioGymWeekStart(today);
-  const [scoreResult, weekResult, todayResult, recentResult, bonusResult, weekActivityResult, creatineScoreResult, creatineTodayResult] = await Promise.all([
+  const [scoreResult, weekResult, todayResult, recentResult, bonusResult, weekActivityResult, creatineScoreResult, creatineTodayResult, creatineFeatureResult] = await Promise.all([
     pool.query(`
       WITH totals AS (
         SELECT participant, COUNT(*)::integer AS points
@@ -29742,7 +29754,13 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
       SELECT participant
       FROM public.desafio_gym_creatine_entries
       WHERE intake_date = $1::date
-    `, [today])
+    `, [today]),
+    pool.query(`
+      SELECT enabled
+      FROM public.desafio_gym_feature_flags
+      WHERE feature_key = 'creatine'
+      LIMIT 1
+    `)
   ]);
 
   const toPoints = (rows) => rows.reduce((result, row) => {
@@ -29768,6 +29786,7 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
     week,
     weekActivity,
     bonus,
+    creatineEnabled: creatineFeatureResult.rows[0]?.enabled === true,
     creatineScores,
     creatineMarkedToday: {
       lucas: creatineTodayResult.rows.some((row) => row.participant === 'lucas'),
@@ -29797,10 +29816,10 @@ async function readDesafioGymState(today = getSaoPauloDateString()) {
 
 const desafioGymAttemptWindows = new Map();
 
-function consumeDesafioGymAttempt(req) {
+function consumeDesafioGymAttempt(req, scope = 'default') {
   const now = Date.now();
   const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  const key = forwarded || req.ip || 'unknown';
+  const key = `${forwarded || req.ip || 'unknown'}:${scope}`;
   const previous = desafioGymAttemptWindows.get(key);
   const windowMs = 10 * 60 * 1000;
   const next = !previous || now - previous.startedAt >= windowMs
@@ -30932,6 +30951,30 @@ app.post('/api/desafiogym/bonus/redeem', async (req, res) => {
   }
 });
 
+app.post('/api/desafiogym/creatine/activate', async (req, res) => {
+  if (!consumeDesafioGymAttempt(req, 'creatine-activation')) {
+    res.status(429).json({ success: false, message: 'Muitas tentativas seguidas. Aguarde alguns minutos.' });
+    return;
+  }
+  if (String(req.body?.code || '') !== '8888') {
+    res.status(403).json({ success: false, message: 'Código de ativação inválido.' });
+    return;
+  }
+
+  try {
+    await ensureDesafioGymTable();
+    await pool.query(`
+      INSERT INTO public.desafio_gym_feature_flags (feature_key, enabled, updated_at)
+      VALUES ('creatine', true, now())
+      ON CONFLICT (feature_key) DO UPDATE SET enabled = true, updated_at = now()
+    `);
+    res.json({ success: true, message: 'Creatina ativada para todos!', ...(await readDesafioGymState()) });
+  } catch (error) {
+    console.error('Erro ao ativar creatina no Desafio Gym:', error);
+    res.status(500).json({ success: false, message: 'Não foi possível ativar a creatina agora.' });
+  }
+});
+
 app.post('/api/desafiogym/creatine', async (req, res) => {
   const participant = String(req.query?.participant || '').trim().toLowerCase();
   if (!['lucas', 'kelly'].includes(participant)) {
@@ -30946,6 +30989,13 @@ app.post('/api/desafiogym/creatine', async (req, res) => {
   let db;
   try {
     await ensureDesafioGymTable();
+    const featureResult = await pool.query(`
+      SELECT enabled FROM public.desafio_gym_feature_flags WHERE feature_key = 'creatine' LIMIT 1
+    `);
+    if (featureResult.rows[0]?.enabled !== true) {
+      res.status(404).json({ success: false, message: 'A creatina ainda não está ativada.' });
+      return;
+    }
     const today = getSaoPauloDateString();
     db = await pool.connect();
     await db.query('BEGIN');
