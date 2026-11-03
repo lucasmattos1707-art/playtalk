@@ -167,12 +167,62 @@
     renderHeaderOptions();
   }
 
+  async function clearOzCacheAndReload(button) {
+    const label = button.querySelector('span');
+    button.disabled = true;
+    label.textContent = 'Atualizando…';
+    try {
+      const ozAssets = [...document.querySelectorAll('link[rel="stylesheet"][href], script[src]')]
+        .map((element) => element.href || element.src)
+        .filter((url) => {
+          const parsed = new URL(url, location.href);
+          return parsed.origin === location.origin && (parsed.pathname === '/oz' || parsed.pathname.startsWith('/oz/'));
+        });
+      const resources = [...new Set([location.href, ...ozAssets])];
+      const responses = await Promise.all(resources.map((url) => fetch(url, { cache: 'reload', credentials: 'same-origin' })));
+      if (responses.some((response) => !response.ok)) throw new Error('Não foi possível atualizar os arquivos do Musical.');
+
+      if ('caches' in window) {
+        try {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map(async (cacheName) => {
+            const cache = await caches.open(cacheName);
+            const requests = await cache.keys();
+            await Promise.all(requests.filter((request) => {
+              const url = new URL(request.url);
+              return url.origin === location.origin && (url.pathname === '/oz' || url.pathname.startsWith('/oz/'));
+            }).map((request) => cache.delete(request)));
+          }));
+        } catch (_error) {}
+      }
+      if (navigator.serviceWorker) {
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.filter((registration) => {
+            const path = new URL(registration.scope).pathname;
+            return path === '/oz' || path.startsWith('/oz/');
+          }).map((registration) => registration.unregister()));
+        } catch (_error) {}
+      }
+
+      const refreshedUrl = new URL(location.href);
+      refreshedUrl.searchParams.set('_oz_refresh', String(Date.now()));
+      location.replace(refreshedUrl.href);
+    } catch (_error) {
+      button.disabled = false;
+      label.textContent = 'Tentar atualizar novamente';
+      headerOptionsMenu.hidden = false;
+      headerOptionsButton.setAttribute('aria-expanded', 'true');
+    }
+  }
+
   function renderHeaderOptions() {
     const countdownVisible = isCountdownVisible();
     headerOptionsMenu.innerHTML = `
       <button type="button" role="menuitem" data-header-option="badges"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 2.1 2.1 3-.1.8 2.9 2.6 1.5-1 2.8 1 2.8-2.6 1.5-.8 2.9-3-.1L12 21.2l-2.1-2.1-3 .1-.8-2.9-2.6-1.5 1-2.8-1-2.8 2.6-1.5.8-2.9 3 .1z"></path><path d="m8.7 12.1 2.1 2.1 4.6-4.6"></path></svg><span>Selos</span></button>
       <button type="button" role="menuitem" data-header-option="musical"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l10-2v13"></path><path d="M9 9l10-2M6.5 21A2.5 2.5 0 1 0 6.5 16a2.5 2.5 0 0 0 0 5ZM16.5 19a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"></path></svg><span>Musical</span></button>
-      <button type="button" role="menuitem" data-header-option="countdown"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.3"></circle><path d="M12 7.5v5l3.2 1.8"></path></svg><span>${countdownVisible ? 'Ocultar contagem' : 'Mostrar contagem'}</span></button>`;
+      <button type="button" role="menuitem" data-header-option="countdown"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.3"></circle><path d="M12 7.5v5l3.2 1.8"></path></svg><span>${countdownVisible ? 'Ocultar contagem' : 'Mostrar contagem'}</span></button>
+      <button type="button" role="menuitem" data-header-option="clear-cache"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"></path><path d="M5.6 9a7 7 0 0 1 11.7-2L20 12M4 12l2.7 5a7 7 0 0 0 11.7-2"></path></svg><span>Limpar cache e recarregar</span></button>`;
   }
 
   function musicalTime(seconds) {
@@ -1586,6 +1636,7 @@
     if (option.dataset.headerOption === 'badges') openBadgeAlbum();
     if (option.dataset.headerOption === 'musical') openMusical();
     if (option.dataset.headerOption === 'countdown') setCountdownVisible(!isCountdownVisible());
+    if (option.dataset.headerOption === 'clear-cache') clearOzCacheAndReload(option);
   });
   document.getElementById('closeOzMusical').addEventListener('click', () => musicalDialog.close());
   musicalDialog.addEventListener('click', (event) => { if (event.target === musicalDialog) musicalDialog.close(); });
