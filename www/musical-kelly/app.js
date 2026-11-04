@@ -2061,7 +2061,32 @@
       });
 
       bindCardGestures(node, card.id);
-      if (state.sortMode) bindSortGestures(node, card.id);
+      if (state.sortMode) {
+        const sortControls = document.createElement('div');
+        sortControls.className = 'track-sort-controls';
+        sortControls.setAttribute('aria-label', `Organizar ${publicLabel}`);
+        const cardIndex = state.project.cards.findIndex((entry) => entry.id === card.id);
+        [
+          { offset: -1, label: '↑', title: 'Subir uma posição', disabled: cardIndex <= 0 },
+          { offset: 1, label: '↓', title: 'Descer uma posição', disabled: cardIndex >= state.project.cards.length - 1 }
+        ].forEach(({ offset, label, title, disabled }) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = label;
+          button.title = title;
+          button.setAttribute('aria-label', `${title}: ${publicLabel}`);
+          button.disabled = disabled;
+          button.addEventListener('pointerdown', (event) => event.stopPropagation());
+          button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            moveCardByOffset(card.id, offset).catch((error) => showToast(error.message, true));
+          });
+          sortControls.appendChild(button);
+        });
+        node.appendChild(sortControls);
+        bindSortGestures(node, card.id);
+      }
       fragment.appendChild(node);
     });
     elements.trackList.appendChild(fragment);
@@ -4385,6 +4410,18 @@
       elements.trackList.insertBefore(draggedNode, placeAfter ? targetNode.nextSibling : targetNode);
     }
     return true;
+  }
+
+  async function moveCardByOffset(cardId, offset) {
+    if (!state.canReorder || state.collaborationBusy || ![-1, 1].includes(offset)) return;
+    const cards = state.project.cards;
+    const currentIndex = cards.findIndex((card) => card.id === cardId);
+    const nextIndex = currentIndex + offset;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= cards.length) return;
+    const [card] = cards.splice(currentIndex, 1);
+    cards.splice(nextIndex, 0, card);
+    render();
+    await persistCardOrder();
   }
 
   async function persistCardOrder() {
