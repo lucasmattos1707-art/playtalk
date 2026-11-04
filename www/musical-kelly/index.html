@@ -6,13 +6,14 @@
   <meta name="theme-color" content="#030405">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=67">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=68">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
   <div class="ambient ambient-two" aria-hidden="true"></div>
 
   <header class="topbar" id="topbar" hidden>
+    <p class="playlist-total-duration" id="playlistTotalDuration" aria-label="Duração total das faixas" aria-live="polite" aria-busy="false"></p>
     <div class="top-actions">
       <button class="icon-action" id="refreshButton" type="button" title="Atualizar o musical" aria-label="Atualizar containers, áudios e comentários">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -44,10 +45,6 @@
   </aside>
 
   <main>
-    <section class="playlist-intro" id="playlistIntro" aria-label="Wicked e o Mundo de Oz">
-      <p class="playlist-intro__duration" id="playlistTotalDuration" aria-live="polite" aria-busy="false">Tempo total</p>
-    </section>
-
     <section class="selection-panel" id="selectionPanel" hidden aria-label="Editar container selecionado">
       <div class="selection-copy">
         <span class="selection-dot" aria-hidden="true"></span>
@@ -634,6 +631,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <script src="/arquivos-codex/vendor/lamejs/lame.min.js" defer></script>
-  <script src="/musical-kelly/app.js?v=76" defer></script>
+  <script src="/musical-kelly/app.js?v=77" defer></script>
 </body>
 </html>

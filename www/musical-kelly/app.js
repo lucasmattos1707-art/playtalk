@@ -1845,12 +1845,12 @@
   }
 
   function refreshPlaylistTotalDuration() {
-    if (!elements.playlistTotalDuration || APP_SLUG !== 'musical-kelly' || state.canEdit) return;
-    const cardsWithAudio = state.project.cards.filter((card) => cardAudioTracks(card).length);
+    if (!elements.playlistTotalDuration || APP_SLUG !== 'musical-kelly') return;
+    const cardsWithAudio = state.project.cards.filter((card) => cardHasImage(card) && cardAudioTracks(card).length);
     if (!cardsWithAudio.length) {
       elements.playlistTotalDuration.classList.remove('is-calculating');
       elements.playlistTotalDuration.setAttribute('aria-busy', 'false');
-      elements.playlistTotalDuration.textContent = 'Tempo total · 0min';
+      elements.playlistTotalDuration.textContent = '0s';
       return;
     }
     const total = cardsWithAudio.reduce((sum, card) => sum + cardAudioDuration(card), 0);
