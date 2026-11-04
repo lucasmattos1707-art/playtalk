@@ -28942,7 +28942,20 @@ app.put(musicalKellyApiPaths('/order'), async (req, res) => {
         throw error;
       }
       currentProject.cards = requestedIds.map((id) => currentById.get(id));
-      return writeMusicalKellyGlobalProject(currentProject);
+      await writeMusicalKellyGlobalProject(currentProject);
+      const persistedProject = normalizeMusicalKellyProject(await fetchR2JsonObject(
+        `${musicalKellyGlobalRoot()}/project.json`,
+        { timeoutMs: 12000, retries: 1 }
+      ));
+      const persistedIds = persistedProject.cards.map((card) => card.id);
+      if (persistedIds.length !== requestedIds.length
+        || persistedIds.some((id, index) => id !== requestedIds[index])) {
+        const error = new Error('A ordem ainda nao foi confirmada no armazenamento. Atualize e tente novamente.');
+        error.statusCode = 502;
+        throw error;
+      }
+      musicalKellyProjectCaches.set(currentMusicalKellyWorkspaceSlug(), persistedProject);
+      return persistedProject;
     });
     res.json({ success: true, project: hydrateMusicalKellyProject(project) });
   } catch (error) {

@@ -1928,6 +1928,14 @@ body.is-sorting .track-card.is-dragging {
   transform: scale(0.985);
 }
 
+body.is-sorting .track-card.is-sort-target-before::after {
+  border-top-color: var(--green);
+}
+
+body.is-sorting .track-card.is-sort-target-after::after {
+  border-bottom-color: var(--green);
+}
+
 body.is-sorting .track-card button {
   pointer-events: none;
 }
@@ -2112,6 +2120,20 @@ body.is-sorting .track-card .track-sort-controls button:disabled {
 
 .download-prompt-dialog {
   width: min(520px, calc(100% - 24px));
+}
+
+.order-saved-dialog {
+  width: min(420px, calc(100% - 24px));
+}
+
+.order-saved-card {
+  gap: 14px;
+}
+
+.order-saved-copy {
+  margin: 0;
+  color: #dce9e1;
+  line-height: 1.5;
 }
 
 .download-prompt-card {

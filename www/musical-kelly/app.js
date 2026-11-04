@@ -22,7 +22,9 @@
   const CONTAINER_MENU_HOLD_MS = 300;
   const USE_NATIVE_AUDIO_ON_APPLE = isAppleTouchDevice();
   let commentOutboxDbPromise = null;
-  let playlistDurationGeneration = 0;
+  let cardDurationQueueScheduled = false;
+  let cardDurationQueueRunning = false;
+  let cardDurationQueuePending = false;
 
   const elements = {
     topbar: document.getElementById('topbar'),
@@ -41,6 +43,8 @@
     refreshButton: document.getElementById('refreshButton'),
     downloadAllButton: document.getElementById('downloadAllButton'),
     addCardDialog: document.getElementById('addCardDialog'),
+    orderSavedDialog: document.getElementById('orderSavedDialog'),
+    orderSavedOkButton: document.getElementById('orderSavedOkButton'),
     bulkAudioOpenButton: document.getElementById('bulkAudioOpenButton'),
     bulkAudioDialog: document.getElementById('bulkAudioDialog'),
     bulkAudioCloseButton: document.getElementById('bulkAudioCloseButton'),
@@ -1842,25 +1846,23 @@
 
   function refreshPlaylistTotalDuration() {
     if (!elements.playlistTotalDuration || APP_SLUG !== 'musical-kelly' || state.canEdit) return;
-    const generation = ++playlistDurationGeneration;
-    const cards = state.project.cards.slice();
-    const cardsWithAudio = cards.filter((card) => cardAudioTracks(card).length);
+    const cardsWithAudio = state.project.cards.filter((card) => cardAudioTracks(card).length);
     if (!cardsWithAudio.length) {
       elements.playlistTotalDuration.classList.remove('is-calculating');
       elements.playlistTotalDuration.setAttribute('aria-busy', 'false');
       elements.playlistTotalDuration.textContent = 'Tempo total · 0min';
       return;
     }
-    elements.playlistTotalDuration.classList.add('is-calculating');
-    elements.playlistTotalDuration.setAttribute('aria-busy', 'true');
-    elements.playlistTotalDuration.textContent = 'Carregando duração';
-    Promise.all(cardsWithAudio.map((card) => loadCardDuration(card))).then((durations) => {
-      if (generation !== playlistDurationGeneration || !elements.playlistTotalDuration) return;
-      const total = durations.reduce((sum, duration) => sum + (Number(duration) || 0), 0);
-      elements.playlistTotalDuration.classList.remove('is-calculating');
-      elements.playlistTotalDuration.setAttribute('aria-busy', 'false');
-      elements.playlistTotalDuration.textContent = `Tempo total · ${formatPlaylistDuration(total)}`;
-    });
+    const total = cardsWithAudio.reduce((sum, card) => sum + cardAudioDuration(card), 0);
+    const knownCount = cardsWithAudio.filter((card) => state.cardDurations.has(
+      `card:${card.id}:${cardAudioFingerprint(card)}`
+    )).length;
+    const hasPending = knownCount < cardsWithAudio.length;
+    elements.playlistTotalDuration.classList.toggle('is-calculating', hasPending);
+    elements.playlistTotalDuration.setAttribute('aria-busy', String(hasPending));
+    elements.playlistTotalDuration.textContent = knownCount
+      ? `Tempo total · ${formatPlaylistDuration(total)}${hasPending ? ' · atualizando' : ''}`
+      : 'Tempo total';
   }
 
   function loadCardDuration(card) {
@@ -1896,6 +1898,59 @@
       state.durationPromises.set(key, promise);
     }
     return state.durationPromises.get(key);
+  }
+
+  function scheduleCardDurationQueue() {
+    if (APP_SLUG !== 'musical-kelly' || !state.project.cards.length) return;
+    if (cardDurationQueueRunning) {
+      cardDurationQueuePending = true;
+      return;
+    }
+    if (cardDurationQueueScheduled) return;
+    cardDurationQueueScheduled = true;
+    const startQueue = () => {
+      cardDurationQueueScheduled = false;
+      loadCardDurationsInBackground().catch(() => {});
+    };
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(startQueue, { timeout: 900 });
+    } else {
+      window.setTimeout(startQueue, 180);
+    }
+  }
+
+  async function loadCardDurationsInBackground() {
+    if (cardDurationQueueRunning) {
+      cardDurationQueuePending = true;
+      return;
+    }
+    cardDurationQueueRunning = true;
+    try {
+      const cards = state.project.cards.slice();
+      for (const card of cards) {
+        if (!cardAudioTracks(card).length) continue;
+        const key = `card:${card.id}:${cardAudioFingerprint(card)}`;
+        if (state.cardDurations.has(key)) continue;
+        const currentCard = getCard(card.id);
+        if (!currentCard || cardAudioFingerprint(currentCard) !== cardAudioFingerprint(card)) continue;
+        const duration = await loadCardDuration(card).catch(() => 0);
+        const latestCard = getCard(card.id);
+        if (latestCard && cardAudioFingerprint(latestCard) === cardAudioFingerprint(card)) {
+          const currentNode = elements.trackList.querySelector(`[data-card-id="${CSS.escape(card.id)}"]`);
+          const currentLabel = currentNode?.querySelector('.track-duration');
+          const isCurrent = state.current?.cardId === card.id && !state.current.paused;
+          if (currentLabel && duration > 0 && !isCurrent) currentLabel.textContent = formatDuration(duration);
+          refreshPlaylistTotalDuration();
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 0));
+      }
+    } finally {
+      cardDurationQueueRunning = false;
+      if (cardDurationQueuePending) {
+        cardDurationQueuePending = false;
+        scheduleCardDurationQueue();
+      }
+    }
   }
 
   function applyDownloadState(cardId, button) {
@@ -1953,7 +2008,7 @@
     state.project.cards.forEach((card) => {
       const node = elements.trackTemplate.content.firstElementChild.cloneNode(true);
       node.dataset.cardId = card.id;
-      node.draggable = state.sortMode;
+      node.draggable = false;
       const isPlaying = state.current?.cardId === card.id && !state.current.paused;
       const isFadingOut = state.transitioning && state.transitionFromId === card.id;
       const isFadingIn = state.transitioning && state.transitionTargetId === card.id;
@@ -1993,7 +2048,7 @@
         event.stopPropagation();
         seekCardRelative(card.id, 5);
       });
-      if (hasAudioTracks && !knownDuration) {
+      if (APP_SLUG !== 'musical-kelly' && hasAudioTracks && !knownDuration) {
         loadCardDuration(card).then((duration) => {
           const currentCard = elements.trackList.querySelector(`[data-card-id="${CSS.escape(card.id)}"]`);
           const currentLabel = currentCard?.querySelector('.track-duration');
@@ -2093,6 +2148,7 @@
     document.body.classList.toggle('musical-kelly-page', APP_SLUG === 'musical-kelly');
     document.body.classList.toggle('musical-kelly-admin-view', APP_SLUG === 'musical-kelly' && state.canEdit);
     refreshPlaylistTotalDuration();
+    scheduleCardDurationQueue();
     document.body.classList.toggle('has-playing-track', Boolean(state.current && !state.current.paused));
     document.body.classList.toggle('is-sorting', state.sortMode);
     elements.topbar.hidden = false;
@@ -4396,6 +4452,7 @@
     const cards = state.project.cards;
     const draggedIndex = cards.findIndex((card) => card.id === draggedId);
     if (draggedIndex < 0) return false;
+    const previousOrder = cards.map((card) => card.id);
     const [draggedCard] = cards.splice(draggedIndex, 1);
     const targetIndex = cards.findIndex((card) => card.id === targetId);
     if (targetIndex < 0) {
@@ -4403,13 +4460,14 @@
       return false;
     }
     cards.splice(targetIndex + (placeAfter ? 1 : 0), 0, draggedCard);
+    const changed = cards.some((card, index) => card.id !== previousOrder[index]);
 
     const draggedNode = elements.trackList.querySelector(`[data-card-id="${CSS.escape(draggedId)}"]`);
     const targetNode = elements.trackList.querySelector(`[data-card-id="${CSS.escape(targetId)}"]`);
-    if (draggedNode && targetNode) {
+    if (changed && draggedNode && targetNode) {
       elements.trackList.insertBefore(draggedNode, placeAfter ? targetNode.nextSibling : targetNode);
     }
-    return true;
+    return changed;
   }
 
   async function moveCardByOffset(cardId, offset) {
@@ -4436,7 +4494,7 @@
       });
       applyCollaborationProject(payload.project);
       setStatus('Nova ordem salva para todos.');
-      showToast('Ordem dos containers atualizada.');
+      showDialog(elements.orderSavedDialog);
     } catch (error) {
       const payload = await apiJson(`${API_ROOT}/project`).catch(() => null);
       if (payload?.project) applyCollaborationProject(payload.project);
@@ -4447,63 +4505,55 @@
   }
 
   function bindSortGestures(element, cardId) {
-    let moved = false;
+    let startingOrder = '';
+    let dropTargetId = '';
+    let dropAfter = false;
+    const currentOrder = () => state.project.cards.map((card) => card.id).join('\u0000');
+    const clearDropTarget = () => {
+      elements.trackList.querySelectorAll('.track-card.is-sort-target-before, .track-card.is-sort-target-after')
+        .forEach((card) => card.classList.remove('is-sort-target-before', 'is-sort-target-after'));
+    };
     const moveFromPoint = (clientX, clientY) => {
       const target = document.elementFromPoint(clientX, clientY)?.closest?.('.track-card');
       const targetId = target?.dataset?.cardId;
-      if (!targetId || targetId === cardId) return;
+      if (!targetId || targetId === cardId) {
+        clearDropTarget();
+        dropTargetId = '';
+        return;
+      }
       const rect = target.getBoundingClientRect();
-      moved = moveCardBeside(cardId, targetId, clientY > rect.top + rect.height / 2) || moved;
+      dropTargetId = targetId;
+      dropAfter = clientY > rect.top + rect.height / 2;
+      clearDropTarget();
+      target.classList.add(dropAfter ? 'is-sort-target-after' : 'is-sort-target-before');
     };
 
-    element.addEventListener('dragstart', (event) => {
-      state.sortingCardId = cardId;
-      moved = false;
-      element.classList.add('is-dragging');
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', cardId);
-    });
-    element.addEventListener('dragover', (event) => {
-      event.preventDefault();
-      const draggedId = state.sortingCardId || event.dataTransfer.getData('text/plain');
-      if (!draggedId || draggedId === cardId) return;
-      const rect = element.getBoundingClientRect();
-      moved = moveCardBeside(draggedId, cardId, event.clientY > rect.top + rect.height / 2) || moved;
-    });
-    element.addEventListener('drop', (event) => {
-      event.preventDefault();
-      state.sortingCardId = '';
-      element.classList.remove('is-dragging');
-      if (moved) persistCardOrder().catch((error) => showToast(error.message, true));
-      moved = false;
-    });
-    element.addEventListener('dragend', () => {
-      element.classList.remove('is-dragging');
-      state.sortingCardId = '';
-      if (moved) persistCardOrder().catch((error) => showToast(error.message, true));
-      moved = false;
-    });
-
     element.addEventListener('pointerdown', (event) => {
-      if (event.pointerType === 'mouse') return;
+      if (event.button !== 0 || event.target.closest('.track-sort-controls') || state.collaborationBusy) return;
       event.preventDefault();
-      moved = false;
+      startingOrder = currentOrder();
+      dropTargetId = '';
       state.sortingCardId = cardId;
       element.classList.add('is-dragging');
       element.setPointerCapture?.(event.pointerId);
     });
     element.addEventListener('pointermove', (event) => {
-      if (state.sortingCardId !== cardId || event.pointerType === 'mouse') return;
+      if (state.sortingCardId !== cardId) return;
       event.preventDefault();
       moveFromPoint(event.clientX, event.clientY);
     });
     const finishPointerSort = (event) => {
-      if (state.sortingCardId !== cardId || event.pointerType === 'mouse') return;
+      if (state.sortingCardId !== cardId) return;
+      if (event.type === 'pointerup') moveFromPoint(event.clientX, event.clientY);
       state.sortingCardId = '';
       element.classList.remove('is-dragging');
       element.releasePointerCapture?.(event.pointerId);
-      if (moved) persistCardOrder().catch((error) => showToast(error.message, true));
-      moved = false;
+      if (event.type === 'pointerup' && dropTargetId) moveCardBeside(cardId, dropTargetId, dropAfter);
+      clearDropTarget();
+      const changed = startingOrder && startingOrder !== currentOrder();
+      if (changed) persistCardOrder().catch((error) => showToast(error.message, true));
+      startingOrder = '';
+      dropTargetId = '';
     };
     element.addEventListener('pointerup', finishPointerSort);
     element.addEventListener('pointercancel', finishPointerSort);
@@ -5835,6 +5885,7 @@
     });
     elements.addCardButton.addEventListener('click', openAddCardDialog);
     elements.sortButton.addEventListener('click', toggleSortMode);
+    elements.orderSavedOkButton?.addEventListener('click', () => closeDialog(elements.orderSavedDialog));
     elements.addCardForm.addEventListener('submit', (event) => {
       submitNewCard(event).catch((error) => showToast(error.message, true));
     });
@@ -6253,6 +6304,21 @@
     bindControls();
     registerOfflineSupport();
     runProgressLoop();
+    const startupSnapshot = readProjectSnapshot();
+    if (startupSnapshot?.project?.cards?.length) {
+      state.canEdit = false;
+      state.canContribute = false;
+      state.canComment = false;
+      state.canApprove = false;
+      state.canDeleteComments = false;
+      state.canReorder = false;
+      state.viewerUserId = 0;
+      state.unreadCardIds = new Set();
+      state.characters = Array.isArray(startupSnapshot.characters) ? startupSnapshot.characters : [];
+      state.project = startupSnapshot.project;
+      render();
+      setStatus('Carregando as faixas atualizadas…', true);
+    }
     await reloadPendingComments({ renderNow: false }).catch(() => {
       state.pendingComments = [];
     });

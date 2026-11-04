@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#030405">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=66">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=67">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -45,7 +45,7 @@
 
   <main>
     <section class="playlist-intro" id="playlistIntro" aria-label="Wicked e o Mundo de Oz">
-      <p class="playlist-intro__duration is-calculating" id="playlistTotalDuration" aria-live="polite" aria-busy="true">Carregando duração</p>
+      <p class="playlist-intro__duration" id="playlistTotalDuration" aria-live="polite" aria-busy="false">Tempo total</p>
     </section>
 
     <section class="selection-panel" id="selectionPanel" hidden aria-label="Editar container selecionado">
@@ -170,6 +170,19 @@
       </div>
       <div class="audio-tracks-list" id="audioTracksList"></div>
       <button class="dialog-primary" id="audioTracksAddButton" type="button">Adicionar nova faixa</button>
+    </section>
+  </dialog>
+
+  <dialog class="musical-dialog order-saved-dialog" id="orderSavedDialog" aria-labelledby="orderSavedDialogTitle">
+    <section class="dialog-card order-saved-card">
+      <div class="dialog-heading">
+        <div>
+          <span class="dialog-kicker">Organização salva</span>
+          <h2 id="orderSavedDialogTitle">Faixas atualizadas</h2>
+        </div>
+      </div>
+      <p class="order-saved-copy">A nova ordem foi salva para todos.</p>
+      <button class="dialog-primary" id="orderSavedOkButton" type="button">OK</button>
     </section>
   </dialog>
 
@@ -621,6 +634,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <script src="/arquivos-codex/vendor/lamejs/lame.min.js" defer></script>
-  <script src="/musical-kelly/app.js?v=75" defer></script>
+  <script src="/musical-kelly/app.js?v=76" defer></script>
 </body>
 </html>
