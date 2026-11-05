@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const zlib = require('zlib');
 const sharp = require('sharp');
 const { Worker } = require('node:worker_threads');
 const { AsyncLocalStorage } = require('node:async_hooks');
@@ -19896,11 +19897,13 @@ async function ensureVideoQuadrantsSchema() {
           image_data text NOT NULL DEFAULT '',
           object_key text,
           created_by bigint,
-          created_at timestamptz NOT NULL DEFAULT now()
+          created_at timestamptz NOT NULL DEFAULT now(),
+          deleted_at timestamptz
         )
       `);
       await pool.query('ALTER TABLE public.video_quadrant_images ADD COLUMN IF NOT EXISTS track_id text');
       await pool.query("ALTER TABLE public.video_quadrant_images ADD COLUMN IF NOT EXISTS object_key text");
+      await pool.query('ALTER TABLE public.video_quadrant_images ADD COLUMN IF NOT EXISTS deleted_at timestamptz');
       await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS video_quadrant_images_track_unique_idx ON public.video_quadrant_images(track_id) WHERE track_id IS NOT NULL');
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.video_quadrant_responses (
@@ -19966,14 +19969,16 @@ async function restoreVideoQuadrantRowsFromR2() {
     console.warn('Não foi possível listar as imagens do seletor no R2:', error?.message || error);
     return;
   }
-  const stored = await pool.query('SELECT id, object_key FROM public.video_quadrant_images');
+  const stored = await pool.query('SELECT id, object_key, deleted_at FROM public.video_quadrant_images');
   const knownIds = new Set(stored.rows.map((row) => String(row.id)));
   const knownKeys = new Set(stored.rows.map((row) => String(row.object_key || '')).filter(Boolean));
+  const deletedIds = new Set(stored.rows.filter((row) => row.deleted_at).map((row) => String(row.id)));
   for (const objectKey of keys) {
     if (!objectKey.startsWith('fluentlevelup/video/') || !objectKey.toLowerCase().endsWith('.webp') || knownKeys.has(objectKey)) continue;
     const fileName = objectKey.slice('fluentlevelup/video/'.length);
     const imageId = fileName.replace(/\.webp$/i, '');
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(imageId)) continue;
+    if (deletedIds.has(imageId)) continue;
     if (knownIds.has(imageId)) {
       await pool.query("UPDATE public.video_quadrant_images SET object_key = $2, image_data = '' WHERE id = $1 AND COALESCE(object_key, '') = ''", [imageId, objectKey]);
       knownKeys.add(objectKey);
@@ -20002,8 +20007,21 @@ async function saveVideoQuadrantImage({ imageData, title, trackId = null, userId
   const buffer = parseVideoQuadrantImageData(imageData);
   let existing = null;
   if (trackId) {
-    const current = await pool.query('SELECT id, object_key FROM public.video_quadrant_images WHERE track_id = $1 LIMIT 1', [trackId]);
+    const current = await pool.query('SELECT id, object_key FROM public.video_quadrant_images WHERE track_id = $1 AND deleted_at IS NULL LIMIT 1', [trackId]);
     existing = current.rows[0] || null;
+    if (!existing && trackId === '__video_custom_slot__') {
+      const slotHistory = await pool.query('SELECT id FROM public.video_quadrant_images WHERE track_id = $1 LIMIT 1', [trackId]);
+      if (!slotHistory.rowCount) {
+        const legacyCustom = await pool.query(`
+          SELECT id, object_key FROM public.video_quadrant_images
+          WHERE track_id IS NULL AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1
+        `);
+        existing = legacyCustom.rows[0] || null;
+        if (existing) {
+          await pool.query('UPDATE public.video_quadrant_images SET track_id = $2 WHERE id = $1 AND deleted_at IS NULL', [existing.id, trackId]);
+        }
+      }
+    }
   }
   const imageId = String(existing?.id || crypto.randomUUID());
   const objectKey = `fluentlevelup/video/${imageId}.webp`;
@@ -20017,14 +20035,68 @@ async function saveVideoQuadrantImage({ imageData, title, trackId = null, userId
       VALUES($1, $2, $3, '', $4, $5)
       ON CONFLICT (track_id) WHERE track_id IS NOT NULL DO UPDATE SET
         title = EXCLUDED.title, image_data = '', object_key = EXCLUDED.object_key,
-        created_by = EXCLUDED.created_by, created_at = now()
+        created_by = EXCLUDED.created_by, created_at = now(), deleted_at = NULL
       RETURNING id, track_id AS "trackId", title, object_key AS "objectKey", created_at AS "createdAt"
     `, [imageId, trackId, imageTitle, objectKey, userId]);
+    await pool.query('DELETE FROM public.video_quadrant_responses WHERE image_id = $1', [result.rows[0].id]).catch((error) => {
+      console.warn('Não foi possível limpar aprovações da imagem substituída:', error?.message || error);
+    });
     return result.rows[0];
   } catch (error) {
     if (!existing) await deleteR2Object(objectKey).catch(() => {});
     throw error;
   }
+}
+
+function videoQuadrantZipCrc32(buffer) {
+  let crc = 0xffffffff;
+  for (const byte of buffer) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function createVideoQuadrantZip(entries) {
+  const localParts = [], centralParts = [];
+  let offset = 0;
+  const now = new Date();
+  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+  const dosDate = ((Math.max(1980, now.getFullYear()) - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  for (const entry of entries) {
+    const name = Buffer.from(entry.name, 'utf8');
+    const source = Buffer.from(entry.buffer);
+    const compressed = zlib.deflateRawSync(source);
+    const crc = videoQuadrantZipCrc32(source);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(20, 4); local.writeUInt16LE(0x0800, 6);
+    local.writeUInt16LE(8, 8); local.writeUInt16LE(dosTime, 10); local.writeUInt16LE(dosDate, 12);
+    local.writeUInt32LE(crc, 14); local.writeUInt32LE(compressed.length, 18); local.writeUInt32LE(source.length, 22);
+    local.writeUInt16LE(name.length, 26); local.writeUInt16LE(0, 28);
+    localParts.push(local, name, compressed);
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(0x02014b50, 0); central.writeUInt16LE(0x0314, 4); central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(0x0800, 8); central.writeUInt16LE(8, 10); central.writeUInt16LE(dosTime, 12); central.writeUInt16LE(dosDate, 14);
+    central.writeUInt32LE(crc, 16); central.writeUInt32LE(compressed.length, 20); central.writeUInt32LE(source.length, 24);
+    central.writeUInt16LE(name.length, 28); central.writeUInt16LE(0, 30); central.writeUInt16LE(0, 32);
+    central.writeUInt16LE(0, 34); central.writeUInt16LE(0, 36); central.writeUInt32LE(0, 38); central.writeUInt32LE(offset, 42);
+    centralParts.push(central, name);
+    offset += local.length + name.length + compressed.length;
+  }
+  const centralDirectory = Buffer.concat(centralParts);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(0, 4); end.writeUInt16LE(0, 6);
+  end.writeUInt16LE(entries.length, 8); end.writeUInt16LE(entries.length, 10);
+  end.writeUInt32LE(centralDirectory.length, 12); end.writeUInt32LE(offset, 16); end.writeUInt16LE(0, 20);
+  return Buffer.concat([...localParts, centralDirectory, end]);
+}
+
+function videoQuadrantZipFileName(title, index) {
+  const safeTitle = String(title || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+    .slice(0, 90) || 'imagem';
+  return `${String(index).padStart(3, '0')}-${safeTitle}.webp`;
 }
 
 app.get('/api/video-quadrants', async (req, res) => {
@@ -20042,7 +20114,7 @@ app.get('/api/video-quadrants', async (req, res) => {
     await restoreVideoQuadrantRowsFromR2();
     const images = await pool.query(`
       SELECT id, track_id AS "trackId", title, image_data AS "imageData", object_key AS "objectKey", created_at AS "createdAt"
-      FROM public.video_quadrant_images ORDER BY created_at DESC, id DESC
+      FROM public.video_quadrant_images WHERE deleted_at IS NULL ORDER BY created_at DESC, id DESC
     `);
     const toClientImage = (image) => image ? ({
       id: String(image.id), title: image.title,
@@ -20055,13 +20127,32 @@ app.get('/api/video-quadrants', async (req, res) => {
       id: String(card.id || ''), title: String(card.title || '').trim() || 'Faixa',
       image: toClientImage(imageByTrack.get(String(card.id || '')))
     })).filter((track) => track.id);
-    const customImages = images.rows.filter((image) => !image.trackId || !validTrackIds.has(String(image.trackId))).map((image) => ({
+    const approvalResult = await pool.query(`
+      SELECT DISTINCT r.image_id AS "imageId"
+      FROM public.video_quadrant_responses r
+      JOIN public.video_quadrant_images vi ON vi.id = r.image_id
+      WHERE vi.deleted_at IS NULL AND r.selected_option >= 0
+    `);
+    const legacyCustomSlot = images.rows.find((image) => String(image.trackId || '') === '__video_custom_slot__')
+      || images.rows.find((image) => !image.trackId);
+    const customRows = images.rows.filter((image) => image.trackId && String(image.trackId) !== '__video_custom_slot__' && !validTrackIds.has(String(image.trackId)));
+    if (legacyCustomSlot) customRows.push(legacyCustomSlot);
+    const customImages = customRows.map((image) => ({
       id: `custom-${image.id}`, title: image.title, isCustom: true, image: toClientImage(image)
     }));
+    const visibleImageIds = new Set([
+      ...tracks.filter((track) => track.image).map((track) => track.image.id),
+      ...customRows.map((image) => String(image.id))
+    ]);
+    const approvalProgress = {
+      approved: approvalResult.rows.filter((row) => visibleImageIds.has(String(row.imageId))).length,
+      total: visibleImageIds.size
+    };
     let responses = [];
     if (isAdmin) {
       const result = await pool.query(`
-        SELECT r.image_id AS "imageId", r.selected_option AS "selectedOption", r.comment,
+        SELECT r.image_id AS "imageId", vi.title AS "imageTitle", (vi.deleted_at IS NOT NULL) AS "imageDeleted",
+               r.selected_option AS "selectedOption", r.comment,
                r.created_at AS "createdAt", r.updated_at AS "updatedAt",
                COALESCE(NULLIF(u.username, ''), NULLIF(u.email, ''), 'Visitante') AS "respondentName"
         FROM public.video_quadrant_responses r
@@ -20072,7 +20163,7 @@ app.get('/api/video-quadrants', async (req, res) => {
       responses = result.rows;
     }
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, isAdmin, tracks: (isAdmin ? tracks : tracks.filter((track) => track.image)).concat(customImages), responses });
+    res.json({ success: true, isAdmin, approvalProgress, tracks: (isAdmin ? tracks : tracks.filter((track) => track.image)).concat(customImages), responses });
   } catch (error) {
     const status = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     if (status >= 500) console.error('Erro ao carregar seletor de imagens:', error);
@@ -20107,7 +20198,7 @@ app.post('/api/video-quadrants', express.json({ limit: '8mb' }), async (req, res
   try {
     const admin = await requireAdminUserFromRequest(req);
     await ensureVideoQuadrantsSchema();
-    const image = await saveVideoQuadrantImage({ imageData: req.body?.imageData, title: req.body?.title, userId: admin.id });
+    const image = await saveVideoQuadrantImage({ imageData: req.body?.imageData, title: req.body?.title, trackId: '__video_custom_slot__', userId: admin.id });
     res.status(201).json({ success: true, image: { id: image.id, title: image.title } });
   } catch (error) {
     const status = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
@@ -20156,11 +20247,46 @@ app.put('/api/video-quadrants/:imageId/image', express.json({ limit: '8mb' }), a
       SET title = $2, image_data = '', object_key = $3, created_by = $4, created_at = now()
       WHERE id = $1
     `, [imageId, title, objectKey, admin.id]);
+    await pool.query('DELETE FROM public.video_quadrant_responses WHERE image_id = $1', [imageId]);
     res.json({ success: true });
   } catch (error) {
     const status = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     if (status >= 500) console.error('Erro ao substituir imagem do seletor:', error);
     res.status(status).json({ success: false, message: status >= 500 ? (status === 503 ? error.message : 'Não foi possível salvar a imagem no R2.') : error.message });
+  }
+});
+
+app.get('/api/video-quadrants/approved-pack.zip', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    await ensureVideoQuadrantsSchema();
+    const result = await pool.query(`
+      SELECT DISTINCT vi.id, vi.title, vi.image_data AS "imageData", vi.object_key AS "objectKey"
+      FROM public.video_quadrant_images vi
+      JOIN public.video_quadrant_responses r ON r.image_id = vi.id
+      WHERE vi.deleted_at IS NULL AND r.selected_option >= 0
+      ORDER BY vi.title, vi.id
+    `);
+    if (!result.rowCount) { res.status(404).json({ success: false, message: 'Ainda não há imagens aprovadas para baixar.' }); return; }
+    const entries = [];
+    for (let index = 0; index < result.rows.length; index += 1) {
+      const image = result.rows[index];
+      const buffer = image.objectKey
+        ? await fetchR2ObjectBuffer(String(image.objectKey))
+        : parseVideoQuadrantImageData(image.imageData);
+      entries.push({ name: videoQuadrantZipFileName(image.title, index + 1), buffer });
+    }
+    const zip = createVideoQuadrantZip(entries);
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Length', String(zip.length));
+    res.setHeader('Content-Disposition', 'attachment; filename="fluentlevelup-imagens-aprovadas.zip"');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(zip);
+  } catch (error) {
+    const status = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    if (status >= 500) console.error('Erro ao gerar pacote de imagens aprovadas:', error);
+    if (res.headersSent) return;
+    res.status(status).json({ success: false, message: status === 413 ? error.message : 'Não foi possível baixar as imagens aprovadas.' });
   }
 });
 
@@ -20185,6 +20311,30 @@ app.post('/api/video-quadrants/:imageId/response', express.json({ limit: '16kb' 
     }
     if (comment.length > 1000) throw Object.assign(new Error('O comentário pode ter até 1.000 caracteres.'), { statusCode: 400 });
     const user = await readAuthenticatedUserFromRequest(req).catch(() => null);
+    if (selectedOption === -1) {
+      const imageResult = await pool.query(
+        'SELECT object_key FROM public.video_quadrant_images WHERE id = $1 AND deleted_at IS NULL',
+        [imageId]
+      );
+      if (!imageResult.rowCount) throw Object.assign(new Error('Essa imagem já foi removida.'), { statusCode: 404 });
+      const objectKey = String(imageResult.rows[0].object_key || '');
+      if (objectKey.startsWith('fluentlevelup/video/')) await deleteR2Object(objectKey);
+      const result = await pool.query(`
+        INSERT INTO public.video_quadrant_responses(image_id, respondent_key, user_id, selected_option, comment)
+        SELECT id, $2, $3, $4, $5 FROM public.video_quadrant_images WHERE id = $1 AND deleted_at IS NULL
+        ON CONFLICT (image_id, respondent_key) DO UPDATE SET
+          user_id = EXCLUDED.user_id, selected_option = EXCLUDED.selected_option,
+          comment = EXCLUDED.comment, updated_at = now()
+        RETURNING id
+      `, [imageId, respondentKey, user?.id || null, selectedOption, comment]);
+      if (!result.rowCount) throw Object.assign(new Error('Essa imagem já foi removida.'), { statusCode: 404 });
+      await pool.query(`
+        UPDATE public.video_quadrant_images SET deleted_at = now(), image_data = '', object_key = NULL
+        WHERE id = $1 AND deleted_at IS NULL
+      `, [imageId]);
+      res.json({ success: true, removed: true });
+      return;
+    }
     const result = await pool.query(`
       INSERT INTO public.video_quadrant_responses(image_id, respondent_key, user_id, selected_option, comment)
       SELECT id, $2, $3, $4, $5 FROM public.video_quadrant_images WHERE id = $1

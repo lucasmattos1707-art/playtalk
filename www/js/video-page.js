@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  const state = { isAdmin: false, tracks: [], responses: [], pending: null, saving: false };
+  const state = { isAdmin: false, tracks: [], responses: [], approvalProgress: { approved: 0, total: 0 }, pending: null, saving: false };
   const positions = ['superior esquerda', 'superior direita', 'inferior esquerda', 'inferior direita'];
   const respondentKey = (() => {
     try {
@@ -34,11 +34,13 @@
 
   function renderGallery() {
     const root = $('imageList'); root.replaceChildren();
-    if (state.isAdmin) renderCustomImageCreator(root);
+    if (state.isAdmin && !state.tracks.some((track) => track.isCustom)) renderCustomImageCreator(root);
     if (!state.tracks.length) {
       const empty = document.createElement('div'); empty.className = 'empty';
       empty.textContent = state.isAdmin ? 'As faixas do Musical Kelly aparecerão aqui.' : 'Nenhuma imagem disponível para aprovar no momento.';
-      root.append(empty); return;
+      root.append(empty);
+      if (state.isAdmin) renderRemovedResponses(root);
+      return;
     }
     state.tracks.forEach((track) => {
       const image = track.image;
@@ -93,6 +95,22 @@
       if (state.isAdmin) renderAdminResponses(card, image.id);
       root.append(card);
     });
+    if (state.isAdmin) renderRemovedResponses(root);
+  }
+
+  function renderRemovedResponses(root) {
+    const rows = state.responses.filter((row) => row.imageDeleted);
+    if (!rows.length) return;
+    const section = document.createElement('section'); section.className = 'card response-list';
+    const title = document.createElement('h2'); title.textContent = 'Imagens removidas por “Nenhuma”'; section.append(title);
+    rows.forEach((row) => {
+      const item = document.createElement('div'); item.className = 'response';
+      const who = document.createElement('strong'); who.textContent = row.respondentName || 'Visitante'; item.append(who);
+      const imageTitle = document.createElement('span'); imageTitle.textContent = ` · ${row.imageTitle || 'Imagem'}`; item.append(imageTitle);
+      if (row.comment) { const comment = document.createElement('div'); comment.textContent = row.comment; item.append(comment); }
+      section.append(item);
+    });
+    root.append(section);
   }
 
   function renderCustomImageCreator(root) {
@@ -205,8 +223,8 @@
       });
       const done = state.pending.onSaved; const result = { selectedOption: state.pending.selectedOption };
       $('commentModal').hidden = true; state.pending = null; if (done) done(result);
-      setToast('Salvo! Obrigado por participar.');
-      if (state.isAdmin) await loadGallery();
+      setToast(result.selectedOption === -1 ? 'Imagem removida do seletor.' : 'Salvo! Obrigado por participar.');
+      await loadGallery();
     } catch (error) { $('modalStatus').textContent = error.message; }
     finally { state.saving = false; $('commentBtn').disabled = false; $('approveBtn').disabled = false; }
   }
@@ -214,12 +232,51 @@
   function showAdmin() {
     $('adminBadge').hidden = !state.isAdmin;
   }
+  function renderApprovalProgress() {
+    const { approved = 0, total = 0 } = state.approvalProgress;
+    const ratio = total ? Math.min(100, Math.round((approved / total) * 100)) : 0;
+    $('approvalProgressText').textContent = `${approved} de ${total} imagens aprovadas`;
+    $('approvalProgressValue').style.width = `${ratio}%`;
+    $('approvalProgress').setAttribute('aria-valuenow', String(approved));
+    $('approvalProgress').setAttribute('aria-valuemax', String(total));
+  }
   async function loadGallery() {
     const result = await apiFetch('/api/video-quadrants');
     state.isAdmin = Boolean(result.isAdmin); state.tracks = Array.isArray(result.tracks) ? result.tracks : [];
     state.responses = Array.isArray(result.responses) ? result.responses : [];
+    state.approvalProgress = result.approvalProgress || { approved: 0, total: 0 };
+    renderApprovalProgress();
     showAdmin(); renderGallery();
   }
+
+  async function downloadApprovedPack() {
+    setToast('Preparando pacote de imagens aprovadas…');
+    try {
+      const response = await fetch(apiUrl('/api/video-quadrants/approved-pack.zip'), {
+        credentials: 'include', headers: apiHeaders()
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.message || 'Não foi possível baixar o pacote.');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a'); link.href = url; link.download = 'fluentlevelup-imagens-aprovadas.zip';
+      document.body.append(link); link.click(); link.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+      setToast('Pacote de imagens aprovadas baixado.');
+    } catch (error) { setToast(error.message); }
+  }
+
+  let dKeyTimes = [];
+  document.addEventListener('keydown', (event) => {
+    if (!state.isAdmin || !window.matchMedia('(min-width: 700px) and (pointer: fine)').matches) return;
+    const target = event.target;
+    if (target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+    if (event.key.toLowerCase() !== 'd' || event.ctrlKey || event.metaKey || event.altKey) { dKeyTimes = []; return; }
+    if (event.repeat) return;
+    const now = Date.now(); dKeyTimes = dKeyTimes.filter((time) => now - time < 1400); dKeyTimes.push(now);
+    if (dKeyTimes.length >= 3) { dKeyTimes = []; downloadApprovedPack(); }
+  });
 
   function canvasDataUrl(img) {
     const scale = Math.min(1, 1600 / img.naturalWidth, 1600 / img.naturalHeight);
@@ -233,6 +290,6 @@
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && state.pending?.selectedOption !== -1) $('commentModal').hidden = true; });
   loadGallery().catch((error) => { $('imageList').innerHTML = ''; const notice = document.createElement('div'); notice.className = 'empty'; notice.textContent = error.message; $('imageList').append(notice); });
   window.setInterval(() => {
-    if (state.isAdmin && !document.hidden) loadGallery().catch(() => {});
-  }, 60000);
+    if (!document.hidden && $('commentModal').hidden) loadGallery().catch(() => {});
+  }, 30000);
 })();
