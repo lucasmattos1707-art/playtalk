@@ -37,14 +37,14 @@
     if (state.isAdmin) renderCustomImageCreator(root);
     if (!state.tracks.length) {
       const empty = document.createElement('div'); empty.className = 'empty';
-      if (state.isAdmin) empty.textContent = 'As faixas do Musical Kelly aparecerão aqui.';
+      empty.textContent = state.isAdmin ? 'As faixas do Musical Kelly aparecerão aqui.' : 'Nenhuma imagem disponível para aprovar no momento.';
       root.append(empty); return;
     }
     state.tracks.forEach((track) => {
       const image = track.image;
       const card = document.createElement('article'); card.className = 'card';
       const title = document.createElement('h2'); title.textContent = state.isAdmin ? track.title : (image?.title || track.title); card.append(title);
-      if (state.isAdmin && !track.isCustom) renderTrackUploader(card, track);
+      if (state.isAdmin) renderTrackUploader(card, track, track.isCustom ? 'replace-custom' : 'track');
       if (!image) { root.append(card); return; }
       const viewer = document.createElement('div'); viewer.className = 'viewer';
       const canvas = document.createElement('canvas'); viewer.append(canvas);
@@ -61,6 +61,11 @@
       const local = { index: 0, selected: null };
       const imageObj = new Image();
       imageObj.onload = () => renderOptions();
+      imageObj.onerror = () => {
+        const error = document.createElement('div'); error.className = 'image-error';
+        error.textContent = state.isAdmin ? 'Imagem indisponível no R2 · troque a imagem acima' : 'Imagem indisponível no momento';
+        viewer.append(error);
+      };
       imageObj.src = String(image.imageUrl || '').startsWith('data:') ? image.imageUrl : apiUrl(image.imageUrl);
       function renderOptions() {
         if (imageObj.naturalWidth && local.index >= 0) drawQuadrant(canvas, imageObj, local.index);
@@ -93,21 +98,22 @@
   function renderCustomImageCreator(root) {
     const card = document.createElement('article'); card.className = 'card';
     const title = document.createElement('h2'); title.textContent = 'Nova imagem'; card.append(title);
-    renderTrackUploader(card, { id: '', title: '', image: null }, true);
+    renderTrackUploader(card, { id: '', title: '', image: null }, 'create');
     root.append(card);
   }
 
-  function renderTrackUploader(card, track, isCustom = false) {
+  function renderTrackUploader(card, track, mode = 'track') {
+    const isNewCustom = mode === 'create';
     const box = document.createElement('div'); box.className = 'upload-status';
     const row = document.createElement('div'); row.className = 'admin-form';
     const name = document.createElement('input'); name.type = 'text'; name.maxLength = 120; name.value = track.image?.title || track.title; name.placeholder = 'Título da imagem';
     const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/png,image/jpeg,image/webp';
     input.setAttribute('aria-label', `Imagem para ${track.title}`);
     const button = document.createElement('button'); button.type = 'button'; button.className = 'primary';
-    button.textContent = isCustom ? 'Criar imagem' : track.image ? 'Trocar imagem' : 'Adicionar imagem'; button.disabled = true;
+    button.textContent = isNewCustom ? 'Criar imagem' : track.image ? 'Trocar imagem' : 'Adicionar imagem'; button.disabled = true;
     row.append(name, input, button); box.append(row);
     const status = document.createElement('div'); status.className = 'upload-status'; status.setAttribute('aria-live', 'polite');
-    status.textContent = isCustom ? 'Crie uma imagem avulsa com título.' : track.image ? 'Imagem vinculada a esta faixa.' : 'Aguardando imagem desta faixa.'; box.append(status);
+    status.textContent = isNewCustom ? 'Crie uma imagem avulsa com título.' : track.image ? 'Imagem vinculada a esta faixa.' : 'Aguardando imagem desta faixa.'; box.append(status);
     const preview = document.createElement('div'); preview.className = 'viewer'; preview.hidden = true;
     const canvas = document.createElement('canvas'); preview.append(canvas);
     const nav = document.createElement('div'); nav.className = 'nav';
@@ -144,11 +150,16 @@
       if (!imageData) return;
       button.disabled = true; status.textContent = 'Publicando…';
       try {
-        const endpoint = isCustom ? '/api/video-quadrants' : `/api/video-quadrants/${encodeURIComponent(track.id)}/image`;
+        const endpoint = mode === 'create'
+          ? '/api/video-quadrants'
+          : mode === 'replace-custom'
+            ? `/api/video-quadrants/${encodeURIComponent(track.image.id)}/image`
+            : `/api/video-quadrants/${encodeURIComponent(track.id)}/image`;
         await apiFetch(endpoint, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageData, title: name.value.trim() })
+          method: mode === 'replace-custom' ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageData, title: name.value.trim() })
         });
-        await loadGallery(); setToast(isCustom ? 'Imagem criada.' : `Imagem vinculada a ${track.title}.`);
+        await loadGallery(); setToast(isNewCustom ? 'Imagem criada.' : `Imagem salva${track.title ? ` para ${track.title}` : ''}.`);
       } catch (error) { status.textContent = error.message; button.disabled = false; }
     };
   }

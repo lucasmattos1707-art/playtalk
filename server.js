@@ -9159,7 +9159,8 @@ async function putR2Object(objectKey, bodyBuffer, contentType = 'application/oct
       Body: payloadBuffer,
       ContentType: contentType,
       Metadata: {
-        sha256: payloadHash
+        sha256: payloadHash,
+        ...(options.metadata && typeof options.metadata === 'object' ? options.metadata : {})
       }
     });
     if (options.timeoutMs) await sendR2CommandWithRecovery(command, options);
@@ -19938,18 +19939,59 @@ function parseVideoQuadrantImageData(imageData) {
 async function migrateLegacyVideoQuadrantImagesToR2() {
   if (!isR2FluencyConfigured()) return;
   const legacy = await pool.query(`
-    SELECT id, image_data FROM public.video_quadrant_images
+    SELECT id, title, image_data FROM public.video_quadrant_images
     WHERE COALESCE(object_key, '') = '' AND image_data LIKE 'data:image/webp;base64,%'
   `);
   for (const row of legacy.rows) {
     const imageId = String(row.id || '');
     const objectKey = `fluentlevelup/video/${imageId}.webp`;
     const buffer = parseVideoQuadrantImageData(row.image_data);
-    await putR2Object(objectKey, buffer, 'image/webp', { timeoutMs: 20000, retries: 1 });
+    await putR2Object(objectKey, buffer, 'image/webp', {
+      timeoutMs: 20000, retries: 1,
+      metadata: { title: encodeURIComponent(String(row.title || '')) }
+    });
     await pool.query(
       "UPDATE public.video_quadrant_images SET object_key = $2, image_data = '' WHERE id = $1 AND COALESCE(object_key, '') = ''",
       [imageId, objectKey]
     );
+  }
+}
+
+async function restoreVideoQuadrantRowsFromR2() {
+  if (!isR2FluencyConfigured()) return;
+  let keys = [];
+  try {
+    keys = await listAllR2ObjectKeys('fluentlevelup/video/');
+  } catch (error) {
+    console.warn('Não foi possível listar as imagens do seletor no R2:', error?.message || error);
+    return;
+  }
+  const stored = await pool.query('SELECT id, object_key FROM public.video_quadrant_images');
+  const knownIds = new Set(stored.rows.map((row) => String(row.id)));
+  const knownKeys = new Set(stored.rows.map((row) => String(row.object_key || '')).filter(Boolean));
+  for (const objectKey of keys) {
+    if (!objectKey.startsWith('fluentlevelup/video/') || !objectKey.toLowerCase().endsWith('.webp') || knownKeys.has(objectKey)) continue;
+    const fileName = objectKey.slice('fluentlevelup/video/'.length);
+    const imageId = fileName.replace(/\.webp$/i, '');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(imageId)) continue;
+    if (knownIds.has(imageId)) {
+      await pool.query("UPDATE public.video_quadrant_images SET object_key = $2, image_data = '' WHERE id = $1 AND COALESCE(object_key, '') = ''", [imageId, objectKey]);
+      knownKeys.add(objectKey);
+      continue;
+    }
+    let title = '', trackId = '';
+    try {
+      const head = await getR2ObjectHead(objectKey);
+      title = decodeURIComponent(String(head?.Metadata?.title || '')).trim();
+      trackId = String(head?.Metadata?.trackid || '').trim().slice(0, 120);
+    } catch (_error) {}
+    title = title.slice(0, 120) || `Imagem ${imageId.slice(0, 8)}`;
+    await pool.query(`
+      INSERT INTO public.video_quadrant_images(id, track_id, title, image_data, object_key)
+      VALUES($1, $2, $3, '', $4)
+      ON CONFLICT (id) DO NOTHING
+    `, [imageId, trackId || null, title, objectKey]);
+    knownIds.add(imageId); knownKeys.add(objectKey);
   }
 }
 
@@ -19965,7 +20007,10 @@ async function saveVideoQuadrantImage({ imageData, title, trackId = null, userId
   }
   const imageId = String(existing?.id || crypto.randomUUID());
   const objectKey = `fluentlevelup/video/${imageId}.webp`;
-  await putR2Object(objectKey, buffer, 'image/webp', { timeoutMs: 20000, retries: 1 });
+  await putR2Object(objectKey, buffer, 'image/webp', {
+    timeoutMs: 20000, retries: 1,
+    metadata: { title: encodeURIComponent(imageTitle), ...(trackId ? { trackid: String(trackId) } : {}) }
+  });
   try {
     const result = await pool.query(`
       INSERT INTO public.video_quadrant_images(id, track_id, title, image_data, object_key, created_by)
@@ -19994,6 +20039,7 @@ app.get('/api/video-quadrants', async (req, res) => {
       console.warn('Faixas do Musical Kelly indisponíveis; carregando as imagens avulsas:', projectError?.message || projectError);
     }
     await migrateLegacyVideoQuadrantImagesToR2();
+    await restoreVideoQuadrantRowsFromR2();
     const images = await pool.query(`
       SELECT id, track_id AS "trackId", title, image_data AS "imageData", object_key AS "objectKey", created_at AS "createdAt"
       FROM public.video_quadrant_images ORDER BY created_at DESC, id DESC
@@ -20003,11 +20049,13 @@ app.get('/api/video-quadrants', async (req, res) => {
       imageUrl: image.objectKey ? `/api/video-quadrants/${encodeURIComponent(image.id)}/image` : String(image.imageData || '')
     }) : null;
     const imageByTrack = new Map(images.rows.filter((image) => image.trackId).map((image) => [String(image.trackId), image]));
-    const tracks = (Array.isArray(project?.cards) ? project.cards : []).map((card) => ({
+    const projectTracks = Array.isArray(project?.cards) ? project.cards : [];
+    const validTrackIds = new Set(projectTracks.map((card) => String(card.id || '')).filter(Boolean));
+    const tracks = projectTracks.map((card) => ({
       id: String(card.id || ''), title: String(card.title || '').trim() || 'Faixa',
       image: toClientImage(imageByTrack.get(String(card.id || '')))
     })).filter((track) => track.id);
-    const customImages = images.rows.filter((image) => !image.trackId).map((image) => ({
+    const customImages = images.rows.filter((image) => !image.trackId || !validTrackIds.has(String(image.trackId))).map((image) => ({
       id: `custom-${image.id}`, title: image.title, isCustom: true, image: toClientImage(image)
     }));
     let responses = [];
@@ -20083,6 +20131,36 @@ app.post('/api/video-quadrants/:trackId/image', express.json({ limit: '8mb' }), 
     const status = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     if (status >= 500) console.error('Erro ao publicar imagem do seletor:', error);
     res.status(status).json({ success: false, message: status >= 500 ? 'Não foi possível publicar a imagem.' : error.message });
+  }
+});
+
+app.put('/api/video-quadrants/:imageId/image', express.json({ limit: '8mb' }), async (req, res) => {
+  try {
+    const admin = await requireAdminUserFromRequest(req);
+    await ensureVideoQuadrantsSchema();
+    const imageId = String(req.params.imageId || '');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(imageId)) {
+      throw Object.assign(new Error('Imagem inválida.'), { statusCode: 400 });
+    }
+    if (!isR2FluencyConfigured()) throw Object.assign(new Error('O armazenamento R2 não está configurado.'), { statusCode: 503 });
+    const title = String(req.body?.title || '').trim().slice(0, 120);
+    if (!title) throw Object.assign(new Error('Informe o nome da imagem.'), { statusCode: 400 });
+    const buffer = parseVideoQuadrantImageData(req.body?.imageData);
+    const current = await pool.query('SELECT object_key FROM public.video_quadrant_images WHERE id = $1', [imageId]);
+    if (!current.rowCount) throw Object.assign(new Error('Imagem não encontrada.'), { statusCode: 404 });
+    const objectKey = String(current.rows[0].object_key || `fluentlevelup/video/${imageId}.webp`);
+    if (!objectKey.startsWith('fluentlevelup/video/')) throw Object.assign(new Error('Local de armazenamento inválido.'), { statusCode: 400 });
+    await putR2Object(objectKey, buffer, 'image/webp', { timeoutMs: 20000, retries: 1, metadata: { title: encodeURIComponent(title) } });
+    await pool.query(`
+      UPDATE public.video_quadrant_images
+      SET title = $2, image_data = '', object_key = $3, created_by = $4, created_at = now()
+      WHERE id = $1
+    `, [imageId, title, objectKey, admin.id]);
+    res.json({ success: true });
+  } catch (error) {
+    const status = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    if (status >= 500) console.error('Erro ao substituir imagem do seletor:', error);
+    res.status(status).json({ success: false, message: status >= 500 ? (status === 503 ? error.message : 'Não foi possível salvar a imagem no R2.') : error.message });
   }
 });
 
@@ -29797,6 +29875,8 @@ app.use(async (req, res, next) => {
     '/finance/index.html',
     '/finance/login',
     '/finance/login/',
+    '/video',
+    '/video/',
     '/musical-kelly',
     '/musical-kelly/',
     '/musical-kelly/index.html',
