@@ -132,17 +132,19 @@
     row.append(name, input, button); box.append(row);
     const status = document.createElement('div'); status.className = 'upload-status'; status.setAttribute('aria-live', 'polite');
     status.textContent = isNewCustom ? 'Crie uma imagem avulsa com título.' : track.image ? 'Imagem vinculada a esta faixa.' : 'Aguardando imagem desta faixa.'; box.append(status);
+    const showUploadPreview = !track.image;
     const preview = document.createElement('div'); preview.className = 'viewer'; preview.hidden = true;
     const canvas = document.createElement('canvas'); preview.append(canvas);
     const nav = document.createElement('div'); nav.className = 'nav';
     const prev = document.createElement('button'); prev.type = 'button'; prev.textContent = '‹'; prev.setAttribute('aria-label', 'Opção anterior');
     const next = document.createElement('button'); next.type = 'button'; next.textContent = '›'; next.setAttribute('aria-label', 'Próxima opção');
-    nav.append(prev, next); preview.append(nav); box.append(preview);
-    const dots = document.createElement('div'); dots.className = 'dots'; box.append(dots);
+    nav.append(prev, next); preview.append(nav);
+    const dots = document.createElement('div'); dots.className = 'dots';
+    if (showUploadPreview) box.append(preview, dots);
     card.append(box);
     let imageData = '', previewImage = null, option = 0;
     function renderPreview() {
-      if (!previewImage) return;
+      if (!previewImage || !showUploadPreview) return;
       drawQuadrant(canvas, previewImage, option); dots.replaceChildren();
       for (let i = 0; i < 4; i += 1) {
         const dot = document.createElement('button'); dot.type = 'button'; dot.className = 'dot' + (i === option ? ' active' : ''); dot.textContent = String(i + 1);
@@ -158,7 +160,7 @@
       img.onload = () => {
         URL.revokeObjectURL(url);
         if (img.naturalWidth < 2 || img.naturalHeight < 2) { status.textContent = 'A imagem não permite o recorte 2 × 2.'; button.disabled = true; return; }
-        imageData = canvasDataUrl(img); previewImage = img; option = 0; preview.hidden = false; button.disabled = false; renderPreview();
+        imageData = canvasDataUrl(img); previewImage = img; option = 0; preview.hidden = !showUploadPreview; button.disabled = false; renderPreview();
         status.textContent = `${img.naturalWidth} × ${img.naturalHeight} px${track.title ? ` · imagem pronta para ${track.title}` : ' · prévia pronta'}.`;
       };
       img.onerror = () => { URL.revokeObjectURL(url); status.textContent = 'Não foi possível abrir essa imagem.'; button.disabled = true; };
