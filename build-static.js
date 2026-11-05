@@ -26,6 +26,7 @@ const appHtmlFiles = new Set([
   'password.html',
   'premium.html',
   'admin.html',
+  'video.html',
   'bots.html',
   'thata.html'
 ]);
