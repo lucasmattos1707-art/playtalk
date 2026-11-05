@@ -19892,12 +19892,14 @@ async function ensureVideoQuadrantsSchema() {
           id uuid PRIMARY KEY,
           track_id text,
           title text NOT NULL CHECK (char_length(title) BETWEEN 1 AND 120),
-          image_data text NOT NULL,
+          image_data text NOT NULL DEFAULT '',
+          object_key text,
           created_by bigint,
           created_at timestamptz NOT NULL DEFAULT now()
         )
       `);
       await pool.query('ALTER TABLE public.video_quadrant_images ADD COLUMN IF NOT EXISTS track_id text');
+      await pool.query("ALTER TABLE public.video_quadrant_images ADD COLUMN IF NOT EXISTS object_key text");
       await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS video_quadrant_images_track_unique_idx ON public.video_quadrant_images(track_id) WHERE track_id IS NOT NULL');
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.video_quadrant_responses (
@@ -19922,25 +19924,96 @@ async function ensureVideoQuadrantsSchema() {
   return videoQuadrantsSchemaPromise;
 }
 
+function parseVideoQuadrantImageData(imageData) {
+  const normalized = String(imageData || '');
+  const match = normalized.match(/^data:image\/webp;base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) throw Object.assign(new Error('Envie uma imagem WebP válida.'), { statusCode: 400 });
+  const buffer = Buffer.from(match[1], 'base64');
+  if (!buffer.length || buffer.length > 5 * 1024 * 1024) {
+    throw Object.assign(new Error('A imagem precisa ter até 5 MB.'), { statusCode: 413 });
+  }
+  return buffer;
+}
+
+async function migrateLegacyVideoQuadrantImagesToR2() {
+  if (!isR2FluencyConfigured()) return;
+  const legacy = await pool.query(`
+    SELECT id, image_data FROM public.video_quadrant_images
+    WHERE COALESCE(object_key, '') = '' AND image_data LIKE 'data:image/webp;base64,%'
+  `);
+  for (const row of legacy.rows) {
+    const imageId = String(row.id || '');
+    const objectKey = `fluentlevelup/video/${imageId}.webp`;
+    const buffer = parseVideoQuadrantImageData(row.image_data);
+    await putR2Object(objectKey, buffer, 'image/webp', { timeoutMs: 20000, retries: 1 });
+    await pool.query(
+      "UPDATE public.video_quadrant_images SET object_key = $2, image_data = '' WHERE id = $1 AND COALESCE(object_key, '') = ''",
+      [imageId, objectKey]
+    );
+  }
+}
+
+async function saveVideoQuadrantImage({ imageData, title, trackId = null, userId }) {
+  if (!isR2FluencyConfigured()) throw Object.assign(new Error('O armazenamento R2 não está configurado.'), { statusCode: 503 });
+  const imageTitle = String(title || '').trim().slice(0, 120);
+  if (!imageTitle) throw Object.assign(new Error('Informe o nome da imagem.'), { statusCode: 400 });
+  const buffer = parseVideoQuadrantImageData(imageData);
+  let existing = null;
+  if (trackId) {
+    const current = await pool.query('SELECT id, object_key FROM public.video_quadrant_images WHERE track_id = $1 LIMIT 1', [trackId]);
+    existing = current.rows[0] || null;
+  }
+  const imageId = String(existing?.id || crypto.randomUUID());
+  const objectKey = `fluentlevelup/video/${imageId}.webp`;
+  await putR2Object(objectKey, buffer, 'image/webp', { timeoutMs: 20000, retries: 1 });
+  try {
+    const result = await pool.query(`
+      INSERT INTO public.video_quadrant_images(id, track_id, title, image_data, object_key, created_by)
+      VALUES($1, $2, $3, '', $4, $5)
+      ON CONFLICT (track_id) WHERE track_id IS NOT NULL DO UPDATE SET
+        title = EXCLUDED.title, image_data = '', object_key = EXCLUDED.object_key,
+        created_by = EXCLUDED.created_by, created_at = now()
+      RETURNING id, track_id AS "trackId", title, object_key AS "objectKey", created_at AS "createdAt"
+    `, [imageId, trackId, imageTitle, objectKey, userId]);
+    return result.rows[0];
+  } catch (error) {
+    if (!existing) await deleteR2Object(objectKey).catch(() => {});
+    throw error;
+  }
+}
+
 app.get('/api/video-quadrants', async (req, res) => {
   try {
     await ensureVideoQuadrantsSchema();
     const user = await readAuthenticatedUserFromRequest(req).catch(() => null);
     const isAdmin = isAdminUserRecord(user);
-    const project = await readMusicalKellyGlobalProject();
+    let project = { cards: [] };
+    try {
+      project = await readMusicalKellyGlobalProject();
+    } catch (projectError) {
+      console.warn('Faixas do Musical Kelly indisponíveis; carregando as imagens avulsas:', projectError?.message || projectError);
+    }
+    await migrateLegacyVideoQuadrantImagesToR2();
     const images = await pool.query(`
-      SELECT id, track_id AS "trackId", title, image_data AS "imageData", created_at AS "createdAt"
+      SELECT id, track_id AS "trackId", title, image_data AS "imageData", object_key AS "objectKey", created_at AS "createdAt"
       FROM public.video_quadrant_images ORDER BY created_at DESC, id DESC
     `);
-    const imageByTrack = new Map(images.rows.map((image) => [String(image.trackId), image]));
+    const toClientImage = (image) => image ? ({
+      id: String(image.id), title: image.title,
+      imageUrl: image.objectKey ? `/api/video-quadrants/${encodeURIComponent(image.id)}/image` : String(image.imageData || '')
+    }) : null;
+    const imageByTrack = new Map(images.rows.filter((image) => image.trackId).map((image) => [String(image.trackId), image]));
     const tracks = (Array.isArray(project?.cards) ? project.cards : []).map((card) => ({
       id: String(card.id || ''), title: String(card.title || '').trim() || 'Faixa',
-      image: imageByTrack.get(String(card.id || '')) || null
+      image: toClientImage(imageByTrack.get(String(card.id || '')))
     })).filter((track) => track.id);
+    const customImages = images.rows.filter((image) => !image.trackId).map((image) => ({
+      id: `custom-${image.id}`, title: image.title, isCustom: true, image: toClientImage(image)
+    }));
     let responses = [];
     if (isAdmin) {
       const result = await pool.query(`
-        SELECT vi.track_id AS "trackId", r.selected_option AS "selectedOption", r.comment,
+        SELECT r.image_id AS "imageId", r.selected_option AS "selectedOption", r.comment,
                r.created_at AS "createdAt", r.updated_at AS "updatedAt",
                COALESCE(NULLIF(u.username, ''), NULLIF(u.email, ''), 'Visitante') AS "respondentName"
         FROM public.video_quadrant_responses r
@@ -19951,11 +20024,47 @@ app.get('/api/video-quadrants', async (req, res) => {
       responses = result.rows;
     }
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, isAdmin, tracks: isAdmin ? tracks : tracks.filter((track) => track.image), responses });
+    res.json({ success: true, isAdmin, tracks: (isAdmin ? tracks : tracks.filter((track) => track.image)).concat(customImages), responses });
   } catch (error) {
     const status = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     if (status >= 500) console.error('Erro ao carregar seletor de imagens:', error);
     res.status(status).json({ success: false, message: status === 503 ? error.message : 'Não foi possível carregar as imagens.' });
+  }
+});
+
+app.get('/api/video-quadrants/:imageId/image', async (req, res) => {
+  try {
+    await ensureVideoQuadrantsSchema();
+    const imageId = String(req.params.imageId || '');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(imageId)) { res.status(404).end(); return; }
+    const result = await pool.query('SELECT object_key, image_data FROM public.video_quadrant_images WHERE id = $1', [imageId]);
+    const row = result.rows[0];
+    if (!row) { res.status(404).end(); return; }
+    if (!row.object_key) {
+      const parsed = parseVideoQuadrantImageData(row.image_data);
+      res.setHeader('Content-Type', 'image/webp'); res.setHeader('Cache-Control', 'public, max-age=300'); res.send(parsed); return;
+    }
+    if (!String(row.object_key).startsWith('fluentlevelup/video/')) { res.status(404).end(); return; }
+    const buffer = await fetchR2ObjectBuffer(row.object_key);
+    res.setHeader('Content-Type', 'image/webp'); res.setHeader('Content-Length', String(buffer.length));
+    res.setHeader('Cache-Control', 'public, max-age=86400'); res.setHeader('X-Content-Type-Options', 'nosniff'); res.send(buffer);
+  } catch (error) {
+    const status = Number(error?.status || error?.statusCode || error?.$metadata?.httpStatusCode || 0);
+    if (status === 404 || error?.Code === 'NoSuchKey') { res.status(404).end(); return; }
+    console.error('Erro ao servir imagem do seletor de vídeo:', error); res.status(500).end();
+  }
+});
+
+app.post('/api/video-quadrants', express.json({ limit: '8mb' }), async (req, res) => {
+  try {
+    const admin = await requireAdminUserFromRequest(req);
+    await ensureVideoQuadrantsSchema();
+    const image = await saveVideoQuadrantImage({ imageData: req.body?.imageData, title: req.body?.title, userId: admin.id });
+    res.status(201).json({ success: true, image: { id: image.id, title: image.title } });
+  } catch (error) {
+    const status = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    if (status >= 500) console.error('Erro ao criar imagem avulsa do seletor:', error);
+    res.status(status).json({ success: false, message: status >= 500 ? (status === 503 ? error.message : 'Não foi possível salvar a imagem no R2.') : error.message });
   }
 });
 
@@ -19964,25 +20073,12 @@ app.post('/api/video-quadrants/:trackId/image', express.json({ limit: '8mb' }), 
     const admin = await requireAdminUserFromRequest(req);
     await ensureVideoQuadrantsSchema();
     const trackId = String(req.params.trackId || '').trim();
-    const imageTitle = String(req.body?.title || '').trim().slice(0, 120);
-    const imageData = String(req.body?.imageData || '');
     if (!trackId || trackId.length > 120) throw Object.assign(new Error('Faixa inválida.'), { statusCode: 400 });
     const project = await readMusicalKellyGlobalProject();
     const track = (Array.isArray(project?.cards) ? project.cards : []).find((card) => String(card.id) === trackId);
     if (!track) throw Object.assign(new Error('Essa faixa não existe mais no Musical Kelly.'), { statusCode: 404 });
-    if (!imageTitle) throw Object.assign(new Error('Informe o nome da imagem.'), { statusCode: 400 });
-    if (!/^data:image\/webp;base64,[A-Za-z0-9+/=]+$/.test(imageData) || imageData.length > 7_500_000) {
-      throw Object.assign(new Error('Envie uma imagem WebP válida de até 5,5 MB.'), { statusCode: 400 });
-    }
-    const id = crypto.randomUUID();
-    const result = await pool.query(`
-      INSERT INTO public.video_quadrant_images(id, track_id, title, image_data, created_by)
-      VALUES($1, $2, $3, $4, $5)
-      ON CONFLICT (track_id) WHERE track_id IS NOT NULL DO UPDATE SET
-        title = EXCLUDED.title, image_data = EXCLUDED.image_data, created_by = EXCLUDED.created_by, created_at = now()
-      RETURNING id, track_id AS "trackId", title, image_data AS "imageData", created_at AS "createdAt"
-    `, [id, trackId, imageTitle, imageData, admin.id]);
-    res.status(201).json({ success: true, image: result.rows[0] });
+    const image = await saveVideoQuadrantImage({ imageData: req.body?.imageData, title: req.body?.title, trackId, userId: admin.id });
+    res.status(201).json({ success: true, image: { id: image.id, title: image.title } });
   } catch (error) {
     const status = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     if (status >= 500) console.error('Erro ao publicar imagem do seletor:', error);

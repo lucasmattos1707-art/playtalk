@@ -34,6 +34,7 @@
 
   function renderGallery() {
     const root = $('imageList'); root.replaceChildren();
+    if (state.isAdmin) renderCustomImageCreator(root);
     if (!state.tracks.length) {
       const empty = document.createElement('div'); empty.className = 'empty';
       if (state.isAdmin) empty.textContent = 'As faixas do Musical Kelly aparecerão aqui.';
@@ -43,7 +44,7 @@
       const image = track.image;
       const card = document.createElement('article'); card.className = 'card';
       const title = document.createElement('h2'); title.textContent = state.isAdmin ? track.title : (image?.title || track.title); card.append(title);
-      if (state.isAdmin) renderTrackUploader(card, track);
+      if (state.isAdmin && !track.isCustom) renderTrackUploader(card, track);
       if (!image) { root.append(card); return; }
       const viewer = document.createElement('div'); viewer.className = 'viewer';
       const canvas = document.createElement('canvas'); viewer.append(canvas);
@@ -60,7 +61,7 @@
       const local = { index: 0, selected: null };
       const imageObj = new Image();
       imageObj.onload = () => renderOptions();
-      imageObj.src = image.imageData;
+      imageObj.src = String(image.imageUrl || '').startsWith('data:') ? image.imageUrl : apiUrl(image.imageUrl);
       function renderOptions() {
         if (imageObj.naturalWidth && local.index >= 0) drawQuadrant(canvas, imageObj, local.index);
         dots.replaceChildren();
@@ -84,22 +85,29 @@
       choose.onclick = () => openModal(image.id, local.index, (result) => { local.selected = result.selectedOption; if (result.selectedOption >= 0) local.index = result.selectedOption; renderOptions(); });
       none.onclick = () => openModal(image.id, -1, (result) => { local.selected = result.selectedOption; local.index = -1; renderOptions(); });
       renderOptions();
-      if (state.isAdmin) renderAdminResponses(card, track.id);
+      if (state.isAdmin) renderAdminResponses(card, image.id);
       root.append(card);
     });
   }
 
-  function renderTrackUploader(card, track) {
+  function renderCustomImageCreator(root) {
+    const card = document.createElement('article'); card.className = 'card';
+    const title = document.createElement('h2'); title.textContent = 'Nova imagem'; card.append(title);
+    renderTrackUploader(card, { id: '', title: '', image: null }, true);
+    root.append(card);
+  }
+
+  function renderTrackUploader(card, track, isCustom = false) {
     const box = document.createElement('div'); box.className = 'upload-status';
     const row = document.createElement('div'); row.className = 'admin-form';
-    const name = document.createElement('input'); name.type = 'text'; name.maxLength = 120; name.value = track.image?.title || track.title; name.placeholder = 'Nome da imagem';
+    const name = document.createElement('input'); name.type = 'text'; name.maxLength = 120; name.value = track.image?.title || track.title; name.placeholder = 'Título da imagem';
     const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/png,image/jpeg,image/webp';
     input.setAttribute('aria-label', `Imagem para ${track.title}`);
     const button = document.createElement('button'); button.type = 'button'; button.className = 'primary';
-    button.textContent = track.image ? 'Trocar imagem' : 'Adicionar imagem'; button.disabled = true;
+    button.textContent = isCustom ? 'Criar imagem' : track.image ? 'Trocar imagem' : 'Adicionar imagem'; button.disabled = true;
     row.append(name, input, button); box.append(row);
     const status = document.createElement('div'); status.className = 'upload-status'; status.setAttribute('aria-live', 'polite');
-    status.textContent = track.image ? 'Imagem vinculada a esta faixa.' : 'Aguardando imagem desta faixa.'; box.append(status);
+    status.textContent = isCustom ? 'Crie uma imagem avulsa com título.' : track.image ? 'Imagem vinculada a esta faixa.' : 'Aguardando imagem desta faixa.'; box.append(status);
     const preview = document.createElement('div'); preview.className = 'viewer'; preview.hidden = true;
     const canvas = document.createElement('canvas'); preview.append(canvas);
     const nav = document.createElement('div'); nav.className = 'nav';
@@ -127,7 +135,7 @@
         URL.revokeObjectURL(url);
         if (img.naturalWidth < 2 || img.naturalHeight < 2) { status.textContent = 'A imagem não permite o recorte 2 × 2.'; button.disabled = true; return; }
         imageData = canvasDataUrl(img); previewImage = img; option = 0; preview.hidden = false; button.disabled = false; renderPreview();
-        status.textContent = `${img.naturalWidth} × ${img.naturalHeight} px · imagem pronta para ${track.title}.`;
+        status.textContent = `${img.naturalWidth} × ${img.naturalHeight} px${track.title ? ` · imagem pronta para ${track.title}` : ' · prévia pronta'}.`;
       };
       img.onerror = () => { URL.revokeObjectURL(url); status.textContent = 'Não foi possível abrir essa imagem.'; button.disabled = true; };
       img.src = url;
@@ -136,17 +144,18 @@
       if (!imageData) return;
       button.disabled = true; status.textContent = 'Publicando…';
       try {
-        await apiFetch(`/api/video-quadrants/${encodeURIComponent(track.id)}/image`, {
+        const endpoint = isCustom ? '/api/video-quadrants' : `/api/video-quadrants/${encodeURIComponent(track.id)}/image`;
+        await apiFetch(endpoint, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageData, title: name.value.trim() })
         });
-        await loadGallery(); setToast(`Imagem vinculada a ${track.title}.`);
+        await loadGallery(); setToast(isCustom ? 'Imagem criada.' : `Imagem vinculada a ${track.title}.`);
       } catch (error) { status.textContent = error.message; button.disabled = false; }
     };
   }
 
   function renderAdminResponses(card, trackId) {
     const section = document.createElement('div'); section.className = 'response-list';
-    const rows = state.responses.filter((row) => row.trackId === trackId);
+    const rows = state.responses.filter((row) => row.imageId === trackId);
     if (!rows.length) {
       const empty = document.createElement('div'); empty.className = 'response'; empty.textContent = 'Ainda sem escolhas.'; section.append(empty);
     }
