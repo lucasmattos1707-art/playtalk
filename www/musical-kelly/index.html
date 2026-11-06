@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#030405">
   <title>Musical Kelly | Fluent LevelUp</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="stylesheet" href="/musical-kelly/styles.css?v=68">
+  <link rel="stylesheet" href="/musical-kelly/styles.css?v=69">
 </head>
 <body>
   <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -168,6 +168,37 @@
       <div class="audio-tracks-list" id="audioTracksList"></div>
       <button class="dialog-primary" id="audioTracksAddButton" type="button">Adicionar nova faixa</button>
     </section>
+  </dialog>
+
+  <dialog class="musical-dialog linked-tracks-dialog" id="linkedTracksDialog" aria-labelledby="linkedTracksDialogTitle">
+    <section class="dialog-card linked-tracks-card">
+      <div class="dialog-heading">
+        <div>
+          <span class="dialog-kicker">Escolha o arranjo</span>
+          <h2 id="linkedTracksDialogTitle">Faixas</h2>
+        </div>
+        <button class="dialog-close" id="linkedTracksCloseButton" type="button" aria-label="Fechar opções de faixa">×</button>
+      </div>
+      <div class="linked-tracks-list" id="linkedTracksList"></div>
+    </section>
+  </dialog>
+
+  <dialog class="musical-dialog link-track-dialog" id="linkTrackDialog" aria-labelledby="linkTrackDialogTitle">
+    <form class="dialog-card" id="linkTrackForm">
+      <div class="dialog-heading">
+        <div>
+          <span class="dialog-kicker">Organização do musical · desktop</span>
+          <h2 id="linkTrackDialogTitle">Vincular faixa</h2>
+        </div>
+        <button class="dialog-close" id="linkTrackCloseButton" type="button" aria-label="Fechar vínculo">×</button>
+      </div>
+      <p class="linked-track-description" id="linkTrackDescription"></p>
+      <label class="dialog-field" for="linkTrackParent">
+        <span>Faixa principal</span>
+        <select id="linkTrackParent"></select>
+      </label>
+      <button class="dialog-primary" id="saveLinkTrackButton" type="submit">Salvar vínculo</button>
+    </form>
   </dialog>
 
   <dialog class="musical-dialog order-saved-dialog" id="orderSavedDialog" aria-labelledby="orderSavedDialogTitle">
@@ -631,6 +662,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <script src="/arquivos-codex/vendor/lamejs/lame.min.js" defer></script>
-  <script src="/musical-kelly/app.js?v=77" defer></script>
+  <script src="/musical-kelly/app.js?v=78" defer></script>
 </body>
 </html>

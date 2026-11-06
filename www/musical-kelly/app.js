@@ -113,6 +113,15 @@
     containerDownloadWav: document.getElementById('containerDownloadWav'),
     containerDownloadMp3: document.getElementById('containerDownloadMp3'),
     audioTracksDialog: document.getElementById('audioTracksDialog'),
+    linkedTracksDialog: document.getElementById('linkedTracksDialog'),
+    linkedTracksList: document.getElementById('linkedTracksList'),
+    linkedTracksDialogTitle: document.getElementById('linkedTracksDialogTitle'),
+    linkedTracksCloseButton: document.getElementById('linkedTracksCloseButton'),
+    linkTrackDialog: document.getElementById('linkTrackDialog'),
+    linkTrackForm: document.getElementById('linkTrackForm'),
+    linkTrackParent: document.getElementById('linkTrackParent'),
+    linkTrackDescription: document.getElementById('linkTrackDescription'),
+    linkTrackCloseButton: document.getElementById('linkTrackCloseButton'),
     audioTracksList: document.getElementById('audioTracksList'),
     audioTracksCloseButton: document.getElementById('audioTracksCloseButton'),
     audioTracksAddButton: document.getElementById('audioTracksAddButton'),
@@ -1663,6 +1672,7 @@
       cards: state.project.cards.map((card) => ({
         id: card.id,
         title: card.title,
+        parentCardId: String(card.parentCardId || ''),
         audio: card.audio ? {
           fileName: card.audio.fileName,
           name: card.audio.name,
@@ -1759,7 +1769,8 @@
   function cardPublicLabel(card) {
     if (APP_SLUG === 'englishtraining') return String(card?.title || 'Episódio');
     if (!cardHasImage(card)) return card?.title || 'Faixa';
-    const index = state.project.cards.findIndex((entry) => entry.id === card?.id);
+    const mainCards = state.project.cards.filter((entry) => !entry.parentCardId);
+    const index = mainCards.findIndex((entry) => entry.id === card?.id);
     return `Faixa ${index >= 0 ? index + 1 : 1}`;
   }
 
@@ -1846,7 +1857,7 @@
 
   function refreshPlaylistTotalDuration() {
     if (!elements.playlistTotalDuration || APP_SLUG !== 'musical-kelly') return;
-    const cardsWithAudio = state.project.cards.filter((card) => cardHasImage(card) && cardAudioTracks(card).length);
+    const cardsWithAudio = state.project.cards.filter((card) => !card.parentCardId && cardAudioTracks(card).length);
     if (!cardsWithAudio.length) {
       elements.playlistTotalDuration.classList.remove('is-calculating');
       elements.playlistTotalDuration.setAttribute('aria-busy', 'false');
@@ -1926,7 +1937,7 @@
     }
     cardDurationQueueRunning = true;
     try {
-      const cards = state.project.cards.slice();
+      const cards = state.project.cards.filter((card) => !card.parentCardId);
       for (const card of cards) {
         if (!cardAudioTracks(card).length) continue;
         const key = `card:${card.id}:${cardAudioFingerprint(card)}`;
@@ -2005,7 +2016,8 @@
     updateBulkAudioAccess();
     elements.trackList.replaceChildren();
     const fragment = document.createDocumentFragment();
-    state.project.cards.forEach((card) => {
+    const mainCards = state.project.cards.filter((card) => !card.parentCardId);
+    mainCards.forEach((card) => {
       const node = elements.trackTemplate.content.firstElementChild.cloneNode(true);
       node.dataset.cardId = card.id;
       node.draggable = false;
@@ -2027,9 +2039,18 @@
         node.style.setProperty('--transition-ms', `${Math.max(80, state.transitionDurationMs)}ms`);
       }
       const publicLabel = cardPublicLabel(card);
+      if (APP_SLUG === 'musical-kelly' && state.canEdit) node.title = 'Segure 4 e clique para vincular esta faixa.';
+      const linkedTracks = linkedCardsFor(card.id);
+      node.classList.toggle('has-linked-tracks', linkedTracks.length > 0);
       node.setAttribute('aria-label', `${publicLabel}. ${APP_SLUG === 'englishtraining'
-        ? 'Toque para abrir as letras.' : (card.audio ? 'Toque para reproduzir.' : 'Sem música.')}`);
+        ? 'Toque para abrir as letras.' : (linkedTracks.length ? `${linkedTracks.length} opções de faixa.` : (card.audio ? 'Toque para reproduzir.' : 'Sem música.'))}`);
       if (APP_SLUG !== 'englishtraining') setCardBackground(node.querySelector('.track-background'), card);
+      if (linkedTracks.length) {
+        const badge = document.createElement('span');
+        badge.className = 'track-linked-badge';
+        badge.textContent = `${linkedTracks.length} opção${linkedTracks.length === 1 ? '' : 'ões'}`;
+        node.appendChild(badge);
+      }
       node.querySelector('.track-title-text').textContent = APP_SLUG === 'englishtraining' || !cardHasImage(card)
         ? card.title : '';
 
@@ -2120,10 +2141,10 @@
         const sortControls = document.createElement('div');
         sortControls.className = 'track-sort-controls';
         sortControls.setAttribute('aria-label', `Organizar ${publicLabel}`);
-        const cardIndex = state.project.cards.findIndex((entry) => entry.id === card.id);
+        const cardIndex = mainCards.findIndex((entry) => entry.id === card.id);
         [
           { offset: -1, label: '↑', title: 'Subir uma posição', disabled: cardIndex <= 0 },
-          { offset: 1, label: '↓', title: 'Descer uma posição', disabled: cardIndex >= state.project.cards.length - 1 }
+          { offset: 1, label: '↓', title: 'Descer uma posição', disabled: cardIndex >= mainCards.length - 1 }
         ].forEach(({ offset, label, title, disabled }) => {
           const button = document.createElement('button');
           button.type = 'button';
@@ -2218,15 +2239,103 @@
         longPressed = false;
         return;
       }
+      if (APP_SLUG === 'musical-kelly' && state.canEdit && musicalLinkKeyHeld) {
+        openLinkTrackDialog(cardId);
+        return;
+      }
+      if (APP_SLUG === 'musical-kelly' && linkedCardsFor(cardId).length) {
+        openLinkedTracksDialog(cardId);
+        return;
+      }
       openLyricsAndPlay(cardId, { streaming: streamOnTap }).catch((error) => showToast(error.message, true));
     });
     element.addEventListener('keydown', (event) => {
       if (state.sortMode) return;
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
+        if (APP_SLUG === 'musical-kelly' && linkedCardsFor(cardId).length) {
+          openLinkedTracksDialog(cardId);
+          return;
+        }
         openLyricsAndPlay(cardId, { streaming: streamOnTap }).catch((error) => showToast(error.message, true));
       }
     });
+  }
+
+  let musicalLinkKeyHeld = false;
+  let activeLinkTrackId = '';
+
+  function linkedCardsFor(cardId) {
+    return state.project.cards.filter((card) => card.parentCardId === cardId);
+  }
+
+  function openLinkTrackDialog(cardId) {
+    if (!state.canEdit || APP_SLUG !== 'musical-kelly') return;
+    const card = getCard(cardId);
+    if (!card) return;
+    activeLinkTrackId = cardId;
+    const childIds = new Set(state.project.cards.filter((entry) => entry.parentCardId === card.id).map((entry) => entry.id));
+    const parents = childIds.size ? [] : state.project.cards.filter((entry) => !entry.parentCardId && entry.id !== card.id && !childIds.has(entry.id));
+    elements.linkTrackParent.replaceChildren();
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = 'Nenhuma · manter na lista principal';
+    elements.linkTrackParent.appendChild(none);
+    parents.forEach((parent) => {
+      const option = document.createElement('option');
+      option.value = parent.id;
+      option.textContent = cardPublicLabel(parent);
+      elements.linkTrackParent.appendChild(option);
+    });
+    elements.linkTrackParent.value = card.parentCardId || '';
+    elements.linkTrackDescription.textContent = `Escolha em qual faixa principal “${card.title}” ficará como opção. Ela sai da lista principal e não entra no tempo total. Para abrir este vínculo novamente, segure 4 e clique na faixa.`;
+    elements.linkTrackDialog.showModal();
+    elements.linkTrackParent.focus();
+  }
+
+  function openLinkedTracksDialog(cardId) {
+    const main = getCard(cardId);
+    if (!main) return;
+    const linked = linkedCardsFor(cardId);
+    elements.linkedTracksDialogTitle.textContent = main.title || cardPublicLabel(main);
+    elements.linkedTracksList.replaceChildren();
+    const complete = document.createElement('button');
+    complete.type = 'button';
+    complete.className = 'linked-track-option';
+    complete.innerHTML = '<span>Faixa completa</span><small>Reproduzir o arranjo principal</small>';
+    complete.addEventListener('click', () => {
+      elements.linkedTracksDialog.close();
+      openLyricsAndPlay(main.id).catch((error) => showToast(error.message, true));
+    });
+    elements.linkedTracksList.appendChild(complete);
+    linked.forEach((card) => {
+      const row = document.createElement('div');
+      row.className = 'linked-track-row';
+      const play = document.createElement('button');
+      play.type = 'button';
+      play.className = 'linked-track-option';
+      play.innerHTML = `<span></span><small>Faixa vinculada</small>`;
+      play.querySelector('span').textContent = card.title;
+      play.addEventListener('click', () => {
+        elements.linkedTracksDialog.close();
+        openLyricsAndPlay(card.id).catch((error) => showToast(error.message, true));
+      });
+      row.appendChild(play);
+      if (state.canEdit) {
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'linked-track-edit';
+        edit.textContent = 'Vínculo';
+        edit.title = `Alterar vínculo de ${card.title}`;
+        edit.addEventListener('click', () => {
+          elements.linkedTracksDialog.close();
+          openLinkTrackDialog(card.id);
+        });
+        row.appendChild(edit);
+      }
+      elements.linkedTracksList.appendChild(row);
+    });
+    elements.linkedTracksDialog.showModal();
   }
 
   function selectCard(cardId) {
@@ -2625,7 +2734,7 @@
       closeLyrics();
       return;
     }
-    const playableCards = state.project.cards.filter((entry) => entry.audio?.fileName);
+    const playableCards = state.project.cards.filter((entry) => !entry.parentCardId && entry.audio?.fileName);
     const playableIndex = playableCards.findIndex((entry) => entry.id === card.id);
     const trackNumber = playableIndex >= 0 ? playableIndex + 1 : 1;
     const trackTotal = Math.max(1, playableCards.length);
@@ -3846,7 +3955,7 @@
       showToast('Conclua ou cancele o sync manual antes de trocar de faixa.');
       return;
     }
-    const playableCards = state.project.cards.filter((card) => card.audio?.fileName);
+    const playableCards = state.project.cards.filter((card) => !card.parentCardId && card.audio?.fileName);
     const currentIndex = playableCards.findIndex((card) => card.id === state.lyricsCardId);
     const target = playableCards[currentIndex + direction];
     if (!target) return;
@@ -4449,18 +4558,16 @@
 
   function moveCardBeside(draggedId, targetId, placeAfter) {
     if (!draggedId || !targetId || draggedId === targetId) return false;
-    const cards = state.project.cards;
+    const cards = state.project.cards.filter((card) => !card.parentCardId);
     const draggedIndex = cards.findIndex((card) => card.id === draggedId);
     if (draggedIndex < 0) return false;
     const previousOrder = cards.map((card) => card.id);
     const [draggedCard] = cards.splice(draggedIndex, 1);
     const targetIndex = cards.findIndex((card) => card.id === targetId);
-    if (targetIndex < 0) {
-      cards.splice(draggedIndex, 0, draggedCard);
-      return false;
-    }
+    if (targetIndex < 0) return false;
     cards.splice(targetIndex + (placeAfter ? 1 : 0), 0, draggedCard);
     const changed = cards.some((card, index) => card.id !== previousOrder[index]);
+    if (changed) reorderCardGroups(cards.map((card) => card.id));
 
     const draggedNode = elements.trackList.querySelector(`[data-card-id="${CSS.escape(draggedId)}"]`);
     const targetNode = elements.trackList.querySelector(`[data-card-id="${CSS.escape(targetId)}"]`);
@@ -4472,14 +4579,39 @@
 
   async function moveCardByOffset(cardId, offset) {
     if (!state.canReorder || state.collaborationBusy || ![-1, 1].includes(offset)) return;
-    const cards = state.project.cards;
+    const cards = state.project.cards.filter((card) => !card.parentCardId);
     const currentIndex = cards.findIndex((card) => card.id === cardId);
     const nextIndex = currentIndex + offset;
     if (currentIndex < 0 || nextIndex < 0 || nextIndex >= cards.length) return;
     const [card] = cards.splice(currentIndex, 1);
     cards.splice(nextIndex, 0, card);
+    reorderCardGroups(cards.map((entry) => entry.id));
     render();
     await persistCardOrder();
+  }
+
+  function reorderCardGroups(mainIds) {
+    const byId = new Map(state.project.cards.map((card) => [card.id, card]));
+    const children = new Map();
+    state.project.cards.forEach((card) => {
+      if (!card.parentCardId) return;
+      if (!children.has(card.parentCardId)) children.set(card.parentCardId, []);
+      children.get(card.parentCardId).push(card);
+    });
+    const reordered = [];
+    const reorderedIds = new Set();
+    mainIds.forEach((id) => {
+      const main = byId.get(id);
+      if (!main || main.parentCardId) return;
+      reordered.push(main);
+      reorderedIds.add(main.id);
+      (children.get(id) || []).forEach((child) => {
+        reordered.push(child);
+        reorderedIds.add(child.id);
+      });
+    });
+    state.project.cards.filter((card) => !reorderedIds.has(card.id)).forEach((card) => reordered.push(card));
+    state.project.cards = reordered;
   }
 
   async function persistCardOrder() {
@@ -4508,7 +4640,7 @@
     let startingOrder = '';
     let dropTargetId = '';
     let dropAfter = false;
-    const currentOrder = () => state.project.cards.map((card) => card.id).join('\u0000');
+    const currentOrder = () => state.project.cards.filter((card) => !card.parentCardId).map((card) => card.id).join('\u0000');
     const clearDropTarget = () => {
       elements.trackList.querySelectorAll('.track-card.is-sort-target-before, .track-card.is-sort-target-after')
         .forEach((card) => card.classList.remove('is-sort-target-before', 'is-sort-target-after'));
@@ -5193,9 +5325,10 @@
   }
 
   function nextPlayableCard(cardId) {
-    const currentIndex = state.project.cards.findIndex((card) => card.id === cardId);
+    const mainCards = state.project.cards.filter((card) => !card.parentCardId);
+    const currentIndex = mainCards.findIndex((card) => card.id === cardId);
     if (currentIndex < 0) return null;
-    return state.project.cards.slice(currentIndex + 1).find((card) => card.audio) || null;
+    return mainCards.slice(currentIndex + 1).find((card) => card.audio) || null;
   }
 
   async function scheduleAutoAdvance(voice) {
@@ -6209,6 +6342,27 @@
       elements.audioInput.click();
     });
     elements.audioTracksCloseButton.addEventListener('click', () => closeDialog(elements.audioTracksDialog));
+    elements.linkedTracksCloseButton.addEventListener('click', () => closeDialog(elements.linkedTracksDialog));
+    elements.linkTrackCloseButton.addEventListener('click', () => closeDialog(elements.linkTrackDialog));
+    elements.linkTrackForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const card = getCard(activeLinkTrackId);
+      if (!card || !state.canEdit) return;
+      const priorParentId = card.parentCardId || '';
+      card.parentCardId = elements.linkTrackParent.value || '';
+      elements.linkTrackDialog.close();
+      render();
+      try {
+        await saveProject({ quiet: false });
+        showToast(card.parentCardId
+          ? `“${card.title}” foi vinculada à faixa principal.`
+          : `“${card.title}” voltou para a lista principal.`);
+      } catch (error) {
+        card.parentCardId = priorParentId;
+        render();
+        showToast(error.message || 'Não foi possível salvar o vínculo.', true);
+      }
+    });
     elements.imageInput.addEventListener('change', () => {
       uploadFile('image', elements.imageInput.files?.[0]).catch((error) => showToast(error.message, true));
     });
@@ -6259,6 +6413,11 @@
     });
     elements.titleInput.addEventListener('blur', () => saveProject().catch(() => {}));
     document.addEventListener('keydown', (event) => {
+      if (APP_SLUG === 'musical-kelly' && state.canEdit && !event.repeat
+        && (event.code === 'Digit4' || event.code === 'Numpad4')
+        && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) {
+        musicalLinkKeyHeld = true;
+      }
       if (event.key === 'Escape' && !elements.containerUploadMenu.hidden) {
         closeContainerUploadMenu();
         return;
@@ -6289,6 +6448,10 @@
         openPicker('audio');
       }
     });
+    document.addEventListener('keyup', (event) => {
+      if (event.code === 'Digit4' || event.code === 'Numpad4') musicalLinkKeyHeld = false;
+    });
+    window.addEventListener('blur', () => { musicalLinkKeyHeld = false; });
   }
 
   function registerOfflineSupport() {

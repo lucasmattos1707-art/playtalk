@@ -16467,6 +16467,7 @@ function normalizeMusicalKellyProject(payload) {
     cards.push({
       id,
       title: String(source?.title || 'Faixa').trim().slice(0, 120) || 'Faixa',
+      parentCardId: String(source?.parentCardId || '').trim().slice(0, 80),
       audio,
       audioTracks: normalizedTracks,
       image,
@@ -16485,10 +16486,17 @@ function normalizeMusicalKellyProject(payload) {
       comments
     });
   }
+  const cardIds = new Set(cards.map((card) => card.id));
+  const linkedIds = new Set(cards.filter((card) => card.parentCardId && cardIds.has(card.parentCardId) && card.parentCardId !== card.id)
+    .map((card) => card.id));
   return {
     version: 1,
     updatedAt: String(payload?.updatedAt || '').trim().slice(0, 40) || new Date().toISOString(),
-    cards
+    cards: cards.map((card) => ({
+      ...card,
+      parentCardId: card.parentCardId && cardIds.has(card.parentCardId) && card.parentCardId !== card.id
+        && !linkedIds.has(card.parentCardId) ? card.parentCardId : ''
+    }))
   };
 }
 
