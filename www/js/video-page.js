@@ -330,7 +330,7 @@
     $('visitorUploadTitle').textContent = `Enviar imagem para “${image.title || 'esta imagem'}”`;
     $('visitorImageInput').value = '';
     $('visitorImagePreview').removeAttribute('src'); $('visitorImagePreview').hidden = true;
-    $('visitorUploadStatus').textContent = 'A imagem vai inteira para o administrador, sem recorte.';
+    $('visitorUploadStatus').textContent = '';
     $('visitorUploadBtn').disabled = true; $('visitorUploadModal').hidden = false;
   }
 
