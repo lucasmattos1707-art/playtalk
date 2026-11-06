@@ -2039,7 +2039,7 @@
         node.style.setProperty('--transition-ms', `${Math.max(80, state.transitionDurationMs)}ms`);
       }
       const publicLabel = cardPublicLabel(card);
-      if (APP_SLUG === 'musical-kelly' && state.canEdit) node.title = 'Segure 4 e clique para vincular esta faixa.';
+      if (APP_SLUG === 'musical-kelly' && state.canEdit) node.title = 'Segure 4 e clique para vincular. Nas opções, segure 5 e clique para voltar à lista principal.';
       const linkedTracks = linkedCardsFor(card.id);
       node.classList.toggle('has-linked-tracks', linkedTracks.length > 0);
       node.setAttribute('aria-label', `${publicLabel}. ${APP_SLUG === 'englishtraining'
@@ -2048,7 +2048,7 @@
       if (linkedTracks.length) {
         const badge = document.createElement('span');
         badge.className = 'track-linked-badge';
-        badge.textContent = `${linkedTracks.length} opção${linkedTracks.length === 1 ? '' : 'ões'}`;
+        badge.textContent = `${linkedTracks.length} ${linkedTracks.length === 1 ? 'opção' : 'opções'}`;
         node.appendChild(badge);
       }
       node.querySelector('.track-title-text').textContent = APP_SLUG === 'englishtraining' || !cardHasImage(card)
@@ -2263,10 +2263,31 @@
   }
 
   let musicalLinkKeyHeld = false;
+  let musicalUnlinkKeyHeld = false;
   let activeLinkTrackId = '';
+  const musicalKellyTrackNames = [
+    'Abertura',
+    'Além do arco íris',
+    'Dorethy e pintinhos',
+    'Dorethy e ovelinhas',
+    'Furacão e Oz',
+    'Dorothy e os Munchkins',
+    'Fada e Dorothy',
+    'Espantalho e Dorothy',
+    'Homem de Lata',
+    'Dorethy e o Leão',
+    'Derretimento'
+  ];
 
   function linkedCardsFor(cardId) {
     return state.project.cards.filter((card) => card.parentCardId === cardId);
+  }
+
+  function musicalKellyTrackName(card) {
+    if (!card) return 'Faixa';
+    const playableCards = state.project.cards.filter((entry) => cardAudioTracks(entry).length);
+    const index = playableCards.findIndex((entry) => entry.id === card.id);
+    return musicalKellyTrackNames[index] || card.title || 'Faixa';
   }
 
   function openLinkTrackDialog(cardId) {
@@ -2284,7 +2305,7 @@
     parents.forEach((parent) => {
       const option = document.createElement('option');
       option.value = parent.id;
-      option.textContent = cardPublicLabel(parent);
+      option.textContent = musicalKellyTrackName(parent);
       elements.linkTrackParent.appendChild(option);
     });
     elements.linkTrackParent.value = card.parentCardId || '';
@@ -2297,7 +2318,7 @@
     const main = getCard(cardId);
     if (!main) return;
     const linked = linkedCardsFor(cardId);
-    elements.linkedTracksDialogTitle.textContent = main.title || cardPublicLabel(main);
+    elements.linkedTracksDialogTitle.textContent = musicalKellyTrackName(main);
     elements.linkedTracksList.replaceChildren();
     const complete = document.createElement('button');
     complete.type = 'button';
@@ -2315,27 +2336,36 @@
       play.type = 'button';
       play.className = 'linked-track-option';
       play.innerHTML = `<span></span><small>Faixa vinculada</small>`;
-      play.querySelector('span').textContent = card.title;
+      play.querySelector('span').textContent = musicalKellyTrackName(card);
       play.addEventListener('click', () => {
+        if (state.canEdit && musicalUnlinkKeyHeld) {
+          unlinkLinkedTrack(card).catch((error) => showToast(error.message, true));
+          return;
+        }
         elements.linkedTracksDialog.close();
         openLyricsAndPlay(card.id).catch((error) => showToast(error.message, true));
       });
       row.appendChild(play);
-      if (state.canEdit) {
-        const edit = document.createElement('button');
-        edit.type = 'button';
-        edit.className = 'linked-track-edit';
-        edit.textContent = 'Vínculo';
-        edit.title = `Alterar vínculo de ${card.title}`;
-        edit.addEventListener('click', () => {
-          elements.linkedTracksDialog.close();
-          openLinkTrackDialog(card.id);
-        });
-        row.appendChild(edit);
-      }
+
       elements.linkedTracksList.appendChild(row);
     });
     elements.linkedTracksDialog.showModal();
+  }
+
+  async function unlinkLinkedTrack(card) {
+    if (!state.canEdit || !card?.parentCardId) return;
+    const previousParentId = card.parentCardId;
+    card.parentCardId = '';
+    elements.linkedTracksDialog.close();
+    render();
+    try {
+      await saveProject({ quiet: false });
+      showToast(`“${musicalKellyTrackName(card)}” voltou para a lista principal.`);
+    } catch (error) {
+      card.parentCardId = previousParentId;
+      render();
+      showToast(error.message || 'Não foi possível remover o vínculo.', true);
+    }
   }
 
   function selectCard(cardId) {
@@ -6418,6 +6448,11 @@
         && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) {
         musicalLinkKeyHeld = true;
       }
+      if (APP_SLUG === 'musical-kelly' && state.canEdit && !event.repeat
+        && (event.code === 'Digit5' || event.code === 'Numpad5')
+        && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) {
+        musicalUnlinkKeyHeld = true;
+      }
       if (event.key === 'Escape' && !elements.containerUploadMenu.hidden) {
         closeContainerUploadMenu();
         return;
@@ -6450,8 +6485,9 @@
     });
     document.addEventListener('keyup', (event) => {
       if (event.code === 'Digit4' || event.code === 'Numpad4') musicalLinkKeyHeld = false;
+      if (event.code === 'Digit5' || event.code === 'Numpad5') musicalUnlinkKeyHeld = false;
     });
-    window.addEventListener('blur', () => { musicalLinkKeyHeld = false; });
+    window.addEventListener('blur', () => { musicalLinkKeyHeld = false; musicalUnlinkKeyHeld = false; });
   }
 
   function registerOfflineSupport() {

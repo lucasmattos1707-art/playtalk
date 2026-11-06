@@ -3097,9 +3097,7 @@ body.lyrics-open > :not(.lyrics-screen):not(.character-menu):not(.character-dial
 .linked-track-option:hover, .linked-track-option:focus-visible { border-color: rgba(85,230,138,.7); background: rgba(85,230,138,.1); }
 .linked-track-option span { font-weight: 850; }
 .linked-track-option small { color: rgba(255,255,255,.62); font-size: .75rem; }
-.linked-track-row { display: flex; align-items: center; gap: 8px; }
-.linked-track-row .linked-track-option { flex: 1; }
-.linked-track-edit { min-height: 42px; padding: 0 11px; border: 1px solid rgba(255,255,255,.16); border-radius: 11px; color: #d9f7e4; background: rgba(255,255,255,.06); font: inherit; font-size: .75rem; font-weight: 800; cursor: pointer; }
+.linked-track-row { display: flex; align-items: center; }
 .linked-track-description { margin: 0; color: rgba(255,255,255,.72); line-height: 1.55; }
 .link-track-dialog .dialog-field select { min-height: 50px; padding: 0 14px; border: 1px solid rgba(255,255,255,.16); border-radius: 14px; color: #fff; background: #102018; font: inherit; }
 .track-linked-badge { position: absolute; z-index: 3; left: clamp(18px, 4vw, 48px); bottom: 18px; padding: 5px 9px; border: 1px solid rgba(183,255,210,.22); border-radius: 999px; color: #d8ffe4; background: rgba(4,24,15,.72); font-size: .67rem; font-weight: 850; letter-spacing: .04em; pointer-events: none; }
