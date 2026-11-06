@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  const state = { isAdmin: false, tracks: [], responses: [], approvalProgress: { approved: 0, total: 0 }, pending: null, saving: false };
+  const state = { isAdmin: false, tracks: [], submittedImages: [], responses: [], approvalProgress: { approved: 0, total: 0 }, pending: null, saving: false, visitorUploadSource: null };
   const positions = ['superior esquerda', 'superior direita', 'inferior esquerda', 'inferior direita'];
   const respondentKey = (() => {
     try {
@@ -35,6 +35,7 @@
   function renderGallery() {
     const root = $('imageList'); root.replaceChildren();
     if (state.isAdmin && !state.tracks.some((track) => track.isCustom)) renderCustomImageCreator(root);
+    if (state.isAdmin) renderVisitorSubmissions(root);
     if (!state.tracks.length) {
       const empty = document.createElement('div'); empty.className = 'empty';
       empty.textContent = state.isAdmin ? 'As faixas do Musical Kelly aparecerão aqui.' : 'Nenhuma imagem disponível para aprovar no momento.';
@@ -54,6 +55,10 @@
       const prev = document.createElement('button'); prev.type = 'button'; prev.textContent = '‹'; prev.setAttribute('aria-label', 'Opção anterior');
       const next = document.createElement('button'); next.type = 'button'; next.textContent = '›'; next.setAttribute('aria-label', 'Próxima opção');
       nav.append(prev, next); viewer.append(nav); card.append(viewer);
+      if (!state.isAdmin) {
+        const hint = document.createElement('div'); hint.className = 'longpress-hint';
+        hint.textContent = 'Segure a imagem por 300 ms para enviar uma imagem inteira.'; card.append(hint);
+      }
       const dots = document.createElement('div'); dots.className = 'dots'; card.append(dots);
       const actions = document.createElement('div'); actions.className = 'actions';
       const choose = document.createElement('button'); choose.type = 'button'; choose.className = 'primary'; choose.textContent = 'Escolher';
@@ -69,6 +74,7 @@
         viewer.append(error);
       };
       imageObj.src = String(image.imageUrl || '').startsWith('data:') ? image.imageUrl : apiUrl(image.imageUrl);
+      if (!state.isAdmin) bindVisitorUploadGesture(canvas, image);
       function renderOptions() {
         if (imageObj.naturalWidth && local.index >= 0) drawQuadrant(canvas, imageObj, local.index);
         dots.replaceChildren();
@@ -96,6 +102,41 @@
       root.append(card);
     });
     if (state.isAdmin) renderRemovedResponses(root);
+  }
+
+  function renderVisitorSubmissions(root) {
+    if (!state.submittedImages.length) return;
+    const section = document.createElement('section'); section.className = 'visitor-submissions';
+    const heading = document.createElement('h2'); heading.textContent = 'Imagens enviadas por visitantes'; section.append(heading);
+    state.submittedImages.forEach((image) => {
+      const card = document.createElement('article'); card.className = 'card visitor-submission';
+      const title = document.createElement('h3'); title.textContent = image.title; card.append(title);
+      const viewer = document.createElement('div'); viewer.className = 'viewer visitor-full-viewer';
+      const photo = document.createElement('img'); photo.className = 'visitor-full-image'; photo.alt = image.title;
+      photo.src = String(image.imageUrl || '').startsWith('data:') ? image.imageUrl : apiUrl(image.imageUrl);
+      viewer.append(photo); card.append(viewer);
+      const badge = document.createElement('div'); badge.className = 'approved-badge'; badge.textContent = 'Aprovada automaticamente'; card.append(badge);
+      section.append(card);
+    });
+    root.append(section);
+  }
+
+  function bindVisitorUploadGesture(canvas, image) {
+    let timer = 0, startX = 0, startY = 0;
+    const clear = () => { window.clearTimeout(timer); timer = 0; };
+    canvas.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      startX = event.clientX; startY = event.clientY;
+      clear();
+      timer = window.setTimeout(() => openVisitorUpload(image), 300);
+    });
+    canvas.addEventListener('pointermove', (event) => {
+      if (Math.abs(event.clientX - startX) > 12 || Math.abs(event.clientY - startY) > 12) clear();
+    });
+    canvas.addEventListener('pointerup', clear);
+    canvas.addEventListener('pointercancel', clear);
+    canvas.addEventListener('pointerleave', clear);
+    canvas.addEventListener('contextmenu', (event) => event.preventDefault());
   }
 
   function renderRemovedResponses(root) {
@@ -245,6 +286,7 @@
   async function loadGallery() {
     const result = await apiFetch('/api/video-quadrants');
     state.isAdmin = Boolean(result.isAdmin); state.tracks = Array.isArray(result.tracks) ? result.tracks : [];
+    state.submittedImages = Array.isArray(result.submittedImages) ? result.submittedImages : [];
     state.responses = Array.isArray(result.responses) ? result.responses : [];
     state.approvalProgress = result.approvalProgress || { approved: 0, total: 0 };
     renderApprovalProgress();
@@ -280,6 +322,63 @@
     if (dKeyTimes.length >= 3) { dKeyTimes = []; downloadApprovedPack(); }
   });
 
+  let visitorImageData = '';
+  function openVisitorUpload(image) {
+    if (state.isAdmin || !image?.id) return;
+    state.visitorUploadSource = image;
+    visitorImageData = '';
+    $('visitorUploadTitle').textContent = `Enviar imagem para “${image.title || 'esta imagem'}”`;
+    $('visitorImageInput').value = '';
+    $('visitorImagePreview').removeAttribute('src'); $('visitorImagePreview').hidden = true;
+    $('visitorUploadStatus').textContent = 'A imagem vai inteira para o administrador, sem recorte.';
+    $('visitorUploadBtn').disabled = true; $('visitorUploadModal').hidden = false;
+  }
+
+  $('visitorImageInput').addEventListener('change', () => {
+    const file = $('visitorImageInput').files?.[0];
+    visitorImageData = '';
+    $('visitorImagePreview').removeAttribute('src'); $('visitorImagePreview').hidden = true;
+    $('visitorUploadBtn').disabled = true;
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      $('visitorUploadStatus').textContent = 'Escolha uma imagem PNG, JPG ou WebP.'; return;
+    }
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      if (!img.naturalWidth || !img.naturalHeight) { $('visitorUploadStatus').textContent = 'Não foi possível ler essa imagem.'; return; }
+      try {
+        visitorImageData = canvasDataUrl(img);
+        const encodedBytes = Math.floor((visitorImageData.length - visitorImageData.indexOf(',') - 1) * 0.75);
+        if (encodedBytes > 5 * 1024 * 1024) { visitorImageData = ''; $('visitorUploadStatus').textContent = 'A imagem otimizada precisa ter até 5 MB.'; return; }
+        $('visitorImagePreview').src = visitorImageData; $('visitorImagePreview').hidden = false;
+        $('visitorUploadStatus').textContent = `${img.naturalWidth} × ${img.naturalHeight} px · imagem inteira pronta para envio.`;
+        $('visitorUploadBtn').disabled = false;
+      } catch (_error) { $('visitorUploadStatus').textContent = 'Não foi possível preparar essa imagem. Tente outra.'; }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); $('visitorUploadStatus').textContent = 'Não foi possível abrir essa imagem.'; };
+    img.src = url;
+  });
+
+  $('visitorUploadBtn').onclick = async () => {
+    if (!visitorImageData || !state.visitorUploadSource) return;
+    const button = $('visitorUploadBtn'); button.disabled = true;
+    $('visitorUploadStatus').textContent = 'Enviando imagem inteira…';
+    try {
+      await apiFetch('/api/video-quadrants/visitor-upload', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceImageId: state.visitorUploadSource.id, imageData: visitorImageData })
+      });
+      $('visitorUploadModal').hidden = true; state.visitorUploadSource = null; visitorImageData = '';
+      setToast('Imagem enviada ao administrador e aprovada.');
+      await loadGallery();
+    } catch (error) { $('visitorUploadStatus').textContent = error.message; button.disabled = false; }
+  };
+  $('visitorUploadCancel').onclick = () => { $('visitorUploadModal').hidden = true; state.visitorUploadSource = null; visitorImageData = ''; };
+  $('visitorUploadModal').addEventListener('click', (event) => {
+    if (event.target === $('visitorUploadModal')) $('visitorUploadCancel').click();
+  });
+
   function canvasDataUrl(img) {
     const scale = Math.min(1, 1600 / img.naturalWidth, 1600 / img.naturalHeight);
     const canvas = document.createElement('canvas'); canvas.width = Math.max(2, Math.round(img.naturalWidth * scale)); canvas.height = Math.max(2, Math.round(img.naturalHeight * scale));
@@ -289,7 +388,11 @@
   $('commentBtn').onclick = () => saveResponse(true);
   $('approveBtn').onclick = () => saveResponse(false);
   $('commentModal').addEventListener('click', (event) => { if (event.target === $('commentModal') && state.pending?.selectedOption !== -1) $('commentModal').hidden = true; });
-  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && state.pending?.selectedOption !== -1) $('commentModal').hidden = true; });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    if (!$('visitorUploadModal').hidden) $('visitorUploadCancel').click();
+    else if (state.pending?.selectedOption !== -1) $('commentModal').hidden = true;
+  });
   loadGallery().catch((error) => { $('imageList').innerHTML = ''; const notice = document.createElement('div'); notice.className = 'empty'; notice.textContent = error.message; $('imageList').append(notice); });
   window.setInterval(() => {
     if (!document.hidden && $('commentModal').hidden) loadGallery().catch(() => {});

@@ -19898,12 +19898,20 @@ async function ensureVideoQuadrantsSchema() {
           object_key text,
           created_by bigint,
           created_at timestamptz NOT NULL DEFAULT now(),
-          deleted_at timestamptz
+          deleted_at timestamptz,
+          is_full_image boolean NOT NULL DEFAULT false,
+          is_visitor_upload boolean NOT NULL DEFAULT false,
+          is_approved boolean NOT NULL DEFAULT false,
+          source_image_id uuid
         )
       `);
       await pool.query('ALTER TABLE public.video_quadrant_images ADD COLUMN IF NOT EXISTS track_id text');
       await pool.query("ALTER TABLE public.video_quadrant_images ADD COLUMN IF NOT EXISTS object_key text");
       await pool.query('ALTER TABLE public.video_quadrant_images ADD COLUMN IF NOT EXISTS deleted_at timestamptz');
+      await pool.query('ALTER TABLE public.video_quadrant_images ADD COLUMN IF NOT EXISTS is_full_image boolean NOT NULL DEFAULT false');
+      await pool.query('ALTER TABLE public.video_quadrant_images ADD COLUMN IF NOT EXISTS is_visitor_upload boolean NOT NULL DEFAULT false');
+      await pool.query('ALTER TABLE public.video_quadrant_images ADD COLUMN IF NOT EXISTS is_approved boolean NOT NULL DEFAULT false');
+      await pool.query('ALTER TABLE public.video_quadrant_images ADD COLUMN IF NOT EXISTS source_image_id uuid');
       await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS video_quadrant_images_track_unique_idx ON public.video_quadrant_images(track_id) WHERE track_id IS NOT NULL');
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.video_quadrant_responses (
@@ -19984,18 +19992,20 @@ async function restoreVideoQuadrantRowsFromR2() {
       knownKeys.add(objectKey);
       continue;
     }
-    let title = '', trackId = '';
+    let title = '', trackId = '', isVisitorUpload = false, sourceImageId = '';
     try {
       const head = await getR2ObjectHead(objectKey);
       title = decodeURIComponent(String(head?.Metadata?.title || '')).trim();
       trackId = String(head?.Metadata?.trackid || '').trim().slice(0, 120);
+      isVisitorUpload = String(head?.Metadata?.visitorupload || '').toLowerCase() === 'true';
+      sourceImageId = String(head?.Metadata?.sourceimageid || '').trim();
     } catch (_error) {}
     title = title.slice(0, 120) || `Imagem ${imageId.slice(0, 8)}`;
     await pool.query(`
-      INSERT INTO public.video_quadrant_images(id, track_id, title, image_data, object_key)
-      VALUES($1, $2, $3, '', $4)
+      INSERT INTO public.video_quadrant_images(id, track_id, title, image_data, object_key, is_full_image, is_visitor_upload, is_approved, source_image_id)
+      VALUES($1, $2, $3, '', $4, $5, $6, $6, $7)
       ON CONFLICT (id) DO NOTHING
-    `, [imageId, trackId || null, title, objectKey]);
+    `, [imageId, trackId || null, title, objectKey, isVisitorUpload, isVisitorUpload, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sourceImageId) ? sourceImageId : null]);
     knownIds.add(imageId); knownKeys.add(objectKey);
   }
 }
@@ -20035,7 +20045,8 @@ async function saveVideoQuadrantImage({ imageData, title, trackId = null, userId
       VALUES($1, $2, $3, '', $4, $5)
       ON CONFLICT (track_id) WHERE track_id IS NOT NULL DO UPDATE SET
         title = EXCLUDED.title, image_data = '', object_key = EXCLUDED.object_key,
-        created_by = EXCLUDED.created_by, created_at = now(), deleted_at = NULL
+        created_by = EXCLUDED.created_by, created_at = now(), deleted_at = NULL,
+        is_full_image = false, is_visitor_upload = false, is_approved = false, source_image_id = NULL
       RETURNING id, track_id AS "trackId", title, object_key AS "objectKey", created_at AS "createdAt"
     `, [imageId, trackId, imageTitle, objectKey, userId]);
     await pool.query('DELETE FROM public.video_quadrant_responses WHERE image_id = $1', [result.rows[0].id]).catch((error) => {
@@ -20113,14 +20124,23 @@ app.get('/api/video-quadrants', async (req, res) => {
     await migrateLegacyVideoQuadrantImagesToR2();
     await restoreVideoQuadrantRowsFromR2();
     const images = await pool.query(`
-      SELECT id, track_id AS "trackId", title, image_data AS "imageData", object_key AS "objectKey", created_at AS "createdAt"
+      SELECT id, track_id AS "trackId", title, image_data AS "imageData", object_key AS "objectKey", created_at AS "createdAt",
+             is_full_image AS "isFullImage", is_visitor_upload AS "isVisitorUpload", is_approved AS "isApproved",
+             source_image_id AS "sourceImageId"
       FROM public.video_quadrant_images WHERE deleted_at IS NULL ORDER BY created_at DESC, id DESC
     `);
     const toClientImage = (image) => image ? ({
       id: String(image.id), title: image.title,
       imageUrl: image.objectKey ? `/api/video-quadrants/${encodeURIComponent(image.id)}/image` : String(image.imageData || '')
     }) : null;
-    const imageByTrack = new Map(images.rows.filter((image) => image.trackId).map((image) => [String(image.trackId), image]));
+    const regularImages = images.rows.filter((image) => !image.isVisitorUpload);
+    const visitorUploadRows = images.rows.filter((image) => image.isVisitorUpload);
+    const submittedImages = isAdmin ? visitorUploadRows.map((image) => ({
+      id: String(image.id), title: image.title,
+      imageUrl: image.objectKey ? `/api/video-quadrants/${encodeURIComponent(image.id)}/image` : String(image.imageData || ''),
+      createdAt: image.createdAt, isApproved: Boolean(image.isApproved), isFullImage: Boolean(image.isFullImage)
+    })) : [];
+    const imageByTrack = new Map(regularImages.filter((image) => image.trackId).map((image) => [String(image.trackId), image]));
     const projectTracks = Array.isArray(project?.cards) ? project.cards : [];
     const validTrackIds = new Set(projectTracks.map((card) => String(card.id || '')).filter(Boolean));
     const tracks = projectTracks.map((card) => ({
@@ -20128,21 +20148,22 @@ app.get('/api/video-quadrants', async (req, res) => {
       image: toClientImage(imageByTrack.get(String(card.id || '')))
     })).filter((track) => track.id);
     const approvalResult = await pool.query(`
-      SELECT DISTINCT r.image_id AS "imageId"
-      FROM public.video_quadrant_responses r
-      JOIN public.video_quadrant_images vi ON vi.id = r.image_id
-      WHERE vi.deleted_at IS NULL AND r.selected_option >= 0
+      SELECT DISTINCT vi.id AS "imageId"
+      FROM public.video_quadrant_images vi
+      LEFT JOIN public.video_quadrant_responses r ON r.image_id = vi.id AND r.selected_option >= 0
+      WHERE vi.deleted_at IS NULL AND (vi.is_approved = true OR r.id IS NOT NULL)
     `);
-    const legacyCustomSlot = images.rows.find((image) => String(image.trackId || '') === '__video_custom_slot__')
-      || images.rows.find((image) => !image.trackId);
-    const customRows = images.rows.filter((image) => image.trackId && String(image.trackId) !== '__video_custom_slot__' && !validTrackIds.has(String(image.trackId)));
+    const legacyCustomSlot = regularImages.find((image) => String(image.trackId || '') === '__video_custom_slot__')
+      || regularImages.find((image) => !image.trackId);
+    const customRows = regularImages.filter((image) => image.trackId && String(image.trackId) !== '__video_custom_slot__' && !validTrackIds.has(String(image.trackId)));
     if (legacyCustomSlot) customRows.push(legacyCustomSlot);
     const customImages = customRows.map((image) => ({
       id: `custom-${image.id}`, title: image.title, isCustom: true, image: toClientImage(image)
     }));
     const visibleImageIds = new Set([
       ...tracks.filter((track) => track.image).map((track) => track.image.id),
-      ...customRows.map((image) => String(image.id))
+      ...customRows.map((image) => String(image.id)),
+      ...visitorUploadRows.map((image) => String(image.id))
     ]);
     const approvalProgress = {
       approved: approvalResult.rows.filter((row) => visibleImageIds.has(String(row.imageId))).length,
@@ -20163,7 +20184,7 @@ app.get('/api/video-quadrants', async (req, res) => {
       responses = result.rows;
     }
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, isAdmin, approvalProgress, tracks: (isAdmin ? tracks : tracks.filter((track) => track.image)).concat(customImages), responses });
+    res.json({ success: true, isAdmin, approvalProgress, tracks: (isAdmin ? tracks : tracks.filter((track) => track.image)).concat(customImages), submittedImages, responses });
   } catch (error) {
     const status = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
     if (status >= 500) console.error('Erro ao carregar seletor de imagens:', error);
@@ -20207,6 +20228,52 @@ app.post('/api/video-quadrants', express.json({ limit: '8mb' }), async (req, res
   }
 });
 
+app.post('/api/video-quadrants/visitor-upload', express.json({ limit: '8mb' }), async (req, res) => {
+  let uploadedKey = '';
+  try {
+    const rateLimit = consumeAuthRateLimit(req, 'video-visitor-image-upload');
+    if (rateLimit.blocked) {
+      res.setHeader('Retry-After', String(rateLimit.retryAfterSeconds));
+      res.status(429).json({ success: false, message: 'Muitos envios seguidos. Tente novamente mais tarde.' });
+      return;
+    }
+    await ensureVideoQuadrantsSchema();
+    const sourceImageId = String(req.body?.sourceImageId || '');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sourceImageId)) {
+      throw Object.assign(new Error('Imagem de referência inválida.'), { statusCode: 400 });
+    }
+    const sourceResult = await pool.query(`
+      SELECT title FROM public.video_quadrant_images
+      WHERE id = $1 AND deleted_at IS NULL AND is_visitor_upload = false
+    `, [sourceImageId]);
+    if (!sourceResult.rowCount) throw Object.assign(new Error('Essa imagem não está mais disponível.'), { statusCode: 404 });
+    if (!isR2FluencyConfigured()) throw Object.assign(new Error('O armazenamento de imagens está indisponível.'), { statusCode: 503 });
+    const buffer = parseVideoQuadrantImageData(req.body?.imageData);
+    const imageId = crypto.randomUUID();
+    uploadedKey = `fluentlevelup/video/${imageId}.webp`;
+    const title = `${String(sourceResult.rows[0].title || 'Imagem').trim()} — envio visitante`.slice(0, 120);
+    await putR2Object(uploadedKey, buffer, 'image/webp', {
+      timeoutMs: 20000, retries: 1,
+      metadata: {
+        title: encodeURIComponent(title), visitorupload: 'true', fullimage: 'true',
+        approved: 'true', sourceimageid: sourceImageId
+      }
+    });
+    await pool.query(`
+      INSERT INTO public.video_quadrant_images(
+        id, track_id, title, image_data, object_key, created_by,
+        is_full_image, is_visitor_upload, is_approved, source_image_id
+      ) VALUES($1, NULL, $2, '', $3, NULL, true, true, true, $4)
+    `, [imageId, title, uploadedKey, sourceImageId]);
+    res.status(201).json({ success: true, message: 'Imagem enviada e adicionada à fila do administrador.' });
+  } catch (error) {
+    if (uploadedKey) await deleteR2Object(uploadedKey).catch(() => {});
+    const status = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+    if (status >= 500) console.error('Erro ao receber imagem de visitante:', error);
+    res.status(status).json({ success: false, message: status >= 500 ? (status === 503 ? error.message : 'Não foi possível enviar a imagem agora.') : error.message });
+  }
+});
+
 app.post('/api/video-quadrants/:trackId/image', express.json({ limit: '8mb' }), async (req, res) => {
   try {
     const admin = await requireAdminUserFromRequest(req);
@@ -20244,7 +20311,7 @@ app.put('/api/video-quadrants/:imageId/image', express.json({ limit: '8mb' }), a
     await putR2Object(objectKey, buffer, 'image/webp', { timeoutMs: 20000, retries: 1, metadata: { title: encodeURIComponent(title) } });
     await pool.query(`
       UPDATE public.video_quadrant_images
-      SET title = $2, image_data = '', object_key = $3, created_by = $4, created_at = now()
+      SET title = $2, image_data = '', object_key = $3, created_by = $4, created_at = now(), is_approved = false
       WHERE id = $1
     `, [imageId, title, objectKey, admin.id]);
     await pool.query('DELETE FROM public.video_quadrant_responses WHERE image_id = $1', [imageId]);
@@ -20263,8 +20330,8 @@ app.get('/api/video-quadrants/approved-pack.zip', async (req, res) => {
     const result = await pool.query(`
       SELECT DISTINCT vi.id, vi.title, vi.image_data AS "imageData", vi.object_key AS "objectKey"
       FROM public.video_quadrant_images vi
-      JOIN public.video_quadrant_responses r ON r.image_id = vi.id
-      WHERE vi.deleted_at IS NULL AND r.selected_option >= 0
+      LEFT JOIN public.video_quadrant_responses r ON r.image_id = vi.id AND r.selected_option >= 0
+      WHERE vi.deleted_at IS NULL AND (vi.is_approved = true OR r.id IS NOT NULL)
       ORDER BY vi.title, vi.id
     `);
     if (!result.rowCount) { res.status(404).json({ success: false, message: 'Ainda não há imagens aprovadas para baixar.' }); return; }
