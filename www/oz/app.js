@@ -457,7 +457,9 @@
   }
 
   function getMusicalTrackTitle(track, index) {
-    return musicalTrackTitleOverrides[index] || String(track?.title || `Faixa ${index + 1}`).trim();
+    return String(track?.arrangementName || '').trim()
+      || musicalTrackTitleOverrides[index]
+      || String(track?.title || `Faixa ${index + 1}`).trim();
   }
 
   function setMusicalCaptionText(value) {

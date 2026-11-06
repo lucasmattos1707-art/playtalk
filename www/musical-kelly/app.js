@@ -115,6 +115,7 @@
     audioTracksDialog: document.getElementById('audioTracksDialog'),
     linkedTracksDialog: document.getElementById('linkedTracksDialog'),
     linkedTracksList: document.getElementById('linkedTracksList'),
+    linkedTracksHint: document.getElementById('linkedTracksHint'),
     linkedTracksDialogTitle: document.getElementById('linkedTracksDialogTitle'),
     linkedTracksCloseButton: document.getElementById('linkedTracksCloseButton'),
     linkTrackDialog: document.getElementById('linkTrackDialog'),
@@ -122,6 +123,11 @@
     linkTrackParent: document.getElementById('linkTrackParent'),
     linkTrackDescription: document.getElementById('linkTrackDescription'),
     linkTrackCloseButton: document.getElementById('linkTrackCloseButton'),
+    renameArrangementDialog: document.getElementById('renameArrangementDialog'),
+    renameArrangementForm: document.getElementById('renameArrangementForm'),
+    renameArrangementTitle: document.getElementById('renameArrangementTitle'),
+    renameArrangementInput: document.getElementById('renameArrangementInput'),
+    renameArrangementCloseButton: document.getElementById('renameArrangementCloseButton'),
     audioTracksList: document.getElementById('audioTracksList'),
     audioTracksCloseButton: document.getElementById('audioTracksCloseButton'),
     audioTracksAddButton: document.getElementById('audioTracksAddButton'),
@@ -1673,6 +1679,7 @@
         id: card.id,
         title: card.title,
         parentCardId: String(card.parentCardId || ''),
+        arrangementName: String(card.arrangementName || ''),
         audio: card.audio ? {
           fileName: card.audio.fileName,
           name: card.audio.name,
@@ -1768,6 +1775,7 @@
 
   function cardPublicLabel(card) {
     if (APP_SLUG === 'englishtraining') return String(card?.title || 'Episódio');
+    if (card?.arrangementName) return card.arrangementName;
     if (!cardHasImage(card)) return card?.title || 'Faixa';
     const mainCards = state.project.cards.filter((entry) => !entry.parentCardId);
     const index = mainCards.findIndex((entry) => entry.id === card?.id);
@@ -2051,8 +2059,9 @@
         badge.textContent = `${linkedTracks.length} ${linkedTracks.length === 1 ? 'opção' : 'opções'}`;
         node.appendChild(badge);
       }
-      node.querySelector('.track-title-text').textContent = APP_SLUG === 'englishtraining' || !cardHasImage(card)
-        ? card.title : '';
+      node.querySelector('.track-title-text').textContent = APP_SLUG === 'englishtraining'
+        ? card.title
+        : (card.arrangementName || (!cardHasImage(card) ? card.title : ''));
 
       const durationLabel = node.querySelector('.track-duration');
       const hasAudioTracks = cardAudioTracks(card).length > 0;
@@ -2285,6 +2294,7 @@
 
   function musicalKellyTrackName(card) {
     if (!card) return 'Faixa';
+    if (card.arrangementName) return card.arrangementName;
     const playableCards = state.project.cards.filter((entry) => cardAudioTracks(entry).length);
     const index = playableCards.findIndex((entry) => entry.id === card.id);
     return musicalKellyTrackNames[index] || card.title || 'Faixa';
@@ -2319,6 +2329,10 @@
     if (!main) return;
     const linked = linkedCardsFor(cardId);
     elements.linkedTracksDialogTitle.textContent = musicalKellyTrackName(main);
+    elements.linkedTracksDialogTitle.dataset.cardId = main.id;
+    elements.linkedTracksDialogTitle.title = state.canReorder ? 'Toque e segure para renomear esta faixa' : '';
+    bindArrangementRenameGesture(elements.linkedTracksDialogTitle, () => elements.linkedTracksDialogTitle.dataset.cardId);
+    elements.linkedTracksHint.hidden = !state.canReorder;
     elements.linkedTracksList.replaceChildren();
     const complete = document.createElement('button');
     complete.type = 'button';
@@ -2337,7 +2351,13 @@
       play.className = 'linked-track-option';
       play.innerHTML = `<span></span><small>Faixa vinculada</small>`;
       play.querySelector('span').textContent = musicalKellyTrackName(card);
+      play.title = state.canReorder ? 'Toque e segure para renomear esta faixa' : '';
+      bindArrangementRenameGesture(play, card);
       play.addEventListener('click', () => {
+        if (Date.now() < Number(play.dataset.longPressUntil || 0)) {
+          play.dataset.longPressUntil = '0';
+          return;
+        }
         if (state.canEdit && musicalUnlinkKeyHeld) {
           unlinkLinkedTrack(card).catch((error) => showToast(error.message, true));
           return;
@@ -2346,10 +2366,47 @@
         openLyricsAndPlay(card.id).catch((error) => showToast(error.message, true));
       });
       row.appendChild(play);
-
       elements.linkedTracksList.appendChild(row);
     });
-    elements.linkedTracksDialog.showModal();
+    if (!elements.linkedTracksDialog.open) elements.linkedTracksDialog.showModal();
+  }
+
+  function bindArrangementRenameGesture(element, card) {
+    if (!state.canReorder || element.dataset.arrangementRenameBound === 'true') return;
+    element.dataset.arrangementRenameBound = 'true';
+    let timer = null;
+    const cancel = () => {
+      window.clearTimeout(timer);
+      timer = null;
+    };
+    element.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 || musicalUnlinkKeyHeld) return;
+      cancel();
+      timer = window.setTimeout(() => {
+        timer = null;
+        if ('dataset' in element) element.dataset.longPressUntil = String(Date.now() + 1200);
+        if (navigator.vibrate) navigator.vibrate(24);
+        const cardId = typeof card === 'function' ? card() : card.id;
+        openRenameArrangementDialog(cardId);
+      }, 550);
+    });
+    element.addEventListener('pointerup', cancel);
+    element.addEventListener('pointercancel', cancel);
+    element.addEventListener('pointerleave', cancel);
+  }
+
+  let activeArrangementRenameCardId = '';
+
+  function openRenameArrangementDialog(cardId) {
+    if (!state.canReorder) return;
+    const card = getCard(cardId);
+    if (!card) return;
+    activeArrangementRenameCardId = cardId;
+    elements.renameArrangementTitle.textContent = `Renomear · ${musicalKellyTrackName(card)}`;
+    elements.renameArrangementInput.value = card.arrangementName || musicalKellyTrackName(card);
+    elements.renameArrangementDialog.showModal();
+    elements.renameArrangementInput.focus();
+    elements.renameArrangementInput.select();
   }
 
   async function unlinkLinkedTrack(card) {
@@ -2712,6 +2769,7 @@
       showToast('Este container ainda não tem música. Pressione A para adicionar.', true);
       return;
     }
+
     if (!await ensureCardDownloadedForPlayback(card)) return;
     openLyrics(cardId);
     if (state.current?.cardId === card.id && !state.current.paused) {
@@ -2771,7 +2829,7 @@
     const minimalMusicalKellyLyrics = APP_SLUG === 'musical-kelly' && !state.canEdit;
     elements.lyricsScreenTitle.textContent = APP_SLUG === 'englishtraining'
       ? (String(card.title || '').trim() || 'Episódio')
-      : (minimalMusicalKellyLyrics ? card.title : `Faixa ${trackNumber} de ${trackTotal}`);
+      : (card.arrangementName || (minimalMusicalKellyLyrics ? card.title : `Faixa ${trackNumber} de ${trackTotal}`));
     if (minimalMusicalKellyLyrics) {
       elements.lyricsTrackLabelBackground.style.backgroundImage = 'none';
       elements.lyricsTrackLabelBackground.style.removeProperty('--track-image');
@@ -2779,7 +2837,8 @@
       setCardBackground(elements.lyricsTrackLabelBackground, card);
     }
     elements.lyricsTrackLabel.classList.toggle('has-image', !minimalMusicalKellyLyrics && cardHasImage(card));
-    elements.lyricsTrackLabelTitle.textContent = minimalMusicalKellyLyrics || !cardHasImage(card) ? card.title : '';
+    elements.lyricsTrackLabelTitle.textContent = minimalMusicalKellyLyrics || !cardHasImage(card)
+      ? (card.arrangementName || card.title) : '';
     elements.lyricsPreviousTrackButton.disabled = Boolean(state.manualSync) || playableIndex <= 0;
     elements.lyricsNextTrackButton.disabled = Boolean(state.manualSync)
       || playableIndex < 0
@@ -5528,6 +5587,7 @@
       showToast('Este container ainda não tem música. Pressione A para adicionar.', true);
       return;
     }
+
     if (!await ensureCardDownloadedForPlayback(card)) return;
     if (USE_NATIVE_AUDIO_ON_APPLE || state.lyricsTimingRate !== 1 || state.current?.native) {
       if (state.current?.cardId === cardId) {
@@ -6374,6 +6434,42 @@
     elements.audioTracksCloseButton.addEventListener('click', () => closeDialog(elements.audioTracksDialog));
     elements.linkedTracksCloseButton.addEventListener('click', () => closeDialog(elements.linkedTracksDialog));
     elements.linkTrackCloseButton.addEventListener('click', () => closeDialog(elements.linkTrackDialog));
+    elements.renameArrangementCloseButton.addEventListener('click', () => closeDialog(elements.renameArrangementDialog));
+    elements.renameArrangementDialog.addEventListener('close', () => {
+      elements.linkedTracksList.querySelectorAll('.linked-track-option').forEach((button) => {
+        button.dataset.longPressUntil = '0';
+      });
+    });
+    elements.renameArrangementForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!state.canReorder) return;
+      const card = getCard(activeArrangementRenameCardId);
+      const arrangementName = elements.renameArrangementInput.value.trim().replace(/\s+/g, ' ').slice(0, 120);
+      if (!card || !arrangementName) {
+        elements.renameArrangementInput.focus();
+        return;
+      }
+      const saveButton = elements.renameArrangementForm.querySelector('[type="submit"]');
+      saveButton.disabled = true;
+      try {
+        const response = await apiJson(`${API_ROOT}/cards/${encodeURIComponent(card.id)}/arrangement-name`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ arrangementName })
+        });
+        if (response.project) state.project = response.project;
+        saveProjectSnapshot(state.project);
+        closeDialog(elements.renameArrangementDialog);
+        render();
+        const parentId = elements.linkedTracksDialogTitle.dataset.cardId;
+        if (elements.linkedTracksDialog.open && parentId) openLinkedTracksDialog(parentId);
+        showToast('Nome atualizado para todos.');
+      } catch (error) {
+        showToast(error.message || 'Não foi possível salvar o nome.', true);
+      } finally {
+        saveButton.disabled = false;
+      }
+    });
     elements.linkTrackForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const card = getCard(activeLinkTrackId);

@@ -16468,6 +16468,7 @@ function normalizeMusicalKellyProject(payload) {
       id,
       title: String(source?.title || 'Faixa').trim().slice(0, 120) || 'Faixa',
       parentCardId: String(source?.parentCardId || '').trim().slice(0, 80),
+      arrangementName: String(source?.arrangementName || '').trim().replace(/\s+/g, ' ').slice(0, 120),
       audio,
       audioTracks: normalizedTracks,
       image,
@@ -29460,6 +29461,41 @@ app.delete(musicalKellyApiPaths('/cards/:cardId/comments/:commentId/replies/:rep
     res.status(Number(error?.statusCode) || 500).json({
       success: false,
       message: error?.message || 'Nao foi possivel apagar a resposta.'
+    });
+  }
+});
+
+app.patch(musicalKellyApiPaths('/cards/:cardId/arrangement-name'), async (req, res) => {
+  try {
+    await requireMusicalKellyUserFromRequest(req);
+    if (!isR2FluencyConfigured()) {
+      res.status(503).json({ success: false, message: 'O armazenamento do musical ainda nao esta configurado.' });
+      return;
+    }
+    const cardId = normalizeMusicalKellyCardId(req.params.cardId);
+    const arrangementName = String(req.body?.arrangementName || '').trim().replace(/\s+/g, ' ').slice(0, 120);
+    if (!cardId || !arrangementName) {
+      res.status(400).json({ success: false, message: 'Digite um nome valido para a faixa.' });
+      return;
+    }
+
+    const project = await queueMusicalKellyProjectMutation(async () => {
+      const currentProject = await readMusicalKellyGlobalProject();
+      const card = currentProject.cards.find((entry) => entry.id === cardId);
+      if (!card) {
+        const error = new Error('Esta faixa nao existe mais. Atualize a pagina e tente novamente.');
+        error.statusCode = 404;
+        throw error;
+      }
+      card.arrangementName = arrangementName;
+      return writeMusicalKellyGlobalProject(currentProject);
+    });
+    res.json({ success: true, project: hydrateMusicalKellyProject(project) });
+  } catch (error) {
+    console.error('Erro ao renomear faixa do arranjo do musical Kelly:', error);
+    res.status(Number(error?.statusCode) || 500).json({
+      success: false,
+      message: error?.message || 'Nao foi possivel renomear esta faixa.'
     });
   }
 });
