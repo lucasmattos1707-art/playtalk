@@ -9,38 +9,27 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/fabio/styles.css?v=20261110-1">
+  <link rel="stylesheet" href="/fabio/styles.css?v=20261110-4">
   <script src="/fabio/questions.js?v=20261110-1" defer></script>
-  <script src="/fabio/app.js?v=20261110-1" defer></script>
+  <script src="/fabio/app.js?v=20261110-4" defer></script>
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <a class="brand" href="/fabio" aria-label="Página inicial Fabio">
-        <span class="brand-mark" aria-hidden="true">F</span>
-        <span><strong>Uma boa conversa</strong><small>Histórias que ensinam</small></span>
-      </a>
+      <button class="question-count" id="openQuestionList" type="button" aria-label="Escolher pergunta" title="Escolher pergunta"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h11M9 12h11M9 19h11"/><circle cx="4" cy="5" r=".8"/><circle cx="4" cy="12" r=".8"/><circle cx="4" cy="19" r=".8"/></svg></button>
       <button class="icon-button admin-trigger" id="adminTrigger" type="button" aria-label="Abrir respostas da equipe" title="Respostas da equipe" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20M9.5 10.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM17 11h5m-2.5-2.5v5"/></svg>
       </button>
     </header>
 
-    <section class="intro-row" aria-label="Progresso">
-      <div><span class="eyebrow">A jornada do Fabio</span><h1>Uma pergunta de cada vez.</h1></div>
-      <button class="question-count" id="openQuestionList" type="button"><span id="progressCount">1 de 100</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
-    </section>
-
-    <div class="progress-track" role="progressbar" aria-label="Perguntas respondidas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="progressBar"></span></div>
-
     <section class="deck-wrap" aria-live="polite">
       <div class="question-card" id="questionCard" tabindex="0" aria-label="Pergunta atual">
         <div class="card-topline"><span id="categoryLabel" class="category-label">Quem é você?</span><span class="card-number" id="questionNumber">01</span></div>
         <div class="card-content"><span class="quote-mark" aria-hidden="true">“</span><h2 id="questionText">Carregando sua primeira pergunta…</h2></div>
-        <div class="card-bottomline"><span class="swipe-hint"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg> Deslize para explorar</span><span class="answered-badge" id="answeredBadge" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg> Respondida</span></div>
+        <div class="card-bottomline"><span class="answered-badge" id="answeredBadge" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg> Respondida</span></div>
       </div>
       <div class="swipe-arrows" aria-label="Navegação entre perguntas">
         <button class="round-button subtle" id="prevQuestion" type="button" aria-label="Pergunta anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
-        <span class="gesture-copy">Esquerda: voltar <i>·</i> Direita: avançar</span>
         <button class="round-button subtle" id="nextQuestion" type="button" aria-label="Próxima pergunta"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
       </div>
     </section>
@@ -51,12 +40,11 @@
       </button>
       <button class="record-button" id="recordAnswer" type="button">
         <span class="mic-orbit"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8"/></svg></span>
-        <span class="record-copy"><strong id="recordTitle">Responder por voz</strong><small id="recordSubtitle">A transcrição aparece para você conferir</small></span>
-        <svg class="record-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
       </button>
+      <button class="hide-question-button" id="hideQuestion" type="button" aria-label="Ocultar esta pergunta" title="Não mostrar esta pergunta novamente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>
     </section>
 
-    <footer class="privacy-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></svg><span>Suas respostas ficam salvas e só a equipe administradora pode ver quem respondeu.</span></footer>
+    <div class="progress-track" id="answerProgressTrack" role="progressbar" aria-label="Progresso das respostas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 de 100 respondidas"><span id="progressBar"></span></div>
   </main>
 
   <div class="modal-backdrop" id="modalBackdrop" hidden>

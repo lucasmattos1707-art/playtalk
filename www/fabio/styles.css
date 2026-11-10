@@ -47,41 +47,14 @@ svg {
   display:flex;
   flex-direction:column
 }
-.topbar,.brand,.intro-row,.question-count,.card-topline,.card-bottomline,.swipe-arrows,.answer-actions,.record-button,.privacy-note {
+.topbar,.question-count,.card-topline,.card-bottomline,.swipe-arrows,.answer-actions,.record-button {
   display:flex;
   align-items:center
 }
 .topbar {
-  justify-content:space-between;
+  justify-content:flex-end;
+  gap:9px;
   min-height:42px
-}
-.brand {
-  gap:12px;
-  text-decoration:none;
-  color:var(--text)
-}
-.brand-mark {
-  width:39px;
-  height:39px;
-  border-radius:13px;
-  background:var(--green);
-  color:#132017;
-  display:grid;
-  place-items:center;
-  font:800 21px Manrope,sans-serif;
-  box-shadow:0 5px 20px #a6e66d24
-}
-.brand strong,.brand small {
-  display:block
-}
-.brand strong {
-  font:700 14px Manrope,sans-serif;
-  letter-spacing:.01em
-}
-.brand small {
-  font-size:11px;
-  color:var(--muted);
-  margin-top:3px
 }
 .icon-button,.round-button,.question-count,.dialog-close {
   border:1px solid var(--line);
@@ -100,11 +73,6 @@ svg {
   border-color:#a6e66d66;
   color:var(--green)
 }
-.intro-row {
-  justify-content:space-between;
-  gap:18px;
-  margin:58px 0 18px
-}
 .eyebrow {
   font-size:10px;
   letter-spacing:.17em;
@@ -112,26 +80,23 @@ svg {
   color:var(--green);
   font-weight:700
 }
-.intro-row h1 {
-  font:700 clamp(25px,5vw,36px)/1.15 Manrope,sans-serif;
-  letter-spacing:-.04em;
-  margin:9px 0 0
-}
 .question-count {
-  gap:8px;
-  padding:10px 12px;
-  border-radius:12px;
+  width:42px;
+  height:42px;
+  padding:0;
+  border-radius:14px;
   color:var(--muted);
-  font-size:12px;
-  white-space:nowrap
+  flex:0 0 auto
 }
 .question-count svg {
-  width:16px;
-  height:16px
+  width:18px;
+  height:18px
 }
 .progress-track {
   width:100%;
   height:3px;
+  flex:0 0 auto;
+  margin-top:20px;
   background:#ffffff12;
   border-radius:5px;
   overflow:hidden
@@ -205,20 +170,21 @@ svg {
 .question-card.is-answered .card-content h2 {
   color:var(--green)
 }
-.swipe-hint,.answered-badge {
+.answered-badge {
   display:flex;
   align-items:center;
   gap:7px;
   font-size:11px;
-  color:#94a399
+  color:var(--green);
+  font-weight:600
 }
-.swipe-hint svg,.answered-badge svg {
+.answered-badge svg {
   width:16px;
   height:16px
 }
-.answered-badge {
-  color:var(--green);
-  font-weight:600
+.card-bottomline {
+  justify-content:flex-end;
+  min-height:17px
 }
 .swipe-arrows {
   justify-content:space-between;
@@ -230,31 +196,28 @@ svg {
   border-radius:50%;
   color:#a9b6ac
 }
+.round-button:disabled,.question-count:disabled {
+  opacity:.38;
+  cursor:not-allowed
+}
 .round-button svg {
   width:18px;
   height:18px
 }
-.gesture-copy {
-  font-size:11px;
-  color:#8f9d93
-}
-.gesture-copy i {
-  font-style:normal;
-  color:#617167;
-  padding:0 6px
-}
 .answer-actions {
-  gap:11px;
-  min-height:72px
+  justify-content:center;
+  gap:10px;
+  min-height:64px
 }
 .record-button {
-  width:100%;
-  min-height:69px;
-  gap:15px;
-  text-align:left;
-  padding:12px 18px;
+  display:grid;
+  place-items:center;
+  width:64px;
+  height:64px;
+  min-height:64px;
+  padding:4px;
   border:1px solid #a6e66d48;
-  border-radius:18px;
+  border-radius:50%;
   background:linear-gradient(100deg,#a6e66d19,#a6e66d08);
   cursor:pointer;
   transition:background .2s,border-color .2s,transform .2s
@@ -269,10 +232,18 @@ svg {
   cursor:wait;
   transform:none
 }
+.record-button.is-recording .mic-orbit {
+  color:#fff;
+  background:#df5148;
+  animation:pulse 1.2s infinite
+}
+.record-button.is-transcribing .mic-orbit {
+  animation:pulse 1.2s infinite
+}
 .mic-orbit {
-  width:43px;
-  height:43px;
-  border-radius:15px;
+  width:48px;
+  height:48px;
+  border-radius:50%;
   display:grid;
   place-items:center;
   color:#152019;
@@ -280,28 +251,33 @@ svg {
   flex:0 0 auto
 }
 .mic-orbit svg {
-  width:21px;
-  height:21px
+  width:23px;
+  height:23px
 }
-.record-copy {
-  min-width:0;
-  flex:1
+.hide-question-button {
+  display:grid;
+  place-items:center;
+  width:54px;
+  height:54px;
+  border:0;
+  border-radius:50%;
+  background:#df5148;
+  color:#fff;
+  cursor:pointer;
+  transition:background .2s,transform .2s
 }
-.record-copy strong,.record-copy small {
-  display:block
+.hide-question-button:hover {
+  background:#f0655c;
+  transform:translateY(-1px)
 }
-.record-copy strong {
-  font:700 14px Manrope,sans-serif
+.hide-question-button:disabled {
+  opacity:.45;
+  cursor:not-allowed
 }
-.record-copy small {
-  font-size:11px;
-  color:#9caf9f;
-  margin-top:4px
-}
-.record-arrow {
-  color:#b6d799;
-  width:19px;
-  height:19px
+.hide-question-button svg {
+  width:23px;
+  height:23px;
+  stroke-width:2.4
 }
 .answer-text-button {
   flex:0 0 auto;
@@ -324,21 +300,6 @@ svg {
 .answer-text-button svg {
   width:19px;
   height:19px
-}
-.privacy-note {
-  justify-content:center;
-  gap:8px;
-  margin:25px auto 0;
-  color:#84938a;
-  text-align:center;
-  font-size:10px;
-  line-height:1.5
-}
-.privacy-note svg {
-  width:15px;
-  height:15px;
-  flex:0 0 auto;
-  color:#a6e66d8c
 }
 .modal-backdrop {
   position:fixed;
@@ -426,6 +387,13 @@ svg {
 }
 .primary-button:hover {
   background:#b9f28b
+}
+.primary-button.danger-confirm {
+  color:#fff;
+  background:#df5148
+}
+.primary-button.danger-confirm:hover {
+  background:#f0655c
 }
 .secondary-button {
   background:#ffffff10;
@@ -585,16 +553,9 @@ svg {
     width:min(100% - 32px,520px);
     padding:19px 0 calc(20px + env(safe-area-inset-bottom))
   }
-  .intro-row {
-    margin:45px 0 17px;
-    align-items:flex-end
-  }
-  .intro-row h1 {
-    max-width:260px
-  }
   .question-count {
-    padding:9px 10px;
-    font-size:11px
+    width:40px;
+    height:40px
   }
   .deck-wrap {
     padding:28px 0 15px
@@ -607,22 +568,21 @@ svg {
   .card-content h2 {
     font-size:clamp(24px,7vw,32px)
   }
-  .gesture-copy {
-    font-size:10px
-  }
   .answer-actions {
-    gap:8px
+    gap:9px
   }
   .record-button {
-    min-height:67px;
-    padding:10px 13px;
-    gap:12px
+    width:60px;
+    height:60px;
+    min-height:60px
   }
-  .record-copy strong {
-    font-size:13px
+  .mic-orbit {
+    width:44px;
+    height:44px
   }
-  .record-copy small {
-    font-size:10px
+  .hide-question-button {
+    width:50px;
+    height:50px
   }
   .answer-text-button {
     min-height:51px;
@@ -632,9 +592,6 @@ svg {
   }
   .answer-text-button svg {
     width:18px
-  }
-  .privacy-note {
-    max-width:340px
   }
   .dialog {
     padding:25px 20px 21px;

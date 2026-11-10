@@ -31900,6 +31900,14 @@ async function ensureFabioInterviewSchema() {
         )
       `);
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.fabio_interview_hidden_questions (
+          guest_id text NOT NULL REFERENCES public.fabio_interview_guests(id) ON DELETE CASCADE,
+          question_id integer NOT NULL CHECK (question_id BETWEEN 1 AND ${FABIO_QUESTION_COUNT}),
+          hidden_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (guest_id, question_id)
+        )
+      `);
+      await pool.query(`
         CREATE INDEX IF NOT EXISTS fabio_interview_answers_updated_idx
         ON public.fabio_interview_answers (updated_at DESC)
       `);
@@ -31974,8 +31982,12 @@ app.get('/api/fabio/session', async (req, res) => {
       SELECT question_id AS "questionId", transcript, created_at AS "createdAt", updated_at AS "updatedAt"
         FROM public.fabio_interview_answers WHERE guest_id = $1 ORDER BY question_id
     `, [guest.id]);
+    const hidden = await pool.query(`
+      SELECT question_id AS "questionId"
+        FROM public.fabio_interview_hidden_questions WHERE guest_id = $1 ORDER BY question_id
+    `, [guest.id]);
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ success: true, participantName: guest.displayName, answers: result.rows });
+    res.json({ success: true, participantName: guest.displayName, answers: result.rows, hiddenQuestionIds: hidden.rows.map((row) => row.questionId) });
   } catch (error) { fabioInterviewResponseError(res, error); }
 });
 
@@ -31996,6 +32008,22 @@ app.put('/api/fabio/answers/:questionId', async (req, res) => {
     `, [guest.id, questionId, transcript]);
     res.setHeader('Cache-Control', 'no-store');
     res.json({ success: true, answer: result.rows[0] });
+  } catch (error) { fabioInterviewResponseError(res, error); }
+});
+
+app.post('/api/fabio/questions/:questionId/hide', async (req, res) => {
+  try {
+    const guest = await readFabioInterviewGuest(req);
+    if (!guest) { res.status(401).json({ success: false, message: 'Informe seu nome para ocultar esta pergunta.' }); return; }
+    const questionId = Number(req.params.questionId);
+    if (!Number.isInteger(questionId) || questionId < 1 || questionId > FABIO_QUESTION_COUNT) throw Object.assign(new Error('Pergunta inválida.'), { statusCode: 400 });
+    await pool.query(`
+      INSERT INTO public.fabio_interview_hidden_questions (guest_id, question_id)
+      VALUES ($1, $2)
+      ON CONFLICT (guest_id, question_id) DO NOTHING
+    `, [guest.id, questionId]);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, questionId });
   } catch (error) { fabioInterviewResponseError(res, error); }
 });
 
