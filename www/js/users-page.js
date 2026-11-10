@@ -27,9 +27,6 @@
     rankingTitle: document.getElementById('rankingTitle'),
     rankingStatus: document.getElementById('rankingStatus'),
     rankingMetrics: document.getElementById('rankingMetrics'),
-    usersSearchInput: document.getElementById('usersSearchInput'),
-    usersSearchWrap: document.getElementById('usersSearchWrap'),
-    usersSearchClearBtn: document.getElementById('usersSearchClearBtn'),
     usersStage: document.getElementById('usersStage'),
     usersList: document.getElementById('usersList'),
     usersStatus: document.getElementById('usersStatus'),
@@ -108,9 +105,7 @@
     botBusy: false,
     botSourceImageDataUrl: '',
     initialLoaderReleased: false,
-    initialLoaderTimer: 0,
-    searchQuery: '',
-    searchTimer: 0
+    initialLoaderTimer: 0
   };
 
   function pruneRankingMetricButtons() {
@@ -941,12 +936,9 @@
 
   function renderRows(rows) {
     if (!rows.length) {
-      const emptyMessage = state.searchQuery
-        ? 'Nenhum cliente encontrado com esse nome.'
-        : 'Nenhum usuario cadastrado apareceu ainda.';
       els.usersList.innerHTML = `
         <div class="users-row is-empty">
-          <span>${escapeHtml(emptyMessage)}</span>
+          <span>Nenhum usuario cadastrado apareceu ainda.</span>
         </div>
       `;
       return;
@@ -1067,16 +1059,13 @@
 
   async function fetchUsersMetric(metricKey, options = {}) {
     const normalizedMetricKey = safeText(metricKey || state.currentMetricKey || 'flashcards') || 'flashcards';
-    const searchQuery = safeText(options.searchQuery ?? state.searchQuery);
-    const cacheKey = searchQuery ? `${normalizedMetricKey}::${searchQuery.toLocaleLowerCase('pt-BR')}` : normalizedMetricKey;
     const force = Boolean(options.force);
-    const cached = state.rankingCache.get(cacheKey);
+    const cached = state.rankingCache.get(normalizedMetricKey);
     if (!force && cached && (Date.now() - cached.fetchedAt) < RANKING_CACHE_TTL_MS) {
       return cached.data;
     }
     try {
-      const searchParam = searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : '';
-      const response = await fetch(buildApiUrl(`/api/users/flashcards?limit=50&metric=${encodeURIComponent(normalizedMetricKey)}${searchParam}`), {
+      const response = await fetch(buildApiUrl(`/api/users/flashcards?limit=50&metric=${encodeURIComponent(normalizedMetricKey)}`), {
         headers: buildAuthHeaders(),
         cache: 'no-store',
         credentials: 'include'
@@ -1103,19 +1092,18 @@
           data.viewer.level = Math.max(1, Number(viewerRow.level) || 1);
         }
       }
-      state.rankingCache.set(cacheKey, {
+      state.rankingCache.set(normalizedMetricKey, {
         fetchedAt: Date.now(),
         data
       });
       return data;
     } catch (_error) {
       if (normalizedMetricKey !== 'flashcards') {
-        const baseCacheKey = searchQuery ? `flashcards::${searchQuery.toLocaleLowerCase('pt-BR')}` : 'flashcards';
-        const baseCached = state.rankingCache.get(baseCacheKey);
-        const baseData = baseCached?.data || await fetchUsersMetric('flashcards', { force, searchQuery });
+        const baseCached = state.rankingCache.get('flashcards');
+        const baseData = baseCached?.data || await fetchUsersMetric('flashcards', { force });
         const fallbackData = buildMetricFallbackFromBase(normalizedMetricKey, baseData);
         if (fallbackData) {
-          state.rankingCache.set(cacheKey, {
+          state.rankingCache.set(normalizedMetricKey, {
             fetchedAt: Date.now(),
             data: fallbackData
           });
@@ -1176,22 +1164,20 @@
 
   async function preloadMetric(metricKey, options = {}) {
     const normalizedMetricKey = safeText(metricKey) || 'flashcards';
-    const searchQuery = safeText(options.searchQuery ?? state.searchQuery);
-    const cacheKey = searchQuery ? `${normalizedMetricKey}::${searchQuery.toLocaleLowerCase('pt-BR')}` : normalizedMetricKey;
     const force = Boolean(options.force);
     if (!force) {
-      const cached = state.rankingCache.get(cacheKey);
+      const cached = state.rankingCache.get(normalizedMetricKey);
       if (cached && (Date.now() - cached.fetchedAt) < RANKING_CACHE_TTL_MS) {
         return cached.data;
       }
     }
-    const existing = state.preloadInFlight.get(cacheKey);
+    const existing = state.preloadInFlight.get(normalizedMetricKey);
     if (existing) return existing;
-    const promise = fetchUsersMetric(normalizedMetricKey, { force, searchQuery })
+    const promise = fetchUsersMetric(normalizedMetricKey, { force })
       .finally(() => {
-        state.preloadInFlight.delete(cacheKey);
+        state.preloadInFlight.delete(normalizedMetricKey);
       });
-    state.preloadInFlight.set(cacheKey, promise);
+    state.preloadInFlight.set(normalizedMetricKey, promise);
     return promise;
   }
 
@@ -1248,7 +1234,7 @@
       toggleGlobalLoader(loaderKey, true, 'Carregando ranking dos jogadores');
     }
     try {
-      const data = await preloadMetric(metricKey, { force, searchQuery: state.searchQuery });
+      const data = await preloadMetric(metricKey, { force });
       if (requestId !== state.loadRequestId) return;
       if (!data) {
         renderRows([]);
@@ -1677,20 +1663,6 @@
     void createBot();
   });
   els.botSpeedInput?.addEventListener('input', updateBotHint);
-  els.usersSearchInput?.addEventListener('input', () => {
-    state.searchQuery = safeText(els.usersSearchInput.value);
-    els.usersSearchWrap?.classList.toggle('has-value', Boolean(state.searchQuery));
-    if (state.searchTimer) window.clearTimeout(state.searchTimer);
-    state.searchTimer = window.setTimeout(() => {
-      void loadUsers('', { metricKey: state.currentMetricKey, force: true, animate: false });
-    }, 260);
-  });
-  els.usersSearchClearBtn?.addEventListener('click', () => {
-    if (!els.usersSearchInput) return;
-    els.usersSearchInput.value = '';
-    els.usersSearchInput.dispatchEvent(new Event('input', { bubbles: true }));
-    els.usersSearchInput.focus();
-  });
   els.botModal?.addEventListener('click', (event) => {
     if (event.target === els.botModal) closeBotModal();
   });

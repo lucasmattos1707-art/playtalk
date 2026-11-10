@@ -157,72 +157,6 @@
       font-family: "Orbitron", "Exo 2", sans-serif;
     }
 
-    .users-search {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      width: min(100%, 420px);
-      min-height: 42px;
-      margin: 2px auto 0;
-      padding: 0 14px;
-      border: 1px solid rgba(126, 208, 255, 0.2);
-      border-radius: 999px;
-      background: rgba(7, 17, 31, 0.38);
-      color: rgba(196, 222, 246, 0.68);
-      transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
-    }
-
-    .users-search:focus-within {
-      border-color: rgba(126, 208, 255, 0.52);
-      background: rgba(7, 17, 31, 0.64);
-      box-shadow: 0 0 0 3px rgba(82, 174, 255, 0.08);
-    }
-
-    .users-search svg {
-      width: 17px;
-      height: 17px;
-      flex: 0 0 auto;
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 1.8;
-      stroke-linecap: round;
-    }
-
-    .users-search input {
-      width: 100%;
-      min-width: 0;
-      padding: 0;
-      border: 0;
-      outline: 0;
-      background: transparent;
-      color: var(--text);
-      font-size: 14px;
-    }
-
-    .users-search input::placeholder {
-      color: rgba(196, 222, 246, 0.56);
-    }
-
-    .users-search-clear {
-      display: none;
-      width: 24px;
-      height: 24px;
-      flex: 0 0 auto;
-      padding: 0;
-      border: 0;
-      border-radius: 50%;
-      background: transparent;
-      color: rgba(196, 222, 246, 0.72);
-      font-size: 19px;
-      line-height: 1;
-      cursor: pointer;
-    }
-
-    .users-search.has-value .users-search-clear {
-      display: grid;
-      place-items: center;
-    }
-
     .ranking-metrics {
       display: grid;
       grid-template-columns: repeat(4, auto);
@@ -1101,11 +1035,6 @@
         <p class="ranking-status" id="rankingStatus">Você está em 0º lugar</p>
         <p class="status" id="usersStatus">Carregando usuarios...</p>
       </div>
-      <div class="users-search" id="usersSearchWrap">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.2 4.2"></path></svg>
-        <input id="usersSearchInput" type="search" maxlength="80" autocomplete="off" placeholder="Buscar cliente pelo nome" aria-label="Buscar cliente pelo nome">
-        <button class="users-search-clear" id="usersSearchClearBtn" type="button" aria-label="Limpar busca">×</button>
-      </div>
       <div class="ranking-metrics" id="rankingMetrics" aria-label="Seletores do ranking">
         <button type="button" class="ranking-metric is-active" data-metric-key="flashcards" aria-label="Ranking de Cards">
           <span>FlashCards</span>
@@ -1244,7 +1173,7 @@
       document.body.classList.add('is-native-runtime');
     }
   </script>
-  <script src="js/users-page.js?v=20261110a"></script>
+  <script src="js/users-page.js?v=20260517d"></script>
   <script src="js/video-background.js"></script>
 </body>
 </html>

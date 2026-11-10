@@ -22176,20 +22176,7 @@ app.get('/api/users/flashcards', async (req, res) => {
       rank_position: index + 1
     }));
 
-    const searchTerm = String(req.query.search || '')
-      .trim()
-      .slice(0, 80)
-      .toLocaleLowerCase('pt-BR')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
-    const matchingEntries = searchTerm
-      ? entries.filter((entry) => String(entry.username || '')
-        .toLocaleLowerCase('pt-BR')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .includes(searchTerm))
-      : entries;
-    const limitedEntries = matchingEntries.slice(0, limit);
+    const limitedEntries = entries.slice(0, limit);
     const viewerEntry = authUser?.id
       ? entries.find((entry) => Number(entry.id) === Number(authUser.id)) || null
       : null;
