@@ -1,502 +1,502 @@
 window.FABIO_QUESTIONS = [
   {
     "id": 1,
-    "category": "QUEM É VOCÊ? (1–10)",
-    "prompt": "Quem é você fora do ambiente empresarial? Como você se descreveria para alguém que não conhece sua trajetória?"
+    "category": "ORIGENS E QUEM É VOCÊ? (1–10)",
+    "prompt": "Como você descreveria quem você é em poucas palavras?"
   },
   {
     "id": 2,
-    "category": "QUEM É VOCÊ? (1–10)",
-    "prompt": "Onde você nasceu e como foi o ambiente em que cresceu?"
+    "category": "ORIGENS E QUEM É VOCÊ? (1–10)",
+    "prompt": "Onde você nasceu e onde passou a maior parte da sua infância?"
   },
   {
     "id": 3,
-    "category": "QUEM É VOCÊ? (1–10)",
-    "prompt": "Como você era quando criança? Era mais quieto, curioso, comunicativo, levado?"
+    "category": "ORIGENS E QUEM É VOCÊ? (1–10)",
+    "prompt": "Como foi sua infância?"
   },
   {
     "id": 4,
-    "category": "QUEM É VOCÊ? (1–10)",
-    "prompt": "Como seus amigos mais próximos descreveriam sua personalidade?"
+    "category": "ORIGENS E QUEM É VOCÊ? (1–10)",
+    "prompt": "Qual é a lembrança mais marcante que você tem da infância?"
   },
   {
     "id": 5,
-    "category": "QUEM É VOCÊ? (1–10)",
-    "prompt": "Quais características da sua personalidade você acredita que nunca mudaram desde a infância?"
+    "category": "ORIGENS E QUEM É VOCÊ? (1–10)",
+    "prompt": "Como era sua relação com seus pais ou responsáveis?"
   },
   {
     "id": 6,
-    "category": "QUEM É VOCÊ? (1–10)",
-    "prompt": "Como era a situação financeira da sua família quando você era pequeno?"
+    "category": "ORIGENS E QUEM É VOCÊ? (1–10)",
+    "prompt": "Qual pessoa mais influenciou sua formação?"
   },
   {
     "id": 7,
-    "category": "QUEM É VOCÊ? (1–10)",
-    "prompt": "Quais foram as principais referências masculinas que você teve durante seu crescimento?"
+    "category": "ORIGENS E QUEM É VOCÊ? (1–10)",
+    "prompt": "O que você gostaria que as pessoas tivessem compreendido sobre você quando era criança?"
   },
   {
     "id": 8,
-    "category": "QUEM É VOCÊ? (1–10)",
-    "prompt": "O que você gostava de fazer na adolescência, antes de assumir as responsabilidades da vida adulta?"
+    "category": "ORIGENS E QUEM É VOCÊ? (1–10)",
+    "prompt": "Qual foi o momento mais feliz da sua vida até hoje?"
   },
   {
     "id": 9,
-    "category": "QUEM É VOCÊ? (1–10)",
-    "prompt": "Você sempre foi uma pessoa comunicativa ou desenvolveu essa habilidade ao longo dos anos?"
+    "category": "ORIGENS E QUEM É VOCÊ? (1–10)",
+    "prompt": "Qual foi o período mais difícil que você já enfrentou?"
   },
   {
     "id": 10,
-    "category": "QUEM É VOCÊ? (1–10)",
-    "prompt": "Qual lembrança da sua infância você gostaria de poder reviver por um dia?"
+    "category": "ORIGENS E QUEM É VOCÊ? (1–10)",
+    "prompt": "Existe alguma experiência que mudou completamente sua maneira de enxergar a vida?"
   },
   {
     "id": 11,
-    "category": "FORMAÇÃO E PRIMEIRAS EXPERIÊNCIAS (11–20)",
-    "prompt": "Qual foi seu primeiro trabalho e como surgiu aquela oportunidade?"
+    "category": "VALORES E SONHOS (11–20)",
+    "prompt": "Quais são as três coisas mais importantes da sua vida atualmente?"
   },
   {
     "id": 12,
-    "category": "FORMAÇÃO E PRIMEIRAS EXPERIÊNCIAS (11–20)",
-    "prompt": "Você lembra o que fez com o primeiro dinheiro que ganhou trabalhando?"
+    "category": "VALORES E SONHOS (11–20)",
+    "prompt": "O que faz você acordar motivado pela manhã?"
   },
   {
     "id": 13,
-    "category": "FORMAÇÃO E PRIMEIRAS EXPERIÊNCIAS (11–20)",
-    "prompt": "Quando era mais jovem, o que imaginava estar fazendo profissionalmente na idade que tem hoje?"
+    "category": "VALORES E SONHOS (11–20)",
+    "prompt": "O que mais lhe preocupa atualmente?"
   },
   {
     "id": 14,
-    "category": "FORMAÇÃO E PRIMEIRAS EXPERIÊNCIAS (11–20)",
-    "prompt": "Qual foi a primeira responsabilidade realmente grande que você precisou assumir?"
+    "category": "VALORES E SONHOS (11–20)",
+    "prompt": "O que você considera uma vida bem-sucedida?"
   },
   {
     "id": 15,
-    "category": "FORMAÇÃO E PRIMEIRAS EXPERIÊNCIAS (11–20)",
-    "prompt": "Quem foi a primeira pessoa que acreditou no seu potencial profissional?"
+    "category": "VALORES E SONHOS (11–20)",
+    "prompt": "Qual é o seu maior sonho?"
   },
   {
     "id": 16,
-    "category": "FORMAÇÃO E PRIMEIRAS EXPERIÊNCIAS (11–20)",
-    "prompt": "Você se considera uma pessoa mais disciplinada ou mais movida pela paixão pelo que faz?"
+    "category": "VALORES E SONHOS (11–20)",
+    "prompt": "O que você gostaria de conquistar nos próximos cinco anos?"
   },
   {
     "id": 17,
-    "category": "FORMAÇÃO E PRIMEIRAS EXPERIÊNCIAS (11–20)",
-    "prompt": "Qual habilidade você aprendeu na juventude e continua utilizando diariamente?"
+    "category": "VALORES E SONHOS (11–20)",
+    "prompt": "Existe alguma coisa que você ainda deseja muito fazer, mas nunca teve coragem?"
   },
   {
     "id": 18,
-    "category": "FORMAÇÃO E PRIMEIRAS EXPERIÊNCIAS (11–20)",
-    "prompt": "Qual foi a primeira grande decisão que tomou sem saber se daria certo?"
+    "category": "VALORES E SONHOS (11–20)",
+    "prompt": "Se dinheiro não fosse um problema, como seria sua vida?"
   },
   {
     "id": 19,
-    "category": "FORMAÇÃO E PRIMEIRAS EXPERIÊNCIAS (11–20)",
-    "prompt": "Houve algum momento em que você percebeu que precisava amadurecer rapidamente?"
+    "category": "VALORES E SONHOS (11–20)",
+    "prompt": "O que você não abriria mão de maneira alguma?"
   },
   {
     "id": 20,
-    "category": "FORMAÇÃO E PRIMEIRAS EXPERIÊNCIAS (11–20)",
-    "prompt": "Quando olha para o jovem que foi, o que mais chama sua atenção naquela versão de você?"
+    "category": "VALORES E SONHOS (11–20)",
+    "prompt": "O que significa felicidade para você?"
   },
   {
     "id": 21,
-    "category": "A TRAJETÓRIA EMPRESARIAL (21–30)",
-    "prompt": "Como o empreendedorismo entrou na sua vida?"
+    "category": "PERSONALIDADE E AUTOCONHECIMENTO (21–30)",
+    "prompt": "Quais são as suas maiores qualidades?"
   },
   {
     "id": 22,
-    "category": "A TRAJETÓRIA EMPRESARIAL (21–30)",
-    "prompt": "Como começou sua história com a DAFEL e o setor de materiais de construção?"
+    "category": "PERSONALIDADE E AUTOCONHECIMENTO (21–30)",
+    "prompt": "Quais características suas você gostaria de melhorar?"
   },
   {
     "id": 23,
-    "category": "A TRAJETÓRIA EMPRESARIAL (21–30)",
-    "prompt": "O que mais te surpreendeu quando começou a conhecer o funcionamento de uma empresa?"
+    "category": "PERSONALIDADE E AUTOCONHECIMENTO (21–30)",
+    "prompt": "Você se considera uma pessoa mais racional ou emocional?"
   },
   {
     "id": 24,
-    "category": "A TRAJETÓRIA EMPRESARIAL (21–30)",
-    "prompt": "Qual foi sua primeira grande conquista profissional?"
+    "category": "PERSONALIDADE E AUTOCONHECIMENTO (21–30)",
+    "prompt": "Você prefere planejar as coisas ou improvisar?"
   },
   {
     "id": 25,
-    "category": "A TRAJETÓRIA EMPRESARIAL (21–30)",
-    "prompt": "Como foi o processo de assumir responsabilidades cada vez maiores dentro dos negócios?"
+    "category": "PERSONALIDADE E AUTOCONHECIMENTO (21–30)",
+    "prompt": "Você costuma tomar decisões rapidamente ou pensar bastante antes?"
   },
   {
     "id": 26,
-    "category": "A TRAJETÓRIA EMPRESARIAL (21–30)",
-    "prompt": "Qual é a parte mais prazerosa de administrar uma empresa?"
+    "category": "PERSONALIDADE E AUTOCONHECIMENTO (21–30)",
+    "prompt": "Você se considera uma pessoa introvertida ou extrovertida?"
   },
   {
     "id": 27,
-    "category": "A TRAJETÓRIA EMPRESARIAL (21–30)",
-    "prompt": "E qual é a parte que as pessoas de fora menos compreendem?"
+    "category": "PERSONALIDADE E AUTOCONHECIMENTO (21–30)",
+    "prompt": "O que normalmente consegue tirar você do sério?"
   },
   {
     "id": 28,
-    "category": "A TRAJETÓRIA EMPRESARIAL (21–30)",
-    "prompt": "Como costuma começar um dia normal na sua rotina empresarial?"
+    "category": "PERSONALIDADE E AUTOCONHECIMENTO (21–30)",
+    "prompt": "Como você costuma reagir quando algo não acontece como esperava?"
   },
   {
     "id": 29,
-    "category": "A TRAJETÓRIA EMPRESARIAL (21–30)",
-    "prompt": "O que mais mudou na sua maneira de trabalhar desde o início da carreira?"
+    "category": "PERSONALIDADE E AUTOCONHECIMENTO (21–30)",
+    "prompt": "Você tem facilidade para reconhecer quando está errado?"
   },
   {
     "id": 30,
-    "category": "A TRAJETÓRIA EMPRESARIAL (21–30)",
-    "prompt": "Qual foi uma situação curiosa ou engraçada que você viveu dentro de uma das lojas e nunca esqueceu?"
+    "category": "PERSONALIDADE E AUTOCONHECIMENTO (21–30)",
+    "prompt": "Qual característica sua as pessoas geralmente não percebem?"
   },
   {
     "id": 31,
-    "category": "RELACIONAMENTOS E PERSONALIDADE (31–40)",
-    "prompt": "O que faz você admirar uma pessoa logo nos primeiros minutos de conversa?"
+    "category": "RELAÇÕES E FAMÍLIA (31–40)",
+    "prompt": "O que significa amizade para você?"
   },
   {
     "id": 32,
-    "category": "RELACIONAMENTOS E PERSONALIDADE (31–40)",
-    "prompt": "Quais características você mais valoriza nas pessoas que fazem parte da sua vida?"
+    "category": "RELAÇÕES E FAMÍLIA (31–40)",
+    "prompt": "O que você mais valoriza em uma pessoa?"
   },
   {
     "id": 33,
-    "category": "RELACIONAMENTOS E PERSONALIDADE (31–40)",
-    "prompt": "Você prefere estar cercado de pessoas ou também gosta de momentos de solitude?"
+    "category": "RELAÇÕES E FAMÍLIA (31–40)",
+    "prompt": "O que faz você perder a admiração por alguém?"
   },
   {
     "id": 34,
-    "category": "RELACIONAMENTOS E PERSONALIDADE (31–40)",
-    "prompt": "Como costuma reagir quando alguém discorda fortemente de você?"
+    "category": "RELAÇÕES E FAMÍLIA (31–40)",
+    "prompt": "Você prefere ter muitos conhecidos ou poucos amigos próximos?"
   },
   {
     "id": 35,
-    "category": "RELACIONAMENTOS E PERSONALIDADE (31–40)",
-    "prompt": "Que tipo de conversa faz você perder a noção do tempo?"
+    "category": "RELAÇÕES E FAMÍLIA (31–40)",
+    "prompt": "Qual é a importância da família na sua vida?"
   },
   {
     "id": 36,
-    "category": "RELACIONAMENTOS E PERSONALIDADE (31–40)",
-    "prompt": "O que costuma fazer para relaxar depois de um dia particularmente exigente?"
+    "category": "RELAÇÕES E FAMÍLIA (31–40)",
+    "prompt": "Como você demonstra carinho pelas pessoas?"
   },
   {
     "id": 37,
-    "category": "RELACIONAMENTOS E PERSONALIDADE (31–40)",
-    "prompt": "Que papel a família ocupa na sua vida atualmente?"
+    "category": "RELAÇÕES E FAMÍLIA (31–40)",
+    "prompt": "Você tem facilidade para confiar nos outros?"
   },
   {
     "id": 38,
-    "category": "RELACIONAMENTOS E PERSONALIDADE (31–40)",
-    "prompt": "O que as pessoas geralmente imaginam sobre você antes de conhecê-lo e depois descobrem que não é verdade?"
+    "category": "RELAÇÕES E FAMÍLIA (31–40)",
+    "prompt": "O que considera imperdoável em um relacionamento?"
   },
   {
     "id": 39,
-    "category": "RELACIONAMENTOS E PERSONALIDADE (31–40)",
-    "prompt": "Quais são as pequenas coisas do cotidiano que conseguem melhorar seu humor imediatamente?"
+    "category": "RELAÇÕES E FAMÍLIA (31–40)",
+    "prompt": "Qual é a sua maior necessidade em um relacionamento?"
   },
   {
     "id": 40,
-    "category": "RELACIONAMENTOS E PERSONALIDADE (31–40)",
-    "prompt": "Qual elogio você já recebeu que realmente significou alguma coisa para você?"
+    "category": "RELAÇÕES E FAMÍLIA (31–40)",
+    "prompt": "Você se sente verdadeiramente compreendido pelas pessoas ao seu redor?"
   },
   {
     "id": 41,
-    "category": "FÉ, VALORES E PROPÓSITO (41–50)",
-    "prompt": "Qual é o papel da fé cristã na sua rotina?"
+    "category": "ESCOLHAS E TRAJETÓRIA (41–50)",
+    "prompt": "Qual foi a decisão mais importante que você já tomou?"
   },
   {
     "id": 42,
-    "category": "FÉ, VALORES E PROPÓSITO (41–50)",
-    "prompt": "Como começou sua relação com o cristianismo?"
+    "category": "ESCOLHAS E TRAJETÓRIA (41–50)",
+    "prompt": "Qual erro mais ensinou alguma coisa importante para você?"
   },
   {
     "id": 43,
-    "category": "FÉ, VALORES E PROPÓSITO (41–50)",
-    "prompt": "Existe algum ensinamento bíblico que você procura aplicar especialmente no ambiente de trabalho?"
+    "category": "ESCOLHAS E TRAJETÓRIA (41–50)",
+    "prompt": "Existe algo no seu passado que você faria diferente?"
   },
   {
     "id": 44,
-    "category": "FÉ, VALORES E PROPÓSITO (41–50)",
-    "prompt": "O que significa, para você, ser um homem de caráter?"
+    "category": "ESCOLHAS E TRAJETÓRIA (41–50)",
+    "prompt": "Qual foi a maior dificuldade que você conseguiu superar?"
   },
   {
     "id": 45,
-    "category": "FÉ, VALORES E PROPÓSITO (41–50)",
-    "prompt": "Como você define uma vida bem-sucedida?"
+    "category": "ESCOLHAS E TRAJETÓRIA (41–50)",
+    "prompt": "Você costuma aprender mais com seus erros ou com os erros dos outros?"
   },
   {
     "id": 46,
-    "category": "FÉ, VALORES E PROPÓSITO (41–50)",
-    "prompt": "Existe algum hábito pessoal que considera indispensável para manter seu equilíbrio?"
+    "category": "ESCOLHAS E TRAJETÓRIA (41–50)",
+    "prompt": "Qual foi a maior responsabilidade que já precisou assumir?"
   },
   {
     "id": 47,
-    "category": "FÉ, VALORES E PROPÓSITO (41–50)",
-    "prompt": "Qual é uma qualidade que você admira profundamente em outras pessoas e gostaria de desenvolver ainda mais?"
+    "category": "ESCOLHAS E TRAJETÓRIA (41–50)",
+    "prompt": "Você já precisou recomeçar sua vida de alguma maneira?"
   },
   {
     "id": 48,
-    "category": "FÉ, VALORES E PROPÓSITO (41–50)",
-    "prompt": "O que despertou seu interesse em começar a compartilhar suas experiências nas redes sociais?"
+    "category": "ESCOLHAS E TRAJETÓRIA (41–50)",
+    "prompt": "O que mais mudou na sua personalidade ao longo dos anos?"
   },
   {
     "id": 49,
-    "category": "FÉ, VALORES E PROPÓSITO (41–50)",
-    "prompt": "Que tipo de pessoa você gostaria de alcançar com seus vídeos?"
+    "category": "ESCOLHAS E TRAJETÓRIA (41–50)",
+    "prompt": "Qual conselho você daria para sua versão de dez anos atrás?"
   },
   {
     "id": 50,
-    "category": "FÉ, VALORES E PROPÓSITO (41–50)",
-    "prompt": "Se alguém acompanhar seu conteúdo durante um ano, o que você gostaria que essa pessoa tivesse aprendido com você?"
+    "category": "ESCOLHAS E TRAJETÓRIA (41–50)",
+    "prompt": "Do que você mais se orgulha na sua trajetória?"
   },
   {
     "id": 51,
-    "category": "O PREÇO DO SUCESSO (51–60)",
-    "prompt": "Você construiu uma trajetória empresarial relevante. Mas qual foi o preço mais alto que precisou pagar para chegar onde está, e hoje considera que valeu a pena?"
+    "category": "TRABALHO E LEGADO (51–60)",
+    "prompt": "O que você faz atualmente para viver?"
   },
   {
     "id": 52,
-    "category": "O PREÇO DO SUCESSO (51–60)",
-    "prompt": "Em que momento da sua vida você percebeu que ganhar dinheiro e sentir-se realizado eram coisas diferentes?"
+    "category": "TRABALHO E LEGADO (51–60)",
+    "prompt": "Você gosta do trabalho ou da atividade que exerce?"
   },
   {
     "id": 53,
-    "category": "O PREÇO DO SUCESSO (51–60)",
-    "prompt": "Existe alguma conquista que você desejou durante anos, mas que, quando finalmente conseguiu, não trouxe a felicidade que imaginava?"
+    "category": "TRABALHO E LEGADO (51–60)",
+    "prompt": "O que mais lhe dá satisfação profissional?"
   },
   {
     "id": 54,
-    "category": "O PREÇO DO SUCESSO (51–60)",
-    "prompt": "O sucesso profissional mudou a forma como você enxerga as pessoas ou mudou a forma como as pessoas enxergam você? Como lida com isso?"
+    "category": "TRABALHO E LEGADO (51–60)",
+    "prompt": "Qual seria o trabalho ideal para você?"
   },
   {
     "id": 55,
-    "category": "O PREÇO DO SUCESSO (51–60)",
-    "prompt": "Qual foi a última vez que você se sentiu genuinamente inseguro, mesmo sabendo que já superou desafios muito maiores?"
+    "category": "TRABALHO E LEGADO (51–60)",
+    "prompt": "Você prefere estabilidade ou liberdade para construir seu próprio caminho?"
   },
   {
     "id": 56,
-    "category": "O PREÇO DO SUCESSO (51–60)",
-    "prompt": "Você acredita que a ambição tem um limite saudável? Como identifica o momento em que ela deixa de impulsionar uma pessoa e começa a consumi-la?"
+    "category": "TRABALHO E LEGADO (51–60)",
+    "prompt": "Qual é a sua relação com dinheiro?"
   },
   {
     "id": 57,
-    "category": "O PREÇO DO SUCESSO (51–60)",
-    "prompt": "Qual foi a decisão financeiramente mais vantajosa que você deixou de tomar porque entrava em conflito com seus princípios?"
+    "category": "TRABALHO E LEGADO (51–60)",
+    "prompt": "O que significa independência financeira para você?"
   },
   {
     "id": 58,
-    "category": "O PREÇO DO SUCESSO (51–60)",
-    "prompt": "Se amanhã perdesse todo o patrimônio, mas conservasse seus conhecimentos e relacionamentos, por onde começaria? E o que faria diferente?"
+    "category": "TRABALHO E LEGADO (51–60)",
+    "prompt": "Você costuma economizar, gastar ou investir?"
   },
   {
     "id": 59,
-    "category": "O PREÇO DO SUCESSO (51–60)",
-    "prompt": "Existe alguma coisa que você sacrificou pelo trabalho e que nenhum resultado financeiro seria capaz de devolver?"
+    "category": "TRABALHO E LEGADO (51–60)",
+    "prompt": "Qual é a sua maior ambição profissional?"
   },
   {
     "id": 60,
-    "category": "O PREÇO DO SUCESSO (51–60)",
-    "prompt": "Quando você imagina sua vida daqui a vinte anos, qual seria o sinal de que teve sucesso como ser humano, independentemente do tamanho das suas empresas?"
+    "category": "TRABALHO E LEGADO (51–60)",
+    "prompt": "O que gostaria de construir ou deixar como legado?"
   },
   {
     "id": 61,
-    "category": "FRACASSO, MEDO E MATURIDADE (61–70)",
-    "prompt": "Qual foi o momento em que você mais duvidou da própria capacidade, e o que aconteceu depois?"
+    "category": "INTERESSES E TEMPO LIVRE (61–70)",
+    "prompt": "Como você costuma passar seu tempo livre?"
   },
   {
     "id": 62,
-    "category": "FRACASSO, MEDO E MATURIDADE (61–70)",
-    "prompt": "Você consegue identificar uma situação em que seu orgulho tenha custado caro? Como reconheceu isso?"
+    "category": "INTERESSES E TEMPO LIVRE (61–70)",
+    "prompt": "Quais atividades fazem você perder a noção do tempo?"
   },
   {
     "id": 63,
-    "category": "FRACASSO, MEDO E MATURIDADE (61–70)",
-    "prompt": "Qual foi uma verdade sobre você mesmo que demorou muitos anos para aceitar?"
+    "category": "INTERESSES E TEMPO LIVRE (61–70)",
+    "prompt": "Qual é o seu maior interesse ou assunto favorito?"
   },
   {
     "id": 64,
-    "category": "FRACASSO, MEDO E MATURIDADE (61–70)",
-    "prompt": "Existe alguma decisão do passado que ainda incomoda você, mesmo sabendo que não pode modificá-la?"
+    "category": "INTERESSES E TEMPO LIVRE (61–70)",
+    "prompt": "Que tipo de música, filme, livro ou conteúdo você mais aprecia?"
   },
   {
     "id": 65,
-    "category": "FRACASSO, MEDO E MATURIDADE (61–70)",
-    "prompt": "Como você diferencia uma pessoa que está sendo persistente de alguém que simplesmente não consegue admitir que está no caminho errado?"
+    "category": "INTERESSES E TEMPO LIVRE (61–70)",
+    "prompt": "Você prefere ambientes movimentados ou tranquilos?"
   },
   {
     "id": 66,
-    "category": "FRACASSO, MEDO E MATURIDADE (61–70)",
-    "prompt": "Você já precisou abandonar algo que estava funcionando porque percebeu que aquilo estava levando sua vida para uma direção que não desejava?"
+    "category": "INTERESSES E TEMPO LIVRE (61–70)",
+    "prompt": "Gosta mais de viajar, conhecer lugares ou permanecer perto de casa?"
   },
   {
     "id": 67,
-    "category": "FRACASSO, MEDO E MATURIDADE (61–70)",
-    "prompt": "Qual foi o período mais solitário da sua trajetória e o que aquela experiência ensinou sobre relacionamentos?"
+    "category": "INTERESSES E TEMPO LIVRE (61–70)",
+    "prompt": "Qual lugar do mundo gostaria muito de conhecer?"
   },
   {
     "id": 68,
-    "category": "FRACASSO, MEDO E MATURIDADE (61–70)",
-    "prompt": "Quando tudo parece dar errado simultaneamente, qual é a primeira coisa que você procura preservar: sua tranquilidade, sua fé, suas relações ou sua capacidade de agir? Por quê?"
+    "category": "INTERESSES E TEMPO LIVRE (61–70)",
+    "prompt": "Você prefere experiências novas ou atividades familiares e previsíveis?"
   },
   {
     "id": 69,
-    "category": "FRACASSO, MEDO E MATURIDADE (61–70)",
-    "prompt": "Qual conselho você costumava dar às pessoas há dez anos e hoje já não daria, porque sua visão mudou completamente?"
+    "category": "INTERESSES E TEMPO LIVRE (61–70)",
+    "prompt": "O que costuma fazer quando precisa descansar a mente?"
   },
   {
     "id": 70,
-    "category": "FRACASSO, MEDO E MATURIDADE (61–70)",
-    "prompt": "Se você pudesse conversar durante uma hora com a versão mais jovem de si mesmo, o que tentaria fazê-lo compreender, sabendo que talvez ele ainda não estivesse preparado para ouvir?"
+    "category": "INTERESSES E TEMPO LIVRE (61–70)",
+    "prompt": "Existe algum talento ou habilidade que gostaria de desenvolver?"
   },
   {
     "id": 71,
-    "category": "LIDERANÇA, PODER E RELAÇÕES HUMANAS (71–80)",
-    "prompt": "Administrar uma empresa envolve influenciar o destino de muitas pessoas. Como você lida emocionalmente com o peso de decisões que podem afetar dezenas de famílias?"
+    "category": "SAÚDE E BEM-ESTAR (71–80)",
+    "prompt": "O que significa ter uma vida saudável para você?"
   },
   {
     "id": 72,
-    "category": "LIDERANÇA, PODER E RELAÇÕES HUMANAS (71–80)",
-    "prompt": "O que você aprendeu sobre a natureza humana liderando funcionários que dificilmente teria aprendido apenas estudando administração?"
+    "category": "SAÚDE E BEM-ESTAR (71–80)",
+    "prompt": "Como você descreveria sua relação com seu próprio corpo?"
   },
   {
     "id": 73,
-    "category": "LIDERANÇA, PODER E RELAÇÕES HUMANAS (71–80)",
-    "prompt": "Você já precisou escolher entre proteger os resultados da empresa e ajudar alguém que estava enfrentando uma situação pessoal difícil? Como tomou essa decisão?"
+    "category": "SAÚDE E BEM-ESTAR (71–80)",
+    "prompt": "Você costuma cuidar da sua saúde física e mental?"
   },
   {
     "id": 74,
-    "category": "LIDERANÇA, PODER E RELAÇÕES HUMANAS (71–80)",
-    "prompt": "Como você identifica a diferença entre um funcionário desmotivado, alguém que precisa de orientação e uma pessoa que realmente não deseja crescer?"
+    "category": "SAÚDE E BEM-ESTAR (71–80)",
+    "prompt": "Como costuma lidar com o estresse?"
   },
   {
     "id": 75,
-    "category": "LIDERANÇA, PODER E RELAÇÕES HUMANAS (71–80)",
-    "prompt": "Qual foi a situação em que precisou reconhecer diante da sua equipe que estava errado? O que aconteceu com sua autoridade depois disso?"
+    "category": "SAÚDE E BEM-ESTAR (71–80)",
+    "prompt": "O que mais ajuda você a recuperar suas energias?"
   },
   {
     "id": 76,
-    "category": "LIDERANÇA, PODER E RELAÇÕES HUMANAS (71–80)",
-    "prompt": "Você acredita que as pessoas trabalham melhor por reconhecimento, necessidade financeira, medo de perder o emprego ou sentimento de pertencimento? Como suas experiências moldaram essa opinião?"
+    "category": "SAÚDE E BEM-ESTAR (71–80)",
+    "prompt": "Você considera sua rotina equilibrada?"
   },
   {
     "id": 77,
-    "category": "LIDERANÇA, PODER E RELAÇÕES HUMANAS (71–80)",
-    "prompt": "Se entrevistássemos seus funcionários sem que você estivesse presente, qual crítica recorrente sobre sua liderança você acredita que ouviríamos?"
+    "category": "SAÚDE E BEM-ESTAR (71–80)",
+    "prompt": "Qual hábito gostaria de abandonar?"
   },
   {
     "id": 78,
-    "category": "LIDERANÇA, PODER E RELAÇÕES HUMANAS (71–80)",
-    "prompt": "O que é mais difícil para você: confiar responsabilidades importantes a outra pessoa ou aceitar que ela pode executar determinada tarefa de maneira diferente da sua?"
+    "category": "SAÚDE E BEM-ESTAR (71–80)",
+    "prompt": "Qual hábito gostaria de desenvolver?"
   },
   {
     "id": 79,
-    "category": "LIDERANÇA, PODER E RELAÇÕES HUMANAS (71–80)",
-    "prompt": "Imagine dois funcionários: um extraordinariamente competente, mas que prejudica o ambiente, e outro tecnicamente mediano, mas que fortalece a equipe. Como você decidiria quem manter e desenvolver?"
+    "category": "SAÚDE E BEM-ESTAR (71–80)",
+    "prompt": "Você costuma respeitar seus próprios limites?"
   },
   {
     "id": 80,
-    "category": "LIDERANÇA, PODER E RELAÇÕES HUMANAS (71–80)",
-    "prompt": "Se um funcionário que ganha pouco lhe perguntasse como poderia transformar completamente sua condição financeira nos próximos dez anos, que orientação prática você daria, considerando as dificuldades reais que ele enfrenta?"
+    "category": "SAÚDE E BEM-ESTAR (71–80)",
+    "prompt": "O que acredita que poderia melhorar significativamente sua qualidade de vida?"
   },
   {
     "id": 81,
-    "category": "FÉ, EGO E CONFLITOS INTERIORES (81–90)",
-    "prompt": "Como você concilia a mensagem cristã sobre humildade com um ambiente empresarial que frequentemente recompensa competição, ambição e destaque individual?"
+    "category": "VALORES E VISÃO DE MUNDO (81–90)",
+    "prompt": "O que é mais importante para você: liberdade, segurança, reconhecimento ou tranquilidade?"
   },
   {
     "id": 82,
-    "category": "FÉ, EGO E CONFLITOS INTERIORES (81–90)",
-    "prompt": "Em algum momento você já confundiu uma vontade pessoal muito forte com aquilo que acreditava ser a vontade de Deus? Como percebeu a diferença?"
+    "category": "VALORES E VISÃO DE MUNDO (81–90)",
+    "prompt": "Quais princípios você considera inegociáveis?"
   },
   {
     "id": 83,
-    "category": "FÉ, EGO E CONFLITOS INTERIORES (81–90)",
-    "prompt": "Quando seus interesses financeiros entram em conflito com aquilo que considera moralmente correto, que princípios utiliza para tomar uma decisão?"
+    "category": "VALORES E VISÃO DE MUNDO (81–90)",
+    "prompt": "O que significa honestidade para você?"
   },
   {
     "id": 84,
-    "category": "FÉ, EGO E CONFLITOS INTERIORES (81–90)",
-    "prompt": "Qual foi uma experiência em que sua fé precisou ser demonstrada por uma atitude concreta, e não apenas por palavras?"
+    "category": "VALORES E VISÃO DE MUNDO (81–90)",
+    "prompt": "Você acredita que as pessoas podem realmente mudar?"
   },
   {
     "id": 85,
-    "category": "FÉ, EGO E CONFLITOS INTERIORES (81–90)",
-    "prompt": "Você acredita que as dificuldades aproximam as pessoas de Deus ou que algumas experiências também podem produzir dúvidas profundas? Como isso aconteceu na sua própria trajetória?"
+    "category": "VALORES E VISÃO DE MUNDO (81–90)",
+    "prompt": "O que pensa sobre perdão?"
   },
   {
     "id": 86,
-    "category": "FÉ, EGO E CONFLITOS INTERIORES (81–90)",
-    "prompt": "Qual característica sua ainda exige um esforço consciente para não prejudicar suas relações pessoais ou profissionais?"
+    "category": "VALORES E VISÃO DE MUNDO (81–90)",
+    "prompt": "Qual é a sua visão sobre religião, espiritualidade ou propósito?"
   },
   {
     "id": 87,
-    "category": "FÉ, EGO E CONFLITOS INTERIORES (81–90)",
-    "prompt": "Como distingue a humildade verdadeira daquela humildade que as pessoas demonstram publicamente para serem admiradas?"
+    "category": "VALORES E VISÃO DE MUNDO (81–90)",
+    "prompt": "Você acredita que existe um propósito maior para a vida?"
   },
   {
     "id": 88,
-    "category": "FÉ, EGO E CONFLITOS INTERIORES (81–90)",
-    "prompt": "Existe alguma opinião que você defendia com muita convicção e precisou abandonar depois de ouvir alguém com uma experiência de vida completamente diferente?"
+    "category": "VALORES E VISÃO DE MUNDO (81–90)",
+    "prompt": "O que mais admira na humanidade?"
   },
   {
     "id": 89,
-    "category": "FÉ, EGO E CONFLITOS INTERIORES (81–90)",
-    "prompt": "Quando alguém que você admira age de maneira contrária aos valores que defende, como decide entre confrontar, compreender, perdoar ou se afastar?"
+    "category": "VALORES E VISÃO DE MUNDO (81–90)",
+    "prompt": "O que mais o decepciona no comportamento das pessoas?"
   },
   {
     "id": 90,
-    "category": "FÉ, EGO E CONFLITOS INTERIORES (81–90)",
-    "prompt": "Se suas conquistas materiais deixassem de existir amanhã, quais fundamentos da sua identidade continuariam intactos? E quais você teme descobrir que estavam excessivamente ligados ao sucesso?"
+    "category": "VALORES E VISÃO DE MUNDO (81–90)",
+    "prompt": "Que tipo de pessoa você gostaria de ser lembrado como?"
   },
   {
     "id": 91,
-    "category": "LEGADO, VERDADE E O SENTIDO DA VIDA (91–100)",
-    "prompt": "Se você tivesse a oportunidade de ser lembrado por apenas uma contribuição à vida de outras pessoas, qual gostaria que fosse?"
+    "category": "REFLEXÕES E FUTURO (91–100)",
+    "prompt": "Qual é o seu maior medo?"
   },
   {
     "id": 92,
-    "category": "LEGADO, VERDADE E O SENTIDO DA VIDA (91–100)",
-    "prompt": "Que tipo de comportamento a sociedade costuma admirar como sinal de sucesso, mas você considera um grande equívoco?"
+    "category": "REFLEXÕES E FUTURO (91–100)",
+    "prompt": "O que você sente que ainda falta na sua vida?"
   },
   {
     "id": 93,
-    "category": "LEGADO, VERDADE E O SENTIDO DA VIDA (91–100)",
-    "prompt": "Você acredita que uma pessoa pode conquistar tudo aquilo que desejava e, ainda assim, ter construído uma vida da qual se arrepende? Como isso acontece?"
+    "category": "REFLEXÕES E FUTURO (91–100)",
+    "prompt": "Existe alguma coisa que você evita enfrentar?"
   },
   {
     "id": 94,
-    "category": "LEGADO, VERDADE E O SENTIDO DA VIDA (91–100)",
-    "prompt": "Qual é uma realidade sobre o mundo empresarial que você conhece pela experiência, mas que dificilmente seria bem recebida por um público acostumado a discursos motivacionais?"
+    "category": "REFLEXÕES E FUTURO (91–100)",
+    "prompt": "O que você gostaria que as pessoas perguntassem mais frequentemente a você?"
   },
   {
     "id": 95,
-    "category": "LEGADO, VERDADE E O SENTIDO DA VIDA (91–100)",
-    "prompt": "Imagine que um jovem de vinte anos esteja acompanhando seus vídeos. Ele é inteligente, esforçado, mas não possui contatos, dinheiro ou oportunidades. O que você diria sem recorrer à ideia simplista de que basta querer para conseguir?"
+    "category": "REFLEXÕES E FUTURO (91–100)",
+    "prompt": "Qual é uma verdade sobre você que poucas pessoas conhecem?"
   },
   {
     "id": 96,
-    "category": "LEGADO, VERDADE E O SENTIDO DA VIDA (91–100)",
-    "prompt": "Existe alguma diferença entre a pessoa que você realmente é, a pessoa que gostaria de ser e a imagem que acredita transmitir aos outros? Como procura aproximar essas três versões?"
+    "category": "REFLEXÕES E FUTURO (91–100)",
+    "prompt": "Em quais momentos você sente que está sendo verdadeiramente você mesmo?"
   },
   {
     "id": 97,
-    "category": "LEGADO, VERDADE E O SENTIDO DA VIDA (91–100)",
-    "prompt": "Você acredita que o sofrimento é necessário para o amadurecimento ou que romantizamos experiências dolorosas porque precisamos encontrar significado nelas?"
+    "category": "REFLEXÕES E FUTURO (91–100)",
+    "prompt": "Se pudesse mudar uma única coisa no mundo, o que mudaria?"
   },
   {
     "id": 98,
-    "category": "LEGADO, VERDADE E O SENTIDO DA VIDA (91–100)",
-    "prompt": "Se pudesse eliminar uma crença equivocada que impede milhares de pessoas de desenvolver seu potencial, qual seria e por que ela é tão difícil de abandonar?"
+    "category": "REFLEXÕES E FUTURO (91–100)",
+    "prompt": "Como gostaria que sua vida estivesse daqui a vinte anos?"
   },
   {
     "id": 99,
-    "category": "LEGADO, VERDADE E O SENTIDO DA VIDA (91–100)",
-    "prompt": "Imagine que sua presença nas redes sociais cresça muito e que milhares de pessoas comecem a tratá-lo como uma referência. Como pretende evitar que a admiração do público influencie negativamente sua humildade, sua autenticidade e sua disposição para reconhecer erros?"
+    "category": "REFLEXÕES E FUTURO (91–100)",
+    "prompt": "Se sua história fosse contada em um livro, qual seria a principal mensagem?"
   },
   {
     "id": 100,
-    "category": "LEGADO, VERDADE E O SENTIDO DA VIDA (91–100)",
-    "prompt": "Um dia, alguém que nunca conheceu você pessoalmente poderá assistir aos seus vídeos e encontrar uma resposta para um momento difícil da própria vida. Qual verdade você gostaria de deixar registrada para essa pessoa, mesmo que nunca saiba quem ela é?"
+    "category": "REFLEXÕES E FUTURO (91–100)",
+    "prompt": "O que ainda precisamos saber sobre você para compreender verdadeiramente quem você é?"
   }
 ];
