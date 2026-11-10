@@ -31867,6 +31867,194 @@ app.get(['/bots', '/bots/', '/bots.html'], async (req, res) => {
   }
 });
 
+// Fabio interview: public guest sessions with private per-responder answers.
+let fabioInterviewSchemaPromise = null;
+const FABIO_INTERVIEW_COOKIE = 'fabio_interview_session';
+const FABIO_QUESTION_COUNT = 100;
+
+async function ensureFabioInterviewSchema() {
+  if (!pool) throw Object.assign(new Error('Respostas indisponíveis no momento.'), { statusCode: 503 });
+  if (!fabioInterviewSchemaPromise) {
+    fabioInterviewSchemaPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.fabio_interview_guests (
+          id text PRIMARY KEY,
+          token_hash text NOT NULL UNIQUE,
+          display_name varchar(80) NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          expires_at timestamptz NOT NULL,
+          last_seen_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.fabio_interview_answers (
+          guest_id text NOT NULL REFERENCES public.fabio_interview_guests(id) ON DELETE CASCADE,
+          question_id integer NOT NULL CHECK (question_id BETWEEN 1 AND ${FABIO_QUESTION_COUNT}),
+          transcript text NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (guest_id, question_id)
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS fabio_interview_answers_updated_idx
+        ON public.fabio_interview_answers (updated_at DESC)
+      `);
+    })().catch((error) => {
+      fabioInterviewSchemaPromise = null;
+      throw error;
+    });
+  }
+  await fabioInterviewSchemaPromise;
+}
+
+function fabioInterviewTokenHash(token) {
+  return crypto.createHash('sha256').update(String(token || ''), 'utf8').digest('hex');
+}
+
+function setFabioInterviewCookie(res, token) {
+  const parts = [
+    `${FABIO_INTERVIEW_COOKIE}=${encodeURIComponent(token)}`,
+    'Path=/api/fabio',
+    'HttpOnly',
+    'SameSite=Lax',
+    'Max-Age=15552000'
+  ];
+  if (NODE_ENV === 'production') parts.push('Secure');
+  res.setHeader('Set-Cookie', parts.join('; '));
+}
+
+async function readFabioInterviewGuest(req) {
+  await ensureFabioInterviewSchema();
+  const token = parseCookies(req)[FABIO_INTERVIEW_COOKIE];
+  if (!token) return null;
+  const result = await pool.query(`
+    UPDATE public.fabio_interview_guests
+       SET last_seen_at = now()
+     WHERE token_hash = $1 AND expires_at > now()
+     RETURNING id, display_name AS "displayName"
+  `, [fabioInterviewTokenHash(token)]);
+  return result.rows[0] || null;
+}
+
+function fabioInterviewResponseError(res, error) {
+  const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+  if (statusCode >= 500) console.error('Erro nas respostas do Fabio:', error);
+  res.status(statusCode).json({
+    success: false,
+    message: statusCode >= 500 ? 'Não foi possível acessar as respostas agora.' : String(error?.message || 'Não foi possível concluir agora.')
+  });
+}
+
+app.post('/api/fabio/session', async (req, res) => {
+  try {
+    await ensureFabioInterviewSchema();
+    const displayName = String(req.body?.name || '').trim().replace(/\s+/g, ' ');
+    if (!displayName || displayName.length > 80) throw Object.assign(new Error('Digite um nome de até 80 caracteres.'), { statusCode: 400 });
+    const token = crypto.randomBytes(32).toString('base64url');
+    const guestId = crypto.randomUUID();
+    await pool.query(`
+      INSERT INTO public.fabio_interview_guests (id, token_hash, display_name, expires_at)
+      VALUES ($1, $2, $3, now() + interval '180 days')
+    `, [guestId, fabioInterviewTokenHash(token), displayName]);
+    setFabioInterviewCookie(res, token);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(201).json({ success: true, participantName: displayName, answers: [] });
+  } catch (error) { fabioInterviewResponseError(res, error); }
+});
+
+app.get('/api/fabio/session', async (req, res) => {
+  try {
+    const guest = await readFabioInterviewGuest(req);
+    if (!guest) { res.status(401).json({ success: false, message: 'Comece informando seu nome.' }); return; }
+    const result = await pool.query(`
+      SELECT question_id AS "questionId", transcript, created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM public.fabio_interview_answers WHERE guest_id = $1 ORDER BY question_id
+    `, [guest.id]);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, participantName: guest.displayName, answers: result.rows });
+  } catch (error) { fabioInterviewResponseError(res, error); }
+});
+
+app.put('/api/fabio/answers/:questionId', async (req, res) => {
+  try {
+    const guest = await readFabioInterviewGuest(req);
+    if (!guest) { res.status(401).json({ success: false, message: 'Informe seu nome para salvar uma resposta.' }); return; }
+    const questionId = Number(req.params.questionId);
+    const transcript = typeof req.body?.transcript === 'string' ? req.body.transcript.trim() : '';
+    if (!Number.isInteger(questionId) || questionId < 1 || questionId > FABIO_QUESTION_COUNT) throw Object.assign(new Error('Pergunta inválida.'), { statusCode: 400 });
+    if (!transcript || transcript.length > 12000) throw Object.assign(new Error('A transcrição precisa ter até 12.000 caracteres.'), { statusCode: 400 });
+    const result = await pool.query(`
+      INSERT INTO public.fabio_interview_answers (guest_id, question_id, transcript)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (guest_id, question_id)
+      DO UPDATE SET transcript = EXCLUDED.transcript, updated_at = now()
+      RETURNING question_id AS "questionId", transcript, created_at AS "createdAt", updated_at AS "updatedAt"
+    `, [guest.id, questionId, transcript]);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, answer: result.rows[0] });
+  } catch (error) { fabioInterviewResponseError(res, error); }
+});
+
+const fabioTranscriptionRequests = new Map();
+app.post('/api/fabio/transcribe', async (req, res) => {
+  try {
+    const guest = await readFabioInterviewGuest(req);
+    if (!guest) { res.status(401).json({ success: false, message: 'Comece informando seu nome antes de gravar.' }); return; }
+    if (!OPENAI_API_KEY || OPENAI_API_KEY.includes('fake')) throw Object.assign(new Error('A transcrição por voz não está configurada neste site.'), { statusCode: 503 });
+    const now = Date.now();
+    const recent = (fabioTranscriptionRequests.get(guest.id) || []).filter((timestamp) => now - timestamp < 5 * 60 * 1000);
+    if (recent.length >= 10) throw Object.assign(new Error('Você já enviou várias gravações. Aguarde alguns minutos e tente de novo.'), { statusCode: 429 });
+    recent.push(now);
+    fabioTranscriptionRequests.set(guest.id, recent);
+    const audioDataUrl = typeof req.body?.audioDataUrl === 'string' ? req.body.audioDataUrl.trim() : '';
+    if (audioDataUrl.length > 14 * 1024 * 1024) throw Object.assign(new Error('A gravação ficou muito grande. Grave uma resposta de até 90 segundos.'), { statusCode: 413 });
+    const parsedAudio = parseBase64DataUrl(audioDataUrl);
+    if (!parsedAudio?.buffer?.length || !String(parsedAudio.mimeType || '').startsWith('audio/')) throw Object.assign(new Error('Não encontrei áudio válido nesta gravação.'), { statusCode: 400 });
+    if (parsedAudio.buffer.length > 10 * 1024 * 1024) throw Object.assign(new Error('A gravação pode ter no máximo 10 MB.'), { statusCode: 413 });
+    const formData = new FormData();
+    const extension = extensionFromMimeType(parsedAudio.mimeType);
+    formData.append('file', new Blob([parsedAudio.buffer], { type: parsedAudio.mimeType }), `fabio-answer.${extension}`);
+    formData.append('model', OPENAI_STT_MODEL);
+    formData.append('language', 'pt');
+    formData.append('response_format', 'json');
+    const upstream = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: formData,
+      signal: AbortSignal.timeout(45000)
+    });
+    const upstreamText = await upstream.text();
+    let payload = null;
+    try { payload = upstreamText ? JSON.parse(upstreamText) : null; } catch (_) {}
+    if (!upstream.ok) {
+      console.error('Falha na transcrição de Fabio:', upstream.status, payload?.error?.message || upstreamText.slice(0, 250));
+      throw Object.assign(new Error('Não consegui transcrever esta gravação. Tente falar mais perto do microfone.'), { statusCode: 502 });
+    }
+    const transcript = String(payload?.text || '').trim();
+    if (!transcript) throw Object.assign(new Error('Não encontrei fala nessa gravação. Tente de novo.'), { statusCode: 422 });
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, text: transcript, model: OPENAI_STT_MODEL });
+  } catch (error) { fabioInterviewResponseError(res, error); }
+});
+
+app.get('/api/admin/fabio/answers', async (req, res) => {
+  try {
+    await ensureFabioInterviewSchema();
+    await requireAdminUserFromRequest(req);
+    const result = await pool.query(`
+      SELECT answer.question_id AS "questionId", answer.transcript,
+             answer.created_at AS "createdAt", answer.updated_at AS "updatedAt",
+             guest.display_name AS "participantName"
+        FROM public.fabio_interview_answers answer
+        JOIN public.fabio_interview_guests guest ON guest.id = answer.guest_id
+       ORDER BY answer.updated_at DESC, guest.display_name, answer.question_id
+    `);
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, answers: result.rows });
+  } catch (error) { fabioInterviewResponseError(res, error); }
+});
+
 // Studio Arabesque Finance: private module with isolated PostgreSQL data.
 const STUDIO_ARABESQUE_FINANCE_AI_MODEL = env(process.env.STUDIO_ARABESQUE_FINANCE_AI_MODEL) || 'gpt-5.6-luna';
 const STUDIO_ARABESQUE_FINANCE_STT_MODEL = env(process.env.STUDIO_ARABESQUE_FINANCE_STT_MODEL) || 'gpt-4o-mini-transcribe';
@@ -31914,6 +32102,10 @@ app.get(['/video', '/video/'], (_req, res) => {
 });
 app.use(express.static(staticDir));
 app.use('/newfonts', express.static(path.join(__dirname, 'newfonts')));
+app.get(['/fabio', '/fabio/'], (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(staticDir, 'fabio', 'index.html'));
+});
 app.get(['/landing', '/landing/'], (req, res) => {
   res.sendFile(path.join(staticDir, 'landing.html'));
 });
