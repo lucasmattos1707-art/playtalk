@@ -8354,6 +8354,34 @@
       overflow: visible;
     }
 
+    .pronunciation-progress-ring {
+      position: absolute;
+      inset: -10px;
+      width: calc(100% + 20px);
+      height: calc(100% + 20px);
+      overflow: visible;
+      pointer-events: none;
+      z-index: 20;
+      transform: rotate(-90deg);
+      filter: drop-shadow(0 0 7px color-mix(in srgb, var(--pronunciation-ring-color) 60%, transparent));
+    }
+
+    .pronunciation-progress-ring__track,
+    .pronunciation-progress-ring__value {
+      fill: none;
+      stroke-width: 7;
+    }
+
+    .pronunciation-progress-ring__track {
+      stroke: rgba(255, 255, 255, 0.24);
+    }
+
+    .pronunciation-progress-ring__value {
+      stroke: var(--pronunciation-ring-color);
+      stroke-linecap: round;
+      transition: stroke-dashoffset 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
     .first-star-progress {
       width: min(240px, calc(100% - 72px));
       height: 8px;
@@ -30034,6 +30062,52 @@
         }, 780);
       }
 
+      let pronunciationProgressSequence = 0;
+
+      function pronunciationScoreColor(score) {
+        const value = Math.max(0, Math.min(100, Number(score) || 0));
+        if (value >= 85) return '#37dd91';
+        if (value >= 60) return '#42a5ff';
+        if (value >= 35) return '#ffb13d';
+        return '#ff465b';
+      }
+
+      function showPronunciationProgress(score) {
+        const visual = els.gameVisual;
+        if (!visual) return;
+        const sequence = ++pronunciationProgressSequence;
+        visual.querySelector('.pronunciation-progress-ring')?.remove();
+        const value = Math.max(0, Math.min(100, Number(score) || 0));
+        const color = pronunciationScoreColor(value);
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 300 300');
+        svg.setAttribute('class', 'pronunciation-progress-ring');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.style.setProperty('--pronunciation-ring-color', color);
+        const circumference = 2 * Math.PI * 137;
+        const makeCircle = (className) => {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', '150');
+          circle.setAttribute('cy', '150');
+          circle.setAttribute('r', '137');
+          circle.setAttribute('class', className);
+          return circle;
+        };
+        svg.appendChild(makeCircle('pronunciation-progress-ring__track'));
+        const progress = makeCircle('pronunciation-progress-ring__value');
+        progress.setAttribute('stroke-dasharray', String(circumference));
+        progress.setAttribute('stroke-dashoffset', String(circumference));
+        svg.appendChild(progress);
+        visual.appendChild(svg);
+        window.requestAnimationFrame(() => {
+          if (sequence !== pronunciationProgressSequence || !progress.isConnected) return;
+          progress.setAttribute('stroke-dashoffset', String(circumference * (1 - value / 100)));
+        });
+        window.setTimeout(() => {
+          if (sequence === pronunciationProgressSequence) svg.remove();
+        }, 1550);
+      }
+
       function isFooterGuardStage(entry = currentGameEntry()) {
         return false;
       }
@@ -40088,12 +40162,26 @@
           }
           return;
         }
-        const { score, isHit } = evaluateAcceptedAnswers(expectedAnswers, transcript);
+        const evaluation = evaluateAcceptedAnswers(expectedAnswers, transcript);
+        const score = inputMode === 'speech'
+          ? Math.min(100, Math.max(0, Number(evaluation.score) || 0) + 10)
+          : evaluation.score;
+        const isHit = inputMode === 'speech'
+          ? score >= speechHitThresholdForLevel()
+          : evaluation.isHit;
         if (inputMode === 'speech') {
           clearStageTutorialReminder();
           hideGameStageTutorial({ resume: false });
           addSpeakingCharsFromTranscript(transcript);
           pushPronunciationSample(score);
+          showPronunciationProgress(score);
+          if (isHit) playSuccessAudio();
+          if (evaluatedStage === 1) {
+            revealFirstStarTargetLanguage(card);
+            await wait(1500);
+            if (!state.game.active || state.game.currentId !== entry.id || Number(entry.stage) !== evaluatedStage) return;
+            if (!isHit) renderFirstStarPhaseWordSwap(entry, card);
+          }
         }
         updateGameChips();
 
@@ -40126,7 +40214,7 @@
             state.game.training.totalHits = Math.max(0, Number(state.game.training.totalHits) || 0) + 1;
             entry.typingMistakes = 0;
             setGameStatus('', 'hit');
-            playSuccessAudio();
+            if (inputMode !== 'speech') playSuccessAudio();
           } else {
             state.game.training.hitStreak = 0;
             entry.typingMistakes = 0;
@@ -40196,7 +40284,7 @@
               state.game.levelTextHitStreak = Math.max(0, Number(state.game.levelTextHitStreak) || 0) + 1;
             }
             setGameStatus('', 'hit');
-            if (!isTypingRoundStageFourActive()) playSuccessAudio();
+            if (!isTypingRoundStageFourActive() && inputMode !== 'speech') playSuccessAudio();
             if (isLevelTypingModeActive()) {
               els.gameStarCopy.textContent = 'Typing';
               entry._removeAfterReward = true;
@@ -40297,7 +40385,7 @@
           } else if (entry.stars === 5) {
             playMilestoneAudio(FIVE_STARS_SOUND_PATH);
             queueFifthStageCoinsGainAudio(500);
-          } else {
+          } else if (inputMode !== 'speech') {
             playSuccessAudio();
           }
           renderImmediateHitFeedback(entry.stars);
