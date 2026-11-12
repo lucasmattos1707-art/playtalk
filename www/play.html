@@ -5562,10 +5562,12 @@
 
     .game-end {
       display: none;
-      min-height: 50vh;
+      min-height: 100%;
+      max-height: 100%;
       place-items: center;
       text-align: center;
-      padding: 24px;
+      padding: 18px 16px;
+      overflow-y: auto;
       border-radius: 30px;
       border: 1px solid rgba(125, 203, 255, 0.14);
       background: rgba(255, 255, 255, 0.03);
@@ -5583,6 +5585,173 @@
       color: var(--muted);
       max-width: 42ch;
       line-height: 1.45;
+    }
+
+    .game-end__inner {
+      width: min(100%, 640px);
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+      margin: auto;
+    }
+
+    .game-end__presentation {
+      width: 100%;
+      display: grid;
+      gap: 14px;
+    }
+
+    .game-end__presentation[hidden],
+    .game-end__totals[hidden],
+    .game-end__error-count[hidden],
+    .game-end__menu-btn[hidden] {
+      display: none !important;
+    }
+
+    .game-end__meter {
+      display: none;
+      width: min(100%, 560px);
+      margin: 0 auto;
+      padding: 18px 14px 16px;
+      border: 1px solid rgba(98, 157, 221, 0.48);
+      border-radius: 24px;
+      background: linear-gradient(155deg, rgba(23, 39, 68, 0.98), rgba(13, 23, 43, 0.98));
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+      opacity: 0;
+      transform: scale(0.97);
+      transition: opacity 420ms ease, transform 420ms ease;
+    }
+
+    .game-end__meter.is-active {
+      display: block;
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .game-end__meter h4 {
+      margin: 0;
+      font-size: 19px;
+    }
+
+    .game-end__meter-desc {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .game-end__dial {
+      display: block;
+      width: min(100%, 390px);
+      margin: 8px auto -4px;
+      overflow: visible;
+    }
+
+    .game-end__arc-bg,
+    .game-end__segment {
+      fill: none;
+      stroke-width: 23;
+      stroke-linecap: round;
+    }
+
+    .game-end__arc-bg { stroke: #26334a; }
+    .game-end__segment { stroke-linecap: butt; }
+    .game-end__tick { stroke: #a9b9d0; stroke-width: 2; opacity: 0.65; }
+    .game-end__scale-label { fill: #9eb5d6; font-size: 13px; font-weight: 700; }
+    .game-end__needle { stroke: #f5f9ff; stroke-width: 5; stroke-linecap: round; filter: drop-shadow(0 0 6px rgba(255,255,255,.5)); }
+    .game-end__needle-hub { fill: #f4faff; stroke: #537cae; stroke-width: 5; }
+
+    .game-end__readout {
+      margin-top: -4px;
+      color: #fff;
+      font-size: clamp(34px, 8vw, 54px);
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.05em;
+    }
+
+    .game-end__unit {
+      margin-left: 4px;
+      color: #a9c0e3;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .game-end__status {
+      min-height: 22px;
+      margin-top: 5px;
+      color: #c6d6ed;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+    }
+
+    .game-end__totals {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .game-end__total {
+      padding: 12px;
+      border: 1px solid rgba(125, 203, 255, 0.2);
+      border-radius: 16px;
+      background: rgba(17, 29, 53, 0.88);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .game-end__total strong {
+      display: block;
+      color: #fff;
+      font-size: clamp(27px, 6vw, 36px);
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .game-end__error-count {
+      margin: 0 !important;
+      color: #ffb8bf !important;
+      font-size: 13px;
+    }
+
+    .game-end__menu-btn {
+      min-width: 200px;
+      padding: 14px 22px;
+      border: 1px solid rgba(89, 170, 255, 0.55);
+      border-radius: 14px;
+      color: #06172b;
+      background: linear-gradient(110deg, #2585f8, #55c2ff);
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .game-end__menu-btn:disabled { opacity: 0.65; cursor: wait; }
+
+    .flashcards-typing__grid.is-audio-waiting {
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    .game-next-audio-retry {
+      display: block;
+      margin: 12px auto 0;
+      padding: 12px 18px;
+      border: 1px solid rgba(89, 170, 255, 0.55);
+      border-radius: 14px;
+      color: #06172b;
+      background: linear-gradient(110deg, #2585f8, #55c2ff);
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    @media (max-width: 520px) {
+      .game-end { padding: 12px 10px; }
+      .game-end__inner { gap: 9px; }
+      .game-end__meter { padding: 14px 10px 12px; }
+      .game-end__dial { width: min(100%, 330px); }
+      .game-end__totals { gap: 7px; }
     }
 
     .watch-popover-card {
@@ -14491,9 +14660,18 @@
         <div class="navbarscreen" id="gameFooterSlot" aria-hidden="true"></div>
 
         <section class="game-end" id="gameEnd">
-          <div>
+          <div class="game-end__inner">
             <h3>Sem cartas disponiveis para jogar.</h3>
-            <p>Voce ja ganhou todos os cards carregados, ou ainda nao existem cartas suficientes fora de Meus flashcards para montar a rodada.</p>
+            <p id="gameEndCopy">Voce ja ganhou todos os cards carregados, ou ainda nao existem cartas suficientes fora de Meus flashcards para montar a rodada.</p>
+            <div class="game-end__presentation" id="gameEndPresentation" hidden>
+              <div class="game-end__meters" id="gameEndMeters" aria-live="polite"></div>
+              <div class="game-end__totals" id="gameEndTotals" hidden>
+                <div class="game-end__total">Palavras ditas<strong id="gameEndWordsSpoken">+0</strong></div>
+                <div class="game-end__total">Palavras ouvidas<strong id="gameEndWordsHeard">+0</strong></div>
+              </div>
+              <p class="game-end__error-count" id="gameEndErrors" hidden></p>
+            </div>
+            <button class="game-end__menu-btn" id="gameEndMenuBtn" type="button" hidden>Voltar ao menu dos níveis</button>
           </div>
         </section>
       </div>
@@ -16569,6 +16747,14 @@
         gameReportOptions: document.getElementById('gameReportOptions'),
         closeGameReportBtn: document.getElementById('closeGameReportBtn'),
         gameEnd: document.getElementById('gameEnd'),
+        gameEndCopy: document.getElementById('gameEndCopy'),
+        gameEndPresentation: document.getElementById('gameEndPresentation'),
+        gameEndMeters: document.getElementById('gameEndMeters'),
+        gameEndTotals: document.getElementById('gameEndTotals'),
+        gameEndWordsSpoken: document.getElementById('gameEndWordsSpoken'),
+        gameEndWordsHeard: document.getElementById('gameEndWordsHeard'),
+        gameEndErrors: document.getElementById('gameEndErrors'),
+        gameEndMenuBtn: document.getElementById('gameEndMenuBtn'),
         gameCard: document.getElementById('gameCard'),
         gameVisual: document.getElementById('gameVisual'),
         firstStarSeals: document.getElementById('firstStarSeals'),
@@ -19874,7 +20060,7 @@
       }
 
       function isFiveStarCardsModeActive() {
-        return Boolean(isLevelModeAcquisitionFlowActive() && isJourneyGameMode());
+        return Boolean(isLevelModeAcquisitionFlowActive());
       }
 
       function currentGameStarTarget() {
@@ -26628,7 +26814,25 @@
           resetGameOrderedPoolCursor();
           resetTimedGameCardRelease({ seedInitialCard: true });
           if (isLevelModeActive()) {
-            void restartActiveLevelMode(selectedGameLevel());
+            els.gameCard.style.display = 'none';
+            setGameStatus(nextCardSource === 'flow' ? 'Carregando trechos do Flow...' : 'Preparando as cartas do nível...', 'live');
+            void (async () => {
+              if (nextCardSource === 'flow') {
+                const flowCount = await loadFlowCardsForGame();
+                if (flowCount < FINAL_CHALLENGE_CARD_COUNT) {
+                  throw new Error(`O Flow encontrou ${flowCount} trechos sincronizados; são necessários 25.`);
+                }
+              } else if (isJourneyGameMode() && !journeyPhaseRuntime) {
+                const prepared = await prepareCardsModeLevelFromGeneralLevels(selectedGameLevel());
+                if ((prepared?.cards?.length || 0) < FINAL_CHALLENGE_CARD_COUNT) {
+                  throw new Error('Este nível ainda não tem 25 cartas disponíveis.');
+                }
+              }
+              await restartActiveLevelMode(selectedGameLevel());
+            })().catch((error) => {
+              console.warn('Falha ao trocar a origem das cartas:', error);
+              setGameStatus(error?.message || 'Não foi possível carregar as cartas deste nível.', 'miss');
+            });
           } else {
             refillGameEntry('base', state.game.contextLimit || currentGameActiveCardCap(), { ignoreTimedReleaseGate: true });
             if (state.game.active && !state.game.paused) advanceToNextCard();
@@ -28122,7 +28326,9 @@
       }
 
       function buildLevelModeSourceCards(level = selectedGameLevel()) {
-        const cardsMode = isJourneyGameMode();
+        const fixedTwentyFiveCardRound = isFiveStarCardsModeActive();
+        const cardsMode = isJourneyGameMode()
+          || normalizeGameOptionValue('cardSource', state.options?.cardSource) === 'flow';
         const difficultyMode = normalizeGameOptionValue('difficulty', state.options?.difficulty);
         const targetLevel = normalizeUserLevel(Number(level) > 0 ? level : currentUserLevel());
         if (cardsMode) {
@@ -28145,20 +28351,19 @@
         if (difficultyMode === 'manual') {
           const manualLevel = normalizeUserLevel(level || currentUserLevel());
           const playableDeckLevel = resolveSequencePlayableDeckLevel(manualLevel);
-          return applyDeckCardsLimit(
-            allPlayableCards.filter((card) => cardDeckLevel(card) === playableDeckLevel),
-            manualLevel
-          );
+          const levelCards = allPlayableCards.filter((card) => cardDeckLevel(card) === playableDeckLevel);
+          return fixedTwentyFiveCardRound ? levelCards : applyDeckCardsLimit(levelCards, manualLevel);
         }
         if (Number(level) === 0 || !Number.isInteger(Number(level))) {
-          return applyDeckCardsLimit(allPlayableCards, targetLevel);
+          return fixedTwentyFiveCardRound ? allPlayableCards : applyDeckCardsLimit(allPlayableCards, targetLevel);
         }
         const bounds = resolveDeckLevelBounds(targetLevel);
         const windowCards = allPlayableCards.filter((card) => {
           const deckLevel = cardDeckLevel(card);
           return Number.isInteger(deckLevel) && deckLevel >= bounds.minLevel && deckLevel <= bounds.maxLevel;
         });
-        return applyDeckCardsLimit(windowCards.length ? windowCards : allPlayableCards, targetLevel);
+        const levelCards = windowCards.length ? windowCards : allPlayableCards;
+        return fixedTwentyFiveCardRound ? levelCards : applyDeckCardsLimit(levelCards, targetLevel);
       }
 
       async function loadFlowCardsForGame() {
@@ -32388,6 +32593,123 @@
         return preparePromise;
       }
 
+      function waitForAudioPlaybackReady(audio, timeoutMs = 12000) {
+        if (!audio || audio.error) return Promise.resolve(false);
+        if (audio.readyState >= 3 && !audio.seeking) return Promise.resolve(true);
+        return new Promise((resolve) => {
+          let finished = false;
+          const cleanup = () => {
+            audio.removeEventListener('canplay', onReady);
+            audio.removeEventListener('canplaythrough', onReady);
+            audio.removeEventListener('error', onError);
+            audio.removeEventListener('abort', onError);
+            window.clearTimeout(timer);
+          };
+          const finish = (ready) => {
+            if (finished) return;
+            finished = true;
+            cleanup();
+            resolve(Boolean(ready));
+          };
+          const onReady = () => {
+            if (!audio.error && audio.readyState >= 3 && !audio.seeking) finish(true);
+          };
+          const onError = () => finish(false);
+          const timer = window.setTimeout(() => finish(false), Math.max(500, Number(timeoutMs) || 12000));
+          audio.addEventListener('canplay', onReady);
+          audio.addEventListener('canplaythrough', onReady);
+          audio.addEventListener('error', onError);
+          audio.addEventListener('abort', onError);
+          if (audio.error) {
+            finish(false);
+            return;
+          }
+          if (audio.readyState >= 3 && !audio.seeking) {
+            finish(true);
+            return;
+          }
+          try {
+            if (audio.networkState === 0) audio.load();
+          } catch (_error) {
+            finish(false);
+          }
+        });
+      }
+
+      function seekAudioToTime(audio, time, timeoutMs = 10000) {
+        if (!audio || !Number.isFinite(Number(time)) || Number(time) < 0) return Promise.resolve(false);
+        const target = Number(time);
+        if (!audio.seeking && Math.abs((Number(audio.currentTime) || 0) - target) < 0.05) return Promise.resolve(true);
+        return new Promise((resolve) => {
+          let finished = false;
+          const cleanup = () => {
+            audio.removeEventListener('seeked', onSeeked);
+            audio.removeEventListener('error', onError);
+            audio.removeEventListener('abort', onError);
+            window.clearTimeout(timer);
+          };
+          const finish = (ready) => {
+            if (finished) return;
+            finished = true;
+            cleanup();
+            resolve(Boolean(ready));
+          };
+          const onSeeked = () => {
+            if (!audio.seeking && Math.abs((Number(audio.currentTime) || 0) - target) < 0.2) finish(true);
+          };
+          const onError = () => finish(false);
+          const timer = window.setTimeout(() => finish(false), Math.max(500, Number(timeoutMs) || 10000));
+          audio.addEventListener('seeked', onSeeked);
+          audio.addEventListener('error', onError);
+          audio.addEventListener('abort', onError);
+          try {
+            audio.currentTime = target;
+            if (!audio.seeking && Math.abs((Number(audio.currentTime) || 0) - target) < 0.05) finish(true);
+          } catch (_error) {
+            finish(false);
+          }
+        });
+      }
+
+      async function prepareStageFourAudioBeforeCard(entry, card) {
+        if (!entry || Number(entry.stage) !== 4 || !isTypingRoundStageFourActive()) return true;
+        const source = resolveCardAudioUrl(card);
+        if (!source) return false;
+        let audio = await prepareRuntimeAudioSource(source, 12000);
+        if (audio?.error) {
+          state.game.preloadAudioPromises.delete(source);
+          state.game.preloadAudios.delete(source);
+          audio = await prepareRuntimeAudioSource(source, 12000);
+        }
+        if (!audio || !(await waitForAudioPlaybackReady(audio, 12000))) return false;
+        const start = Number(card?.flowSegment?.start);
+        const end = Number(card?.flowSegment?.end);
+        if (Number.isFinite(start) && start >= 0 && Number.isFinite(end) && end > start) {
+          if (!(await seekAudioToTime(audio, start, 10000))) return false;
+          if (!(await waitForAudioPlaybackReady(audio, 10000))) return false;
+        }
+        return !audio.error;
+      }
+
+      function clearNextCardAudioRetryButton() {
+        els.gameStatusSlot?.querySelector('.game-next-audio-retry')?.remove();
+      }
+
+      function showNextCardAudioRetryButton(entryId) {
+        clearNextCardAudioRetryButton();
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'game-next-audio-retry';
+        button.textContent = 'Tentar preparar o áudio novamente';
+        button.addEventListener('click', () => {
+          if (!state.game.active || state.game.queue[0] !== entryId) return;
+          button.disabled = true;
+          button.textContent = 'Preparando áudio...';
+          void advanceToNextCard();
+        });
+        els.gameStatusSlot?.appendChild(button);
+      }
+
       function buildAlbumsPreviewBufferCards(limit = 3) {
         const cards = [];
         const seen = new Set();
@@ -33262,63 +33584,254 @@
         }
       }
 
+      let gameEndPresentationToken = 0;
+
+      function gameEndSvgNode(tag, attributes = {}, parent = null) {
+        const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+        Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, String(value)));
+        if (parent) parent.appendChild(node);
+        return node;
+      }
+
+      function gameEndDialPoint(cx, cy, radius, degrees) {
+        const radians = degrees * Math.PI / 180;
+        return [cx + radius * Math.cos(radians), cy + radius * Math.sin(radians)];
+      }
+
+      function gameEndDialArc(start, end, radius = 131) {
+        const from = gameEndDialPoint(180, 180, radius, start);
+        const to = gameEndDialPoint(180, 180, radius, end);
+        return `M ${from[0]} ${from[1]} A ${radius} ${radius} 0 ${end - start > 180 ? 1 : 0} 1 ${to[0]} ${to[1]}`;
+      }
+
+      function formatGameEndGaugeValue(kind, value) {
+        const safeValue = Math.max(0, Number(value) || 0);
+        if (kind === 'speed') {
+          return safeValue.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        }
+        if (kind === 'pronunciation') {
+          return safeValue.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+        }
+        return Math.round(safeValue).toLocaleString('pt-BR');
+      }
+
+      function gameEndGaugeStatus(value, max) {
+        const ratio = max > 0 ? Math.max(0, Math.min(1, Number(value) / max)) : 0;
+        if (ratio >= 0.85) return 'EXCELENTE';
+        if (ratio >= 0.6) return 'MUITO BOM';
+        if (ratio >= 0.35) return 'BOM';
+        return 'CONTINUE EVOLUINDO';
+      }
+
+      function createGameEndGauge({ kind, title, description, value, max, unit }) {
+        const card = document.createElement('article');
+        card.className = 'game-end__meter';
+        card.dataset.gameEndMeter = kind;
+        const heading = document.createElement('h4');
+        heading.textContent = title;
+        const desc = document.createElement('div');
+        desc.className = 'game-end__meter-desc';
+        desc.textContent = description;
+        const dial = gameEndSvgNode('svg', { class: 'game-end__dial', viewBox: '0 0 360 235', role: 'img', 'aria-label': title });
+        gameEndSvgNode('path', { d: gameEndDialArc(150, 390), class: 'game-end__arc-bg' }, dial);
+        const colors = ['#ff465b', '#ffb13d', '#42a5ff', '#37dd91'];
+        colors.forEach((color, index) => {
+          const start = 150 + index * 60 + 1;
+          const end = 150 + (index + 1) * 60 - 1;
+          gameEndSvgNode('path', { d: gameEndDialArc(start, end), class: 'game-end__segment', stroke: color }, dial);
+        });
+        for (let index = 0; index <= 10; index += 1) {
+          const angle = 150 + index * 24;
+          const outer = gameEndDialPoint(180, 180, 105, angle);
+          const inner = gameEndDialPoint(180, 180, index % 2 === 0 ? 93 : 98, angle);
+          gameEndSvgNode('line', { x1: outer[0], y1: outer[1], x2: inner[0], y2: inner[1], class: 'game-end__tick' }, dial);
+        }
+        [0, max / 2, max].forEach((tickValue, index) => {
+          const point = gameEndDialPoint(180, 180, 74, [150, 270, 390][index]);
+          const label = gameEndSvgNode('text', {
+            x: point[0], y: point[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle', class: 'game-end__scale-label'
+          }, dial);
+          label.textContent = kind === 'speed'
+            ? Math.round(tickValue).toLocaleString('pt-BR')
+            : Math.round(tickValue).toLocaleString('pt-BR');
+        });
+        const needle = gameEndSvgNode('g', { transform: 'rotate(-120 180 180)' }, dial);
+        gameEndSvgNode('line', { x1: 180, y1: 180, x2: 180, y2: 76, class: 'game-end__needle' }, needle);
+        gameEndSvgNode('circle', { cx: 180, cy: 180, r: 11, class: 'game-end__needle-hub' }, dial);
+        const readout = document.createElement('div');
+        readout.className = 'game-end__readout';
+        readout.dataset.gaugeNumber = '';
+        readout.textContent = formatGameEndGaugeValue(kind, 0);
+        const unitNode = document.createElement('span');
+        unitNode.className = 'game-end__unit';
+        unitNode.textContent = unit;
+        readout.appendChild(unitNode);
+        const status = document.createElement('div');
+        status.className = 'game-end__status';
+        status.textContent = 'AGUARDANDO';
+        card.append(heading, desc, dial, readout, status);
+        return { card, needle, readout, status, value, max, kind };
+      }
+
+      function animateGameEndGauge(gauge, token) {
+        return new Promise((resolve) => {
+          const startAt = performance.now();
+          const duration = 1900;
+          const safeValue = Math.max(0, Number(gauge.value) || 0);
+          const safeMax = Math.max(1, Number(gauge.max) || 1);
+          const frame = (now) => {
+            if (token !== gameEndPresentationToken) {
+              resolve();
+              return;
+            }
+            const progress = Math.min(1, (now - startAt) / duration);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const current = safeValue * eased;
+            const dialRatio = Math.max(0, Math.min(1, current / safeMax));
+            gauge.needle.setAttribute('transform', `rotate(${-120 + 240 * dialRatio} 180 180)`);
+            const unitNode = gauge.readout.querySelector('.game-end__unit');
+            gauge.readout.textContent = formatGameEndGaugeValue(gauge.kind, current);
+            if (unitNode) gauge.readout.appendChild(unitNode);
+            if (progress < 1) {
+              window.requestAnimationFrame(frame);
+              return;
+            }
+            gauge.status.textContent = gameEndGaugeStatus(safeValue, safeMax);
+            resolve();
+          };
+          window.requestAnimationFrame(frame);
+        });
+      }
+
+      function animateGameEndWordTotal(element, value, token) {
+        return new Promise((resolve) => {
+          const target = Math.max(0, Math.round(Number(value) || 0));
+          const startAt = performance.now();
+          const duration = 650;
+          const frame = (now) => {
+            if (token !== gameEndPresentationToken) {
+              resolve();
+              return;
+            }
+            const progress = Math.min(1, (now - startAt) / duration);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            element.textContent = `+${Math.round(target * eased).toLocaleString('pt-BR')}`;
+            if (progress < 1) {
+              window.requestAnimationFrame(frame);
+              return;
+            }
+            resolve();
+          };
+          element.textContent = '+0';
+          window.requestAnimationFrame(frame);
+        });
+      }
+
+      async function playGameEndPresentation(gauges, totals) {
+        const token = ++gameEndPresentationToken;
+        await wait(160);
+        if (token !== gameEndPresentationToken) return;
+        for (const gauge of gauges) {
+          if (token !== gameEndPresentationToken) return;
+          gauge.card.classList.add('is-active');
+          await wait(80);
+          await animateGameEndGauge(gauge, token);
+          if (token !== gameEndPresentationToken) return;
+          await wait(620);
+          gauge.card.classList.remove('is-active');
+          await wait(360);
+        }
+        if (totals) {
+          els.gameEndTotals.hidden = false;
+          await animateGameEndWordTotal(els.gameEndWordsSpoken, totals.spoken, token);
+          await wait(180);
+          await animateGameEndWordTotal(els.gameEndWordsHeard, totals.heard, token);
+        }
+        if (token === gameEndPresentationToken) els.gameEndMenuBtn.hidden = false;
+      }
+
       function updateGameEndMessageForCurrentLanguage() {
         if (!els.gameEnd) return;
+        gameEndPresentationToken += 1;
         const heading = els.gameEnd.querySelector('h3');
-        const copy = els.gameEnd.querySelector('p');
         const cardsModeRound = state.game.cardsModeRound;
+        els.gameEndMeters.replaceChildren();
+        els.gameEndPresentation.hidden = true;
+        els.gameEndTotals.hidden = true;
+        els.gameEndErrors.hidden = true;
+        els.gameEndMenuBtn.hidden = true;
+        els.gameEndWordsSpoken.textContent = '+0';
+        els.gameEndWordsHeard.textContent = '+0';
+
+        let gauges = [];
+        let totals = null;
+        let errors = 0;
         if (cardsModeRound?.completed) {
           if (heading) heading.textContent = 'Resultados do treino';
-          if (copy) {
-            const summary = [
-              `<span class="typing-round-result-stat"><strong>${Math.max(0, Number(cardsModeRound.correct) || 0)}</strong> acertos</span>`,
-              `<span class="typing-round-result-stat"><strong>${Math.max(0, Number(cardsModeRound.errors) || 0)}</strong> erros</span>`
-            ];
-            if (Number(cardsModeRound.stage) === 4 && state.game.typingRound?.completed) {
-              const elapsedSeconds = Math.max(1, (Number(state.game.typingRound.elapsedMs) || 0) / 1000);
-              const charactersPerMinute = (Math.max(0, Number(state.game.typingRound.characters) || 0) / elapsedSeconds) * 60;
-              summary.push(`<span class="typing-round-result-stat"><strong>${charactersPerMinute.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> caracteres por minuto</span>`);
-            }
-            if ([0, 1, 2, 3, 5].includes(Number(cardsModeRound.stage))) {
-              const scores = Array.isArray(cardsModeRound.pronunciationScores)
-                ? cardsModeRound.pronunciationScores.map(Number).filter(Number.isFinite)
-                : [];
-              const pronunciation = scores.length
-                ? `${(scores.reduce((sum, value) => sum + value, 0) / scores.length).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
-                : '—';
-              summary.push(`<span class="typing-round-result-stat"><strong>${pronunciation}</strong> pronúncia</span>`);
-              summary.push(`<span class="typing-round-result-stat"><strong>${Math.max(0, Number(cardsModeRound.wordsSpoken) || 0)}</strong> palavras ditas</span>`);
-              summary.push(`<span class="typing-round-result-stat"><strong>${Math.max(0, Number(cardsModeRound.wordsHeard) || 0)}</strong> palavras ouvidas</span>`);
-            }
-            copy.innerHTML = summary.join('');
+          const correct = Math.max(0, Number(cardsModeRound.correct) || 0);
+          errors = Math.max(0, Number(cardsModeRound.errors) || 0);
+          gauges.push(createGameEndGauge({
+            kind: 'correct', title: 'Acertos', description: 'Cartas concluídas corretamente',
+            value: correct, max: 25, unit: '/ 25'
+          }));
+          if (Number(cardsModeRound.stage) === 4 && state.game.typingRound?.completed) {
+            const elapsedSeconds = Math.max(1, (Number(state.game.typingRound.elapsedMs) || 0) / 1000);
+            const charactersPerMinute = (Math.max(0, Number(state.game.typingRound.characters) || 0) / elapsedSeconds) * 60;
+            gauges.push(createGameEndGauge({
+              kind: 'speed', title: 'Velocidade', description: 'Caracteres por minuto',
+              value: charactersPerMinute, max: 500, unit: 'CPM'
+            }));
           }
-          return;
-        }
-        const typingRound = state.game.typingRound;
-        if (typingRound?.completed) {
+          if ([0, 1, 2, 3, 5].includes(Number(cardsModeRound.stage))) {
+            const scores = Array.isArray(cardsModeRound.pronunciationScores)
+              ? cardsModeRound.pronunciationScores.map(Number).filter(Number.isFinite)
+              : [];
+            const pronunciation = scores.length
+              ? scores.reduce((sum, value) => sum + value, 0) / scores.length
+              : 0;
+            gauges.push(createGameEndGauge({
+              kind: 'pronunciation', title: 'Pronúncia', description: 'Qualidade da pronúncia',
+              value: pronunciation, max: 100, unit: '%'
+            }));
+            totals = {
+              spoken: Math.max(0, Number(cardsModeRound.wordsSpoken) || 0),
+              heard: Math.max(0, Number(cardsModeRound.wordsHeard) || 0)
+            };
+          }
+          els.gameEndPresentation.hidden = false;
+          els.gameEndErrors.textContent = `Erros: ${errors}`;
+          els.gameEndErrors.hidden = false;
+          if (els.gameEndCopy) {
+            els.gameEndCopy.textContent = '';
+            els.gameEndCopy.hidden = true;
+          }
+        } else if (state.game.typingRound?.completed) {
+          if (heading) heading.textContent = 'Resumo do Modo 4';
+          const typingRound = state.game.typingRound;
           const elapsedSeconds = Math.max(1, (Number(typingRound.elapsedMs) || 0) / 1000);
           const charactersPerMinute = (Math.max(0, Number(typingRound.characters) || 0) / elapsedSeconds) * 60;
-          if (heading) heading.textContent = 'Resumo do Modo 4';
-          if (copy) {
-            copy.innerHTML = `
-              <span class="typing-round-result-stat"><strong>${Math.max(0, Number(typingRound.correct) || 0)}</strong> acertos</span>
-              <span class="typing-round-result-stat"><strong>${Math.max(0, Number(typingRound.errors) || 0)}</strong> erros</span>
-              <span class="typing-round-result-stat"><strong>${charactersPerMinute.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> caracteres por minuto</span>
-            `;
+          gauges = [
+            createGameEndGauge({ kind: 'correct', title: 'Acertos', description: 'Frases concluídas corretamente', value: typingRound.correct, max: 25, unit: '/ 25' }),
+            createGameEndGauge({ kind: 'speed', title: 'Velocidade', description: 'Caracteres por minuto', value: charactersPerMinute, max: 500, unit: 'CPM' })
+          ];
+          errors = Math.max(0, Number(typingRound.errors) || 0);
+          els.gameEndPresentation.hidden = false;
+          els.gameEndErrors.textContent = `Erros: ${errors}`;
+          els.gameEndErrors.hidden = false;
+          if (els.gameEndCopy) {
+            els.gameEndCopy.textContent = '';
+            els.gameEndCopy.hidden = true;
           }
-          return;
+        } else {
+          if (heading) heading.textContent = 'Sem cartas disponíveis para jogar.';
+          if (els.gameEndCopy) {
+            els.gameEndCopy.hidden = false;
+            els.gameEndCopy.textContent = `As cartas acabaram para ${currentTargetLanguageLabel()} neste nível, ou ainda não existem traduções suficientes para montar a rodada.`;
+          }
+          els.gameEndMenuBtn.hidden = false;
         }
-        if (heading) {
-          heading.textContent = 'Sem cartas disponiveis para jogar.';
-        }
-        if (copy) {
-          const completedCount = Array.isArray(state.game.cardsModeCompletedCardIds)
-            ? state.game.cardsModeCompletedCardIds.length
-            : 0;
-          copy.textContent = isFiveStarCardsModeActive() && completedCount
-            ? `Deck concluido: ${completedCount} cartas conquistadas com 5 estrelas.`
-            : `As cartas acabaram para ${currentTargetLanguageLabel()} neste nivel, ou ainda nao existem traducoes suficientes para montar a rodada.`;
-        }
+        gauges.forEach((gauge) => els.gameEndMeters.appendChild(gauge.card));
+        if (gauges.length) void playGameEndPresentation(gauges, totals);
       }
 
       function buildStageThreePlaceholderMarkup(card) {
@@ -33699,14 +34212,17 @@
         const unlockOnPlayback = () => {
           if (!isCurrentPrompt()) return;
           if (allowInputDuringPlayback && !startTypingRoundAttempt(entry)) return;
+          grid.classList.remove('is-audio-waiting');
           setTypingKeysDisabled(grid, false);
           if (advanceBtn && !isTrainingMode()) syncGameAdvanceButton(entry);
         };
 
         if (allowInputDuringPlayback) {
+          grid.classList.add('is-audio-waiting');
           setTypingKeysDisabled(grid, true);
           if (advanceBtn && !isTrainingMode()) advanceBtn.disabled = true;
           if (round?.attemptClock?.activeKey === attemptKey) {
+            grid.classList.remove('is-audio-waiting');
             setTypingKeysDisabled(grid, false);
             if (advanceBtn && !isTrainingMode()) syncGameAdvanceButton(entry);
             return true;
@@ -35265,6 +35781,7 @@
           return;
         }
 
+        clearNextCardAudioRetryButton();
         persistGameSessionLocally();
         startCurrentCardTrainingTime();
 
@@ -38672,7 +39189,7 @@
       }
 
       async function advanceToNextCard() {
-        if (!state.game.active) return;
+        if (!state.game.active || state.game.transitioning) return;
         await presentPendingGameEventModalIfNeeded();
         await waitForGameEventModalClear();
         if (!state.game.active || state.game.paused) return;
@@ -38714,6 +39231,26 @@
             state.game.transitioning = false;
             return;
           }
+        }
+        const nextEntryId = safeText(state.game.queue[0]);
+        const nextEntry = nextEntryId ? state.game.entries.get(nextEntryId) : null;
+        if (isTypingRoundStageFourActive() && Number(nextEntry?.stage) === 4) {
+          const nextCard = cardById(nextEntryId);
+          els.gameCard.style.display = 'none';
+          setGameStatus('Preparando o áudio da próxima frase...', 'live');
+          const audioReady = await prepareStageFourAudioBeforeCard(nextEntry, nextCard).catch(() => false);
+          if (!state.game.active || state.game.paused || state.game.queue[0] !== nextEntryId) {
+            state.game.transitioning = false;
+            return;
+          }
+          if (!audioReady) {
+            state.game.transitioning = false;
+            setGameStatus('O áudio ainda não está pronto para tocar.', 'live');
+            showNextCardAudioRetryButton(nextEntryId);
+            return;
+          }
+          clearNextCardAudioRetryButton();
+          setGameStatus('', '');
         }
         if (useCardSlideAnimation) {
           els.gameCard.classList.add('is-transitioning');
@@ -38990,7 +39527,7 @@
           syncWelcomeGate();
           return;
         }
-        if (isJourneyGameMode() && normalizeGameOptionValue('cardSource', state.options?.cardSource) === 'flow') {
+        if (normalizeGameOptionValue('cardSource', state.options?.cardSource) === 'flow') {
           setWelcomeCopy('Carregando trechos sincronizados do Flow...');
           try {
             const flowCount = await loadFlowCardsForGame();
@@ -39003,6 +39540,20 @@
           } catch (error) {
             console.warn('Falha ao preparar o baralho Flow:', error);
             setWelcomeCopy('Não foi possível carregar as faixas sincronizadas do Flow. Tente novamente.');
+            state.entry.welcomeStartRequested = false;
+            syncWelcomeGate();
+            return;
+          }
+        } else if (!journeyPhaseRuntime && isJourneyGameMode()) {
+          setWelcomeCopy('Preparando as 25 cartas do nível...');
+          try {
+            const prepared = await prepareCardsModeLevelFromGeneralLevels(selectedGameLevel());
+            if ((prepared?.cards?.length || 0) < FINAL_CHALLENGE_CARD_COUNT) {
+              throw new Error('Este nível ainda não tem 25 cartas disponíveis.');
+            }
+          } catch (error) {
+            console.warn('Falha ao preparar as 25 cartas do nível:', error);
+            setWelcomeCopy(error?.message || 'Não foi possível preparar as 25 cartas deste nível.');
             state.entry.welcomeStartRequested = false;
             syncWelcomeGate();
             return;
@@ -39032,6 +39583,19 @@
         state.game.levelTypingMode = false;
         resetTutorialRuntime({ preserveCompletion: true });
         seedLevelModeEntries();
+
+        if (state.game.cardsModeRound?.active && state.game.entries.size !== FINAL_CHALLENGE_CARD_COUNT) {
+          const availableCount = state.game.entries.size;
+          state.game.active = false;
+          state.game.levelMode = false;
+          state.game.entries.clear();
+          state.game.queue = [];
+          state.game.currentId = null;
+          state.game.cardsModeRound.active = false;
+          setWelcomeCopy(`Este nível tem ${availableCount} cartas disponíveis; são necessárias 25 para iniciar o treino completo.`);
+          syncWelcomeGate();
+          return;
+        }
 
         els.topbar.classList.add('is-hidden');
         els.catalog.classList.add('is-hidden');
@@ -39263,6 +39827,8 @@
 
       async function exitGame() {
         const exitingJourneyPhase = journeyPhaseRuntime;
+        gameEndPresentationToken += 1;
+        clearNextCardAudioRetryButton();
         state.ui.gamePausedAtWelcome = false;
         const babyModeSessionActive = isBabyModeSessionActive();
         clearGameIdleAutoPauseTimer();
@@ -39358,7 +39924,9 @@
           round.pronunciationScores.push(Math.max(0, Math.min(100, Number(score) || 0)));
         }
         if (isHit) {
-          round.correct = Math.max(0, Number(round.correct) || 0) + 1;
+          if (Number(round.stage) !== 0 || Number(evaluatedStage) === 5) {
+            round.correct = Math.max(0, Number(round.correct) || 0) + 1;
+          }
           if (Number(evaluatedStage) === 4 && inputMode === 'typing') {
             const typingState = resolveTypingStageState(entry, card);
             state.game.typingRound.correct = Math.max(0, Number(state.game.typingRound.correct) || 0) + 1;
@@ -40971,6 +41539,17 @@
           openTrainingSetup(button.getAttribute('data-training-stage'));
         });
         els.exitGameBtn?.addEventListener('click', exitGame);
+        els.gameEndMenuBtn?.addEventListener('click', async () => {
+          if (els.gameEndMenuBtn.disabled) return;
+          gameEndPresentationToken += 1;
+          els.gameEndMenuBtn.disabled = true;
+          els.gameEndMenuBtn.textContent = 'Voltando ao menu...';
+          await exitGame();
+          if (els.gameEndMenuBtn) {
+            els.gameEndMenuBtn.disabled = false;
+            els.gameEndMenuBtn.textContent = 'Voltar ao menu dos níveis';
+          }
+        });
         els.libraryPrevBtn?.addEventListener('click', () => {
           state.libraryPage -= 1;
           refreshLibrary();
