@@ -5688,7 +5688,7 @@
 
     .game-end__totals {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr);
       gap: 10px;
     }
 
@@ -32022,7 +32022,7 @@
           const onEnded = () => finish(true);
           const onError = () => finish(false);
           const onActualPlaybackStart = () => {
-            if (typeof onPlaying === 'function') onPlaying();
+            if (typeof onPlaying === 'function') onPlaying(audio);
           };
           const onTimeUpdate = () => {
             if (Number.isFinite(segmentEnd) && segmentEnd > 0 && audio.currentTime >= segmentEnd) {
@@ -32098,8 +32098,8 @@
         }
         const requestedRate = Number(options?.rate) > 0 ? Number(options.rate) : 1;
         const rate = Math.max(0.1, Math.min(2.5, requestedRate * resolveSelectedGameSpeed()));
-        const onActualPlayback = () => {
-          if (typeof options.onPlaying === 'function') options.onPlaying();
+        const onActualPlayback = (audio = null) => {
+          if (typeof options.onPlaying === 'function') options.onPlaying(audio);
           recordCardsModeWordsHeard(card);
         };
         stopActiveAudio();
@@ -33799,8 +33799,12 @@
             };
           }
           els.gameEndPresentation.hidden = false;
-          els.gameEndErrors.textContent = `Erros: ${errors}`;
-          els.gameEndErrors.hidden = false;
+          if (totals) {
+            els.gameEndErrors.hidden = true;
+          } else {
+            els.gameEndErrors.textContent = `Erros: ${errors}`;
+            els.gameEndErrors.hidden = false;
+          }
           if (els.gameEndCopy) {
             els.gameEndCopy.textContent = '';
             els.gameEndCopy.hidden = true;
@@ -34190,6 +34194,47 @@
         });
       }
 
+      function waitForOneMillisecondOfAudioProgress(audio, timeoutMs = 2500) {
+        if (!audio || audio.paused || audio.error) return Promise.resolve(false);
+        const startingTime = Math.max(0, Number(audio.currentTime) || 0);
+        const startedAt = performance.now();
+        return new Promise((resolve) => {
+          let frame = 0;
+          let finished = false;
+          const finish = (progressed) => {
+            if (finished) return;
+            finished = true;
+            if (frame) window.cancelAnimationFrame(frame);
+            audio.removeEventListener('timeupdate', check);
+            audio.removeEventListener('error', onPlaybackError);
+            audio.removeEventListener('pause', onPlaybackPause);
+            resolve(Boolean(progressed));
+          };
+          const check = () => {
+            if (audio.error) {
+              finish(false);
+              return;
+            }
+            const elapsedAudioMs = ((Number(audio.currentTime) || 0) - startingTime) * 1000;
+            if (elapsedAudioMs >= 1) {
+              finish(true);
+              return;
+            }
+            if (audio.paused || performance.now() - startedAt >= Math.max(500, Number(timeoutMs) || 2500)) {
+              finish(false);
+              return;
+            }
+            frame = window.requestAnimationFrame(check);
+          };
+          const onPlaybackError = () => finish(false);
+          const onPlaybackPause = () => finish(false);
+          audio.addEventListener('timeupdate', check);
+          audio.addEventListener('error', onPlaybackError, { once: true });
+          audio.addEventListener('pause', onPlaybackPause, { once: true });
+          check();
+        });
+      }
+
       function gateCustomFourthStageInputUntilEnglishAudio(entry, card, grid, advanceBtn = null) {
         if (!shouldPlayCustomFourthStageEnglishBeforeInput(entry) || !grid) return false;
         const allowInputDuringPlayback = isTypingRoundStageFourActive();
@@ -34209,9 +34254,23 @@
           && state.game.currentId === entry.id
           && safeText(els.game?.dataset?.phaseKey || '') === 'fourth-star'
           && (!allowInputDuringPlayback || Number(round.promptRevision) === promptRevision);
-        const unlockOnPlayback = () => {
+        let retryButton = null;
+        let keysReleased = false;
+        const unlockOnPlayback = async (audio = null) => {
           if (!isCurrentPrompt()) return;
-          if (allowInputDuringPlayback && !startTypingRoundAttempt(entry)) return;
+          if (allowInputDuringPlayback) {
+            const hasOneMillisecondElapsed = await waitForOneMillisecondOfAudioProgress(audio);
+            if (!hasOneMillisecondElapsed || !isCurrentPrompt()) {
+              if (retryButton) {
+                retryButton.hidden = false;
+                retryButton.textContent = 'Áudio não avançou. Toque para tentar novamente';
+              }
+              return;
+            }
+            const attemptStarted = startTypingRoundAttempt(entry);
+            if (!attemptStarted && round?.attemptClock?.activeKey !== attemptKey) return;
+          }
+          keysReleased = true;
           grid.classList.remove('is-audio-waiting');
           setTypingKeysDisabled(grid, false);
           if (advanceBtn && !isTrainingMode()) syncGameAdvanceButton(entry);
@@ -34235,7 +34294,6 @@
           if (advanceBtn && !isTrainingMode()) advanceBtn.disabled = true;
         }
 
-        let retryButton = null;
         if (allowInputDuringPlayback) {
           retryButton = document.createElement('button');
           retryButton.type = 'button';
@@ -34253,14 +34311,14 @@
               onPlaying: unlockOnPlayback
             }).then((played) => {
               if (!isCurrentPrompt()) return;
-              retryButton.hidden = Boolean(played);
+              retryButton.hidden = Boolean(played && keysReleased);
               retryButton.disabled = false;
-              if (!played && !round?.attemptClock?.closedKeys?.includes(attemptKey)) {
+              if ((!played || !keysReleased) && !round?.attemptClock?.closedKeys?.includes(attemptKey)) {
                 pauseTypingRoundAttempt(entry);
                 setTypingKeysDisabled(grid, true);
                 if (advanceBtn && !isTrainingMode()) advanceBtn.disabled = true;
               }
-              retryButton.textContent = played ? '' : 'Áudio bloqueado. Toque para tentar novamente';
+              retryButton.textContent = played && keysReleased ? '' : 'Toque para iniciar ou tentar novamente';
             }).catch(() => {
               if (!isCurrentPrompt()) return;
               retryButton.hidden = false;
@@ -34287,7 +34345,7 @@
             .catch(() => false)
             .then((played) => {
               if (played) entry._customFourthStagePromptPlayedKey = promptKey;
-              if (!played && retryButton && isCurrentPrompt()
+              if ((!played || !keysReleased) && retryButton && isCurrentPrompt()
                 && !round?.attemptClock?.closedKeys?.includes(attemptKey)) {
                 pauseTypingRoundAttempt(entry);
                 setTypingKeysDisabled(grid, true);
@@ -39825,7 +39883,7 @@
         return true;
       }
 
-      async function exitGame() {
+      async function exitGame({ returnToLevelSelector = false } = {}) {
         const exitingJourneyPhase = journeyPhaseRuntime;
         gameEndPresentationToken += 1;
         clearNextCardAudioRetryButton();
@@ -39835,8 +39893,14 @@
         state.game.sessionClockActive = false;
         stopFlashcardSessionTick();
         if (!babyModeSessionActive) {
-          await signalFlashcardSessionClock('out', { forceNetwork: true });
-          await flushDeferredGameplayNetworkSync();
+          if (returnToLevelSelector) {
+            void signalFlashcardSessionClock('out', { forceNetwork: true })
+              .then(() => flushDeferredGameplayNetworkSync())
+              .catch((error) => console.warn('Falha ao finalizar o relógio da rodada em segundo plano:', error));
+          } else {
+            await signalFlashcardSessionClock('out', { forceNetwork: true });
+            await flushDeferredGameplayNetworkSync();
+          }
         }
         clearGameStatusRankTimer();
         commitCurrentCardTrainingTime();
@@ -39875,6 +39939,10 @@
         state.game.currentId = null;
         state.game.listening = false;
         state.game.paused = false;
+        if (returnToLevelSelector) {
+          state.entry.welcomeModeKey = 'cards';
+          state.ui.welcomeSelectedLevel = resolveCardsModeLevel();
+        }
         updateLevelProgressBar();
         if (!babyModeSessionActive && state.game.sessionStartedAt) {
           state.stats.playTimeMs += Date.now() - state.game.sessionStartedAt;
@@ -39894,11 +39962,11 @@
         syncLevelTextModeControls();
         els.game.classList.remove('is-active');
         closeGameReportMenu();
-        await wait(180);
+        if (!returnToLevelSelector) await wait(180);
         els.game.classList.remove('is-visible');
         els.catalog.classList.add('is-hidden');
         els.topbar.classList.add('is-hidden');
-        refreshLibrary();
+        if (!returnToLevelSelector) refreshLibrary();
         syncWelcomeGate();
         if (exitingJourneyPhase && journeyPhaseRuntime === exitingJourneyPhase) {
           journeyPhaseRuntime = null;
@@ -39910,6 +39978,7 @@
           syncGameLevelNavigator();
           exitingJourneyPhase.resolve(Boolean(exitingJourneyPhase.completed));
         }
+        if (returnToLevelSelector) syncWelcomeModeModal();
       }
 
       async function handleCardsModeRoundAttempt(entry, card, evaluatedStage, transcript, inputMode, score, isHit) {
@@ -41544,7 +41613,7 @@
           gameEndPresentationToken += 1;
           els.gameEndMenuBtn.disabled = true;
           els.gameEndMenuBtn.textContent = 'Voltando ao menu...';
-          await exitGame();
+          await exitGame({ returnToLevelSelector: true });
           if (els.gameEndMenuBtn) {
             els.gameEndMenuBtn.disabled = false;
             els.gameEndMenuBtn.textContent = 'Voltar ao menu dos níveis';
