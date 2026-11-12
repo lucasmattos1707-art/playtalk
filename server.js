@@ -25,6 +25,7 @@ const {
 const { categories: OZ_CHECKLIST_SEED } = require('./lib/oz-checklist');
 const { OZ_BADGES, badgeIsUnlocked } = require('./lib/oz-badges');
 const { normalizeCompletedRoundScores } = require('./lib/englishtraining-pronunciation');
+const { buildEnglishTrainingFlowExcerpts } = require('./lib/englishtraining-flow');
 const app = express();
 
 const PORT = process.env.PORT || 3000;
@@ -28957,6 +28958,23 @@ app.post(musicalKellyApiPaths('/cards/:cardId/lyrics/generate'), async (req, res
     res.status(Number(error?.statusCode) || 500).json({
       success: false,
       message: error?.message || 'Nao foi possivel gerar a letra agora.'
+    });
+  }
+});
+
+app.get('/api/englishtraining/flow-cards', async (_req, res) => {
+  try {
+    const project = await readMusicalKellyGlobalProject();
+    const cards = buildEnglishTrainingFlowExcerpts(project, (fileName) => (
+      fileName ? musicalKellyAssetUrl('audio', fileName) : ''
+    ));
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, cards });
+  } catch (error) {
+    console.error('Erro ao preparar os trechos do EnglishTraining para o Flow:', error);
+    res.status(Number(error?.statusCode) || 503).json({
+      success: false,
+      message: 'Nao foi possivel carregar os trechos sincronizados do Flow.'
     });
   }
 });

@@ -21,7 +21,8 @@
         "r2:audiostuto": "node scripts/upload-r2-folder.js --source=audiostuto --prefix=audiostuto --concurrency=4",
         "db:reset:users": "node scripts/reset-users-table.js",
         "keys:generate": "node scripts/generate-access-keys.js",
-        "deploy:pages": "npm run build && npx wrangler pages deploy dist"
+        "deploy:pages": "npm run build && npx wrangler pages deploy dist",
+        "test:typing-flow": "node --test scripts/test-typing-attempt-clock.js scripts/test-englishtraining-flow.js"
     },
     "engines": {
         "node": ">=18"

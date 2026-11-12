@@ -7393,6 +7393,30 @@
       filter: none;
     }
 
+    .flashcards-typing__audio-retry {
+      display: block;
+      width: min(92%, 420px);
+      min-height: 44px;
+      margin: 0 auto 10px;
+      padding: 9px 14px;
+      border: 1px solid rgba(255, 206, 95, 0.74);
+      border-radius: 999px;
+      color: #fff7db;
+      background: rgba(78, 50, 5, 0.94);
+      font: 700 14px/1.25 "TheBoldFont", "Soopafre", Arial, sans-serif;
+      box-shadow: 0 8px 20px rgba(4, 18, 49, 0.26);
+      cursor: pointer;
+    }
+
+    .flashcards-typing__audio-retry[hidden] {
+      display: none !important;
+    }
+
+    .flashcards-typing__audio-retry:disabled {
+      opacity: 0.72;
+      cursor: wait;
+    }
+
     .flashcards-typing__grid {
       width: calc(100% - 60px);
       display: grid;
@@ -7755,6 +7779,56 @@
         0 0 110px var(--flashcards-neon-glow-4);
     }
 
+    .game[data-phase-key="first-star"] #gameVisual::after,
+    .game[data-phase-key="second-star"] #gameVisual::after,
+    .game[data-phase-key="third-star"] #gameVisual::after,
+    .game[data-phase-key="fourth-star"] #gameVisual::after,
+    .game[data-phase-key="fifth-star"] #gameVisual::after {
+      display: none !important;
+    }
+
+    .game[data-phase-key="fifth-star"] .game-card__content {
+      top: calc(12dvh + 54dvh + 4px);
+      height: 22dvh;
+      justify-content: flex-start;
+      padding-top: 6px;
+    }
+
+    .game[data-phase-key="fifth-star"] .game-card__content > div:first-child {
+      display: flex !important;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 4px;
+      width: 100%;
+      font-size: clamp(22px, 4.4vw, 32px);
+      line-height: 1.3;
+      max-height: 2.6em;
+      overflow: hidden;
+    }
+
+    .game[data-phase-key="fifth-star"] .game-card__content .game-step {
+      display: none !important;
+    }
+
+    .game[data-phase-key="fifth-star"] .game-card__content .game-word,
+    .game[data-phase-key="fifth-star"] .game-card__content .game-subword {
+      position: static !important;
+      top: auto !important;
+      left: auto !important;
+      transform: none !important;
+      display: -webkit-box !important;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      max-width: min(92vw, 700px);
+      max-height: 2.8em;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      line-height: 1.35;
+    }
+
     .game #gameVisual.is-neon-touch::after {
       --flashcards-neon-border-color: rgba(126, 255, 172, 1);
       --flashcards-neon-outline-color: rgba(25, 171, 92, 0.54);
@@ -7857,29 +7931,18 @@
 
     .game[data-phase-key="first-star"] #gameVisual::before,
     .game[data-phase-key="third-star"] #gameVisual::before,
-    .game[data-phase-key="fifth-star"] #gameVisual::before {
-      inset: -8px;
-      top: auto;
-      left: auto;
-      transform: none !important;
-      background:
-        conic-gradient(from -90deg, rgba(64, 221, 255, 1) 0deg, rgba(51, 116, 255, 0.96) 180deg, rgba(9, 27, 61, 0.64) 180deg, rgba(9, 27, 61, 0.64) 360deg);
-      filter:
-        drop-shadow(0 0 12px rgba(52, 207, 255, 0.64))
-        drop-shadow(0 0 26px rgba(34, 126, 255, 0.38));
-      z-index: 0;
-      opacity: 1;
-    }
-
+    .game[data-phase-key="fifth-star"] #gameVisual::before,
     .game[data-phase-key="first-star"] #gameVisual::after,
     .game[data-phase-key="third-star"] #gameVisual::after,
-    .game[data-phase-key="fifth-star"] #gameVisual::after {
-      width: calc(100% + 2px);
-      height: calc(100% + 2px);
-      border: 0;
-      box-shadow: none;
-      background: #071121;
-      z-index: 0;
+    .game[data-phase-key="fifth-star"] #gameVisual::after,
+    .game[data-phase-key="fifth-star"] .game-card__visual.is-win-flash::after {
+      content: none !important;
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      box-shadow: none !important;
+      border: 0 !important;
+      background: transparent !important;
     }
 
     .game[data-phase-key="first-star"] .textscreen,
@@ -14692,6 +14755,7 @@
   <script src="js/gamesounds.js"></script>
   <script src="js/vendor/opus-recorder/recorder.min.js"></script>
   <script src="js/journey-player.js?v=20260919a"></script>
+  <script src="js/typing-attempt-clock.js?v=20261112a"></script>
   <script>
     (() => {
       const FLASHCARDS_R2_PUBLIC_ROOT = window.PlaytalkApi?.publicAssetsRoot || 'https://pub-1208463a3c774431bf7e0ddcbd3cf670.r2.dev';
@@ -15239,6 +15303,7 @@
         }
       };
       const GAME_OPTION_VALUE_MAP = {
+        cardSource: ['cards', 'flow'],
         difficulty: ['manual'],
         speed: ['0.70', '0.80', '0.90', '1.00'],
         accent: ['mix_100_0', 'mix_90_10', 'mix_80_20', 'mix_70_30', 'mix_60_40', 'mix_50_50', 'mix_40_60', 'mix_30_70', 'mix_20_80', 'mix_10_90', 'mix_0_100'],
@@ -15250,6 +15315,7 @@
         nativeLanguage: ['portuguese', 'english', 'french', 'mandarin', 'spanish', 'german']
       };
       const DEFAULT_GAME_OPTIONS = {
+        cardSource: 'cards',
         difficulty: 'manual',
         speed: '0.90',
         accent: 'mix_100_0',
@@ -15834,7 +15900,11 @@
           levelTypingMode: false,
           levelTextResponseLanguage: 'english',
           levelTextHitStreak: 0,
-          typingRound: { active: false, completed: false, correct: 0, errors: 0, characters: 0, startedAt: 0, endedAt: 0, level: 0, total: 0 },
+          typingRound: { active: false, completed: false, correct: 0, errors: 0, characters: 0, startedAt: 0, endedAt: 0, elapsedMs: 0, attemptClock: null, activeAttemptKey: '', level: 0, total: 0 },
+          cardsModeRound: { active: false, completed: false, correct: 0, errors: 0, attempts: 0, pronunciationScores: [], wordsSpoken: 0, wordsHeard: 0, stage: 0, total: 0 },
+          flowCards: [],
+          flowCardsById: new Map(),
+          flowCardsLoadPromise: null,
           scaleBatchAttempts: 0,
           scaleBatchHits: 0,
           entries: new Map(),
@@ -16698,6 +16768,11 @@
 
       function normalizeGameOptionValue(key, value) {
         if (key === 'mode') return 'journey';
+        if (key === 'cardSource') {
+          return ['cards', 'flow'].includes(safeText(value).toLowerCase())
+            ? safeText(value).toLowerCase()
+            : 'cards';
+        }
         const values = key === 'difficulty'
           ? availableDifficultyValues()
           : (Array.isArray(GAME_OPTION_VALUE_MAP[key]) ? GAME_OPTION_VALUE_MAP[key] : []);
@@ -18702,7 +18777,7 @@
       }
 
       function currentGameOptionSlides() {
-        const slides = ['mode', 'difficulty', 'targetLanguage', 'nativeLanguage', 'practiceNativeAudio', 'babyMode'];
+        const slides = ['cardSource', 'difficulty', 'targetLanguage', 'nativeLanguage', 'practiceNativeAudio', 'babyMode'];
         if (currentTargetLanguage() === 'english') {
           slides.push('accent');
         }
@@ -18998,6 +19073,9 @@
         state.options.practiceNativeAudio = normalizeGameOptionValue('practiceNativeAudio', options.practiceNativeAudio);
         state.options.mode = normalizeGameOptionValue('mode', options.mode);
         state.options.targetLanguage = normalizeGameOptionValue('targetLanguage', options.targetLanguage);
+        state.options.cardSource = currentTargetLanguage() === 'english'
+          ? normalizeGameOptionValue('cardSource', options.cardSource)
+          : 'cards';
         state.options.nativeLanguage = normalizeGameOptionValue('nativeLanguage', options.nativeLanguage);
         if (previousTargetLanguage !== currentTargetLanguage() || previousNativeLanguage !== currentNativeLanguage()) {
           applySelectedLanguageProjectionToAllCards();
@@ -20550,6 +20628,7 @@
           conqueredLanguages: serializeConqueredLanguagesMap(conqueredLanguagesSnapshot),
           stats: normalizeStatsSnapshot(state.stats),
           gameOptions: {
+            cardSource: normalizeGameOptionValue('cardSource', state.options?.cardSource),
             difficulty: normalizeGameOptionValue('difficulty', state.options?.difficulty),
             speed: normalizeGameOptionValue('speed', state.options?.speed),
             accent: normalizeGameOptionValue('accent', state.options?.accent),
@@ -24574,6 +24653,56 @@
         return Boolean(state.game.typingRound?.active);
       }
 
+      function typingRoundAttemptKey(entry) {
+        return `${safeText(entry?.id)}:${Math.max(1, Number(entry?.stage) || 1)}`;
+      }
+
+      function startTypingRoundAttempt(entry) {
+        const round = state.game.typingRound;
+        if (!isTypingRoundStageFourActive() || !entry || state.game.currentId !== entry.id) return false;
+        if (!round.attemptClock) round.attemptClock = window.PlaytalkTypingAttemptClock.createTypingAttemptClock();
+        const attemptKey = typingRoundAttemptKey(entry);
+        const started = window.PlaytalkTypingAttemptClock.startTypingAttempt(
+          round.attemptClock,
+          attemptKey,
+          performance.now()
+        );
+        if (!started) return false;
+        round.activeAttemptKey = attemptKey;
+        if (!Number(round.startedAt)) round.startedAt = performance.now();
+        return true;
+      }
+
+      function finishTypingRoundAttempt(entry) {
+        const round = state.game.typingRound;
+        if (!isTypingRoundStageFourActive() || !entry || !round?.attemptClock) return 0;
+        const attemptKey = typingRoundAttemptKey(entry);
+        const elapsed = window.PlaytalkTypingAttemptClock.finishTypingAttempt(
+          round.attemptClock,
+          attemptKey,
+          performance.now()
+        );
+        round.elapsedMs = Math.max(0, Number(round.attemptClock.elapsedMs) || 0);
+        if (safeText(round.activeAttemptKey) === attemptKey) round.activeAttemptKey = '';
+        if (elapsed > 0 && !Number(round.startedAt)) round.startedAt = performance.now() - elapsed;
+        round.endedAt = performance.now();
+        return elapsed;
+      }
+
+      function pauseTypingRoundAttempt(entry) {
+        const round = state.game.typingRound;
+        if (!isTypingRoundStageFourActive() || !entry || !round?.attemptClock) return 0;
+        const attemptKey = typingRoundAttemptKey(entry);
+        const elapsed = window.PlaytalkTypingAttemptClock.pauseTypingAttempt(
+          round.attemptClock,
+          attemptKey,
+          performance.now()
+        );
+        round.elapsedMs = Math.max(0, Number(round.attemptClock.elapsedMs) || 0);
+        if (safeText(round.activeAttemptKey) === attemptKey) round.activeAttemptKey = '';
+        return elapsed;
+      }
+
       function isCardsModeCustomFourthStageEntry(entry) {
         return Boolean(
           entry
@@ -26158,6 +26287,14 @@
 
       function gameOptionSlideMeta() {
         return {
+          cardSource: {
+            name: 'Origem das cartas',
+            desc: '',
+            values: {
+              cards: { label: 'Cartas', desc: '' },
+              flow: { label: 'Flow', desc: '' }
+            }
+          },
           difficulty: {
             name: nativeUiText('level'),
             desc: '',
@@ -26226,6 +26363,8 @@
 
       function gameOptionIconMarkup(key) {
         switch (safeText(key)) {
+          case 'cardSource':
+            return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="11" height="14" rx="2"></rect><path d="M8 3h9a2 2 0 0 1 2 2v12"></path><path d="M7 10h5M7 14h5"></path></svg>';
           case 'difficulty':
             return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="4"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"></circle></svg>';
           case 'speed':
@@ -26329,6 +26468,12 @@
         const nextValue = values[nextIndex];
         if (nextValue === currentValue) return;
         state.options[slideKey] = nextValue;
+        if (slideKey === 'cardSource' && nextValue === 'flow') {
+          state.options.targetLanguage = 'english';
+        } else if (slideKey === 'targetLanguage' && nextValue !== 'english'
+          && normalizeGameOptionValue('cardSource', state.options?.cardSource) === 'flow') {
+          state.options.cardSource = 'cards';
+        }
         persistGameOptions();
         const valueEl = els.gameOptionsDeck?.querySelector(`[data-game-option-value="${slideKey}"]`);
         if (valueEl) {
@@ -26354,6 +26499,7 @@
         pauseFlashcardsGameForDailyPlan();
         state.ui.gameOptionsLaunchSource = safeText(source) || 'game';
         state.ui.gameOptionsSnapshotBeforeOpen = {
+          cardSource: normalizeGameOptionValue('cardSource', state.options?.cardSource),
           difficulty: normalizeGameOptionValue('difficulty', state.options?.difficulty),
           speed: normalizeGameOptionValue('speed', state.options?.speed),
           accent: normalizeGameOptionValue('accent', state.options?.accent),
@@ -26393,6 +26539,8 @@
 
       function applyGameOptionsAfterModalClose(previousOptions) {
         if (!previousOptions) return;
+        const previousCardSource = normalizeGameOptionValue('cardSource', previousOptions.cardSource);
+        const nextCardSource = normalizeGameOptionValue('cardSource', state.options?.cardSource);
         const previousDifficulty = normalizeGameOptionValue('difficulty', previousOptions.difficulty);
         const nextDifficulty = normalizeGameOptionValue('difficulty', state.options?.difficulty);
         const previousFourthTyping = normalizeGameOptionValue('fourthStageTyping', previousOptions.fourthStageTyping);
@@ -26409,6 +26557,7 @@
         const fourthTypingChanged = previousFourthTyping !== nextFourthTyping;
         const babyModeChanged = previousBabyMode !== nextBabyMode;
         const modeChanged = previousMode !== nextMode;
+        const cardSourceChanged = previousCardSource !== nextCardSource;
         const targetLanguageChanged = previousTargetLanguage !== nextTargetLanguage;
         const nativeLanguageChanged = previousNativeLanguage !== nextNativeLanguage;
         if (targetLanguageChanged) {
@@ -26466,6 +26615,27 @@
           });
         }
         if (!state.game.active) return;
+        if (cardSourceChanged) {
+          clearGameSessionLocally();
+          state.game.entries.clear();
+          state.game.queue = [];
+          state.game.currentId = null;
+          state.game.persistedOnTable = [];
+          state.game.currentLevelPriorityIds = [];
+          state.game.currentLevelPriorityPendingIds = [];
+          state.game.currentLevelPriorityLevel = 0;
+          resetJourneyLevelProgress();
+          resetGameOrderedPoolCursor();
+          resetTimedGameCardRelease({ seedInitialCard: true });
+          if (isLevelModeActive()) {
+            void restartActiveLevelMode(selectedGameLevel());
+          } else {
+            refillGameEntry('base', state.game.contextLimit || currentGameActiveCardCap(), { ignoreTimedReleaseGate: true });
+            if (state.game.active && !state.game.paused) advanceToNextCard();
+          }
+          updateLevelProgressBar();
+          return;
+        }
         if (modeChanged || babyModeChanged) {
           clearGameSessionLocally();
           state.game.entries.clear();
@@ -27901,6 +28071,12 @@
         const currentValue = normalizeGameOptionValue(slideKey, state.options?.[slideKey]);
         if (!normalizedNextValue || normalizedNextValue === currentValue) return;
         state.options[slideKey] = normalizedNextValue;
+        if (slideKey === 'cardSource' && normalizedNextValue === 'flow') {
+          state.options.targetLanguage = 'english';
+        } else if (slideKey === 'targetLanguage' && normalizedNextValue !== 'english'
+          && normalizeGameOptionValue('cardSource', state.options?.cardSource) === 'flow') {
+          state.options.cardSource = 'cards';
+        }
         persistGameOptions();
         renderGameOptionsModal();
         if (slideKey === 'targetLanguage' || slideKey === 'accent') {
@@ -27950,6 +28126,9 @@
         const difficultyMode = normalizeGameOptionValue('difficulty', state.options?.difficulty);
         const targetLevel = normalizeUserLevel(Number(level) > 0 ? level : currentUserLevel());
         if (cardsMode) {
+          if (normalizeGameOptionValue('cardSource', state.options?.cardSource) === 'flow') {
+            return Array.isArray(state.game.flowCards) ? state.game.flowCards.slice() : [];
+          }
           const selection = resolveStoredFinalChallengeSelection(resolveCardsModeLevel(targetLevel));
           const selectedCards = selection.cards.slice(0, FINAL_CHALLENGE_CARD_COUNT);
           const cardsById = new Map(selectedCards.map((card) => [safeText(card?.id), card]));
@@ -27980,6 +28159,59 @@
           return Number.isInteger(deckLevel) && deckLevel >= bounds.minLevel && deckLevel <= bounds.maxLevel;
         });
         return applyDeckCardsLimit(windowCards.length ? windowCards : allPlayableCards, targetLevel);
+      }
+
+      async function loadFlowCardsForGame() {
+        if (Array.isArray(state.game.flowCards) && state.game.flowCards.length) return state.game.flowCards.length;
+        if (state.game.flowCardsLoadPromise) return state.game.flowCardsLoadPromise;
+        state.game.flowCardsLoadPromise = (async () => {
+          const response = await fetch(buildApiUrl('/api/englishtraining/flow-cards'), {
+            credentials: 'include',
+            cache: 'no-store',
+            headers: buildAuthHeaders()
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success || !Array.isArray(payload?.cards)) {
+            throw new Error(payload?.message || 'Não foi possível carregar as cartas do Flow.');
+          }
+          const imageUrl = '/images/englishtraining-flow.webp';
+          const seenIds = new Set();
+          const cards = payload.cards.map((entry, index) => {
+            const id = safeText(entry?.id);
+            const english = repairDisplayText(entry?.english || '');
+            const portuguese = repairDisplayText(entry?.portuguese || '');
+            const start = Number(entry?.start);
+            const end = Number(entry?.end);
+            if (!id || seenIds.has(id) || !english || !safeText(entry?.audioUrl)
+              || !Number.isFinite(start) || start < 0 || !Number.isFinite(end) || end <= start) return null;
+            seenIds.add(id);
+            return {
+              id,
+              title: safeText(entry?.trackTitle) || 'Flow',
+              deckTitle: safeText(entry?.trackTitle) || 'Flow',
+              source: 'EnglishTraining Flow',
+              sourceIndex: index,
+              english,
+              sourceEnglish: english,
+              englishAnswers: [english],
+              portuguese,
+              sourcePortuguese: portuguese,
+              portugueseAnswers: portuguese ? [portuguese] : [],
+              audioUrl: safeText(entry?.audioUrl),
+              sourceAudioEnglish: safeText(entry?.audioUrl),
+              imageUrl,
+              imageDisplayUrl: imageUrl,
+              flowSegment: { start, end },
+              deckLevel: resolveCardsModeLevel()
+            };
+          }).filter(Boolean);
+          state.game.flowCards = cards;
+          state.game.flowCardsById = new Map(cards.map((card) => [card.id, card]));
+          return cards.length;
+        })().finally(() => {
+          state.game.flowCardsLoadPromise = null;
+        });
+        return state.game.flowCardsLoadPromise;
       }
 
       function syncGameLevelNavigator() {
@@ -30081,13 +30313,44 @@
       function finishTypingRound() {
         const round = state.game.typingRound;
         if (!round?.active) return false;
+        if (round.attemptClock) {
+          const activeKey = safeText(round.activeAttemptKey);
+          if (activeKey) {
+            window.PlaytalkTypingAttemptClock.stopTypingAttemptClock(round.attemptClock, performance.now());
+          }
+          round.elapsedMs = Math.max(0, Number(round.attemptClock.elapsedMs) || 0);
+          round.activeAttemptKey = '';
+        }
         round.active = false;
         round.completed = true;
-        round.endedAt = Date.now();
+        round.endedAt = performance.now();
         state.game.entries.clear();
         state.game.queue = [];
         state.game.currentId = null;
         renderCurrentCard();
+        return true;
+      }
+
+      function finishCardsModeRound() {
+        const round = state.game.cardsModeRound;
+        if (!round?.active) return false;
+        round.active = false;
+        round.completed = true;
+        const typingRound = state.game.typingRound;
+        if (typingRound?.active) {
+          const activeKey = safeText(typingRound.activeAttemptKey);
+          if (activeKey && typingRound.attemptClock) {
+            window.PlaytalkTypingAttemptClock.stopTypingAttemptClock(typingRound.attemptClock, performance.now());
+          }
+          typingRound.elapsedMs = Math.max(0, Number(typingRound.attemptClock?.elapsedMs) || 0);
+          typingRound.activeAttemptKey = '';
+          typingRound.active = false;
+          typingRound.completed = true;
+          typingRound.endedAt = performance.now();
+        }
+        state.game.entries.clear();
+        state.game.queue = [];
+        state.game.currentId = null;
         return true;
       }
 
@@ -31530,7 +31793,7 @@
         renderFirstStarSeals(currentEntry);
       }
 
-      function playAudioWithSoftEnd(audio, { registerAsActive = false, onPlay = null } = {}) {
+      function playAudioWithSoftEnd(audio, { registerAsActive = false, onPlay = null, onPlaying = null, segment = null } = {}) {
         if (isNoEnergyMediaLocked()) return Promise.resolve(false);
         if (!audio) return Promise.resolve(false);
         if (typeof audio._softEndCleanup === 'function') {
@@ -31541,6 +31804,7 @@
         return new Promise((resolve) => {
           let finished = false;
           let fading = false;
+          const segmentEnd = Number(segment?.end);
           const finish = (played = true) => {
             if (finished) return;
             finished = true;
@@ -31552,7 +31816,15 @@
           };
           const onEnded = () => finish(true);
           const onError = () => finish(false);
+          const onActualPlaybackStart = () => {
+            if (typeof onPlaying === 'function') onPlaying();
+          };
           const onTimeUpdate = () => {
+            if (Number.isFinite(segmentEnd) && segmentEnd > 0 && audio.currentTime >= segmentEnd) {
+              audio.pause();
+              finish(true);
+              return;
+            }
             if (!shouldTrim || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
             const remainingMs = Math.max(0, (audio.duration - audio.currentTime) * 1000);
             if (!fading && remainingMs <= 500) {
@@ -31575,12 +31847,14 @@
             audio.removeEventListener('ended', onEnded);
             audio.removeEventListener('error', onError);
             audio.removeEventListener('timeupdate', onTimeUpdate);
+            audio.removeEventListener('playing', onActualPlaybackStart);
             audio._softEndCleanup = null;
           };
           audio._softEndCleanup = cleanup;
           audio.addEventListener('ended', onEnded);
           audio.addEventListener('error', onError);
           audio.addEventListener('timeupdate', onTimeUpdate);
+          audio.addEventListener('playing', onActualPlaybackStart, { once: true });
           if (registerAsActive) {
             state.game.activeAudio = { type: 'audio', instance: audio };
           }
@@ -31589,6 +31863,17 @@
           }
           audio.play().catch(() => finish(false));
         });
+      }
+
+      function countPracticeWords(text) {
+        return safeText(text).trim().split(/\s+/).filter(Boolean).length;
+      }
+
+      function recordCardsModeWordsHeard(card) {
+        const round = state.game.cardsModeRound;
+        if (!round?.active) return;
+        round.wordsHeard = Math.max(0, Number(round.wordsHeard) || 0)
+          + countPracticeWords(resolveSourceLanguageText(card, 'english') || card?.english || '');
       }
 
       function playPromptAudio(card, options = {}) {
@@ -31608,6 +31893,10 @@
         }
         const requestedRate = Number(options?.rate) > 0 ? Number(options.rate) : 1;
         const rate = Math.max(0.1, Math.min(2.5, requestedRate * resolveSelectedGameSpeed()));
+        const onActualPlayback = () => {
+          if (typeof options.onPlaying === 'function') options.onPlaying();
+          recordCardsModeWordsHeard(card);
+        };
         stopActiveAudio();
         if (reflectStagePlay) setStagePlayButtonActive(true);
         if (reflectFirstStarListen) setFirstStarListenSealPlaying(true);
@@ -31634,8 +31923,24 @@
             audio.playbackRate = rate;
             audio.defaultPlaybackRate = rate;
             audio.preservesPitch = true;
+            const segmentStart = Number(card?.flowSegment?.start);
+            const segmentEnd = Number(card?.flowSegment?.end);
+            const segment = Number.isFinite(segmentStart) && segmentStart >= 0
+              && Number.isFinite(segmentEnd) && segmentEnd > segmentStart
+              ? { start: segmentStart, end: segmentEnd }
+              : null;
+            if (segment) {
+              await waitForAudioCanPlay(audio, 3200);
+              try {
+                audio.currentTime = segment.start;
+              } catch (_error) {
+                return false;
+              }
+            }
             return playAudioWithSoftEnd(audio, {
               registerAsActive: true,
+              onPlaying: onActualPlayback,
+              segment,
               onPlay: () => {
                 if (reflectFirstStarListen) {
                   startFirstStarListenProgressAnimation(audio);
@@ -31674,6 +31979,9 @@
               : currentTargetSpeechCode();
             utterance.rate = rate;
             utterance.pitch = 1;
+            utterance.onstart = () => {
+              onActualPlayback();
+            };
             utterance.onend = utterance.onerror = () => {
               if (state.game.activeAudio && state.game.activeAudio.instance === utterance) {
                 state.game.activeAudio = null;
@@ -32460,6 +32768,8 @@
       }
 
       function cardById(id) {
+        const flowCard = state.game.flowCardsById?.get(safeText(id));
+        if (flowCard) return flowCard;
         const pendingCard = state.admin.pendingNewCards.find(card => card.id === id);
         if (pendingCard) return pendingCard;
         const card = state.allCards.find(entry => entry.id === id);
@@ -32956,9 +33266,37 @@
         if (!els.gameEnd) return;
         const heading = els.gameEnd.querySelector('h3');
         const copy = els.gameEnd.querySelector('p');
+        const cardsModeRound = state.game.cardsModeRound;
+        if (cardsModeRound?.completed) {
+          if (heading) heading.textContent = 'Resultados do treino';
+          if (copy) {
+            const summary = [
+              `<span class="typing-round-result-stat"><strong>${Math.max(0, Number(cardsModeRound.correct) || 0)}</strong> acertos</span>`,
+              `<span class="typing-round-result-stat"><strong>${Math.max(0, Number(cardsModeRound.errors) || 0)}</strong> erros</span>`
+            ];
+            if (Number(cardsModeRound.stage) === 4 && state.game.typingRound?.completed) {
+              const elapsedSeconds = Math.max(1, (Number(state.game.typingRound.elapsedMs) || 0) / 1000);
+              const charactersPerMinute = (Math.max(0, Number(state.game.typingRound.characters) || 0) / elapsedSeconds) * 60;
+              summary.push(`<span class="typing-round-result-stat"><strong>${charactersPerMinute.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong> caracteres por minuto</span>`);
+            }
+            if ([0, 1, 2, 3, 5].includes(Number(cardsModeRound.stage))) {
+              const scores = Array.isArray(cardsModeRound.pronunciationScores)
+                ? cardsModeRound.pronunciationScores.map(Number).filter(Number.isFinite)
+                : [];
+              const pronunciation = scores.length
+                ? `${(scores.reduce((sum, value) => sum + value, 0) / scores.length).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
+                : '—';
+              summary.push(`<span class="typing-round-result-stat"><strong>${pronunciation}</strong> pronúncia</span>`);
+              summary.push(`<span class="typing-round-result-stat"><strong>${Math.max(0, Number(cardsModeRound.wordsSpoken) || 0)}</strong> palavras ditas</span>`);
+              summary.push(`<span class="typing-round-result-stat"><strong>${Math.max(0, Number(cardsModeRound.wordsHeard) || 0)}</strong> palavras ouvidas</span>`);
+            }
+            copy.innerHTML = summary.join('');
+          }
+          return;
+        }
         const typingRound = state.game.typingRound;
         if (typingRound?.completed) {
-          const elapsedSeconds = Math.max(1, (Number(typingRound.endedAt) - Number(typingRound.startedAt)) / 1000);
+          const elapsedSeconds = Math.max(1, (Number(typingRound.elapsedMs) || 0) / 1000);
           const charactersPerMinute = (Math.max(0, Number(typingRound.characters) || 0) / elapsedSeconds) * 60;
           if (heading) heading.textContent = 'Resumo do Modo 4';
           if (copy) {
@@ -33344,11 +33682,76 @@
         const allowInputDuringPlayback = isTypingRoundStageFourActive();
         const earnedStars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(entry?.stars) || 0));
         const promptKey = `${entry.id}:${earnedStars}:stage-4-english`;
-        if (entry._customFourthStagePromptPlayedKey === promptKey) return false;
+        const round = state.game.typingRound;
+        const attemptKey = typingRoundAttemptKey(entry);
+        const isNewPrompt = entry._customFourthStagePromptPendingKey !== promptKey
+          || !entry._customFourthStagePromptPromise;
+        const promptRevision = allowInputDuringPlayback
+          ? (isNewPrompt
+              ? (round.promptRevision = Math.max(0, Number(round.promptRevision) || 0) + 1)
+              : Math.max(1, Number(round.promptRevision) || 1))
+          : 0;
+        const isCurrentPrompt = () => state.game.active
+          && !state.game.paused
+          && state.game.currentId === entry.id
+          && safeText(els.game?.dataset?.phaseKey || '') === 'fourth-star'
+          && (!allowInputDuringPlayback || Number(round.promptRevision) === promptRevision);
+        const unlockOnPlayback = () => {
+          if (!isCurrentPrompt()) return;
+          if (allowInputDuringPlayback && !startTypingRoundAttempt(entry)) return;
+          setTypingKeysDisabled(grid, false);
+          if (advanceBtn && !isTrainingMode()) syncGameAdvanceButton(entry);
+        };
 
-        if (!allowInputDuringPlayback) {
+        if (allowInputDuringPlayback) {
           setTypingKeysDisabled(grid, true);
           if (advanceBtn && !isTrainingMode()) advanceBtn.disabled = true;
+          if (round?.attemptClock?.activeKey === attemptKey) {
+            setTypingKeysDisabled(grid, false);
+            if (advanceBtn && !isTrainingMode()) syncGameAdvanceButton(entry);
+            return true;
+          }
+          if (round?.attemptClock?.closedKeys?.includes(attemptKey)) return true;
+        } else if (entry._customFourthStagePromptPlayedKey === promptKey) {
+          return false;
+        } else {
+          setTypingKeysDisabled(grid, true);
+          if (advanceBtn && !isTrainingMode()) advanceBtn.disabled = true;
+        }
+
+        let retryButton = null;
+        if (allowInputDuringPlayback) {
+          retryButton = document.createElement('button');
+          retryButton.type = 'button';
+          retryButton.className = 'flashcards-typing__audio-retry';
+          retryButton.textContent = 'Toque para carregar e ouvir o áudio';
+          retryButton.hidden = true;
+          grid.parentElement?.insertBefore(retryButton, grid);
+          retryButton.addEventListener('click', () => {
+            if (!isCurrentPrompt()) return;
+            retryButton.disabled = true;
+            retryButton.textContent = 'Carregando áudio...';
+            void playPromptAudio(card, {
+              rate: 0.8,
+              enableMicDuringPlayback: false,
+              onPlaying: unlockOnPlayback
+            }).then((played) => {
+              if (!isCurrentPrompt()) return;
+              retryButton.hidden = Boolean(played);
+              retryButton.disabled = false;
+              if (!played && !round?.attemptClock?.closedKeys?.includes(attemptKey)) {
+                pauseTypingRoundAttempt(entry);
+                setTypingKeysDisabled(grid, true);
+                if (advanceBtn && !isTrainingMode()) advanceBtn.disabled = true;
+              }
+              retryButton.textContent = played ? '' : 'Áudio bloqueado. Toque para tentar novamente';
+            }).catch(() => {
+              if (!isCurrentPrompt()) return;
+              retryButton.hidden = false;
+              retryButton.disabled = false;
+              retryButton.textContent = 'Áudio indisponível. Toque para tentar novamente';
+            });
+          });
         }
 
         if (
@@ -33358,29 +33761,41 @@
           entry._customFourthStagePromptPendingKey = promptKey;
           entry._customFourthStagePromptPromise = wait(160)
             .then(() => {
-              if (!state.game.active || state.game.paused || state.game.currentId !== entry.id) return false;
-              return playGameAudioForLanguage(card, 'english', { rate: 0.8 });
+              if (!isCurrentPrompt()) return false;
+              return playPromptAudio(card, {
+                rate: 0.8,
+                enableMicDuringPlayback: false,
+                onPlaying: unlockOnPlayback
+              });
             })
             .catch(() => false)
+            .then((played) => {
+              if (played) entry._customFourthStagePromptPlayedKey = promptKey;
+              if (!played && retryButton && isCurrentPrompt()
+                && !round?.attemptClock?.closedKeys?.includes(attemptKey)) {
+                pauseTypingRoundAttempt(entry);
+                setTypingKeysDisabled(grid, true);
+                retryButton.hidden = false;
+                retryButton.textContent = 'Áudio bloqueado. Toque para tentar novamente';
+              }
+              return Boolean(played);
+            })
             .finally(() => {
-              entry._customFourthStagePromptPlayedKey = promptKey;
               entry._customFourthStagePromptPendingKey = '';
               entry._customFourthStagePromptPromise = null;
             });
         }
 
-        Promise.resolve(entry._customFourthStagePromptPromise).finally(() => {
+        Promise.resolve(entry._customFourthStagePromptPromise).then((played) => {
           if (
-            !state.game.active
-            || state.game.paused
-            || state.game.currentId !== entry.id
-            || safeText(els.game?.dataset?.phaseKey || '') !== 'fourth-star'
+            !isCurrentPrompt()
           ) return;
+          if (!played && allowInputDuringPlayback) return;
           if (!allowInputDuringPlayback) {
             setTypingKeysDisabled(grid, false);
             if (advanceBtn && !isTrainingMode()) syncGameAdvanceButton(entry);
           }
-        });
+        }).catch(() => {});
         return true;
       }
 
@@ -34176,6 +34591,7 @@
       async function handleSecondStageWordBlockMistake(entry, card, grid, selectedButtons) {
         entry.typingMistakes = (entry.typingMistakes || 0) + 1;
         if (isTypingRoundStageFourActive()) {
+          finishTypingRoundAttempt(entry);
           return playTypingRoundErrorFeedback(entry, card, grid);
         }
         void applyJumpDeckLevelPenalty();
@@ -34310,6 +34726,7 @@
             if (!wordBlockSequenceIsComplete(blockState.targetSequences, selectedWords)) return false;
             resolving = true;
             setTypingKeysDisabled(grid, true);
+            finishTypingRoundAttempt(entry);
             await handleRecognitionResult(typingState.acceptedAnswer || typingState.sourceText || '', 'typing');
             return true;
           };
@@ -34327,12 +34744,10 @@
             key.setAttribute('aria-label', `Bloco ${block.word}`);
             key.addEventListener('click', async () => {
               if (!state.game.active || state.game.paused || (state.game.listening && !isTypingRoundStageFourActive()) || resolving || state.game.typingSkipActive || state.game.currentId !== entry.id) return;
-              if (isTypingRoundStageFourActive() && !Number(state.game.typingRound.startedAt)) {
-                state.game.typingRound.startedAt = Date.now();
-              }
               const nextWords = [...selectedWords, block.normalized];
             if (!wordBlockSequenceMatchesPrefix(blockState.targetSequences, nextWords)) {
               resolving = true;
+              finishTypingRoundAttempt(entry);
               const finished = await handleSecondStageWordBlockMistake(entry, card, grid, selectedButtons);
               if (finished) return;
               selectedWords.length = 0;
@@ -34372,9 +34787,7 @@
 
           skipBtn.addEventListener('click', async () => {
             if (!state.game.active || state.game.paused || (state.game.listening && !isTypingRoundStageFourActive()) || resolving || state.game.currentId !== entry.id || state.game.typingSkipActive) return;
-            if (isTypingRoundStageFourActive() && !Number(state.game.typingRound.startedAt)) {
-              state.game.typingRound.startedAt = Date.now();
-            }
+            finishTypingRoundAttempt(entry);
             resolving = true;
             clearSecondStarIdleHintTimers();
             skipBtn.disabled = true;
@@ -34538,9 +34951,6 @@
             ) return;
             const keyLetter = safeText(key.dataset.letter || key.textContent).toUpperCase();
             if (!keyLetter) return;
-            if (isTypingRoundStageFourActive() && !isStageSixBattleTyping) {
-              if (!Number(state.game.typingRound.startedAt)) state.game.typingRound.startedAt = Date.now();
-            }
             if (isStageSixBattleTyping) {
               const expectedLetter = target[typed.length];
               const correct = keyLetter === expectedLetter;
@@ -34833,10 +35243,12 @@
           clearGameVisualTypingDisplays();
           updateGameChips();
           if (!state.game.entries.size) {
-            if (isTypingRoundStageFourActive()) {
+            if (state.game.cardsModeRound?.active) {
+              finishCardsModeRound();
+            } else if (isTypingRoundStageFourActive()) {
               state.game.typingRound.active = false;
               state.game.typingRound.completed = true;
-              state.game.typingRound.endedAt = Date.now();
+              state.game.typingRound.endedAt = performance.now();
             }
             clearGameSessionLocally();
             els.gameCard.style.display = 'none';
@@ -38371,7 +38783,23 @@
 
         const level = selectedGameLevel();
         const sourceCards = buildLevelModeSourceCards(level);
-        const typingRoundActive = isFiveStarCardsModeActive() && selectedCardsModePracticeStage() === 4;
+        const cardsModeRoundActive = isFiveStarCardsModeActive();
+        const cardsModeRoundStage = selectedCardsModePracticeStage();
+        const typingRoundActive = cardsModeRoundActive && cardsModeRoundStage === 4;
+        state.game.cardsModeRound = {
+          active: cardsModeRoundActive,
+          completed: false,
+          correct: 0,
+          errors: 0,
+          attempts: 0,
+          pronunciationScores: [],
+          wordsSpoken: 0,
+          wordsHeard: 0,
+          processingAttemptKey: '',
+          stage: cardsModeRoundStage,
+          source: normalizeGameOptionValue('cardSource', state.options?.cardSource),
+          total: cardsModeRoundActive ? 25 : 0
+        };
         state.game.typingRound = {
           active: typingRoundActive,
           completed: false,
@@ -38380,31 +38808,31 @@
           characters: 0,
           startedAt: 0,
           endedAt: 0,
+          elapsedMs: 0,
+          attemptClock: window.PlaytalkTypingAttemptClock.createTypingAttemptClock(),
+          activeAttemptKey: '',
+          promptRevision: 0,
           level,
-          total: typingRoundActive ? sourceCards.length : 0
+          total: typingRoundActive ? 25 : 0
         };
-        const roundCount = typingRoundActive
-          ? sourceCards.length
+        const roundCount = cardsModeRoundActive
+          ? 25
           : isAllLevelsSelected()
           ? Math.min(sourceCards.length, LEVEL_MODE_BUFFER_SIZE)
           : Math.max(MIN_GAME_CONTEXT_LIMIT, normalizeGameCount(state.game.selectedCount) || currentBaseGameCount(level));
         state.game.contextLimit = isAllLevelsSelected()
           ? roundCount
           : currentGameActiveCardCap(level || currentUserLevel(), roundCount);
-        if (typingRoundActive) state.game.contextLimit = roundCount;
+        if (cardsModeRoundActive) state.game.contextLimit = roundCount;
         state.game.selectedCount = roundCount;
 
-        const initialCards = typingRoundActive
-          ? shuffleArray(sourceCards)
-          : isFiveStarCardsModeActive()
-          ? sourceCards.slice(0, roundCount)
+        const initialCards = cardsModeRoundActive
+          ? shuffleArray(sourceCards).slice(0, roundCount)
           : buildOrderedDeckSelection(sourceCards, roundCount);
-        if (isFiveStarCardsModeActive()) {
-          const initialIds = new Set(initialCards.map((card) => safeText(card?.id)).filter(Boolean));
-          const sourceIds = sourceCards.map((card) => safeText(card?.id)).filter(Boolean);
-          state.game.cardsModeRemainingCardIds = sourceIds.filter((id) => !initialIds.has(id));
+        if (cardsModeRoundActive) {
+          state.game.cardsModeRemainingCardIds = [];
           state.game.cardsModeCompletedCardIds = [];
-          state.game.cardsModeInitialDeckSize = sourceIds.length;
+          state.game.cardsModeInitialDeckSize = 25;
         } else {
           state.game.cardsModeRemainingCardIds = [];
           state.game.cardsModeCompletedCardIds = [];
@@ -38561,6 +38989,24 @@
           state.game.active = false;
           syncWelcomeGate();
           return;
+        }
+        if (isJourneyGameMode() && normalizeGameOptionValue('cardSource', state.options?.cardSource) === 'flow') {
+          setWelcomeCopy('Carregando trechos sincronizados do Flow...');
+          try {
+            const flowCount = await loadFlowCardsForGame();
+            if (flowCount < 25) {
+              setWelcomeCopy(`O Flow encontrou ${flowCount} trechos sincronizados; são necessários 25 para iniciar.`);
+              state.entry.welcomeStartRequested = false;
+              syncWelcomeGate();
+              return;
+            }
+          } catch (error) {
+            console.warn('Falha ao preparar o baralho Flow:', error);
+            setWelcomeCopy('Não foi possível carregar as faixas sincronizadas do Flow. Tente novamente.');
+            state.entry.welcomeStartRequested = false;
+            syncWelcomeGate();
+            return;
+          }
         }
         resetTrainingRuntime();
         hideWelcomeGate();
@@ -38900,6 +39346,66 @@
         }
       }
 
+      async function handleCardsModeRoundAttempt(entry, card, evaluatedStage, transcript, inputMode, score, isHit) {
+        const round = state.game.cardsModeRound;
+        if (!round?.active || !entry || !card) return false;
+        const attemptKey = `${safeText(entry.id)}:${Math.max(1, Number(evaluatedStage) || 1)}`;
+        if (round.processingAttemptKey === attemptKey) return true;
+        round.processingAttemptKey = attemptKey;
+        round.attempts = Math.max(0, Number(round.attempts) || 0) + 1;
+        if (inputMode === 'speech') {
+          round.wordsSpoken = Math.max(0, Number(round.wordsSpoken) || 0) + countPracticeWords(transcript);
+          round.pronunciationScores.push(Math.max(0, Math.min(100, Number(score) || 0)));
+        }
+        if (isHit) {
+          round.correct = Math.max(0, Number(round.correct) || 0) + 1;
+          if (Number(evaluatedStage) === 4 && inputMode === 'typing') {
+            const typingState = resolveTypingStageState(entry, card);
+            state.game.typingRound.correct = Math.max(0, Number(state.game.typingRound.correct) || 0) + 1;
+            state.game.typingRound.characters = Math.max(0, Number(state.game.typingRound.characters) || 0)
+              + countTypingDisplayCharacters(typingState.sourceText || typingState.acceptedAnswer);
+            showTypingRoundSuccessTranslation(card);
+          }
+          setGameStatus('', 'hit');
+          await playStageResponseSequence(evaluatedStage, card);
+        } else {
+          round.errors = Math.max(0, Number(round.errors) || 0) + 1;
+          if (Number(evaluatedStage) === 4 && inputMode === 'typing') {
+            state.game.typingRound.errors = Math.max(0, Number(state.game.typingRound.errors) || 0) + 1;
+            renderTypingRoundHearts();
+          } else {
+            playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
+            await wait(350);
+          }
+          setGameStatus('', 'miss');
+        }
+        updateGameChips();
+        if (!state.game.active || state.game.currentId !== entry.id) return true;
+        if (state.game.paused) {
+          round.processingAttemptKey = '';
+          return true;
+        }
+
+        if (round.stage === 0 && isHit && Number(evaluatedStage) < 5) {
+          round.processingAttemptKey = '';
+          entry.stage = Number(evaluatedStage) + 1;
+          entry.stars = 0;
+          renderCurrentCard();
+          return true;
+        }
+
+        state.game.entries.delete(entry.id);
+        state.game.currentId = null;
+        if (Number(evaluatedStage) === 4 && inputMode === 'typing'
+          && Number(state.game.typingRound.errors) >= 5) {
+          finishCardsModeRound();
+          renderCurrentCard();
+          return true;
+        }
+        await advanceToNextCard();
+        return true;
+      }
+
       async function handleRecognitionResult(transcript, inputMode = 'speech') {
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         if (!entry) return;
@@ -38917,6 +39423,10 @@
           || inputMode === 'dont-remember-button'
         ) && (evaluatedStage === 3 || evaluatedStage === 5);
         const card = cardById(entry.id);
+        if (state.game.cardsModeRound?.active && dontRememberRequested) {
+          await handleCardsModeRoundAttempt(entry, card, evaluatedStage, transcript, inputMode, 0, false);
+          return;
+        }
         if (dontRememberRequested) {
           clearStageHintLoop({ clearStatus: true });
           clearFirstStageMicHint({ clearStatus: true });
@@ -38949,6 +39459,11 @@
           pushPronunciationSample(score);
         }
         updateGameChips();
+
+        if (state.game.cardsModeRound?.active) {
+          await handleCardsModeRoundAttempt(entry, card, evaluatedStage, transcript, inputMode, score, isHit);
+          return;
+        }
 
         if (isBabyModeSessionActive()) {
           clearStageHintLoop({ clearStatus: true });
