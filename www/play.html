@@ -1549,44 +1549,6 @@
       color: #ffffff;
     }
 
-    .welcome-mode-modal__stage-entry {
-      width: min(360px, 100%);
-      display: flex;
-      justify-content: center;
-    }
-
-    .welcome-mode-modal__stage-entry[hidden] {
-      display: none;
-    }
-
-    .welcome-mode-modal__stage-edit {
-      width: 100%;
-      min-height: 52px;
-      padding: 10px 16px;
-      border: 1px solid rgba(173, 231, 255, 0.28);
-      border-radius: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      background: rgba(255, 255, 255, 0.08);
-      color: #f4fbff;
-      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
-      font-size: 16px;
-      font-weight: 750;
-      letter-spacing: 0.03em;
-    }
-
-    .welcome-mode-modal__stage-edit svg {
-      width: 21px;
-      height: 21px;
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 1.9;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
     .welcome-mode-modal__online {
       width: min(360px, 100%);
       min-height: 56px;
@@ -1621,6 +1583,51 @@
       stroke-width: 1.9;
       stroke-linecap: round;
       stroke-linejoin: round;
+    }
+
+    .cards-mode-quick-picker {
+      width: min(360px, 100%);
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: clamp(5px, 2vw, 12px);
+      align-items: center;
+    }
+
+    .cards-mode-quick-picker[hidden] {
+      display: none;
+    }
+
+    .cards-mode-quick-picker__option {
+      min-width: 0;
+      aspect-ratio: 1;
+      padding: 3px;
+      border: 2px solid transparent;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      background: transparent;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    }
+
+    .cards-mode-quick-picker__option:hover,
+    .cards-mode-quick-picker__option:focus-visible {
+      transform: translateY(-2px) scale(1.04);
+      outline: none;
+    }
+
+    .cards-mode-quick-picker__option.is-selected {
+      border-color: rgba(88, 255, 174, 0.8);
+      background: rgba(40, 221, 139, 0.14);
+      box-shadow: 0 0 22px rgba(40, 221, 139, 0.24);
+    }
+
+    .cards-mode-quick-picker__seal {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
     }
 
     .cards-battle-search {
@@ -1808,133 +1815,6 @@
       font: 850 16px "Exo 2", "Open Sans", Arial, sans-serif;
     }
 
-    .cards-stage-modal {
-      position: fixed;
-      inset: 0;
-      z-index: 2;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      background: rgba(1, 5, 13, 0.86);
-      backdrop-filter: blur(18px) saturate(0.92);
-      -webkit-backdrop-filter: blur(18px) saturate(0.92);
-    }
-
-    .cards-stage-modal.is-visible {
-      display: flex;
-    }
-
-    .cards-stage-modal__panel {
-      width: min(430px, 100%);
-      max-height: calc(100dvh - 40px);
-      overflow: auto;
-      padding: 20px;
-      border: 1px solid rgba(132, 218, 255, 0.28);
-      border-radius: 26px;
-      display: grid;
-      gap: 16px;
-      background: rgba(2, 12, 29, 0.94);
-      box-shadow: 0 28px 70px rgba(0, 0, 0, 0.46);
-    }
-
-    .cards-stage-modal__header {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 44px;
-      gap: 12px;
-      align-items: start;
-    }
-
-    .cards-stage-modal__heading {
-      display: grid;
-      gap: 5px;
-      text-align: left;
-    }
-
-    .cards-stage-modal__title,
-    .cards-stage-modal__copy {
-      margin: 0;
-    }
-
-    .cards-stage-modal__title {
-      font: 850 clamp(24px, 6vw, 34px)/1 "Exo 2", "Open Sans", Arial, sans-serif;
-      color: #ffffff;
-    }
-
-    .cards-stage-modal__copy {
-      font: 650 14px/1.4 "Open Sans", Arial, sans-serif;
-      color: rgba(226, 243, 255, 0.76);
-    }
-
-    .cards-stage-modal__close {
-      width: 44px;
-      height: 44px;
-      border-radius: 14px;
-      border: 1px solid rgba(173, 231, 255, 0.24);
-      background: rgba(255, 255, 255, 0.08);
-      color: #ffffff;
-      display: grid;
-      place-items: center;
-      font-size: 26px;
-      line-height: 1;
-    }
-
-    .cards-stage-modal__options {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: clamp(5px, 1.4vw, 12px);
-    }
-
-    .cards-stage-modal__option {
-      min-width: 0;
-      min-height: 96px;
-      padding: 9px 4px;
-      border: 1px solid rgba(173, 231, 255, 0.2);
-      border-radius: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      background: rgba(255, 255, 255, 0.055);
-      color: #eef9ff;
-    }
-
-    .cards-stage-modal__option.is-selected {
-      border-color: rgba(88, 255, 174, 0.68);
-      background: rgba(40, 221, 139, 0.15);
-      box-shadow: 0 0 24px rgba(40, 221, 139, 0.12);
-    }
-
-    .cards-stage-modal__number {
-      font: 850 clamp(10px, 2.5vw, 13px)/1 "Rajdhani", "Exo 2", Arial, sans-serif;
-      letter-spacing: 0.08em;
-      color: #7fe4ff;
-      text-transform: uppercase;
-    }
-
-    .cards-stage-modal__seal {
-      display: block;
-      width: clamp(40px, 13vw, 68px);
-      height: clamp(40px, 13vw, 68px);
-      object-fit: contain;
-      pointer-events: none;
-    }
-
-    .cards-stage-modal__label {
-      font: 760 clamp(9px, 2.2vw, 12px)/1.1 "Exo 2", "Open Sans", Arial, sans-serif;
-    }
-
-    .cards-stage-modal__result {
-      min-height: 1.4em;
-      margin: 0;
-      color: #a8f4d0;
-      text-align: center;
-      font: 850 18px/1.25 "Exo 2", "Open Sans", Arial, sans-serif;
-    }
-
-    .cards-stage-modal__result[hidden],
     .welcome-mode-modal__description[hidden] {
       display: none !important;
     }
@@ -14073,12 +13953,6 @@
             <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M8 5.5v13l10-6.5-10-6.5Z"/></svg>
           </button>
           <p class="welcome-mode-modal__description" id="welcomeModeModalDescription" aria-live="polite" hidden></p>
-          <div class="welcome-mode-modal__stage-entry" id="welcomeModeModalStageEntry" hidden>
-            <button class="welcome-mode-modal__stage-edit" id="welcomeModeModalStageEditBtn" type="button" aria-label="Editar stage de pratica">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.3-1 10.9-10.9a2.1 2.1 0 0 0-3-3L5.3 16 4 20Z"></path><path d="m14.8 6.5 3 3"></path></svg>
-              <span id="welcomeModeModalStageSummary">Sequencia completa: stages 1 a 5</span>
-            </button>
-          </div>
           <div class="welcome-mode-modal__level" id="welcomeModeModalLevel">
             <p class="welcome-mode-modal__level-copy">Nivel do jogo</p>
             <div class="welcome-mode-modal__level-strip">
@@ -14091,6 +13965,13 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v6M22 11h-6"></path></svg>
             <span>Jogar Online</span>
           </button>
+          <div class="cards-mode-quick-picker" id="cardsModeQuickPicker" aria-label="Selecionar modo de jogo" hidden>
+            <button class="cards-mode-quick-picker__option" type="button" data-cards-stage="1" aria-label="Selecionar modo 1" aria-pressed="false"><img class="cards-mode-quick-picker__seal" src="/medalhas/modo-1.png" alt=""></button>
+            <button class="cards-mode-quick-picker__option" type="button" data-cards-stage="2" aria-label="Selecionar modo 2" aria-pressed="false"><img class="cards-mode-quick-picker__seal" src="/medalhas/modo-2.png" alt=""></button>
+            <button class="cards-mode-quick-picker__option" type="button" data-cards-stage="3" aria-label="Selecionar modo 3" aria-pressed="false"><img class="cards-mode-quick-picker__seal" src="/medalhas/modo-3.png" alt=""></button>
+            <button class="cards-mode-quick-picker__option" type="button" data-cards-stage="4" aria-label="Selecionar modo 4" aria-pressed="false"><img class="cards-mode-quick-picker__seal" src="/medalhas/modo-4.png" alt=""></button>
+            <button class="cards-mode-quick-picker__option" type="button" data-cards-stage="5" aria-label="Selecionar modo 5" aria-pressed="false"><img class="cards-mode-quick-picker__seal" src="/medalhas/modo-5.png" alt=""></button>
+          </div>
         </div>
         <div class="cards-battle-search" id="cardsBattleSearchModal" aria-hidden="true">
           <div class="cards-battle-search__panel" role="dialog" aria-modal="true" aria-labelledby="cardsBattleSearchTitle">
@@ -14112,40 +13993,6 @@
               <button class="cards-battle-search__start-mode" id="cardsBattleStartModeBtn" type="button" hidden>Comecar</button>
             </div>
             <button class="cards-battle-search__cancel" id="cardsBattleSearchCancelBtn" type="button">Cancelar</button>
-          </div>
-        </div>
-        <div class="cards-stage-modal" id="cardsStageModal" aria-hidden="true">
-          <div class="cards-stage-modal__panel" role="dialog" aria-modal="true" aria-labelledby="cardsStageModalTitle">
-            <div class="cards-stage-modal__header">
-              <div class="cards-stage-modal__heading">
-                <h3 class="cards-stage-modal__title" id="cardsStageModalTitle">Escolha o stage</h3>
-                <p class="cards-stage-modal__copy" hidden></p>
-              </div>
-              <button class="cards-stage-modal__close" id="cardsStageModalCloseBtn" type="button" aria-label="Fechar seletor de stages">&times;</button>
-            </div>
-            <div class="cards-stage-modal__options" id="cardsStageModalOptions">
-              <button class="cards-stage-modal__option" type="button" data-cards-stage="1">
-                <img class="cards-stage-modal__seal" src="/medalhas/modo-1.png" alt="" aria-hidden="true">
-                <span class="cards-stage-modal__number">Modo 1</span>
-              </button>
-              <button class="cards-stage-modal__option" type="button" data-cards-stage="2">
-                <img class="cards-stage-modal__seal" src="/medalhas/modo-2.png" alt="" aria-hidden="true">
-                <span class="cards-stage-modal__number">Modo 2</span>
-              </button>
-              <button class="cards-stage-modal__option" type="button" data-cards-stage="3">
-                <img class="cards-stage-modal__seal" src="/medalhas/modo-3.png" alt="" aria-hidden="true">
-                <span class="cards-stage-modal__number">Modo 3</span>
-              </button>
-              <button class="cards-stage-modal__option" type="button" data-cards-stage="4">
-                <img class="cards-stage-modal__seal" src="/medalhas/modo-4.png" alt="" aria-hidden="true">
-                <span class="cards-stage-modal__number">Modo 4</span>
-              </button>
-              <button class="cards-stage-modal__option" type="button" data-cards-stage="5">
-                <img class="cards-stage-modal__seal" src="/medalhas/modo-5.png" alt="" aria-hidden="true">
-                <span class="cards-stage-modal__number">Modo 5</span>
-              </button>
-            </div>
-            <p class="cards-stage-modal__result" id="cardsStageModeResult" aria-live="polite" hidden></p>
           </div>
         </div>
       </div>
@@ -16555,13 +16402,7 @@
         cardsBattleBotsList: document.getElementById('cardsBattleBotsList'),
         cardsBattleStartModeBtn: document.getElementById('cardsBattleStartModeBtn'),
         cardsBattleSearchCancelBtn: document.getElementById('cardsBattleSearchCancelBtn'),
-        welcomeModeModalStageEntry: document.getElementById('welcomeModeModalStageEntry'),
-        welcomeModeModalStageEditBtn: document.getElementById('welcomeModeModalStageEditBtn'),
-        welcomeModeModalStageSummary: document.getElementById('welcomeModeModalStageSummary'),
-        cardsStageModal: document.getElementById('cardsStageModal'),
-        cardsStageModalCloseBtn: document.getElementById('cardsStageModalCloseBtn'),
-        cardsStageModalOptions: document.getElementById('cardsStageModalOptions'),
-        cardsStageModeResult: document.getElementById('cardsStageModeResult'),
+        cardsModeQuickPicker: document.getElementById('cardsModeQuickPicker'),
         finalChallengeModal: document.getElementById('finalChallengeModal'),
         finalChallengeIntroScreen: document.getElementById('finalChallengeIntroScreen'),
         finalChallengeRunScreen: document.getElementById('finalChallengeRunScreen'),
@@ -24827,11 +24668,6 @@
         return normalizeCardsModePracticeStage(state.game.cardsModePracticeStage);
       }
 
-      function cardsModePracticeStageSummary(stage = selectedCardsModePracticeStage()) {
-        const normalizedStage = normalizeCardsModePracticeStage(stage);
-        return `Modo ${normalizedStage}`;
-      }
-
       function cardsModeBestResultForStage(stage, records = cardsModeBestRecords) {
         if (records === cardsModeBestRecords
           && (cardsModeBestRecordsLanguage !== currentTargetLanguage()
@@ -24890,23 +24726,15 @@
 
       function syncCardsModeStagePicker() {
         const selectedStage = selectedCardsModePracticeStage();
-        if (els.welcomeModeModalStageEntry) {
-          els.welcomeModeModalStageEntry.hidden = !isCardsWelcomeMode();
+        if (els.cardsModeQuickPicker) {
+          els.cardsModeQuickPicker.hidden = !isCardsWelcomeMode();
         }
-        if (els.welcomeModeModalStageSummary) {
-          els.welcomeModeModalStageSummary.textContent = cardsModePracticeStageSummary(selectedStage);
-        }
-        els.cardsStageModalOptions?.querySelectorAll('[data-cards-stage]').forEach((button) => {
+        els.cardsModeQuickPicker?.querySelectorAll('[data-cards-stage]').forEach((button) => {
           const stage = normalizeCardsModePracticeStage(button.getAttribute('data-cards-stage'));
           const selected = stage === selectedStage;
           button.classList.toggle('is-selected', selected);
           button.setAttribute('aria-pressed', selected ? 'true' : 'false');
         });
-        if (els.cardsStageModeResult) {
-          const result = cardsModeBestResultForStage(selectedStage);
-          els.cardsStageModeResult.textContent = result;
-          els.cardsStageModeResult.hidden = !result;
-        }
       }
 
       function setCardsModePracticeStage(value) {
@@ -24919,19 +24747,6 @@
         }
         syncCardsModeStagePicker();
         return stage;
-      }
-
-      function openCardsModeStageModal() {
-        if (!isCardsWelcomeMode() || !els.cardsStageModal) return;
-        syncCardsModeStagePicker();
-        els.cardsStageModal.classList.add('is-visible');
-        els.cardsStageModal.setAttribute('aria-hidden', 'false');
-      }
-
-      function closeCardsModeStageModal() {
-        if (!els.cardsStageModal) return;
-        els.cardsStageModal.classList.remove('is-visible');
-        els.cardsStageModal.setAttribute('aria-hidden', 'true');
       }
 
       function isCardsModeFixedStageActive() {
@@ -41508,25 +41323,13 @@
             closeWelcomeModeModal();
           }
         });
-        els.welcomeModeModalStageEditBtn?.addEventListener('click', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          openCardsModeStageModal();
-        });
-        els.cardsStageModalCloseBtn?.addEventListener('click', closeCardsModeStageModal);
-        els.cardsStageModal?.addEventListener('click', (event) => {
-          if (event.target === els.cardsStageModal) {
-            closeCardsModeStageModal();
-          }
-        });
-        els.cardsStageModalOptions?.addEventListener('click', (event) => {
+        els.cardsModeQuickPicker?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-cards-stage]');
           if (!button) return;
           event.preventDefault();
           event.stopPropagation();
           setCardsModePracticeStage(button.getAttribute('data-cards-stage'));
           syncWelcomeModeModal();
-          closeCardsModeStageModal();
         });
         bindWelcomeModeLevelArrowHold(els.welcomeModeModalLevelPrevBtn, -1);
         bindWelcomeModeLevelArrowHold(els.welcomeModeModalLevelNextBtn, 1);
