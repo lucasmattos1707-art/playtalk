@@ -1486,7 +1486,7 @@
     stopBattleCardsPromptAudio();
     updateBattlePhaseHeader();
     renderBattleCardsVisual(card);
-    renderBattleCardsPhaseWord(state.duel.currentPhase === 1 ? '' : safeText(card?.nativeText || card?.portuguese || card?.targetText || card?.english), 'portuguese');
+    renderBattleCardsPhaseWord(safeText(card?.nativeText || card?.portuguese || card?.targetText || card?.english), 'portuguese');
     updateBattleCardsBuffer();
     state.battleCardsReadyToSpeak = state.duel.currentPhase === 1;
     if (state.duel.currentPhase === 1) {

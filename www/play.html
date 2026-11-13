@@ -1881,19 +1881,22 @@
 
     .cards-stage-modal__options {
       display: grid;
-      gap: 9px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: clamp(5px, 1.4vw, 12px);
     }
 
     .cards-stage-modal__option {
-      min-height: 58px;
-      padding: 11px 14px;
+      min-width: 0;
+      min-height: 96px;
+      padding: 9px 4px;
       border: 1px solid rgba(173, 231, 255, 0.2);
-      border-radius: 18px;
-      display: grid;
-      grid-template-columns: 62px minmax(0, 1fr);
-      gap: 12px;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
       align-items: center;
-      text-align: left;
+      justify-content: center;
+      text-align: center;
       background: rgba(255, 255, 255, 0.055);
       color: #eef9ff;
     }
@@ -1905,14 +1908,35 @@
     }
 
     .cards-stage-modal__number {
-      font: 850 13px/1 "Rajdhani", "Exo 2", Arial, sans-serif;
+      font: 850 clamp(10px, 2.5vw, 13px)/1 "Rajdhani", "Exo 2", Arial, sans-serif;
       letter-spacing: 0.08em;
       color: #7fe4ff;
       text-transform: uppercase;
     }
 
+    .cards-stage-modal__seal {
+      display: block;
+      width: clamp(40px, 13vw, 68px);
+      height: clamp(40px, 13vw, 68px);
+      object-fit: contain;
+      pointer-events: none;
+    }
+
     .cards-stage-modal__label {
-      font: 760 15px/1.25 "Exo 2", "Open Sans", Arial, sans-serif;
+      font: 760 clamp(9px, 2.2vw, 12px)/1.1 "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
+    .cards-stage-modal__result {
+      min-height: 1.4em;
+      margin: 0;
+      color: #a8f4d0;
+      text-align: center;
+      font: 850 18px/1.25 "Exo 2", "Open Sans", Arial, sans-serif;
+    }
+
+    .cards-stage-modal__result[hidden],
+    .welcome-mode-modal__description[hidden] {
+      display: none !important;
     }
 
     .daily-plan-modal {
@@ -8379,7 +8403,7 @@
     .pronunciation-progress-ring__value {
       stroke: var(--pronunciation-ring-color);
       stroke-linecap: round;
-      transition: stroke-dashoffset 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      transition: stroke-dashoffset 750ms cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 
     .first-star-progress {
@@ -14048,7 +14072,7 @@
           <button class="welcome-mode-modal__play" id="welcomeModeModalPlayBtn" type="button" aria-label="Iniciar modo">
             <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M8 5.5v13l10-6.5-10-6.5Z"/></svg>
           </button>
-          <p class="welcome-mode-modal__description" id="welcomeModeModalDescription">Treino por niveis com cinco etapas em sequencia.</p>
+          <p class="welcome-mode-modal__description" id="welcomeModeModalDescription" aria-live="polite" hidden></p>
           <div class="welcome-mode-modal__stage-entry" id="welcomeModeModalStageEntry" hidden>
             <button class="welcome-mode-modal__stage-edit" id="welcomeModeModalStageEditBtn" type="button" aria-label="Editar stage de pratica">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.3-1 10.9-10.9a2.1 2.1 0 0 0-3-3L5.3 16 4 20Z"></path><path d="m14.8 6.5 3 3"></path></svg>
@@ -14095,40 +14119,33 @@
             <div class="cards-stage-modal__header">
               <div class="cards-stage-modal__heading">
                 <h3 class="cards-stage-modal__title" id="cardsStageModalTitle">Escolha o stage</h3>
-                <p class="cards-stage-modal__copy">A carta continua nesse mesmo modelo ate conquistar as 5 estrelas.</p>
+                <p class="cards-stage-modal__copy" hidden></p>
               </div>
               <button class="cards-stage-modal__close" id="cardsStageModalCloseBtn" type="button" aria-label="Fechar seletor de stages">&times;</button>
             </div>
             <div class="cards-stage-modal__options" id="cardsStageModalOptions">
-              <button class="cards-stage-modal__option" type="button" data-cards-stage="0">
-                <span class="cards-stage-modal__number">Todos</span>
-                <span class="cards-stage-modal__label">Sequencia completa: stages 1, 2, 3, 4 e 5</span>
-              </button>
               <button class="cards-stage-modal__option" type="button" data-cards-stage="1">
-                <span class="cards-stage-modal__number">Stage 1</span>
-                <span class="cards-stage-modal__label">Ouvir e falar no idioma estudado</span>
+                <img class="cards-stage-modal__seal" src="/medalhas/modo-1.png" alt="" aria-hidden="true">
+                <span class="cards-stage-modal__number">Modo 1</span>
               </button>
               <button class="cards-stage-modal__option" type="button" data-cards-stage="2">
-                <span class="cards-stage-modal__number">Stage 2</span>
-                <span class="cards-stage-modal__label">Ouvir e falar no idioma nativo</span>
+                <img class="cards-stage-modal__seal" src="/medalhas/modo-2.png" alt="" aria-hidden="true">
+                <span class="cards-stage-modal__number">Modo 2</span>
               </button>
               <button class="cards-stage-modal__option" type="button" data-cards-stage="3">
-                <span class="cards-stage-modal__number">Stage 3</span>
-                <span class="cards-stage-modal__label">Falar no idioma estudado</span>
+                <img class="cards-stage-modal__seal" src="/medalhas/modo-3.png" alt="" aria-hidden="true">
+                <span class="cards-stage-modal__number">Modo 3</span>
               </button>
               <button class="cards-stage-modal__option" type="button" data-cards-stage="4">
-                <span class="cards-stage-modal__number">Stage 4</span>
-                <span class="cards-stage-modal__label">Escrever no idioma estudado</span>
+                <img class="cards-stage-modal__seal" src="/medalhas/modo-4.png" alt="" aria-hidden="true">
+                <span class="cards-stage-modal__number">Modo 4</span>
               </button>
               <button class="cards-stage-modal__option" type="button" data-cards-stage="5">
-                <span class="cards-stage-modal__number">Stage 5</span>
-                <span class="cards-stage-modal__label">Falar sem ajuda no idioma estudado</span>
-              </button>
-              <button class="cards-stage-modal__option" type="button" data-cards-stage="6">
-                <span class="cards-stage-modal__number">Stage 6</span>
-                <span class="cards-stage-modal__label">Ouvir e escrever com o teclado de 9 letras</span>
+                <img class="cards-stage-modal__seal" src="/medalhas/modo-5.png" alt="" aria-hidden="true">
+                <span class="cards-stage-modal__number">Modo 5</span>
               </button>
             </div>
+            <p class="cards-stage-modal__result" id="cardsStageModeResult" aria-live="polite" hidden></p>
           </div>
         </div>
       </div>
@@ -15769,7 +15786,7 @@
       const TRAINING_MAX_CARD_COUNT = 500;
       const TRAINING_CARD_STEP = 10;
       const GAME_STAR_TARGET = 5;
-      const CARDS_MODE_PRACTICE_STAGE_MAX = 6;
+      const CARDS_MODE_PRACTICE_STAGE_MAX = 5;
       const LEVEL_MODE_ACQUISITION_STAGE_SEQUENCE = [4, 1, 3];
       const GAME_STAGE_PROGRESS_WEIGHTS = Object.freeze([25, 25, 10, 25, 15]);
       const GAME_STAGE_PROGRESS_TOTAL = Math.max(
@@ -16506,6 +16523,11 @@
       let cardsBattleFallbackBusy = false;
       let cardsBattleSelectedFormat = 'simple';
       let cardsBattleBots = [];
+      let cardsModeBestRecords = new Map();
+      let cardsModeBestRecordsLanguage = '';
+      let cardsModeBestRecordsLoadedLanguage = '';
+      let cardsModeBestRecordsUserId = '';
+      let cardsModeBestRecordsLoadPromise = null;
 
       loadGameOptionsFromStorage();
 
@@ -16539,6 +16561,7 @@
         cardsStageModal: document.getElementById('cardsStageModal'),
         cardsStageModalCloseBtn: document.getElementById('cardsStageModalCloseBtn'),
         cardsStageModalOptions: document.getElementById('cardsStageModalOptions'),
+        cardsStageModeResult: document.getElementById('cardsStageModeResult'),
         finalChallengeModal: document.getElementById('finalChallengeModal'),
         finalChallengeIntroScreen: document.getElementById('finalChallengeIntroScreen'),
         finalChallengeRunScreen: document.getElementById('finalChallengeRunScreen'),
@@ -24786,7 +24809,7 @@
 
       function normalizeCardsModePracticeStage(value) {
         const stage = Number.parseInt(value, 10);
-        return stage >= 1 && stage <= CARDS_MODE_PRACTICE_STAGE_MAX ? stage : 0;
+        return stage >= 1 && stage <= CARDS_MODE_PRACTICE_STAGE_MAX ? stage : 1;
       }
 
       function readCardsModePracticeStage() {
@@ -24806,16 +24829,63 @@
 
       function cardsModePracticeStageSummary(stage = selectedCardsModePracticeStage()) {
         const normalizedStage = normalizeCardsModePracticeStage(stage);
-        if (!normalizedStage) return 'Sequencia completa: stages 1 a 5';
-        const labels = {
-          1: 'Stage 1: ouvir e falar',
-          2: 'Stage 2: ouvir e falar no idioma nativo',
-          3: 'Stage 3: falar',
-          4: 'Stage 4: escrever',
-          5: 'Stage 5: falar sem ajuda',
-          6: 'Stage 6: teclado de 9 letras'
-        };
-        return labels[normalizedStage] || `Stage ${normalizedStage}`;
+        return `Modo ${normalizedStage}`;
+      }
+
+      function cardsModeBestResultForStage(stage, records = cardsModeBestRecords) {
+        if (records === cardsModeBestRecords
+          && (cardsModeBestRecordsLanguage !== currentTargetLanguage()
+            || cardsModeBestRecordsUserId !== safeText(state.user?.id))) return '';
+        const record = records instanceof Map ? records.get(Number(stage)) : null;
+        const score = Number(record?.bestScore);
+        if (!record || !Number.isFinite(score)) return '';
+        if (Number(stage) === 4 || record.scoreType === 'speed_cpm') {
+          return `Velocidade · ${score.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} caract./min`;
+        }
+        return `Pronúncia · ${score.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+      }
+
+      async function loadCardsModeBestResults() {
+        const language = currentTargetLanguage();
+        const userId = safeText(state.user?.id);
+        if (!userId) {
+          cardsModeBestRecords = new Map();
+          cardsModeBestRecordsLanguage = language;
+          cardsModeBestRecordsLoadedLanguage = '';
+          cardsModeBestRecordsUserId = '';
+          return;
+        }
+        if (cardsModeBestRecordsLoadedLanguage === language && cardsModeBestRecordsUserId === userId) return;
+        if (cardsModeBestRecordsLoadPromise) {
+          await cardsModeBestRecordsLoadPromise;
+          if (cardsModeBestRecordsLoadedLanguage !== language || cardsModeBestRecordsUserId !== userId) {
+            return loadCardsModeBestResults();
+          }
+          return;
+        }
+        cardsModeBestRecordsLoadPromise = (async () => {
+          const response = await fetch(buildApiUrl(`/api/flashcards/mode-records?targetLanguage=${encodeURIComponent(language)}`), {
+            credentials: 'include',
+            cache: 'no-store',
+            headers: buildAuthHeaders()
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success) return;
+          if (safeText(state.user?.id) !== userId || currentTargetLanguage() !== language) return;
+          const records = new Map();
+          (Array.isArray(payload.records) ? payload.records : []).forEach((record) => {
+            const stage = Number(record?.stage);
+            const bestScore = Number(record?.bestScore);
+            if (stage >= 1 && stage <= 5 && Number.isFinite(bestScore)) records.set(stage, record);
+          });
+          cardsModeBestRecords = records;
+          cardsModeBestRecordsLanguage = language;
+          cardsModeBestRecordsUserId = userId;
+          cardsModeBestRecordsLoadedLanguage = language;
+        })().catch(() => {}).finally(() => {
+          cardsModeBestRecordsLoadPromise = null;
+        });
+        await cardsModeBestRecordsLoadPromise;
       }
 
       function syncCardsModeStagePicker() {
@@ -24832,6 +24902,11 @@
           button.classList.toggle('is-selected', selected);
           button.setAttribute('aria-pressed', selected ? 'true' : 'false');
         });
+        if (els.cardsStageModeResult) {
+          const result = cardsModeBestResultForStage(selectedStage);
+          els.cardsStageModeResult.textContent = result;
+          els.cardsStageModeResult.hidden = !result;
+        }
       }
 
       function setCardsModePracticeStage(value) {
@@ -25292,11 +25367,27 @@
           state.ui.welcomeSelectedLevel = cardsLevel;
         }
         if (els.welcomeModeModalDescription) {
-          els.welcomeModeModalDescription.textContent = cardsMode && !cardsLevels.length
-            ? 'Nenhum nivel com cartas jogaveis foi encontrado para este idioma.'
-            : mode.description;
+          if (cardsMode) {
+            const result = cardsModeBestResultForStage(selectedCardsModePracticeStage());
+            els.welcomeModeModalDescription.textContent = result;
+            els.welcomeModeModalDescription.hidden = !result;
+          } else {
+            els.welcomeModeModalDescription.textContent = mode.description;
+            els.welcomeModeModalDescription.hidden = false;
+          }
         }
         syncCardsModeStagePicker();
+        if (cardsMode) {
+          void loadCardsModeBestResults().then(() => {
+            if (!isCardsWelcomeMode()) return;
+            const result = cardsModeBestResultForStage(selectedCardsModePracticeStage());
+            if (els.welcomeModeModalDescription) {
+              els.welcomeModeModalDescription.textContent = result;
+              els.welcomeModeModalDescription.hidden = !result;
+            }
+            syncCardsModeStagePicker();
+          });
+        }
         if (els.welcomeModeModalPlayBtn) {
           els.welcomeModeModalPlayBtn.disabled = Boolean(cardsMode && !cardsLevels.length);
         }
@@ -30527,7 +30618,7 @@
       }
 
       function renderStars(stars) {
-        if (isTypingRoundStageFourActive()) {
+        if (isTypingRoundStageFourActive() || state.game.cardsModeRound?.active) {
           renderTypingRoundHearts();
           return;
         }
@@ -30550,7 +30641,8 @@
 
       function renderTypingRoundHearts() {
         if (!els.gameStars) return;
-        const round = state.game.typingRound || {};
+        const cardsRound = state.game.cardsModeRound || {};
+        const round = cardsRound.active ? cardsRound : (state.game.typingRound || {});
         const errors = Math.max(0, Math.min(5, Number(round.errors) || 0));
         els.gameStars.classList.remove('is-training-sequence');
         els.gameStars.classList.add('is-typing-round-lives');
@@ -30630,7 +30722,74 @@
         state.game.entries.clear();
         state.game.queue = [];
         state.game.currentId = null;
+        void saveCardsModeRoundBestResult(round);
         return true;
+      }
+
+      function createCardsModeRoundId() {
+        try {
+          if (typeof crypto?.randomUUID === 'function') return crypto.randomUUID();
+        } catch (_error) {
+          // Use the local fallback below in older browsers.
+        }
+        return `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+      }
+
+      async function saveCardsModeRoundBestResult(round) {
+        if (!round || round.recordSaveStarted) return false;
+        round.recordSaveStarted = true;
+        const stage = Number(round.stage);
+        const completedCards = Math.max(0, Number(round.attempts) || 0);
+        if (!round.completed || Number(round.total) !== 25 || completedCards !== 25 || stage < 1 || stage > 5 || !state.user?.id) {
+          return false;
+        }
+        let score = 0;
+        const scoreType = stage === 4 ? 'speed_cpm' : 'pronunciation';
+        if (stage === 4) {
+          const elapsedSeconds = Math.max(1, (Number(state.game.typingRound?.elapsedMs) || 0) / 1000);
+          score = (Math.max(0, Number(state.game.typingRound?.characters) || 0) / elapsedSeconds) * 60;
+        } else {
+          const samples = Array.isArray(round.pronunciationScores)
+            ? round.pronunciationScores.map(Number).filter(Number.isFinite)
+            : [];
+          if (!samples.length) return false;
+          score = samples.reduce((sum, sample) => sum + sample, 0) / samples.length;
+        }
+        if (!Number.isFinite(score)) return false;
+        const targetLanguage = safeText(round.targetLanguage || currentTargetLanguage());
+        const roundId = safeText(round.roundId) || createCardsModeRoundId();
+        try {
+          const response = await fetch(buildApiUrl('/api/flashcards/mode-records'), {
+            method: 'POST',
+            credentials: 'include',
+            headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+              stage,
+              scoreType,
+              score: Math.round(score * 10) / 10,
+              targetLanguage,
+              totalCards: 25,
+              completedCards,
+              roundId
+            })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload?.success || !payload?.record) return false;
+          if (targetLanguage !== currentTargetLanguage()) {
+            cardsModeBestRecordsLoadedLanguage = '';
+            return true;
+          }
+          cardsModeBestRecords.set(stage, payload.record);
+          cardsModeBestRecordsLanguage = targetLanguage;
+          cardsModeBestRecordsUserId = safeText(state.user?.id);
+          cardsModeBestRecordsLoadedLanguage = targetLanguage;
+          if (isCardsWelcomeMode() && els.welcomeModeModal?.classList.contains('is-visible')) {
+            syncWelcomeModeModal();
+          }
+          return true;
+        } catch (_error) {
+          return false;
+        }
       }
 
       function renderStarsLossState(initialStars, lostCount) {
@@ -39464,6 +39623,9 @@
           pronunciationScores: [],
           wordsSpoken: 0,
           wordsHeard: 0,
+          roundId: createCardsModeRoundId(),
+          targetLanguage: currentTargetLanguage(),
+          recordSaveStarted: false,
           processingAttemptKey: '',
           stage: cardsModeRoundStage,
           source: normalizeGameOptionValue('cardSource', state.options?.cardSource),
@@ -40081,9 +40243,9 @@
           await playStageResponseSequence(evaluatedStage, card);
         } else {
           round.errors = Math.max(0, Number(round.errors) || 0) + 1;
+          renderTypingRoundHearts();
           if (Number(evaluatedStage) === 4 && inputMode === 'typing') {
             state.game.typingRound.errors = Math.max(0, Number(state.game.typingRound.errors) || 0) + 1;
-            renderTypingRoundHearts();
           } else {
             playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
             await wait(350);
@@ -40107,8 +40269,7 @@
 
         state.game.entries.delete(entry.id);
         state.game.currentId = null;
-        if (Number(evaluatedStage) === 4 && inputMode === 'typing'
-          && Number(state.game.typingRound.errors) >= 5) {
+        if (Number(round.errors) >= 5) {
           finishCardsModeRound();
           renderCurrentCard();
           return true;
@@ -40164,10 +40325,12 @@
         }
         const evaluation = evaluateAcceptedAnswers(expectedAnswers, transcript);
         const score = inputMode === 'speech'
-          ? Math.min(100, Math.max(0, Number(evaluation.score) || 0) + 10)
+          ? safeText(transcript).trim()
+            ? Math.min(100, Math.max(0, Number(evaluation.score) || 0) + 10)
+            : 0
           : evaluation.score;
         const isHit = inputMode === 'speech'
-          ? score >= speechHitThresholdForLevel()
+          ? score >= (state.game.cardsModeRound?.active ? 70 : speechHitThresholdForLevel())
           : evaluation.isHit;
         if (inputMode === 'speech') {
           clearStageTutorialReminder();
@@ -41128,9 +41291,6 @@
             playButton.setAttribute('aria-busy', 'true');
             playButton.classList.add('is-loading');
           }
-          if (els.welcomeModeModalDescription) {
-            els.welcomeModeModalDescription.textContent = `Carregando a primeira carta do Nivel ${cardsLevel}...`;
-          }
           try {
             if (await handleManualWelcomeNoEnergy(playButton || els.welcomeStartBtn || event?.currentTarget)) return;
             if (!(await guardWelcomeEnergy({ previewTargets, previewTarget: previewTargets[0] }))) return;
@@ -41178,9 +41338,6 @@
             state.game.levelTypingMode = false;
             loader?.hide?.('welcome-flash-start', { force: true });
             openWelcomeModeModal('cards');
-            if (els.welcomeModeModalDescription) {
-              els.welcomeModeModalDescription.textContent = startError;
-            }
           } finally {
             cardsModeStartInFlight = false;
             if (playButton) {
@@ -41368,6 +41525,7 @@
           event.preventDefault();
           event.stopPropagation();
           setCardsModePracticeStage(button.getAttribute('data-cards-stage'));
+          syncWelcomeModeModal();
           closeCardsModeStageModal();
         });
         bindWelcomeModeLevelArrowHold(els.welcomeModeModalLevelPrevBtn, -1);

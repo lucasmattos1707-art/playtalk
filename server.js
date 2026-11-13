@@ -352,6 +352,7 @@ function buildAuthErrorDetails(error, req) {
 let flashcardRankingsTableReadyPromise = null;
 let usersAvatarColumnReadyPromise = null;
 let flashcardUserStateTablesReadyPromise = null;
+let flashcardModeRecordsTableReadyPromise = null;
 let flashcardAcquisitionTableReadyPromise = null;
 let userDailyMissionStatsTableReadyPromise = null;
 let userFluencySealsTableReadyPromise = null;
@@ -2831,6 +2832,36 @@ const ensureFlashcardAcquisitionTable = async () => {
     });
   }
   return flashcardAcquisitionTableReadyPromise;
+};
+
+const ensureFlashcardModeRecordsTable = async () => {
+  if (!pool) return false;
+  if (!flashcardModeRecordsTableReadyPromise) {
+    flashcardModeRecordsTableReadyPromise = pool.query(`
+      CREATE TABLE IF NOT EXISTS public.user_flashcard_mode_records (
+        user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+        target_language text NOT NULL DEFAULT 'english',
+        mode_stage smallint NOT NULL CHECK (mode_stage BETWEEN 1 AND 5),
+        score_type text NOT NULL CHECK (
+          (mode_stage = 4 AND score_type = 'speed_cpm')
+          OR (mode_stage <> 4 AND score_type = 'pronunciation')
+        ),
+        best_score numeric(10,1) NOT NULL CHECK (best_score >= 0),
+        latest_score numeric(10,1) NOT NULL CHECK (latest_score >= 0),
+        last_round_id text NOT NULL DEFAULT '',
+        completed_cards smallint NOT NULL DEFAULT 25 CHECK (completed_cards = 25),
+        completed_rounds bigint NOT NULL DEFAULT 1 CHECK (completed_rounds > 0),
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (user_id, target_language, mode_stage)
+      )
+    `).catch((error) => {
+      flashcardModeRecordsTableReadyPromise = null;
+      throw error;
+    });
+  }
+  await flashcardModeRecordsTableReadyPromise;
+  return true;
 };
 
 const ensurePremiumAccessTables = async () => {
@@ -20792,6 +20823,109 @@ app.get('/api/flashcards/state', async (req, res) => {
         ? 'Usuario invalido.'
         : 'Erro ao carregar estado dos flashcards.'
     });
+  }
+});
+
+app.get('/api/flashcards/mode-records', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      res.json({ success: true, records: [] });
+      return;
+    }
+    await ensureFlashcardModeRecordsTable();
+    const targetLanguage = normalizeFlashcardTargetLanguage(req.query?.targetLanguage);
+    const result = await pool.query(
+      `SELECT mode_stage, score_type, best_score, latest_score, completed_cards, updated_at
+       FROM public.user_flashcard_mode_records
+       WHERE user_id = $1 AND target_language = $2
+       ORDER BY mode_stage ASC`,
+      [Number(authUser.id), targetLanguage]
+    );
+    res.json({
+      success: true,
+      records: result.rows.map((row) => ({
+        stage: Number(row.mode_stage),
+        scoreType: String(row.score_type || ''),
+        bestScore: Number(row.best_score) || 0,
+        latestScore: Number(row.latest_score) || 0,
+        completedCards: Number(row.completed_cards) || 25,
+        updatedAt: row.updated_at
+      }))
+    });
+  } catch (error) {
+    console.error('Erro ao carregar recordes dos modos de flashcards:', error);
+    res.status(500).json({ success: false, message: 'Erro ao carregar os recordes dos modos.' });
+  }
+});
+
+app.post('/api/flashcards/mode-records', express.json({ limit: '32kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    const stage = Number.parseInt(req.body?.stage, 10);
+    const completedCards = Number.parseInt(req.body?.completedCards, 10);
+    const totalCards = Number.parseInt(req.body?.totalCards, 10);
+    const score = Number(req.body?.score);
+    const roundId = String(req.body?.roundId || '').trim().slice(0, 100);
+    const scoreType = stage === 4 ? 'speed_cpm' : 'pronunciation';
+    if (!Number.isInteger(stage) || stage < 1 || stage > 5 || completedCards !== 25 || totalCards !== 25
+      || !Number.isFinite(score) || score < 0 || score > (stage === 4 ? 10000 : 100)
+      || !roundId) {
+      res.status(400).json({ success: false, message: 'O recorde exige uma rodada completa de 25 cartas.' });
+      return;
+    }
+    await ensureFlashcardModeRecordsTable();
+    const targetLanguage = normalizeFlashcardTargetLanguage(req.body?.targetLanguage);
+    const result = await pool.query(
+      `INSERT INTO public.user_flashcard_mode_records (
+         user_id, target_language, mode_stage, score_type, best_score,
+         latest_score, completed_cards, completed_rounds, last_round_id, updated_at
+       )
+       VALUES ($1, $2, $3, $4, $5, $5, 25, 1, $6, now())
+       ON CONFLICT (user_id, target_language, mode_stage)
+       DO UPDATE SET
+         best_score = GREATEST(public.user_flashcard_mode_records.best_score, EXCLUDED.best_score),
+         latest_score = CASE
+           WHEN public.user_flashcard_mode_records.last_round_id = EXCLUDED.last_round_id
+             THEN public.user_flashcard_mode_records.latest_score
+           ELSE EXCLUDED.latest_score
+         END,
+         completed_rounds = public.user_flashcard_mode_records.completed_rounds
+           + CASE WHEN public.user_flashcard_mode_records.last_round_id = EXCLUDED.last_round_id THEN 0 ELSE 1 END,
+         completed_cards = 25,
+         last_round_id = EXCLUDED.last_round_id,
+         updated_at = now()
+       RETURNING mode_stage, score_type, best_score, latest_score, completed_cards, updated_at`,
+      [Number(authUser.id), targetLanguage, stage, scoreType, Number(score.toFixed(1)), roundId]
+    );
+    const row = result.rows[0] || {};
+    res.json({
+      success: true,
+      record: {
+        stage: Number(row.mode_stage),
+        scoreType: String(row.score_type || scoreType),
+        bestScore: Number(row.best_score) || 0,
+        latestScore: Number(row.latest_score) || 0,
+        completedCards: Number(row.completed_cards) || 25,
+        updatedAt: row.updated_at
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao salvar recorde dos modos de flashcards:', error);
+    res.status(500).json({ success: false, message: 'Erro ao salvar o recorde do modo.' });
   }
 });
 
