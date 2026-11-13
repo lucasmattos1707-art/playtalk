@@ -25067,7 +25067,6 @@
 
       function startCardsBattleSearch() {
         if (!isCardsWelcomeMode() || cardsBattleSearchActive) return;
-        closeCardsModeStageModal();
         cardsBattleSearchActive = true;
         cardsBattleSearchStartedAt = Date.now();
         cardsBattleBots = [];
@@ -25254,7 +25253,6 @@
       }
 
       function closeWelcomeModeModal() {
-        closeCardsModeStageModal();
         if (!state.entry.welcomeModeKey) return;
         clearWelcomeModeLevelHold();
         state.entry.welcomeModeKey = '';
