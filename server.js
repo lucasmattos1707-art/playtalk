@@ -30310,7 +30310,10 @@ app.use(async (req, res, next) => {
     '/oz/index.html',
     '/desafiogym',
     '/desafiogym/',
-    '/desafiogym/index.html'
+    '/desafiogym/index.html',
+    '/desafio-meninas',
+    '/desafio-meninas/',
+    '/desafio-meninas/index.html'
   ]);
 
   if (

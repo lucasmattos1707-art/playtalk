@@ -1,22 +1,33 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#171316"><meta name="description" content="Espetáculo Kelly — telão e navegação por capítulos.">
-  <title>Telão · Espetáculo Kelly</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#171316">
+  <title>Telão</title>
   <link rel="stylesheet" href="/telao/style.css">
 </head>
 <body>
   <main class="telao">
-    <header class="topbar"><a href="/" class="wordmark"><span class="mark">F</span> Fluent<span>LevelUp</span></a><span class="live-label"><i></i> PLAYER DO ESPETÁCULO</span></header>
-    <section class="intro"><p class="overline">UMA APRESENTAÇÃO DE KELLY</p><h1>Espetáculo <em>Kelly</em></h1><p class="subtitle">Escolha um capítulo e aproveite cada momento.</p></section>
-    <section class="player-card" aria-label="Player do espetáculo">
-      <div class="video-shell"><video id="video" controls playsinline preload="metadata"><source src="/api/telao/video" type="video/mp4"></video><div class="video-error" id="videoError" hidden>Não foi possível carregar o vídeo agora. Atualize a página e tente novamente.</div></div>
-      <div class="player-tools"><div class="chapter-current"><span class="chapter-index" id="chapterIndex">01</span><div><span class="tool-label">CAPÍTULO ATUAL</span><strong id="chapterTitle">Abertura</strong></div></div><div class="step-controls"><button class="step-button" id="previous" type="button" aria-label="Voltar ao capítulo anterior">← <span>Anterior</span></button><button class="step-button step-next" id="next" type="button" aria-label="Avançar para o próximo capítulo"><span>Próximo</span> →</button></div></div>
+    <section class="player-card" aria-label="Player de vídeo">
+      <div class="video-shell">
+        <video id="video" controls playsinline preload="metadata">
+          <source src="/api/telao/video" type="video/mp4">
+        </video>
+        <div class="video-error" id="videoError" hidden>Não foi possível carregar o vídeo. Atualize a página e tente novamente.</div>
+      </div>
+      <div class="player-tools">
+        <div class="chapter-current"><span class="chapter-index" id="chapterIndex">01</span><strong id="chapterTitle">Capítulo 1</strong></div>
+        <div class="step-controls">
+          <button class="step-button" id="previous" type="button" aria-label="Voltar ao capítulo anterior">← <span>Anterior</span></button>
+          <button class="step-button step-next" id="next" type="button" aria-label="Avançar para o próximo capítulo"><span>Próximo</span> →</button>
+        </div>
+      </div>
       <div class="chapter-progress"><span id="progressFill"></span></div>
     </section>
-    <section class="chapters-section"><div class="section-head"><div><p class="overline">NAVEGUE PELOS MOMENTOS</p><h2>Capítulos</h2></div><span class="chapter-total">12 capítulos</span></div><div class="chapter-list" id="chapters"></div></section>
-    <footer><span>Espetáculo Kelly</span><span>Com carinho, em cada capítulo <b>✦</b></span></footer>
+    <section class="chapters-section" aria-label="Capítulos">
+      <div class="chapter-list" id="chapters"></div>
+    </section>
   </main>
   <script src="/telao/app.js" defer></script>
 </body>

@@ -10,7 +10,15 @@
 </head>
 <body>
   <main class="shell">
-    <header class="topbar"><a class="brand" href="/desafio-meninas"><span class="brand-icon">✳</span><span>um caminho <b>compartilhado</b></span></a><button id="manageBtn" class="quiet admin-hidden" type="button">⚙ <span>Gerenciar jornada</span></button></header>
+    <section id="welcomeChooser" class="welcome-chooser" aria-labelledby="chooserTitle" hidden>
+      <span class="welcome-flower" aria-hidden="true">✿</span>
+      <span class="eyebrow small">A JORNADA DE VOCÊS DUAS</span>
+      <h1 id="chooserTitle">Quem vai caminhar agora?</h1>
+      <p>Toque no seu nome para abrir sua jornada.</p>
+      <div id="participantChoices" class="participant-choices"></div>
+    </section>
+    <div id="journeyView" hidden>
+    <header class="topbar"><a class="brand" href="/desafio-meninas"><span class="brand-icon">✳</span><span>um caminho <b>compartilhado</b></span></a><div class="header-actions"><button id="switchParticipant" class="quiet" type="button">Trocar nome</button><button id="manageBtn" class="quiet admin-hidden" type="button">⚙ <span>Gerenciar jornada</span></button></div></header>
     <section class="hero">
       <div class="eyebrow"><span></span> UM ESPAÇO PARA CRESCER JUNTAS</div>
       <h1>Nossa <em>Jornada</em></h1><p class="subtitle">Cada passo importa. Cada experiência transforma.</p>
@@ -26,6 +34,7 @@
     <section id="activitiesSection"><div class="section-heading"><div><span class="eyebrow small">A JORNADA</span><h2>Atividades</h2></div><span class="count-chip" id="activityCount">0 etapas</span></div><div class="activity-list" id="activityList"></div></section>
     <section id="historySection" class="hidden"><div class="section-heading"><div><span class="eyebrow small">MEMÓRIAS QUE FICAM</span><h2>Nossa História</h2></div></div><div id="historyList"></div></section>
     <footer>Feito de presença, coragem e pequenos começos <span>✧</span></footer>
+    </div>
   </main>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <dialog id="manageDialog" class="manage-dialog"><form method="dialog" class="dialog-top"><div><span class="eyebrow small">ESPAÇO DE CUIDADO</span><h2>Gerenciar jornada</h2></div><button class="icon-button" value="cancel" aria-label="Fechar">×</button></form><div id="manageContent"></div></dialog>
