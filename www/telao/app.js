@@ -24,9 +24,16 @@
   function seek(index) {
     const wasPlaying=!video.paused&&!video.ended;
     update(index);
-    pendingSeekIndex=selected;
-    video.currentTime=seconds[selected];
+    const targetIndex=selected;
+    pendingSeekIndex=targetIndex;
+    video.currentTime=seconds[targetIndex];
     if(wasPlaying)video.play().catch(()=>{});
+    const settleSeek=()=>{
+      if(pendingSeekIndex!==targetIndex)return;
+      if(!video.seeking&&Math.abs(video.currentTime-seconds[targetIndex])<=0.75){updateFromPlayback();return;}
+      if(video.readyState>0)setTimeout(settleSeek,120);
+    };
+    setTimeout(settleSeek,0);
   }
   function updateFromPlayback() {
     let index=0;
