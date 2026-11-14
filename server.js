@@ -32301,7 +32301,7 @@ app.get('/api/telao/video', async (req, res) => {
       : undefined;
     const result = await getR2Client().send(new GetObjectCommand({
       Bucket: R2_BUCKET_NAME,
-      Key: 'fluentlevelup/telao/espetaculo-kelly.mp4',
+      Key: 'fluentlevelup/telao/espetaculo-kelly-abertura.mp4',
       Range: rangeHeader
     }));
     res.status(result?.ContentRange ? 206 : 200);

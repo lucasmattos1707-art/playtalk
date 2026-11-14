@@ -6,7 +6,7 @@
   <title>Nossa Jornada · Desafio Meninas</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/desafio-meninas/style.css">
+  <link rel="stylesheet" href="/desafio-meninas/style.css?v=20261114-activities">
 </head>
 <body>
   <main class="shell">
@@ -31,7 +31,7 @@
       <div class="people-progress" id="peopleProgress"></div>
     </section>
     <nav class="section-nav" aria-label="Seções"><button class="nav-pill active" data-section="activities">✦ <span>Atividades</span></button><button class="nav-pill" data-section="history">◷ <span>Nossa história</span></button></nav>
-    <section id="activitiesSection"><div class="section-heading"><div><span class="eyebrow small">A JORNADA</span><h2>Atividades</h2></div><span class="count-chip" id="activityCount">0 etapas</span></div><div class="activity-list" id="activityList"></div></section>
+    <section id="activitiesSection"><div class="section-heading"><div><span class="eyebrow small">A JORNADA</span><h2>Atividades</h2></div><div class="activity-heading-actions"><span class="count-chip" id="activityCount">0 etapas</span><button class="add-activity" id="addActivityButton" type="button" aria-label="Adicionar atividade" title="Adicionar atividade"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div></div><div class="activity-list" id="activityList"></div></section>
     <section id="historySection" class="hidden"><div class="section-heading"><div><span class="eyebrow small">MEMÓRIAS QUE FICAM</span><h2>Nossa História</h2></div></div><div id="historyList"></div></section>
     <footer>Feito de presença, coragem e pequenos começos <span>✧</span></footer>
     </div>
@@ -39,6 +39,7 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <dialog id="manageDialog" class="manage-dialog"><form method="dialog" class="dialog-top"><div><span class="eyebrow small">ESPAÇO DE CUIDADO</span><h2>Gerenciar jornada</h2></div><button class="icon-button" value="cancel" aria-label="Fechar">×</button></form><div id="manageContent"></div></dialog>
   <template id="participantTemplate"><article class="participant"><button class="avatar-wrap" type="button" aria-label="Adicionar ou trocar foto"><span class="avatar"></span><span class="photo-edit">＋</span></button><input class="photo-input" type="file" accept="image/png,image/jpeg,image/webp" hidden><div class="participant-name"></div><div class="participant-caption"></div></article></template>
-  <script src="/desafio-meninas/app.js" defer></script>
+  <dialog id="addActivityDialog" class="manage-dialog activity-dialog"><form id="addActivityForm"><div class="dialog-top"><div><span class="eyebrow small">NOVA ETAPA</span><h2>Adicionar atividade</h2></div><button class="icon-button" type="button" data-close-add aria-label="Fechar">×</button></div><label class="activity-form-label" for="newActivityTitle">Nome da atividade</label><input class="field" id="newActivityTitle" name="title" maxlength="160" required placeholder="Ex.: Criar algo juntas"><label class="activity-form-label" for="newActivityDescription">Descrição</label><textarea class="field" id="newActivityDescription" name="description" maxlength="2500" placeholder="Conte o que vocês podem fazer"></textarea><div class="activity-form-actions"><button class="button button-soft" type="button" data-close-add>Cancelar</button><button class="button button-primary" type="submit">Adicionar</button></div></form></dialog>
+  <script src="/desafio-meninas/app.js?v=20261114-activities" defer></script>
 </body>
 </html>
