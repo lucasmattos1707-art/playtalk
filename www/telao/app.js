@@ -30,7 +30,7 @@
     if(wasPlaying)video.play().catch(()=>{});
     const settleSeek=()=>{
       if(pendingSeekIndex!==targetIndex)return;
-      if(!video.seeking&&Math.abs(video.currentTime-seconds[targetIndex])<=0.75){updateFromPlayback();return;}
+      if(!video.seeking&&Math.abs(video.currentTime-seconds[targetIndex])<=0.75){pendingSeekIndex=null;update(targetIndex);return;}
       if(video.readyState>0)setTimeout(settleSeek,120);
     };
     setTimeout(settleSeek,0);
@@ -44,8 +44,8 @@
   list.addEventListener('click',e=>{const button=e.target.closest('[data-index]');if(button)seek(Number(button.dataset.index));});
   previous.addEventListener('click',()=>seek(selected-1));
   next.addEventListener('click',()=>seek(selected+1));
-  video.addEventListener('timeupdate',()=>{if(video.seeking)return;if(pendingSeekIndex!==null&&Math.abs(video.currentTime-seconds[pendingSeekIndex])>0.75)return;updateFromPlayback();});
-  video.addEventListener('seeked',()=>{if(pendingSeekIndex!==null&&Math.abs(video.currentTime-seconds[pendingSeekIndex])<=0.75)updateFromPlayback();});
+  video.addEventListener('timeupdate',()=>{if(video.seeking)return;if(pendingSeekIndex!==null){if(Math.abs(video.currentTime-seconds[pendingSeekIndex])<=0.75){const targetIndex=pendingSeekIndex;pendingSeekIndex=null;update(targetIndex);}return;}updateFromPlayback();});
+  video.addEventListener('seeked',()=>{if(pendingSeekIndex!==null&&Math.abs(video.currentTime-seconds[pendingSeekIndex])<=0.75){const targetIndex=pendingSeekIndex;pendingSeekIndex=null;update(targetIndex);}});
   const videoError=document.querySelector('#videoError');
   video.addEventListener('error',()=>{if(video.error)videoError.hidden=false;});
   video.addEventListener('loadedmetadata',()=>{videoError.hidden=true;});
