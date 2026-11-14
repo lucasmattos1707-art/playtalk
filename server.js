@@ -31993,6 +31993,15 @@ Use frases naturais, fáceis de falar e com o mesmo sentido. Não use outros idi
   }
 });
 
+require('./lib/desafio-meninas').installGirlsChallenge(app, {
+  pool,
+  authenticate: readAuthenticatedUserFromRequest,
+  authorizeAdmin: requireAdminUserFromRequest,
+  isAdminRecord: isAdminUserRecord,
+  staticDir,
+  sharp
+});
+
 app.get(['/generallevels', '/generallevels/', '/generallevels.html'], (req, res) => {
   const payload = getAuthenticatedUserFromRequest(req);
   if (!payload) {
