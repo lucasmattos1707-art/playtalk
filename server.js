@@ -32301,13 +32301,13 @@ app.get('/api/telao/video', async (req, res) => {
       : undefined;
     const result = await getR2Client().send(new GetObjectCommand({
       Bucket: R2_BUCKET_NAME,
-      Key: 'fluentlevelup/telao/espetaculo-kelly-abertura.mp4',
+      Key: 'fluentlevelup/telao/espetaculo-kelly-completo-v20261119.mp4',
       Range: rangeHeader
     }));
     res.status(result?.ContentRange ? 206 : 200);
     res.setHeader('Content-Type', 'video/mp4');
     res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     if (Number.isFinite(Number(result?.ContentLength))) res.setHeader('Content-Length', String(result.ContentLength));
     if (result?.ContentRange) res.setHeader('Content-Range', result.ContentRange);
     if (result?.ETag) res.setHeader('ETag', result.ETag);

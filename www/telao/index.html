@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#171316">
   <title>Telão</title>
-  <link rel="stylesheet" href="/telao/style.css">
+  <link rel="stylesheet" href="/telao/style.css?v=20261119-extended-show-v1">
 </head>
 <body>
   <main class="telao">
     <section class="player-card" aria-label="Player de vídeo">
       <div class="video-shell">
-        <video id="video" controls playsinline preload="metadata">
-          <source src="/api/telao/video" type="video/mp4">
+        <video id="video" controls playsinline preload="auto">
+          <source src="/api/telao/video?v=20261119-extended-show-v1" type="video/mp4">
         </video>
         <div class="video-error" id="videoError" hidden>Não foi possível carregar o vídeo. Atualize a página e tente novamente.</div>
       </div>
@@ -29,6 +29,6 @@
       <div class="chapter-list" id="chapters"></div>
     </section>
   </main>
-  <script src="/telao/app.js?v=61cb0af" defer></script>
+  <script src="/telao/app.js?v=20261119-extended-show-v1" defer></script>
 </body>
 </html>
