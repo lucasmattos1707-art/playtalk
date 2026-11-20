@@ -32296,36 +32296,12 @@ app.post('/api/finance/assistant/confirm',async(req,res)=>{let client;try{const 
 
 app.get('/api/telao/video', async (req, res) => {
   try {
-    const rangeHeader = typeof req.headers.range === 'string' && /^bytes=\d*-\d*$/i.test(req.headers.range.trim())
-      ? req.headers.range.trim()
-      : undefined;
-    const result = await getR2Client().send(new GetObjectCommand({
-      Bucket: R2_BUCKET_NAME,
-      Key: 'fluentlevelup/telao/espetaculo-kelly-completo-v20261119.mp4',
-      Range: rangeHeader
-    }));
-    res.status(result?.ContentRange ? 206 : 200);
-    res.setHeader('Content-Type', 'video/mp4');
-    res.setHeader('Accept-Ranges', 'bytes');
+    const videoUrl = buildFlashcardsR2PublicUrl('fluentlevelup/telao/espetaculo-kelly-completo-v20261119.mp4');
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    if (Number.isFinite(Number(result?.ContentLength))) res.setHeader('Content-Length', String(result.ContentLength));
-    if (result?.ContentRange) res.setHeader('Content-Range', result.ContentRange);
-    if (result?.ETag) res.setHeader('ETag', result.ETag);
-    if (typeof result?.Body?.pipe === 'function') {
-      result.Body.on('error', error => {
-        console.error('Erro no streaming do vídeo do telão:', error);
-        if (!res.headersSent) res.status(500).end();
-        else res.destroy(error);
-      });
-      result.Body.pipe(res);
-      return;
-    }
-    res.send(await readR2BodyAsBuffer(result?.Body));
+    res.redirect(302, videoUrl);
   } catch (error) {
-    const status = Number(error?.$metadata?.httpStatusCode || error?.statusCode || 0);
-    if (status === 404 || error?.Code === 'NoSuchKey') { res.status(404).end(); return; }
     console.error('Erro ao abrir vídeo do telão:', error);
-    if (!res.headersSent) res.status(status || 500).end();
+    if (!res.headersSent) res.status(500).end();
   }
 });
 
