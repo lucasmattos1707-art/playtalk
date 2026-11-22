@@ -353,6 +353,7 @@ let flashcardRankingsTableReadyPromise = null;
 let usersAvatarColumnReadyPromise = null;
 let flashcardUserStateTablesReadyPromise = null;
 let flashcardModeRecordsTableReadyPromise = null;
+let flashcardGameModeProgressTableReadyPromise = null;
 let flashcardAcquisitionTableReadyPromise = null;
 let userDailyMissionStatsTableReadyPromise = null;
 let userFluencySealsTableReadyPromise = null;
@@ -2861,6 +2862,27 @@ const ensureFlashcardModeRecordsTable = async () => {
     });
   }
   await flashcardModeRecordsTableReadyPromise;
+  return true;
+};
+
+const ensureFlashcardGameModeProgressTable = async () => {
+  if (!pool) return false;
+  if (!flashcardGameModeProgressTableReadyPromise) {
+    flashcardGameModeProgressTableReadyPromise = pool.query(`
+      CREATE TABLE IF NOT EXISTS public.user_flashcard_game_mode_progress (
+        user_id integer PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+        current_level integer NOT NULL DEFAULT 1 CHECK (current_level BETWEEN 1 AND 50000),
+        current_mode smallint NOT NULL DEFAULT 0 CHECK (current_mode BETWEEN 0 AND 6),
+        intro_completed boolean NOT NULL DEFAULT false,
+        last_round_id text NOT NULL DEFAULT '',
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )
+    `).catch((error) => {
+      flashcardGameModeProgressTableReadyPromise = null;
+      throw error;
+    });
+  }
+  await flashcardGameModeProgressTableReadyPromise;
   return true;
 };
 
@@ -20823,6 +20845,176 @@ app.get('/api/flashcards/state', async (req, res) => {
         ? 'Usuario invalido.'
         : 'Erro ao carregar estado dos flashcards.'
     });
+  }
+});
+
+app.get('/api/flashcards/game-mode-progress', async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    await ensureFlashcardGameModeProgressTable();
+    const userId = Number(authUser.id);
+    await pool.query(
+      `INSERT INTO public.user_flashcard_game_mode_progress (user_id)
+       VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
+      [userId]
+    );
+    const result = await pool.query(
+      `SELECT current_level, current_mode, intro_completed, updated_at
+       FROM public.user_flashcard_game_mode_progress WHERE user_id = $1`,
+      [userId]
+    );
+    const row = result.rows[0] || {};
+    res.json({
+      success: true,
+      progress: {
+        level: Math.max(1, Number(row.current_level) || 1),
+        mode: Math.max(0, Math.min(6, Number(row.current_mode) || 0)),
+        introCompleted: Boolean(row.intro_completed),
+        updatedAt: row.updated_at || null
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao carregar progresso dos modos de jogo:', error);
+    res.status(500).json({ success: false, message: 'Erro ao carregar o progresso dos modos.' });
+  }
+});
+
+app.post('/api/flashcards/game-mode-progress/intro-complete', express.json({ limit: '16kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    await ensureFlashcardGameModeProgressTable();
+    const userId = Number(authUser.id);
+    const result = await pool.query(
+      `INSERT INTO public.user_flashcard_game_mode_progress (user_id, current_level, current_mode, intro_completed)
+       VALUES ($1, 1, 1, true)
+       ON CONFLICT (user_id) DO UPDATE SET
+         current_mode = CASE
+           WHEN public.user_flashcard_game_mode_progress.current_mode = 0 THEN 1
+           ELSE public.user_flashcard_game_mode_progress.current_mode
+         END,
+         intro_completed = true,
+         updated_at = now()
+       RETURNING current_level, current_mode, intro_completed, updated_at`,
+      [userId]
+    );
+    const row = result.rows[0] || {};
+    res.json({
+      success: true,
+      progress: {
+        level: Math.max(1, Number(row.current_level) || 1),
+        mode: Math.max(1, Math.min(6, Number(row.current_mode) || 1)),
+        introCompleted: Boolean(row.intro_completed),
+        updatedAt: row.updated_at || null
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao concluir a introducao dos modos de jogo:', error);
+    res.status(500).json({ success: false, message: 'Erro ao salvar a introducao.' });
+  }
+});
+
+app.post('/api/flashcards/game-mode-progress/complete', express.json({ limit: '16kb' }), async (req, res) => {
+  if (!pool) {
+    res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+    return;
+  }
+  const authUser = await readAuthenticatedUserFromRequest(req);
+  if (!authUser?.id) {
+    clearAuthCookie(res);
+    res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+    return;
+  }
+  const level = Number.parseInt(req.body?.level, 10);
+  const mode = Number.parseInt(req.body?.mode, 10);
+  const attempts = Number.parseInt(req.body?.attempts, 10);
+  const errors = Number.parseInt(req.body?.errors, 10);
+  const roundId = String(req.body?.roundId || '').trim().slice(0, 100);
+  if (!Number.isInteger(level) || level < 1 || level > 50000
+    || !Number.isInteger(mode) || mode < 1 || mode > 6
+    || attempts !== 25 || !Number.isInteger(errors) || errors < 0 || errors >= 5 || !roundId) {
+    res.status(400).json({ success: false, message: 'O modo precisa ser concluido com 25 cartas e pelo menos um coracao restante.' });
+    return;
+  }
+  let client;
+  try {
+    await ensureFlashcardGameModeProgressTable();
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const userId = Number(authUser.id);
+    await client.query(
+      `INSERT INTO public.user_flashcard_game_mode_progress (user_id)
+       VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
+      [userId]
+    );
+    const currentResult = await client.query(
+      `SELECT current_level, current_mode, intro_completed, last_round_id
+       FROM public.user_flashcard_game_mode_progress WHERE user_id = $1 FOR UPDATE`,
+      [userId]
+    );
+    const current = currentResult.rows[0] || {};
+    if (String(current.last_round_id || '') === roundId) {
+      await client.query('COMMIT');
+      res.json({ success: true, advanced: false, duplicate: true, progress: {
+        level: Number(current.current_level) || 1,
+        mode: Number(current.current_mode) || 0,
+        introCompleted: Boolean(current.intro_completed)
+      } });
+      return;
+    }
+    if (!current.intro_completed || Number(current.current_level) !== level || Number(current.current_mode) !== mode) {
+      await client.query('ROLLBACK');
+      res.status(409).json({
+        success: false,
+        message: 'Este modo nao esta liberado para o progresso atual.',
+        progress: {
+          level: Number(current.current_level) || 1,
+          mode: Number(current.current_mode) || 0,
+          introCompleted: Boolean(current.intro_completed)
+        }
+      });
+      return;
+    }
+    const nextLevel = mode === 6 ? Math.min(50000, level + 1) : level;
+    const nextMode = mode === 6 ? 1 : mode + 1;
+    const saved = await client.query(
+      `UPDATE public.user_flashcard_game_mode_progress
+       SET current_level = $2, current_mode = $3, last_round_id = $4, updated_at = now()
+       WHERE user_id = $1
+       RETURNING current_level, current_mode, intro_completed, updated_at`,
+      [userId, nextLevel, nextMode, roundId]
+    );
+    await client.query('COMMIT');
+    const row = saved.rows[0] || {};
+    res.json({ success: true, advanced: true, progress: {
+      level: Number(row.current_level) || nextLevel,
+      mode: Number(row.current_mode) || nextMode,
+      introCompleted: Boolean(row.intro_completed),
+      updatedAt: row.updated_at || null
+    } });
+  } catch (error) {
+    if (client) await client.query('ROLLBACK').catch(() => {});
+    console.error('Erro ao avancar progresso dos modos de jogo:', error);
+    res.status(500).json({ success: false, message: 'Erro ao salvar o progresso do modo.' });
+  } finally {
+    client?.release();
   }
 });
 

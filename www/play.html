@@ -1630,6 +1630,201 @@
       pointer-events: none;
     }
 
+    .game-mode-home[hidden],
+    .game-mode-intro[hidden],
+    .game-mode-prestart[hidden],
+    .game-mode-home-return[hidden] { display: none !important; }
+
+    .game-mode-home {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: clamp(14px, 3vh, 34px);
+      padding: clamp(18px, 4vw, 54px);
+      color: #f5f8ff;
+      background: radial-gradient(circle at 50% 42%, #12253d 0, #081323 48%, #030811 100%);
+      overflow: auto;
+    }
+
+    .game-mode-home__top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      min-height: 84px;
+    }
+
+    .game-mode-level-star {
+      width: clamp(68px, 10vw, 112px);
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      color: #07111d;
+      font-size: clamp(24px, 4vw, 42px);
+      font-weight: 900;
+      background: #ffd33d;
+      clip-path: polygon(50% 0%, 61% 34%, 98% 35%, 68% 57%, 79% 94%, 50% 72%, 21% 94%, 32% 57%, 2% 35%, 39% 34%);
+      filter: drop-shadow(0 0 20px rgba(255, 211, 61, .32));
+      opacity: 0;
+      transform: scale(.86);
+      transition: opacity .75s ease, transform .75s ease;
+    }
+
+    .game-mode-profile {
+      width: clamp(62px, 8vw, 92px);
+      aspect-ratio: 1;
+      padding: 4px;
+      border: 2px solid rgba(134, 216, 255, .62);
+      border-radius: 50%;
+      background: rgba(22, 57, 86, .72);
+      box-shadow: 0 0 24px rgba(68, 185, 255, .2);
+      cursor: pointer;
+      opacity: 0;
+      transform: scale(.86);
+      transition: opacity .75s ease, transform .75s ease, border-color .2s ease;
+    }
+
+    .game-mode-profile:hover { border-color: #76d6ff; }
+    .game-mode-profile img { width: 100%; height: 100%; display: block; border-radius: 50%; object-fit: cover; }
+    .game-mode-home.is-intro-profile-visible .game-mode-profile,
+    .game-mode-home.is-intro-star-visible .game-mode-level-star,
+    .game-mode-home.is-ready .game-mode-profile,
+    .game-mode-home.is-ready .game-mode-level-star { opacity: 1; transform: scale(1); }
+
+    .game-mode-grid {
+      width: min(1120px, 100%);
+      align-self: center;
+      justify-self: center;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      gap: clamp(12px, 2.7vw, 34px);
+    }
+
+    .game-mode-tile {
+      min-width: 0;
+      min-height: clamp(150px, 25vh, 270px);
+      padding: clamp(12px, 2vw, 24px);
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      gap: clamp(8px, 1.5vh, 16px);
+      border: 1px solid rgba(135, 181, 220, .22);
+      border-radius: 28px;
+      color: #f7fbff;
+      background: linear-gradient(155deg, rgba(20, 37, 58, .92), rgba(8, 19, 33, .84));
+      box-shadow: 0 18px 44px rgba(0, 0, 0, .22), inset 0 1px rgba(255,255,255,.05);
+      opacity: .6;
+      transform: translateY(12px) scale(.97);
+      transition: opacity .8s ease, transform .8s ease, border-color .2s ease, box-shadow .2s ease;
+      cursor: not-allowed;
+    }
+
+    .game-mode-tile.is-intro-visible { opacity: .6; transform: translateY(0) scale(1); }
+    .game-mode-home.is-ready .game-mode-tile { opacity: .6; transform: none; }
+    .game-mode-tile.is-unlocked { opacity: 1; cursor: pointer; border-color: rgba(109, 204, 255, .54); }
+    .game-mode-tile.is-unlocked:hover { transform: translateY(-3px); box-shadow: 0 20px 46px rgba(0,0,0,.34), 0 0 24px rgba(55, 177, 255, .16); }
+    .game-mode-tile.is-current { border-color: #48e2a0; box-shadow: 0 0 0 2px rgba(72, 226, 160, .18), 0 0 28px rgba(72, 226, 160, .25); }
+    .game-mode-tile img { width: min(64%, 150px); aspect-ratio: 1; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0,0,0,.2)); }
+    .game-mode-tile__title { font-size: clamp(16px, 2.2vw, 23px); line-height: 1.1; font-weight: 800; text-align: center; }
+    .game-mode-tile:disabled { color: #f7fbff; }
+
+    .game-mode-intro {
+      position: fixed;
+      inset: 0;
+      z-index: 33;
+      display: grid;
+      place-items: center;
+      background: #000;
+      transition: opacity 1.5s ease;
+    }
+
+    .game-mode-intro.is-fading { opacity: 0; pointer-events: none; }
+    .game-mode-intro.is-playing { background: rgba(0, 0, 0, .28); }
+    .game-mode-intro__brand { position: absolute; width: min(62vw, 520px); max-height: 34vh; object-fit: contain; opacity: 0; transition: opacity 1.5s ease; }
+    .game-mode-intro__brand.is-visible { opacity: 1; }
+    .game-mode-intro__brand--first { width: min(48vw, 440px); }
+    .game-mode-intro__prompt {
+      position: absolute;
+      top: calc(50% + min(25vh, 190px));
+      padding: 14px 24px;
+      border: 1px solid rgba(220, 240, 255, .45);
+      border-radius: 999px;
+      color: #ecf7ff;
+      background: rgba(7, 17, 29, .78);
+      font: 700 clamp(15px, 2vw, 21px)/1.2 system-ui, sans-serif;
+      letter-spacing: .03em;
+      cursor: pointer;
+      transition: opacity 1.5s ease, transform 1.5s ease;
+    }
+
+    .game-mode-intro.is-playing .game-mode-intro__prompt { opacity: 0; transform: translateY(10px); pointer-events: none; }
+    .game-mode-intro__status { position: absolute; bottom: 28px; color: #91a8bf; font-size: 13px; }
+
+    .game-mode-prestart {
+      position: fixed;
+      inset: 0;
+      z-index: 36;
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(280px, 3fr);
+      align-items: center;
+      gap: clamp(24px, 5vw, 72px);
+      padding: clamp(22px, 6vw, 84px);
+      color: #f4f8ff;
+      background: radial-gradient(circle at 25% 45%, #132741 0, #071323 52%, #020811 100%);
+    }
+
+    .game-mode-prestart__back { position: absolute; top: 24px; left: 24px; width: 48px; height: 48px; border: 1px solid rgba(148,190,224,.32); border-radius: 50%; color: #eaf6ff; background: rgba(10,24,41,.8); font-size: 24px; cursor: pointer; }
+    .game-mode-prestart__logo-wrap { display: grid; place-items: center; }
+    .game-mode-prestart__logo { display: block; width: min(40vw, 520px); max-height: 54vh; object-fit: contain; }
+    .game-mode-prestart__body { width: min(560px, 100%); display: grid; gap: 20px; }
+    .game-mode-prestart__eyebrow { margin: 0; color: #8bb5d0; font: 700 13px/1.2 ui-monospace, monospace; letter-spacing: .2em; text-transform: uppercase; }
+    .game-mode-prestart__title { margin: 0; font-size: clamp(32px, 5vw, 58px); line-height: 1; font-weight: 900; }
+    .game-mode-prestart__copy { margin: 0; min-height: 1.4em; color: #b5c9da; font-size: 16px; }
+    .game-mode-audio-progress { height: 4px; overflow: hidden; border-radius: 999px; background: rgba(172,208,235,.22); }
+    .game-mode-audio-progress__fill { width: 0; height: 100%; display: block; border-radius: inherit; background: #75dcff; transition: width .12s linear; }
+    .game-mode-prestart__start { width: min(40vw, 520px); min-height: 68px; display: grid; place-items: center; gap: 6px; padding: 10px 20px; border: 0; border-radius: 18px; color: #032014; background: #49e39b; box-shadow: 0 12px 32px rgba(49,225,148,.24); font-size: 20px; font-weight: 900; cursor: pointer; }
+    .game-mode-prestart__start[hidden] { display: none; }
+    .game-mode-prestart__start svg { width: 28px; height: 28px; fill: currentColor; }
+    .game-mode-prestart__start:disabled { opacity: .55; cursor: progress; }
+    .game-mode-home-return { position: fixed; z-index: 31; top: 18px; left: 18px; width: 46px; height: 46px; border: 1px solid rgba(145,191,224,.32); border-radius: 50%; color: #eaf6ff; background: rgba(6,17,31,.88); font-size: 24px; cursor: pointer; }
+    .game-mode-watch-forward { position: fixed; z-index: 42; right: max(22px, env(safe-area-inset-right)); bottom: max(22px, env(safe-area-inset-bottom)); width: 62px; height: 62px; display: grid; place-items: center; border: 1px solid rgba(117,214,255,.56); border-radius: 50%; color: #effaff; background: rgba(8,31,52,.9); box-shadow: 0 0 24px rgba(65,188,255,.22); cursor: pointer; }
+    .game-mode-watch-forward[hidden] { display: none !important; }
+    .game.is-mode-two-repeat .game-card__content,
+    .game.is-mode-two-repeat #gameStep,
+    .game.is-mode-two-repeat #gameWord,
+    .game.is-mode-two-repeat #gameSubword,
+    .game.is-mode-two-repeat #gamePhaseWord,
+    .game.is-mode-two-repeat #gameStarCopy,
+    .game.is-mode-two-repeat #gameStatusWrap,
+    .game.is-mode-two-repeat .game-touch__label { display: none !important; }
+    .game.is-watching-mode .game-card__content { display: grid !important; }
+    .game.is-watching-mode #gameStep,
+    .game.is-watching-mode #gameSubword,
+    .game.is-watching-mode #gamePhaseWord { display: none !important; }
+    .game.is-watching-mode .game-touch__label,
+    .game.is-watching-mode .game-status-wrap,
+    .game.is-watching-mode .game-controls-proxy,
+    .game.is-watching-mode .keyboardscreen-host { display: none !important; }
+    .game.is-watching-mode .game-card__visual { width: min(82vw, 720px); max-height: 62vh; margin-inline: auto; }
+    .game.is-watching-mode .game-word { display: none !important; }
+
+    @media (max-width: 720px) {
+      .game-mode-home { padding: 14px; gap: 12px; }
+      .game-mode-home__top { min-height: 62px; }
+      .game-mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 10px; }
+      .game-mode-tile { min-height: clamp(128px, 22vh, 190px); border-radius: 20px; }
+      .game-mode-tile img { width: min(60%, 104px); }
+      .game-mode-prestart { grid-template-columns: 1fr; grid-template-rows: minmax(120px, 35vh) auto; align-content: center; gap: 22px; padding: 70px 22px 28px; }
+      .game-mode-prestart__logo { width: min(40vw, 240px); max-height: 30vh; }
+      .game-mode-prestart__body { justify-self: center; }
+      .game-mode-prestart__start { width: min(40vw, 240px); justify-self: center; }
+      .game-mode-intro__brand { width: min(86vw, 430px); }
+      .game-mode-intro__brand--first { width: min(74vw, 360px); }
+      .game-mode-intro__prompt { top: calc(50% + 22vh); }
+    }
+
     .cards-battle-search {
       position: fixed;
       inset: 0;
@@ -13939,6 +14134,41 @@
         <p class="welcome-gate__bg-status" id="welcomeBgStatus"></p>
       </div>
     </div>
+    <section class="game-mode-home" id="gameModeHome" aria-label="Modos de jogo" hidden>
+      <header class="game-mode-home__top">
+        <div class="game-mode-level-star" id="gameModeLevelStar" aria-label="Nivel atual"><span id="gameModeLevelValue">1</span></div>
+        <button class="game-mode-profile" id="gameModeProfileBtn" type="button" aria-label="Abrir a home e o perfil">
+          <img id="gameModeProfileImage" src="/Avatar/profile-neon-blue.svg" alt="Foto do usuario">
+        </button>
+      </header>
+      <div class="game-mode-grid" id="gameModeGrid" aria-label="Seis modos de jogo">
+        <button class="game-mode-tile" type="button" data-game-mode="1" aria-label="Modo 1: Digitação" disabled><img src="/medalhas/modo-4.png" alt=""><span class="game-mode-tile__title">Digitação</span></button>
+        <button class="game-mode-tile" type="button" data-game-mode="2" aria-label="Modo 2: Falar em inglês" disabled><img src="/medalhas/modo-3.png" alt=""><span class="game-mode-tile__title">Falar em inglês</span></button>
+        <button class="game-mode-tile" type="button" data-game-mode="3" aria-label="Modo 3: Ouvir e repetir" disabled><img src="/medalhas/modo-2.png" alt=""><span class="game-mode-tile__title">Ouvir e repetir</span></button>
+        <button class="game-mode-tile" type="button" data-game-mode="4" aria-label="Modo 4: Ouvir e falar" disabled><img src="/medalhas/modo-1.png" alt=""><span class="game-mode-tile__title">Ouvir e falar</span></button>
+        <button class="game-mode-tile" type="button" data-game-mode="5" aria-label="Modo 5: Watching" disabled><img src="/medalhas/modo-watching.webp" alt=""><span class="game-mode-tile__title">Watching</span></button>
+        <button class="game-mode-tile" type="button" data-game-mode="6" aria-label="Modo 6: Modo Fire" disabled><img src="/medalhas/modo-5.png" alt=""><span class="game-mode-tile__title">Modo Fire</span></button>
+      </div>
+    </section>
+    <section class="game-mode-intro" id="gameModeIntroSplash" aria-label="Apresentacao inicial" hidden>
+      <img class="game-mode-intro__brand game-mode-intro__brand--first is-visible" id="gameModeIntroFirstLogo" src="/arquivos-codex/welcome-gate/fluent-level-up.png" alt="Fluent LevelUp">
+      <img class="game-mode-intro__brand" id="gameModeIntroSecondLogo" src="/arquivos-codex/welcome-gate/fluent-level-up-wordmark.png" alt="Fluent LevelUp">
+      <button class="game-mode-intro__prompt" id="gameModeIntroStartBtn" type="button">Toque para começar</button>
+      <p class="game-mode-intro__status" id="gameModeIntroStatus" aria-live="polite"></p>
+    </section>
+    <button class="game-mode-home-return" id="gameModeHomeReturnBtn" type="button" aria-label="Voltar aos modos de jogo" hidden>&larr;</button>
+    <section class="game-mode-prestart" id="gameModePrestart" aria-modal="true" role="dialog" aria-labelledby="gameModePrestartTitle" hidden>
+      <button class="game-mode-prestart__back" id="gameModePrestartBackBtn" type="button" aria-label="Voltar aos modos">&larr;</button>
+      <div class="game-mode-prestart__logo-wrap"><img class="game-mode-prestart__logo" id="gameModePrestartLogo" alt=""></div>
+      <div class="game-mode-prestart__body">
+        <p class="game-mode-prestart__eyebrow" id="gameModePrestartLevel">Nivel 1</p>
+        <h2 class="game-mode-prestart__title" id="gameModePrestartTitle">Digitação</h2>
+        <p class="game-mode-prestart__copy" id="gameModePrestartStatus" aria-live="polite">Carregando as cartas...</p>
+        <div class="game-mode-audio-progress" id="gameModeAudioProgress" role="progressbar" aria-label="Progresso do audio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="game-mode-audio-progress__fill" id="gameModeAudioProgressFill"></span></div>
+        <button class="game-mode-prestart__start" id="gameModePrestartStartBtn" type="button" hidden><span>Começar</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5.4v13.2L18.2 12 7 5.4Z"></path></svg></button>
+      </div>
+    </section>
+    <button class="game-mode-watch-forward" id="gameModeWatchForwardBtn" type="button" aria-label="Pular para a proxima carta" hidden><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M5 5v14l9-7-9-7Zm10 0v14l8-7-8-7Z"></path></svg></button>
     <div class="welcome-mode-modal" id="welcomeModeModal" aria-hidden="true">
       <div class="welcome-mode-modal__panel">
         <div class="welcome-mode-modal__top">
@@ -15634,6 +15864,14 @@
       const TRAINING_CARD_STEP = 10;
       const GAME_STAR_TARGET = 5;
       const CARDS_MODE_PRACTICE_STAGE_MAX = 5;
+      const GAME_MODE_HOME_CONFIG = [
+        { id: 1, title: 'Digitação', stage: 4, image: '/medalhas/modo-4.png', audio: '/audiostuto/mode-intros/planting.mp3', needsMic: false },
+        { id: 2, title: 'Falar em inglês', stage: 3, image: '/medalhas/modo-3.png', audio: '/audiostuto/mode-intros/listening.mp3', needsMic: true },
+        { id: 3, title: 'Ouvir e repetir', stage: 2, image: '/medalhas/modo-2.png', audio: '/audiostuto/mode-intros/meaning.mp3', needsMic: true },
+        { id: 4, title: 'Ouvir e falar', stage: 1, image: '/medalhas/modo-1.png', audio: '/audiostuto/mode-intros/connecting.mp3', needsMic: true },
+        { id: 5, title: 'Watching', stage: 1, image: '/medalhas/modo-watching.webp', audio: '/audiostuto/mode-intros/watching.mp3', needsMic: false },
+        { id: 6, title: 'Modo Fire', stage: 5, image: '/medalhas/modo-5.png', audio: '/audiostuto/mode-intros/fire.mp3', needsMic: true }
+      ];
       const LEVEL_MODE_ACQUISITION_STAGE_SEQUENCE = [4, 1, 3];
       const GAME_STAGE_PROGRESS_WEIGHTS = Object.freeze([25, 25, 10, 25, 15]);
       const GAME_STAGE_PROGRESS_TOTAL = Math.max(
@@ -15971,7 +16209,7 @@
           levelTextResponseLanguage: 'english',
           levelTextHitStreak: 0,
           typingRound: { active: false, completed: false, correct: 0, errors: 0, characters: 0, startedAt: 0, endedAt: 0, elapsedMs: 0, attemptClock: null, activeAttemptKey: '', level: 0, total: 0 },
-          cardsModeRound: { active: false, completed: false, correct: 0, errors: 0, attempts: 0, pronunciationScores: [], wordsSpoken: 0, wordsHeard: 0, stage: 0, total: 0 },
+          cardsModeRound: { active: false, completed: false, correct: 0, errors: 0, attempts: 0, pronunciationScores: [], wordsSpoken: 0, wordsHeard: 0, stage: 0, modeId: 0, level: 1, roundId: '', total: 0 },
           flowCards: [],
           flowCardsById: new Map(),
           flowCardsLoadPromise: null,
@@ -15997,6 +16235,10 @@
           cardsModeRemainingCardIds: [],
           cardsModeCompletedCardIds: [],
           cardsModePracticeStage: null,
+          cardsModeModeId: 1,
+          watchingModeActive: false,
+          watchingModeEntryKey: '',
+          mode2PromptEntryKey: '',
           cardsModeInitialDeckSize: 0,
           cardsModeBufferRevision: 0,
           preloadAudios: new Map(),
@@ -16370,6 +16612,20 @@
       let cardsBattleFallbackBusy = false;
       let cardsBattleSelectedFormat = 'simple';
       let cardsBattleBots = [];
+      let gameModeHomeProgress = { level: 1, mode: 0, introCompleted: false };
+      let gameModeIntroAudio = null;
+      let gameModeIntroFrame = 0;
+      let gameModeIntroModeUnlocked = false;
+      let gameModePrestartAudio = null;
+      let gameModePrestartReady = false;
+      let gameModePrestartAudioFinished = false;
+      let gameModePrestartModeId = 0;
+      let gameModeCardsPreloadPromise = null;
+      let gameModeWatchAudio = null;
+      let gameModeWatchTickTimer = 0;
+      let gameModeWatchToken = 0;
+      let gameModeWatchProgress = 0;
+      let gameModeWatchDurationMs = 0;
       let cardsModeBestRecords = new Map();
       let cardsModeBestRecordsLanguage = '';
       let cardsModeBestRecordsLoadedLanguage = '';
@@ -16380,6 +16636,28 @@
 
       const els = {
         welcomeGate: document.getElementById('welcomeGate'),
+        welcomeAvatarPreview: document.getElementById('welcomeAvatarPreview'),
+        gameModeHome: document.getElementById('gameModeHome'),
+        gameModeGrid: document.getElementById('gameModeGrid'),
+        gameModeProfileBtn: document.getElementById('gameModeProfileBtn'),
+        gameModeProfileImage: document.getElementById('gameModeProfileImage'),
+        gameModeLevelValue: document.getElementById('gameModeLevelValue'),
+        gameModeIntroSplash: document.getElementById('gameModeIntroSplash'),
+        gameModeIntroFirstLogo: document.getElementById('gameModeIntroFirstLogo'),
+        gameModeIntroSecondLogo: document.getElementById('gameModeIntroSecondLogo'),
+        gameModeIntroStartBtn: document.getElementById('gameModeIntroStartBtn'),
+        gameModeIntroStatus: document.getElementById('gameModeIntroStatus'),
+        gameModeHomeReturnBtn: document.getElementById('gameModeHomeReturnBtn'),
+        gameModePrestart: document.getElementById('gameModePrestart'),
+        gameModePrestartBackBtn: document.getElementById('gameModePrestartBackBtn'),
+        gameModePrestartLogo: document.getElementById('gameModePrestartLogo'),
+        gameModePrestartTitle: document.getElementById('gameModePrestartTitle'),
+        gameModePrestartLevel: document.getElementById('gameModePrestartLevel'),
+        gameModePrestartStatus: document.getElementById('gameModePrestartStatus'),
+        gameModeAudioProgress: document.getElementById('gameModeAudioProgress'),
+        gameModeAudioProgressFill: document.getElementById('gameModeAudioProgressFill'),
+        gameModePrestartStartBtn: document.getElementById('gameModePrestartStartBtn'),
+        gameModeWatchForwardBtn: document.getElementById('gameModeWatchForwardBtn'),
         welcomeBgBase: document.getElementById('welcomeBgBase'),
         welcomeBgFade: document.getElementById('welcomeBgFade'),
         welcomeModeModal: document.getElementById('welcomeModeModal'),
@@ -24732,7 +25010,10 @@
         els.cardsModeQuickPicker?.querySelectorAll('[data-cards-stage]').forEach((button) => {
           const stage = normalizeCardsModePracticeStage(button.getAttribute('data-cards-stage'));
           const selected = stage === selectedStage;
+          const matchingMode = GAME_MODE_HOME_CONFIG.find((mode) => mode.stage === stage && mode.id !== 5);
+          const locked = Boolean(gameModeHomeProgress.introCompleted && matchingMode && !gameModeIsUnlocked(matchingMode.id));
           button.classList.toggle('is-selected', selected);
+          button.disabled = locked;
           button.setAttribute('aria-pressed', selected ? 'true' : 'false');
         });
       }
@@ -24747,6 +25028,459 @@
         }
         syncCardsModeStagePicker();
         return stage;
+      }
+
+      function gameModeHomeConfig(modeId) {
+        return GAME_MODE_HOME_CONFIG.find((mode) => mode.id === Number(modeId)) || null;
+      }
+
+      function gameModeIsUnlocked(modeId) {
+        return Boolean(gameModeHomeProgress.introCompleted && Number(modeId) <= Number(gameModeHomeProgress.mode));
+      }
+
+      function syncGameModeHome() {
+        if (!els.gameModeHome) return;
+        const avatarSrc = safeText(els.welcomeAvatarPreview?.currentSrc || els.welcomeAvatarPreview?.src);
+        if (avatarSrc && els.gameModeProfileImage) els.gameModeProfileImage.src = avatarSrc;
+        if (els.gameModeLevelValue) els.gameModeLevelValue.textContent = String(Math.max(1, Number(gameModeHomeProgress.level) || 1));
+        els.gameModeGrid?.querySelectorAll('[data-game-mode]').forEach((button) => {
+          const modeId = Number(button.getAttribute('data-game-mode'));
+          const introUnlocked = Boolean(gameModeIntroModeUnlocked && modeId === 1);
+          const unlocked = gameModeIsUnlocked(modeId) || introUnlocked;
+          button.disabled = !unlocked;
+          button.classList.toggle('is-unlocked', unlocked);
+          button.classList.toggle('is-current', unlocked && modeId === Number(gameModeHomeProgress.mode || 1));
+          button.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
+        });
+      }
+
+      async function fetchGameModeHomeProgress() {
+        const response = await fetch(buildApiUrl('/api/flashcards/game-mode-progress'), {
+          credentials: 'include', cache: 'no-store', headers: buildAuthHeaders()
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success || !payload?.progress) {
+          throw new Error(payload?.message || 'Nao foi possivel carregar seu progresso dos modos.');
+        }
+        gameModeHomeProgress = {
+          level: Math.max(1, Number(payload.progress.level) || 1),
+          mode: Math.max(0, Math.min(6, Number(payload.progress.mode) || 0)),
+          introCompleted: Boolean(payload.progress.introCompleted)
+        };
+        const currentModeConfig = gameModeHomeConfig(gameModeHomeProgress.mode || 1);
+        if (currentModeConfig) {
+          state.game.cardsModeModeId = currentModeConfig.id;
+          state.game.cardsModePracticeStage = currentModeConfig.stage;
+        }
+        setSelectedGameLevel(gameModeHomeProgress.level);
+        syncGameModeHome();
+        return gameModeHomeProgress;
+      }
+
+      async function completeGameModeHomeIntro() {
+        const response = await fetch(buildApiUrl('/api/flashcards/game-mode-progress/intro-complete'), {
+          method: 'POST', credentials: 'include',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({})
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success || !payload?.progress) {
+          throw new Error(payload?.message || 'Nao foi possivel salvar a apresentacao.');
+        }
+        gameModeHomeProgress = {
+          level: Math.max(1, Number(payload.progress.level) || 1),
+          mode: Math.max(1, Math.min(6, Number(payload.progress.mode) || 1)),
+          introCompleted: true
+        };
+        syncGameModeHome();
+        return true;
+      }
+
+      async function advanceGameModeHomeProgress(round) {
+        if (!round || !state.user?.id) return false;
+        if (!gameModeHomeProgress.introCompleted
+          || Number(round.level) !== Number(gameModeHomeProgress.level)
+          || Number(round.modeId) !== Number(gameModeHomeProgress.mode)) {
+          return false;
+        }
+        const response = await fetch(buildApiUrl('/api/flashcards/game-mode-progress/complete'), {
+          method: 'POST', credentials: 'include',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            level: Number(round.level) || 1,
+            mode: Number(round.modeId) || 0,
+            attempts: Number(round.attempts) || 0,
+            errors: Number(round.errors) || 0,
+            roundId: safeText(round.roundId)
+          })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success || !payload?.progress) {
+          if (payload?.progress) {
+            gameModeHomeProgress = {
+              level: Math.max(1, Number(payload.progress.level) || 1),
+              mode: Math.max(0, Math.min(6, Number(payload.progress.mode) || 0)),
+              introCompleted: Boolean(payload.progress.introCompleted)
+            };
+            syncGameModeHome();
+          }
+          throw new Error(payload?.message || 'Nao foi possivel avancar o modo.');
+        }
+        gameModeHomeProgress = {
+          level: Math.max(1, Number(payload.progress.level) || 1),
+          mode: Math.max(1, Math.min(6, Number(payload.progress.mode) || 1)),
+          introCompleted: Boolean(payload.progress.introCompleted)
+        };
+        round.progressAdvanced = Boolean(payload.advanced || payload.duplicate);
+        syncGameModeHome();
+        return round.progressAdvanced;
+      }
+
+      function showGameModeHome() {
+        if (!state.user?.id || !els.gameModeHome) return false;
+        els.gameModeHome.hidden = false;
+        els.gameModeHome.classList.add('is-ready');
+        els.gameModeHomeReturnBtn && (els.gameModeHomeReturnBtn.hidden = true);
+        syncGameModeHome();
+        if (!gameModeHomeProgress.introCompleted) {
+          els.gameModeIntroSplash.hidden = false;
+          els.gameModeHome.classList.remove('is-ready');
+        }
+        return true;
+      }
+
+      function openLegacyHomeFromGameModeProfile() {
+        if (els.gameModeHome) els.gameModeHome.hidden = true;
+        if (els.gameModeIntroSplash) els.gameModeIntroSplash.hidden = true;
+        if (els.gameModeHomeReturnBtn) els.gameModeHomeReturnBtn.hidden = false;
+        state.entry.welcomeVisible = true;
+        document.body.classList.add('welcome-active');
+        els.welcomeGate?.classList.add('is-visible');
+        syncWelcomeGate();
+      }
+
+      function closeGameModeIntroAudio() {
+        if (gameModeIntroFrame) window.cancelAnimationFrame(gameModeIntroFrame);
+        gameModeIntroFrame = 0;
+        if (gameModeIntroAudio) {
+          gameModeIntroAudio.pause();
+          gameModeIntroAudio.src = '';
+        }
+        gameModeIntroAudio = null;
+      }
+
+      function runGameModeIntroTimeline() {
+        const audio = gameModeIntroAudio;
+        if (!audio || !els.gameModeHome) return;
+        const time = Math.max(0, Number(audio.currentTime) || 0);
+        if (time >= 1.5) els.gameModeIntroFirstLogo?.classList.remove('is-visible');
+        if (time >= 2) els.gameModeIntroSecondLogo?.classList.add('is-visible');
+        const tiles = Array.from(els.gameModeGrid?.querySelectorAll('[data-game-mode]') || []);
+        tiles.forEach((tile, index) => {
+          tile.classList.toggle('is-intro-visible', time >= 4 + index);
+        });
+        if (time >= 10 && !gameModeIntroModeUnlocked) {
+          gameModeIntroModeUnlocked = true;
+          syncGameModeHome();
+        }
+        if (time >= 11) els.gameModeHome.classList.add('is-intro-profile-visible');
+        if (time >= 12) els.gameModeHome.classList.add('is-intro-star-visible');
+        if (!audio.ended) gameModeIntroFrame = window.requestAnimationFrame(runGameModeIntroTimeline);
+      }
+
+      async function startGameModeHomeIntro() {
+        if (gameModeIntroAudio || !els.gameModeIntroSplash || !els.gameModeHome) return;
+        gameModeIntroAudio = new Audio('/audiostuto/mode-intros/intro.mp3');
+        gameModeIntroAudio.preload = 'auto';
+        gameModeIntroAudio.addEventListener('ended', async () => {
+          try {
+            await completeGameModeHomeIntro();
+            els.gameModeIntroSplash.classList.add('is-fading');
+            window.setTimeout(() => {
+              els.gameModeIntroSplash.hidden = true;
+              els.gameModeIntroSplash.classList.remove('is-fading', 'is-playing');
+              els.gameModeIntroFirstLogo?.classList.add('is-visible');
+              els.gameModeIntroSecondLogo?.classList.remove('is-visible');
+              els.gameModeHome?.classList.add('is-ready');
+              els.gameModeHome?.classList.remove('is-intro-profile-visible', 'is-intro-star-visible');
+              els.gameModeGrid?.querySelectorAll('.is-intro-visible').forEach((tile) => tile.classList.remove('is-intro-visible'));
+              gameModeIntroModeUnlocked = false;
+              closeGameModeIntroAudio();
+            }, 1500);
+          } catch (error) {
+            if (els.gameModeIntroStatus) els.gameModeIntroStatus.textContent = error?.message || 'Falha ao salvar o progresso. Tente novamente.';
+            closeGameModeIntroAudio();
+          }
+        }, { once: true });
+        gameModeIntroAudio.addEventListener('error', () => {
+          if (els.gameModeIntroStatus) els.gameModeIntroStatus.textContent = 'Nao foi possivel carregar a introducao. Toque para tentar novamente.';
+          closeGameModeIntroAudio();
+        }, { once: true });
+        els.gameModeIntroSplash.classList.add('is-playing');
+        els.gameModeIntroStatus.textContent = '';
+        try {
+          await gameModeIntroAudio.play();
+          gameModeIntroFrame = window.requestAnimationFrame(runGameModeIntroTimeline);
+        } catch (_error) {
+          els.gameModeIntroSplash.classList.remove('is-playing');
+          els.gameModeIntroStatus.textContent = 'Toque para tentar reproduzir a apresentacao.';
+          closeGameModeIntroAudio();
+        }
+      }
+
+      function updateGameModePrestartButton() {
+        if (!els.gameModePrestartStartBtn) return;
+        const ready = gameModePrestartReady && gameModePrestartAudioFinished;
+        els.gameModePrestartStartBtn.hidden = !ready;
+        if (ready && els.gameModePrestartStatus) els.gameModePrestartStatus.textContent = 'Pronto para jogar.';
+      }
+
+      function closeGameModePrestart() {
+        if (gameModePrestartAudio) {
+          gameModePrestartAudio.pause();
+          gameModePrestartAudio.src = '';
+        }
+        gameModePrestartAudio = null;
+        gameModeCardsPreloadPromise = null;
+        gameModePrestartReady = false;
+        gameModePrestartAudioFinished = false;
+        if (els.gameModePrestart) els.gameModePrestart.hidden = true;
+        if (els.gameModeAudioProgressFill) els.gameModeAudioProgressFill.style.width = '0%';
+        if (els.gameModeAudioProgress) els.gameModeAudioProgress.setAttribute('aria-valuenow', '0');
+        if (els.gameModePrestartStartBtn) els.gameModePrestartStartBtn.hidden = true;
+      }
+
+      function openGameModePrestart(modeId) {
+        const mode = gameModeHomeConfig(modeId);
+        if (!mode || !gameModeIsUnlocked(mode.id)) return false;
+        closeGameModePrestart();
+        gameModePrestartModeId = mode.id;
+        state.game.cardsModeModeId = mode.id;
+        setCardsModePracticeStage(mode.stage);
+        setSelectedGameLevel(gameModeHomeProgress.level);
+        gameModePrestartReady = false;
+        gameModePrestartAudioFinished = gameModeHomeProgress.level !== 1;
+        if (els.gameModePrestartTitle) els.gameModePrestartTitle.textContent = mode.title;
+        if (els.gameModePrestartLevel) els.gameModePrestartLevel.textContent = `Nivel ${gameModeHomeProgress.level}`;
+        if (els.gameModePrestartLogo) {
+          els.gameModePrestartLogo.src = mode.image;
+          els.gameModePrestartLogo.alt = mode.title;
+        }
+        if (els.gameModePrestartStatus) els.gameModePrestartStatus.textContent = 'Carregando as cartas...';
+        if (els.gameModeAudioProgress) els.gameModeAudioProgress.hidden = gameModeHomeProgress.level !== 1;
+        if (els.gameModePrestart) els.gameModePrestart.hidden = false;
+
+        gameModeCardsPreloadPromise = prepareCardsModeLevelFromGeneralLevels(gameModeHomeProgress.level)
+          .then(() => {
+            gameModePrestartReady = true;
+            updateGameModePrestartButton();
+          })
+          .catch((error) => {
+            if (els.gameModePrestartStatus) els.gameModePrestartStatus.textContent = safeText(error?.message) || 'Falha ao carregar as cartas.';
+            throw error;
+          });
+        gameModeCardsPreloadPromise.catch(() => {});
+
+        if (gameModeHomeProgress.level !== 1) {
+          updateGameModePrestartButton();
+          return true;
+        }
+        gameModePrestartAudio = new Audio(mode.audio);
+        gameModePrestartAudio.preload = 'auto';
+        gameModePrestartAudio.addEventListener('timeupdate', () => {
+          if (!gameModePrestartAudio || !els.gameModeAudioProgressFill) return;
+          const duration = Number(gameModePrestartAudio.duration) || 0;
+          const progress = duration > 0 ? Math.max(0, Math.min(100, gameModePrestartAudio.currentTime / duration * 100)) : 0;
+          els.gameModeAudioProgressFill.style.width = `${progress}%`;
+          els.gameModeAudioProgress?.setAttribute('aria-valuenow', String(Math.round(progress)));
+        });
+        gameModePrestartAudio.addEventListener('ended', () => {
+          gameModePrestartAudioFinished = true;
+          if (els.gameModeAudioProgressFill) els.gameModeAudioProgressFill.style.width = '100%';
+          updateGameModePrestartButton();
+        }, { once: true });
+        gameModePrestartAudio.addEventListener('error', () => {
+          gameModePrestartAudioFinished = true;
+          if (els.gameModePrestartStatus) els.gameModePrestartStatus.textContent = 'Audio indisponivel; voce pode iniciar quando as cartas carregarem.';
+          updateGameModePrestartButton();
+        }, { once: true });
+        gameModePrestartAudio.play().catch(() => {
+          gameModePrestartAudioFinished = true;
+          if (els.gameModePrestartStatus) els.gameModePrestartStatus.textContent = 'Audio bloqueado pelo navegador; toque em Começar quando estiver pronto.';
+          updateGameModePrestartButton();
+        });
+        return true;
+      }
+
+      function stopGameModeWatchPlayback() {
+        gameModeWatchToken += 1;
+        if (gameModeWatchAudio) {
+          gameModeWatchAudio.pause();
+          gameModeWatchAudio.removeAttribute('src');
+          gameModeWatchAudio.load?.();
+        }
+        gameModeWatchAudio = null;
+        if (gameModeWatchTickTimer) {
+          window.clearInterval(gameModeWatchTickTimer);
+          gameModeWatchTickTimer = 0;
+        }
+        if (window.speechSynthesis?.speaking) window.speechSynthesis.cancel();
+        if (state.game.activeAudio?.type === 'watching') state.game.activeAudio = null;
+        if (els.gameModeWatchForwardBtn) els.gameModeWatchForwardBtn.hidden = true;
+      }
+
+      function syncGameModeWatchProgress(audio, passIndex, estimatedDurationSec = 0) {
+        const sourceDuration = Number(audio?.duration) || estimatedDurationSec;
+        if (!(sourceDuration > 0)) return;
+        const secondPassRate = 0.7;
+        gameModeWatchDurationMs = sourceDuration * 1000 * (1 + (1 / secondPassRate));
+        const elapsedBefore = passIndex === 0 ? 0 : sourceDuration * 1000;
+        const rate = passIndex === 0 ? 1 : secondPassRate;
+        const mediaCurrent = Number(audio?.currentTime) || 0;
+        const elapsed = elapsedBefore + (mediaCurrent / rate * 1000);
+        gameModeWatchProgress = Math.max(0, Math.min(1, elapsed / gameModeWatchDurationMs));
+      }
+
+      function playWatchingSpeechSynthesis(text, rate, passIndex, token, estimatedDurationSec) {
+        if (!window.speechSynthesis || !safeText(text)) return Promise.resolve(false);
+        return new Promise((resolve) => {
+          const utterance = new SpeechSynthesisUtterance(safeText(text));
+          utterance.lang = 'en-US';
+          utterance.rate = rate;
+          const startedAt = performance.now();
+          if (gameModeWatchTickTimer) window.clearInterval(gameModeWatchTickTimer);
+          gameModeWatchTickTimer = window.setInterval(() => {
+            if (token !== gameModeWatchToken) return;
+            const elapsedBefore = passIndex === 0 ? 0 : estimatedDurationSec * 1000;
+            const elapsed = elapsedBefore + (performance.now() - startedAt);
+            gameModeWatchDurationMs = estimatedDurationSec * 1000 * (1 + (1 / 0.7));
+            gameModeWatchProgress = Math.max(0, Math.min(1, elapsed / Math.max(1, gameModeWatchDurationMs)));
+          }, 100);
+          const finish = (played) => {
+            if (gameModeWatchTickTimer) window.clearInterval(gameModeWatchTickTimer);
+            gameModeWatchTickTimer = 0;
+            resolve(played);
+          };
+          utterance.onend = () => finish(true);
+          utterance.onerror = () => finish(false);
+          state.game.activeAudio = { type: 'watching', instance: utterance };
+          try {
+            window.speechSynthesis.speak(utterance);
+          } catch (_error) {
+            finish(false);
+          }
+        });
+      }
+
+      function playWatchingAudioElement(src, rate, passIndex, token) {
+        return new Promise((resolve) => {
+          const audio = new Audio(src);
+          audio.preload = 'auto';
+          audio.playbackRate = rate;
+          audio.defaultPlaybackRate = rate;
+          audio.preservesPitch = true;
+          gameModeWatchAudio = audio;
+          state.game.activeAudio = { type: 'watching', instance: audio };
+          const finish = (played) => {
+            audio.removeEventListener('timeupdate', onTimeUpdate);
+            audio.removeEventListener('ended', onEnded);
+            audio.removeEventListener('error', onError);
+            if (gameModeWatchAudio === audio) gameModeWatchAudio = null;
+            if (state.game.activeAudio?.instance === audio) state.game.activeAudio = null;
+            resolve(played);
+          };
+          const onTimeUpdate = () => {
+            if (token === gameModeWatchToken) syncGameModeWatchProgress(audio, passIndex);
+          };
+          const onEnded = () => finish(true);
+          const onError = () => finish(false);
+          audio.addEventListener('timeupdate', onTimeUpdate);
+          audio.addEventListener('ended', onEnded, { once: true });
+          audio.addEventListener('error', onError, { once: true });
+          audio.play().catch(() => finish(false));
+        });
+      }
+
+      async function playWatchingCard(entry, card) {
+        if (!isWatchingModeActive() || !entry || !card) return;
+        stopGameModeWatchPlayback();
+        const token = gameModeWatchToken;
+        gameModeWatchProgress = 0;
+        gameModeWatchDurationMs = 0;
+        if (els.gameModeWatchForwardBtn) els.gameModeWatchForwardBtn.hidden = false;
+        if (els.gameWord) {
+          els.gameWord.textContent = '';
+          els.gameWord.className = 'game-word is-hidden';
+        }
+        if (els.gameSubword) {
+          els.gameSubword.textContent = '';
+          els.gameSubword.className = 'game-subword is-hidden';
+        }
+        if (els.gamePhaseWord) {
+          els.gamePhaseWord.textContent = '';
+          els.gamePhaseWord.classList.remove('is-visible', 'is-english', 'is-portuguese', 'is-fading');
+        }
+        if (els.gameTouchBtn?.parentElement) els.gameTouchBtn.parentElement.hidden = true;
+        if (els.gameKeyboardHost) els.gameKeyboardHost.hidden = true;
+        if (els.gameStep) els.gameStep.textContent = 'Watching';
+        if (els.gameStatus) els.gameStatus.textContent = '';
+        els.game?.classList.add('is-watching-mode');
+
+        const src = resolveCardAudioUrlForLanguage(card, 'english', {
+          accent: currentLanguageBackgroundAccent()
+        });
+        let playableSource = '';
+        if (src) {
+          try {
+            await ensureRuntimeAudioSource(src);
+            playableSource = runtimeAudioSourceFor(src);
+          } catch (_error) {
+            playableSource = '';
+          }
+        }
+        if (token !== gameModeWatchToken || !state.game.active || state.game.currentId !== entry.id) return;
+        const english = safeText(card.english || card.sourceEnglish || card.deckTitle || '');
+        const estimatedDurationSec = Math.max(1.2, countPracticeWords(english) * 0.42);
+        gameModeWatchDurationMs = estimatedDurationSec * 1000 * (1 + (1 / 0.7));
+        for (const [passIndex, rate] of [1, 0.7].entries()) {
+          let played = false;
+          if (playableSource) played = await playWatchingAudioElement(playableSource, rate, passIndex, token);
+          if (!played && token === gameModeWatchToken) {
+            played = await playWatchingSpeechSynthesis(english, rate, passIndex, token, estimatedDurationSec);
+          }
+          if (token !== gameModeWatchToken || !state.game.active || state.game.currentId !== entry.id) return;
+          if (!played) break;
+        }
+        if (token === gameModeWatchToken && state.game.active && state.game.currentId === entry.id) {
+          gameModeWatchProgress = 1;
+          await finishWatchingModeCard(entry, false);
+        }
+      }
+
+      async function finishWatchingModeCard(entry, skipped = false) {
+        const round = state.game.cardsModeRound;
+        if (!round?.active || !entry || state.game.currentId !== entry.id) return false;
+        const attemptKey = `watch:${safeText(entry.id)}`;
+        if (round.processingAttemptKey === attemptKey) return false;
+        round.processingAttemptKey = attemptKey;
+        const losesLife = Boolean(skipped && gameModeWatchProgress < 0.8);
+        round.attempts = Math.max(0, Number(round.attempts) || 0) + 1;
+        if (losesLife) round.errors = Math.max(0, Number(round.errors) || 0) + 1;
+        else round.correct = Math.max(0, Number(round.correct) || 0) + 1;
+        round.wordsHeard = Math.max(0, Number(round.wordsHeard) || 0) + countPracticeWords(cardById(entry.id)?.english || '');
+        round.processingAttemptKey = '';
+        renderTypingRoundHearts();
+        updateGameChips();
+        stopGameModeWatchPlayback();
+        state.game.entries.delete(entry.id);
+        state.game.currentId = null;
+        if (Number(round.errors) >= 5) {
+          finishCardsModeRound();
+          renderCurrentCard();
+          return true;
+        }
+        await advanceToNextCard();
+        return true;
       }
 
       function isCardsModeFixedStageActive() {
@@ -30535,7 +31269,27 @@
         state.game.entries.clear();
         state.game.queue = [];
         state.game.currentId = null;
+        const roundSucceeded = Number(round.attempts) === 25 && Number(round.errors) < 5;
+        round.succeeded = roundSucceeded;
         void saveCardsModeRoundBestResult(round);
+        if (roundSucceeded) {
+          void advanceGameModeHomeProgress(round).then(() => {
+            if (!round.progressAdvanced) return;
+            if (els.gameEndCopy) {
+              const nextMode = gameModeHomeProgress.mode;
+              els.gameEndCopy.textContent = nextMode === 1
+                ? `Modo concluido! Nivel ${gameModeHomeProgress.level} iniciado.`
+                : `Modo ${nextMode} liberado!`;
+              els.gameEndCopy.hidden = false;
+            }
+          }).catch((error) => {
+            round.progressError = safeText(error?.message) || 'Nao foi possivel salvar o progresso.';
+            if (els.gameEndCopy) {
+              els.gameEndCopy.textContent = 'Rodada concluida, mas o progresso nao foi salvo. Volte ao menu quando a conexao retornar.';
+              els.gameEndCopy.hidden = false;
+            }
+          });
+        }
         return true;
       }
 
@@ -30978,6 +31732,19 @@
         );
       }
 
+      function isWatchingModeActive() {
+        return Boolean(state.game.cardsModeRound?.active && Number(state.game.cardsModeRound?.modeId) === 5);
+      }
+
+      function isModeTwoEnglishRepeatEntry(entry = null) {
+        return Boolean(
+          entry
+          && isFiveStarCardsModeActive()
+          && Number(state.game.cardsModeRound?.modeId) === 2
+          && Number(resolveEntryStageNumber(entry)) === 3
+        );
+      }
+
       function resolveGameStageConfig(entry) {
         if (
           isLevelModeActive()
@@ -31001,7 +31768,10 @@
             badge: STAGES[2].badge,
             instruction: `Fale ${targetLabel}`,
             expected: 'english',
-            autoAudio: false
+            autoAudio: false,
+            showWord: true,
+            wordType: 'english',
+            subtitleType: 'none'
           };
         }
         if (isLevelModeAcquisitionFlowActive() && Number(entry?.stage) === 1) {
@@ -31100,9 +31870,13 @@
         const stageNumber = resolveEntryStageNumber(entry);
         const phaseKey = safeText(stageConfig?.key || '');
         const cardsModeSecondSpeaking = isCardsModeSecondSpeakingEntry(entry);
-        const useBooksMic = !isFiveStarCardsModeActive()
+        const useModeVoiceMic = Boolean(
+          state.game.cardsModeRound?.active
+          && [2, 3, 4, 6].includes(Number(state.game.cardsModeRound.modeId))
+        );
+        const useBooksMic = useModeVoiceMic || (!isFiveStarCardsModeActive()
           && (!isLevelAudioModeActive() || isLevelTextModeActive())
-          && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5);
+          && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5));
         const useStagePlay = (stageNumber === 2 && !cardsModeSecondSpeaking) || stageNumber === 4;
         const micListeningActive = Boolean(state.game.listening);
         const showMissionHud = stageNumber >= 1 && stageNumber <= 5;
@@ -33057,8 +33831,8 @@
           return uniqueAnswerList(
             resolveSourceLanguageAnswers(
               card,
-              currentTargetLanguage(),
-              resolveSourceLanguageText(card, currentTargetLanguage())
+              'english',
+              resolveSourceLanguageText(card, 'english')
             ).map(repairDisplayText).map(item => safeText(item)).filter(Boolean)
           );
         }
@@ -35908,6 +36682,11 @@
           renderCurrentCard(options);
           return;
         }
+        els.game?.classList.toggle('is-mode-two-repeat', isModeTwoEnglishRepeatEntry(entry));
+        if (!isWatchingModeActive()) {
+          els.game?.classList.remove('is-watching-mode');
+          if (els.gameModeWatchForwardBtn) els.gameModeWatchForwardBtn.hidden = true;
+        }
         const stageConfig = resolveGameStageConfig(entry);
         els.game.dataset.phaseKey = stageConfig.key || '';
         if (isCardsModeFixedStageActive()) {
@@ -35996,7 +36775,11 @@
         }
         const stageOneSwapActive = !isSimpleStarPhase && entry.stage === 1 && Boolean(subword);
         if (els.gamePhaseWord) {
-          if (isSimpleStarPhase) {
+          if (isModeTwoEnglishRepeatEntry(entry) || isCardsModeSecondSpeakingEntry(entry)) {
+            clearGameLanguageSwapTimer();
+            els.gamePhaseWord.textContent = '';
+            els.gamePhaseWord.classList.remove('is-visible', 'is-english', 'is-portuguese', 'is-fading');
+          } else if (isSimpleStarPhase) {
             if (stageConfig.key === 'first-star') {
               renderFirstStarPhaseWordSwap(entry, card);
               els.gamePhaseWord.classList.add('is-visible');
@@ -36138,6 +36921,35 @@
                 playPromptAudio(card, { rate: 0.8, enableMicDuringPlayback: false });
               }
             }, 220);
+          }
+          return;
+        }
+
+        if (isWatchingModeActive()) {
+          state.game.watchingModeActive = true;
+          state.game.watchingModeEntryKey = safeText(entry.id);
+          window.setTimeout(() => {
+            if (state.game.active && !state.game.paused && state.game.currentId === entry.id && isWatchingModeActive()) {
+              void playWatchingCard(entry, card);
+            }
+          }, 80);
+          return;
+        }
+
+        if (isModeTwoEnglishRepeatEntry(entry)) {
+          const promptKey = `${safeText(entry.id)}:${Number(entry.stage) || 0}`;
+          state.game.canListen = false;
+          renderGameTouchButton(stageConfig, entry);
+          if (state.game.mode2PromptEntryKey !== promptKey) {
+            state.game.mode2PromptEntryKey = promptKey;
+            window.setTimeout(() => {
+              if (!state.game.active || state.game.currentId !== entry.id || state.game.paused) return;
+              void playGameAudioForLanguage(card, 'english', { rate: 1 }).catch(() => false).finally(() => {
+                if (!state.game.active || state.game.currentId !== entry.id || state.game.paused) return;
+                state.game.canListen = true;
+                renderGameTouchButton(stageConfig, entry);
+              });
+            }, 120);
           }
           return;
         }
@@ -39426,6 +40238,7 @@
         const sourceCards = buildLevelModeSourceCards(level);
         const cardsModeRoundActive = isFiveStarCardsModeActive();
         const cardsModeRoundStage = selectedCardsModePracticeStage();
+        const cardsModeRoundModeId = Math.max(1, Math.min(6, Number(state.game.cardsModeModeId) || 1));
         const typingRoundActive = cardsModeRoundActive && cardsModeRoundStage === 4;
         state.game.cardsModeRound = {
           active: cardsModeRoundActive,
@@ -39437,6 +40250,8 @@
           wordsSpoken: 0,
           wordsHeard: 0,
           roundId: createCardsModeRoundId(),
+          modeId: cardsModeRoundModeId,
+          level,
           targetLanguage: currentTargetLanguage(),
           recordSaveStarted: false,
           processingAttemptKey: '',
@@ -39959,6 +40774,7 @@
         clearScheduledOnboardingGate();
         cleanupGameRecognition();
         stopActiveAudio();
+        stopGameModeWatchPlayback();
         clearGameLanguageSwapTimer();
         clearTypingPromptLoop();
         clearRememberButtonRevealTimer();
@@ -40005,6 +40821,7 @@
         els.game?.classList.remove('is-level-switching');
         els.game?.classList.remove('is-level-switching-reset');
         els.game?.classList.remove('is-level-text-mode');
+        els.game?.classList.remove('is-mode-two-repeat', 'is-watching-mode');
         resetGameSwipeTracking();
         syncFooterGuardState(null);
         syncGameLevelNavigator();
@@ -40017,6 +40834,7 @@
         els.topbar.classList.add('is-hidden');
         if (!returnToLevelSelector) refreshLibrary();
         syncWelcomeGate();
+        if (!returnToLevelSelector && gameModeHomeProgress.introCompleted) showGameModeHome();
         if (exitingJourneyPhase && journeyPhaseRuntime === exitingJourneyPhase) {
           journeyPhaseRuntime = null;
           state.options.mode = exitingJourneyPhase.previousMode;
@@ -41088,15 +41906,15 @@
           hideWelcomeGate();
           startWatch({ useDefaults: true });
         };
-        const startCardsModeFromWelcome = async (event) => {
-          if (await startConfiguredJourney(event)) return;
+        const startCardsModeFromWelcome = async (event, options = {}) => {
+          if (!options.fromGameModeHome && await startConfiguredJourney(event)) return;
           event?.preventDefault?.();
           event?.stopPropagation?.();
           if (cardsModeStartInFlight) return;
           cardsModeStartInFlight = true;
           const cardsLevel = resolveCardsModeLevel();
           const previewTargets = [event?.currentTarget, els.welcomeModeModalPlayBtn, els.welcomeStartBtn].filter(Boolean);
-          const playButton = els.welcomeModeModalPlayBtn;
+          const playButton = options.fromGameModeHome ? els.gameModePrestartStartBtn : els.welcomeModeModalPlayBtn;
           const loader = window.PlaytalkLoader;
           let startError = '';
           if (playButton) {
@@ -41115,6 +41933,7 @@
             state.game.levelTextMode = false;
             state.game.levelTypingMode = false;
             resetScaleBatchProgress();
+            state.entry.welcomeModeKey = 'cards';
             state.entry.pendingPlayStart = true;
 
             let timeoutId = 0;
@@ -41137,7 +41956,18 @@
             state.entry.welcomeStartRequested = true;
             state.entry.welcomeFlashStartAt = Date.now();
             closeWelcomeModeModal();
-            await openAudioCheck();
+            if (gameModeHomeConfig(state.game.cardsModeModeId)?.needsMic) {
+              await openAudioCheck();
+            } else {
+              state.entry.welcomeStartRequested = false;
+              state.entry.welcomeFlashStartAt = 0;
+              els.gameModeHome && (els.gameModeHome.hidden = true);
+              els.gameModePrestart && (els.gameModePrestart.hidden = true);
+              hideWelcomeGate();
+              state.game.selectedCount = FINAL_CHALLENGE_CARD_COUNT;
+              saveSelectedGameCount(FINAL_CHALLENGE_CARD_COUNT);
+              await beginGame();
+            }
           } catch (error) {
             startError = safeText(error?.message) || nativeUiText('download_unavailable');
             console.warn('Falha ao iniciar Modo Cartas:', error);
@@ -41150,7 +41980,11 @@
             state.game.levelTextMode = false;
             state.game.levelTypingMode = false;
             loader?.hide?.('welcome-flash-start', { force: true });
-            openWelcomeModeModal('cards');
+            if (options.fromGameModeHome) {
+              if (els.gameModePrestartStatus) els.gameModePrestartStatus.textContent = startError;
+            } else {
+              openWelcomeModeModal('cards');
+            }
           } finally {
             cardsModeStartInFlight = false;
             if (playButton) {
@@ -41163,6 +41997,37 @@
             }
           }
         };
+        els.gameModeProfileBtn?.addEventListener('click', openLegacyHomeFromGameModeProfile);
+        els.gameModeHomeReturnBtn?.addEventListener('click', () => {
+          if (els.gameModeHomeReturnBtn) els.gameModeHomeReturnBtn.hidden = true;
+          state.entry.welcomeVisible = false;
+          els.welcomeGate?.classList.remove('is-visible');
+          document.body.classList.remove('welcome-active');
+          showGameModeHome();
+        });
+        els.gameModeGrid?.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-game-mode]');
+          if (!button || button.disabled) return;
+          openGameModePrestart(Number(button.getAttribute('data-game-mode')));
+        });
+        els.gameModeIntroStartBtn?.addEventListener('click', () => { void startGameModeHomeIntro(); });
+        els.gameModePrestartBackBtn?.addEventListener('click', closeGameModePrestart);
+        els.gameModePrestart?.addEventListener('click', (event) => {
+          if (event.target === els.gameModePrestart) closeGameModePrestart();
+        });
+        els.gameModePrestartStartBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!gameModePrestartReady || !gameModePrestartAudioFinished) return;
+          const mode = gameModeHomeConfig(gameModePrestartModeId);
+          if (!mode) return;
+          state.game.cardsModeModeId = mode.id;
+          setCardsModePracticeStage(mode.stage);
+          setSelectedGameLevel(gameModeHomeProgress.level);
+          closeGameModePrestart();
+          els.gameModeHome.hidden = true;
+          void startCardsModeFromWelcome(event, { fromGameModeHome: true });
+        });
         els.welcomeStartBtn?.addEventListener('click', (event) => {
           void (async () => {
             event.preventDefault();
@@ -41326,7 +42191,11 @@
           if (!button) return;
           event.preventDefault();
           event.stopPropagation();
-          setCardsModePracticeStage(button.getAttribute('data-cards-stage'));
+          const stage = normalizeCardsModePracticeStage(button.getAttribute('data-cards-stage'));
+          const matchingMode = GAME_MODE_HOME_CONFIG.find((mode) => mode.stage === stage && mode.id !== 5);
+          if (gameModeHomeProgress.introCompleted && matchingMode && !gameModeIsUnlocked(matchingMode.id)) return;
+          if (matchingMode) state.game.cardsModeModeId = matchingMode.id;
+          setCardsModePracticeStage(stage);
           syncWelcomeModeModal();
         });
         bindWelcomeModeLevelArrowHold(els.welcomeModeModalLevelPrevBtn, -1);
@@ -41575,6 +42444,15 @@
           event.preventDefault();
           event.stopPropagation();
           pauseFlashcardsGameToWelcome();
+        });
+        els.gameModeWatchForwardBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!isWatchingModeActive()) return;
+          const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+          if (!entry) return;
+          stopGameModeWatchPlayback();
+          void finishWatchingModeCard(entry, true);
         });
         els.gameOptionsCloseBtn?.addEventListener('click', closeGameOptionsModal);
         els.gameOptionsContinueBtn?.addEventListener('click', (event) => {
@@ -42178,6 +43056,12 @@
           if (sessionUser) {
             await hydrateAuthenticatedApp(sessionUser, { skipLoadCards: true });
             primeGameTouchButton();
+            try {
+              await fetchGameModeHomeProgress();
+            } catch (error) {
+              console.warn('Falha ao carregar progresso dos seis modos:', error);
+            }
+            showGameModeHome();
           } else {
             await handleLoggedOutState('');
           }
