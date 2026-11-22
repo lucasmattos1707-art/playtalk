@@ -21156,6 +21156,22 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
     const bots = users.rows.filter(u => u.is_bot);
     const power = u => { const c = readRawBotConfig(u.bot_config); const a = Number(c.pronunciationMin), b = Number(c.pronunciationMax); return Number.isFinite(a) && Number.isFinite(b) ? (a + b) / 2 : (Number(c.pronunciationBase) || 0); };
     const powers = bots.map(power); const low = Math.min(...powers), high = Math.max(...powers);
+    const botListeningOrder = bots.slice().sort((a, b) => power(b) - power(a) || Number(a.id) - Number(b.id));
+    const botMetricFactors = new Map();
+    for (const metric of ['speaking', 'pronunciation', 'level', 'building', 'meaning', 'consistency', 'practice']) {
+      const factors = new Map();
+      for (let start = 0; start < botListeningOrder.length; start += 13) {
+        const original = botListeningOrder.slice(start, start + 13);
+        const shuffled = original.slice().sort((a, b) =>
+          seededUnitInterval(`game-ranking:${metric}:${a.id}`) - seededUnitInterval(`game-ranking:${metric}:${b.id}`)
+          || Number(a.id) - Number(b.id));
+        shuffled.forEach((bot, index) => {
+          const sourcePower = power(original[index]);
+          factors.set(Number(bot.id), high > low ? (sourcePower - low) / (high - low) : 1);
+        });
+      }
+      botMetricFactors.set(metric, factors);
+    }
     const stats = users.rows.map(u => {
       const own = rounds.rows.filter(r => Number(r.user_id) === Number(u.id));
       const scores = own.filter(r => Number(r.mode) !== 6).flatMap(r => Array.isArray(r.scores) ? r.scores.slice().reverse() : []).slice(0, 100);
@@ -21176,8 +21192,8 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
       let values = { listening: own.reduce((n,r)=>n+Number(r.heard),0), speaking: own.reduce((n,r)=>n+Number(r.spoken),0), pronunciation: avg(scores), level:Number(u.current_level)||1, building:avg(speeds), meaning:avg(meaning), consistency:streak, practice:own.reduce((n,r)=>n+Number(r.duration_ms),0)/60000 };
       if (u.is_bot) {
         const t = high > low ? (power(u) - low) / (high - low) : 1;
-        const lerp = (min,max) => min + t * (max-min);
-        values = { listening:lerp(1500,80000), speaking:lerp(750,40000), pronunciation:lerp(61,98.7), level:lerp(6,141), building:lerp(150,470), meaning:lerp(25,92), consistency:lerp(1,91), practice:lerp(15,1800) };
+        const lerp = (metric,min,max) => min + (metric === 'listening' ? t : botMetricFactors.get(metric).get(Number(u.id))) * (max-min);
+        values = { listening:lerp('listening',1500,80000), speaking:lerp('speaking',750,40000), pronunciation:lerp('pronunciation',61,98.7), level:lerp('level',6,141), building:lerp('building',150,470), meaning:lerp('meaning',25,92), consistency:lerp('consistency',1,91), practice:lerp('practice',15,1800) };
       }
       return { id:Number(u.id), name:String(u.username || 'Usuário'), avatar:String(u.avatar_image || ''), isBot:Boolean(u.is_bot), values };
     });
