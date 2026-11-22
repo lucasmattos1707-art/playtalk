@@ -1744,13 +1744,15 @@
       visibility: hidden;
       transform: translateY(12px) scale(.97);
       transition: opacity .5s ease, transform .8s ease, filter .25s ease, visibility 0s linear .8s;
-      cursor: not-allowed;
+      cursor: default;
+      touch-action: manipulation;
     }
 
     .game-mode-tile.is-intro-visible { opacity: .6; visibility: visible; transform: translateY(0) scale(1); transition: opacity .5s ease, transform .8s ease, filter .25s ease; }
     .game-mode-home.is-ready .game-mode-tile { opacity: .6; visibility: visible; transform: none; transition-delay: 0s; }
     .game-mode-tile.is-unlocked { opacity: 1 !important; visibility: visible; cursor: pointer; transition: opacity .5s ease, transform .8s ease, filter .25s ease; }
     .game-mode-tile.is-newly-unlocked { opacity: 1 !important; }
+    .game-mode-tile.is-unlock-pending { opacity: .6 !important; }
     .game-mode-tile.is-unlocked:hover { transform: translateY(-3px) scale(1.035); }
     .game-mode-tile.is-unlocked img { filter: drop-shadow(0 0 22px rgba(72, 226, 160, .22)); }
     .game-mode-tile.is-current img { filter: drop-shadow(0 0 28px rgba(72, 226, 160, .38)); }
@@ -1778,6 +1780,7 @@
     .game-mode-intro__prompt {
       position: absolute;
       inset: 0;
+      z-index: 2;
       width: 100%;
       height: 100%;
       padding: 0;
@@ -1786,6 +1789,7 @@
       color: transparent;
       background: transparent;
       cursor: pointer;
+      touch-action: manipulation;
     }
 
     .game-mode-intro__prompt span {
@@ -1802,7 +1806,7 @@
     }
 
     .game-mode-intro.is-playing .game-mode-intro__prompt span { opacity: 0; transform: translate(-50%, 10px); pointer-events: none; }
-    .game-mode-intro__status { position: absolute; bottom: 28px; color: #91a8bf; font-size: 13px; }
+    .game-mode-intro__status { position: absolute; z-index: 3; bottom: 28px; color: #91a8bf; font-size: 13px; pointer-events: none; }
 
     .game-mode-prestart {
       position: fixed;
@@ -1812,24 +1816,19 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: clamp(20px, 4vh, 42px);
       padding: clamp(22px, 6vw, 84px);
       color: #f4f8ff;
       background: #0a0911;
     }
 
-    .game-mode-prestart__back { position: absolute; top: 24px; left: 24px; width: 48px; height: 48px; border: 1px solid rgba(148,190,224,.32); border-radius: 50%; color: #eaf6ff; background: rgba(10,24,41,.8); font-size: 24px; cursor: pointer; }
-    .game-mode-prestart__logo-wrap { width: 100%; display: grid; place-items: center; }
+    .game-mode-prestart__back { position: absolute; z-index: 2; top: 24px; left: 24px; width: 48px; height: 48px; border: 1px solid rgba(148,190,224,.32); border-radius: 50%; color: #eaf6ff; background: rgba(10,24,41,.8); font-size: 24px; cursor: pointer; }
+    .game-mode-prestart__logo-wrap { position: absolute; inset: 0; width: 100%; display: grid; place-items: center; pointer-events: none; }
     .game-mode-prestart__logo { display: block; width: min(68vw, 680px); max-height: 58vh; object-fit: contain; }
-    .game-mode-prestart__body { width: min(520px, 84vw); display: grid; justify-items: center; gap: clamp(22px, 4vh, 38px); }
-    .game-mode-audio-progress { position: relative; width: min(40vw, 420px); min-width: 200px; height: 4px; overflow: hidden; border-radius: 999px; background: rgba(172,208,235,.22); }
-    .game-mode-audio-progress__fill { width: 0; height: 100%; display: block; border-radius: inherit; background: #75dcff; transition: width .12s linear; }
-    .game-mode-audio-progress.is-loading .game-mode-audio-progress__fill { position: absolute; width: 34% !important; animation: game-mode-progress-scan 1.15s ease-in-out infinite alternate; }
-    @keyframes game-mode-progress-scan { from { transform: translateX(-5%); } to { transform: translateX(205%); } }
-    .game-mode-prestart__start { width: min(40vw, 420px); min-height: 64px; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px 24px; border: 1px solid rgba(167,255,209,.48); border-radius: 18px; color: #ffffff; background: linear-gradient(135deg, #24b96e 0%, #16d784 52%, #55e7a0 100%); box-shadow: 0 12px 34px rgba(49,225,148,.32), inset 0 1px rgba(255,255,255,.28); font-size: 20px; font-weight: 900; cursor: pointer; }
+    .game-mode-prestart__body { position: absolute; inset: 0; width: 100%; pointer-events: none; }
+    .game-mode-prestart__start { position: absolute; inset: 0; width: 100%; height: 100%; display: grid; place-items: end center; padding: 0 20px max(34px, env(safe-area-inset-bottom)); border: 0; border-radius: 0; color: transparent; background: transparent; box-shadow: none; font-size: 20px; font-weight: 800; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
     .game-mode-prestart__start[hidden] { display: none; }
-    .game-mode-prestart__start svg { width: 26px; height: 26px; flex: 0 0 auto; fill: currentColor; }
-    .game-mode-prestart__start:disabled { opacity: .55; cursor: progress; }
+    .game-mode-prestart__start span { color: #f4f8ff; text-shadow: 0 2px 14px rgba(0,0,0,.52); }
+    .game-mode-prestart__start:disabled { opacity: 1; cursor: default; }
     .game-mode-home-return { position: fixed; z-index: 31; top: 18px; left: 18px; width: 46px; height: 46px; border: 1px solid rgba(145,191,224,.32); border-radius: 50%; color: #eaf6ff; background: rgba(6,17,31,.88); font-size: 24px; cursor: pointer; }
     .game-mode-watch-forward { position: fixed; z-index: 42; right: max(22px, env(safe-area-inset-right)); bottom: max(22px, env(safe-area-inset-bottom)); width: 62px; height: 62px; display: grid; place-items: center; border: 1px solid rgba(117,214,255,.56); border-radius: 50%; color: #effaff; background: rgba(8,31,52,.9); box-shadow: 0 0 24px rgba(65,188,255,.22); cursor: pointer; }
     .game-mode-watch-forward[hidden] { display: none !important; }
@@ -1858,11 +1857,9 @@
       .game-mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 10px; }
       .game-mode-tile { min-height: clamp(128px, 22vh, 190px); border-radius: 0; }
       .game-mode-tile img { width: min(78%, 160px); }
-      .game-mode-prestart { gap: 24px; padding: 70px 22px 28px; }
+      .game-mode-prestart { padding: 70px 22px 28px; }
       .game-mode-prestart__logo { width: min(82vw, 430px); max-height: 44vh; }
-      .game-mode-prestart__body { width: min(82vw, 430px); }
-      .game-mode-audio-progress { width: min(60vw, 320px); }
-      .game-mode-prestart__start { width: min(60vw, 320px); }
+      .game-mode-prestart__body { width: 100%; }
       .game-mode-intro__brand { width: min(86vw, 430px); }
       .game-mode-intro__brand--first { width: min(74vw, 360px); }
       .game-mode-intro__prompt span { top: calc(50% + 22vh); }
@@ -5716,6 +5713,30 @@
     }
 
     .game-end.is-visible { display: grid; }
+
+    .game.is-game-mode-home-results .game-end {
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      overflow: hidden;
+    }
+    .game.is-game-mode-home-results .game-end h3,
+    .game.is-game-mode-home-results .game-end p,
+    .game.is-game-mode-home-results .game-end__totals,
+    .game.is-game-mode-home-results .game-end__menu-btn { display: none !important; }
+    .game.is-game-mode-home-results .game-end__inner,
+    .game.is-game-mode-home-results .game-end__presentation { width: 100%; gap: 0; }
+    .game.is-game-mode-home-results .game-end__meter--minimal {
+      width: min(100%, 640px);
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+    .game.is-game-mode-home-results .game-end__meter--minimal .game-end__dial { width: min(100%, 520px); margin: 0 auto; }
+    .game.is-game-mode-home-results .game-end__meter--minimal .game-end__readout { margin-top: -8px; }
 
     .game-end h3 {
       margin: 0;
@@ -14204,8 +14225,7 @@
       <button class="game-mode-prestart__back" id="gameModePrestartBackBtn" type="button" aria-label="Voltar aos modos">&larr;</button>
       <div class="game-mode-prestart__logo-wrap"><img class="game-mode-prestart__logo" id="gameModePrestartLogo" alt=""></div>
       <div class="game-mode-prestart__body">
-        <div class="game-mode-audio-progress" id="gameModeAudioProgress" role="progressbar" aria-label="Progresso do audio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="game-mode-audio-progress__fill" id="gameModeAudioProgressFill"></span></div>
-        <button class="game-mode-prestart__start" id="gameModePrestartStartBtn" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5.4v13.2L18.2 12 7 5.4Z"></path></svg><span>Começar</span></button>
+        <button class="game-mode-prestart__start" id="gameModePrestartStartBtn" type="button" aria-label="Toque em qualquer lugar para começar" hidden><span>Toque para começar</span></button>
       </div>
     </section>
     <button class="game-mode-watch-forward" id="gameModeWatchForwardBtn" type="button" aria-label="Pular para a proxima carta" hidden><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M5 5v14l9-7-9-7Zm10 0v14l8-7-8-7Z"></path></svg></button>
@@ -16667,7 +16687,6 @@
       let gameModeResultsShownAt = 0;
       let gameModeUnlockCuePending = false;
       let gameModeUnlockCueTimer = 0;
-      let gameModeAutoReturnTimer = 0;
       let gameModeUnlockAudio = null;
       let gameModeNewlyUnlockedId = 0;
       let gameModeWatchAudio = null;
@@ -16700,8 +16719,6 @@
         gameModePrestart: document.getElementById('gameModePrestart'),
         gameModePrestartBackBtn: document.getElementById('gameModePrestartBackBtn'),
         gameModePrestartLogo: document.getElementById('gameModePrestartLogo'),
-        gameModeAudioProgress: document.getElementById('gameModeAudioProgress'),
-        gameModeAudioProgressFill: document.getElementById('gameModeAudioProgressFill'),
         gameModePrestartStartBtn: document.getElementById('gameModePrestartStartBtn'),
         gameModeWatchForwardBtn: document.getElementById('gameModeWatchForwardBtn'),
         welcomeBgBase: document.getElementById('welcomeBgBase'),
@@ -25095,10 +25112,12 @@
           const modeId = Number(button.getAttribute('data-game-mode'));
           const introUnlocked = Boolean(gameModeIntroModeUnlocked && modeId === 1);
           const unlocked = gameModeIsUnlocked(modeId) || introUnlocked;
+          const unlockPending = gameModeUnlockCuePending && modeId === Number(gameModeNewlyUnlockedId);
           button.disabled = false;
           button.classList.toggle('is-unlocked', unlocked);
+          button.classList.toggle('is-unlock-pending', unlockPending);
           button.classList.toggle('is-current', unlocked && modeId === Number(gameModeHomeProgress.mode || 1));
-          button.classList.toggle('is-newly-unlocked', unlocked && modeId === Number(gameModeNewlyUnlockedId));
+          button.classList.toggle('is-newly-unlocked', unlocked && modeId === Number(gameModeNewlyUnlockedId) && !unlockPending);
           button.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
         });
       }
@@ -25231,20 +25250,19 @@
           && (gameModeHomeProgress.level !== previousLevel || gameModeHomeProgress.mode !== previousMode)) {
           gameModeNewlyUnlockedId = gameModeHomeProgress.mode;
           gameModeUnlockCuePending = true;
-          scheduleGameModeUnlockCueAfterResults();
         }
         syncGameModeHome();
         return round.progressAdvanced;
       }
 
-      function scheduleGameModeUnlockCueAfterResults() {
-        if (!gameModeUnlockCuePending || !state.game.gameModeHomeSessionActive || !gameModeResultsShownAt) return;
+      function scheduleGameModeUnlockCueAfterHome() {
+        if (!gameModeUnlockCuePending || !document.body.classList.contains('game-mode-home-active')) return;
         if (gameModeUnlockCueTimer) window.clearTimeout(gameModeUnlockCueTimer);
-        const remainingDelay = Math.max(0, 1000 - (Date.now() - gameModeResultsShownAt));
         gameModeUnlockCueTimer = window.setTimeout(() => {
           gameModeUnlockCueTimer = 0;
-          if (!gameModeUnlockCuePending || !state.game.gameModeHomeSessionActive) return;
           gameModeUnlockCuePending = false;
+          if (!document.body.classList.contains('game-mode-home-active')) return;
+          syncGameModeHome();
           if (gameModeUnlockAudio) {
             gameModeUnlockAudio.pause();
             gameModeUnlockAudio.src = '';
@@ -25254,30 +25272,12 @@
           gameModeUnlockAudio.volume = 0.9;
           gameModeUnlockAudio.addEventListener('ended', () => { gameModeUnlockAudio = null; }, { once: true });
           gameModeUnlockAudio.play().catch(() => { gameModeUnlockAudio = null; });
-        }, remainingDelay);
+        }, 1000);
       }
 
       function markGameModeResultsScreenShown() {
         if (!state.game.gameModeHomeSessionActive || gameModeResultsShownAt) return;
         gameModeResultsShownAt = Date.now();
-        scheduleGameModeUnlockCueAfterResults();
-        if (els.gameEndPresentation?.hidden && !els.gameEndMenuBtn?.hidden) {
-          gameModeAutoReturnTimer = window.setTimeout(() => {
-            gameModeAutoReturnTimer = 0;
-            if (state.game.gameModeHomeSessionActive) void exitGame();
-          }, 5000);
-        }
-      }
-
-      function scheduleGameModeHomeAutoReturn() {
-        if (!state.game.gameModeHomeSessionActive) return;
-        if (gameModeAutoReturnTimer) window.clearTimeout(gameModeAutoReturnTimer);
-        gameModeAutoReturnTimer = window.setTimeout(() => {
-          gameModeAutoReturnTimer = 0;
-          if (state.game.gameModeHomeSessionActive && els.gameEnd?.classList.contains('is-visible')) {
-            void exitGame();
-          }
-        }, 4500);
       }
 
       function showGameModeHome() {
@@ -25384,15 +25384,6 @@
         if (!els.gameModePrestartStartBtn) return;
         const ready = gameModePrestartReady && gameModePrestartAudioFinished;
         els.gameModePrestartStartBtn.hidden = !ready;
-        if (els.gameModeAudioProgress) {
-          els.gameModeAudioProgress.hidden = false;
-          const loadingCardsWithoutAudio = gameModeHomeProgress.level !== 1 && !gameModePrestartReady;
-          els.gameModeAudioProgress.classList.toggle('is-loading', loadingCardsWithoutAudio);
-          if (gameModeHomeProgress.level !== 1 && gameModePrestartReady && els.gameModeAudioProgressFill) {
-            els.gameModeAudioProgressFill.style.width = '100%';
-            els.gameModeAudioProgress.setAttribute('aria-valuenow', '100');
-          }
-        }
       }
 
       function closeGameModePrestart() {
@@ -25405,11 +25396,6 @@
         gameModePrestartReady = false;
         gameModePrestartAudioFinished = false;
         if (els.gameModePrestart) els.gameModePrestart.hidden = true;
-        if (els.gameModeAudioProgressFill) els.gameModeAudioProgressFill.style.width = '0%';
-        if (els.gameModeAudioProgress) {
-          els.gameModeAudioProgress.setAttribute('aria-valuenow', '0');
-          els.gameModeAudioProgress.classList.remove('is-loading');
-        }
         if (els.gameModePrestartStartBtn) els.gameModePrestartStartBtn.hidden = true;
       }
 
@@ -25427,22 +25413,12 @@
           els.gameModePrestartLogo.src = mode.image;
           els.gameModePrestartLogo.alt = '';
         }
-        if (els.gameModeAudioProgress) {
-          els.gameModeAudioProgress.hidden = false;
-          els.gameModeAudioProgress.classList.toggle('is-loading', gameModeHomeProgress.level !== 1);
-          if (els.gameModeAudioProgressFill) els.gameModeAudioProgressFill.style.width = '0%';
-          els.gameModeAudioProgress.setAttribute('aria-valuenow', '0');
-        }
         if (els.gameModePrestart) els.gameModePrestart.hidden = false;
 
         gameModeCardsPreloadPromise = prepareCardsModeLevelFromGeneralLevels(gameModeHomeProgress.level)
           .then(() => {
             gameModePrestartReady = true;
             updateGameModePrestartButton();
-          })
-          .catch((error) => {
-            if (els.gameModeAudioProgress) els.gameModeAudioProgress.classList.remove('is-loading');
-            throw error;
           });
         gameModeCardsPreloadPromise.catch(() => {});
 
@@ -25452,27 +25428,16 @@
         }
         gameModePrestartAudio = new Audio(mode.audio);
         gameModePrestartAudio.preload = 'auto';
-        gameModePrestartAudio.addEventListener('timeupdate', () => {
-          if (!gameModePrestartAudio || !els.gameModeAudioProgressFill) return;
-          const duration = Number(gameModePrestartAudio.duration) || 0;
-          const progress = duration > 0 ? Math.max(0, Math.min(100, gameModePrestartAudio.currentTime / duration * 100)) : 0;
-          els.gameModeAudioProgressFill.style.width = `${progress}%`;
-          els.gameModeAudioProgress?.setAttribute('aria-valuenow', String(Math.round(progress)));
-        });
         gameModePrestartAudio.addEventListener('ended', () => {
           gameModePrestartAudioFinished = true;
-          if (els.gameModeAudioProgressFill) els.gameModeAudioProgressFill.style.width = '100%';
-          if (els.gameModeAudioProgress) els.gameModeAudioProgress.setAttribute('aria-valuenow', '100');
           updateGameModePrestartButton();
         }, { once: true });
         gameModePrestartAudio.addEventListener('error', () => {
           gameModePrestartAudioFinished = true;
-          if (els.gameModeAudioProgress) els.gameModeAudioProgress.classList.add('is-loading');
           updateGameModePrestartButton();
         }, { once: true });
         gameModePrestartAudio.play().catch(() => {
           gameModePrestartAudioFinished = true;
-          if (els.gameModeAudioProgress) els.gameModeAudioProgress.classList.add('is-loading');
           updateGameModePrestartButton();
         });
         return true;
@@ -34610,15 +34575,18 @@
       }
 
       function createGameEndGauge({ kind, title, description, value, max, unit }) {
+        const minimal = Boolean(state.game.gameModeHomeSessionActive);
         const card = document.createElement('article');
-        card.className = 'game-end__meter';
+        card.className = `game-end__meter${minimal ? ' game-end__meter--minimal' : ''}`;
         card.dataset.gameEndMeter = kind;
         const heading = document.createElement('h4');
         heading.textContent = title;
+        heading.hidden = minimal;
         const desc = document.createElement('div');
         desc.className = 'game-end__meter-desc';
         desc.textContent = description;
-        const dial = gameEndSvgNode('svg', { class: 'game-end__dial', viewBox: '0 0 360 235', role: 'img', 'aria-label': title });
+        desc.hidden = minimal;
+        const dial = gameEndSvgNode('svg', { class: 'game-end__dial', viewBox: '0 0 360 235', role: 'img', 'aria-label': title || 'Resultado' });
         gameEndSvgNode('path', { d: gameEndDialArc(150, 390), class: 'game-end__arc-bg' }, dial);
         const colors = ['#ff465b', '#ffb13d', '#42a5ff', '#37dd91'];
         colors.forEach((color, index) => {
@@ -34651,10 +34619,11 @@
         const unitNode = document.createElement('span');
         unitNode.className = 'game-end__unit';
         unitNode.textContent = unit;
-        readout.appendChild(unitNode);
+        if (!minimal && unit) readout.appendChild(unitNode);
         const status = document.createElement('div');
         status.className = 'game-end__status';
         status.textContent = 'AGUARDANDO';
+        status.hidden = minimal;
         card.append(heading, desc, dial, readout, status);
         return { card, needle, readout, status, value, max, kind };
       }
@@ -34715,6 +34684,7 @@
 
       async function playGameEndPresentation(gauges, totals) {
         const token = ++gameEndPresentationToken;
+        const autoReturnHome = Boolean(state.game.gameModeHomeSessionActive);
         await wait(160);
         if (token !== gameEndPresentationToken) return;
         for (const gauge of gauges) {
@@ -34723,6 +34693,11 @@
           await wait(80);
           await animateGameEndGauge(gauge, token);
           if (token !== gameEndPresentationToken) return;
+          if (autoReturnHome) {
+            await wait(1000);
+            if (token === gameEndPresentationToken && state.game.gameModeHomeSessionActive) void exitGame();
+            return;
+          }
           await wait(620);
           gauge.card.classList.remove('is-active');
           await wait(360);
@@ -34735,7 +34710,6 @@
         }
         if (token === gameEndPresentationToken) {
           els.gameEndMenuBtn.hidden = false;
-          if (state.game.gameModeHomeSessionActive) scheduleGameModeHomeAutoReturn();
         }
       }
 
@@ -34743,7 +34717,10 @@
         if (!els.gameEnd) return;
         gameEndPresentationToken += 1;
         const heading = els.gameEnd.querySelector('h3');
+        if (heading) heading.hidden = false;
         const cardsModeRound = state.game.cardsModeRound;
+        const modeHomeResults = Boolean(state.game.gameModeHomeSessionActive);
+        els.game?.classList.toggle('is-game-mode-home-results', modeHomeResults);
         els.gameEndMeters.replaceChildren();
         els.gameEndPresentation.hidden = true;
         els.gameEndTotals.hidden = true;
@@ -34788,7 +34765,12 @@
             };
           }
           els.gameEndPresentation.hidden = false;
-          if (totals) {
+          if (modeHomeResults) {
+            totals = null;
+            errors = 0;
+            els.gameEndErrors.hidden = true;
+            if (els.gameEndCopy) els.gameEndCopy.hidden = true;
+          } else if (totals) {
             els.gameEndErrors.hidden = true;
           } else {
             els.gameEndErrors.textContent = `Erros: ${errors}`;
@@ -34816,6 +34798,10 @@
             els.gameEndCopy.hidden = true;
           }
         } else {
+          if (modeHomeResults) {
+            void exitGame();
+            return;
+          }
           if (heading) heading.textContent = 'Sem cartas disponíveis para jogar.';
           if (els.gameEndCopy) {
             els.gameEndCopy.hidden = false;
@@ -34823,8 +34809,20 @@
           }
           els.gameEndMenuBtn.hidden = false;
         }
+        if (modeHomeResults && gauges.length) {
+          const resultGauge = gauges.find((gauge) => gauge.kind === 'speed')
+            || gauges.find((gauge) => gauge.kind === 'pronunciation')
+            || gauges[0];
+          gauges = resultGauge ? [resultGauge] : [];
+          totals = null;
+          els.gameEndErrors.hidden = true;
+          els.gameEndTotals.hidden = true;
+          els.gameEndMenuBtn.hidden = true;
+          if (heading) heading.hidden = true;
+        }
         gauges.forEach((gauge) => els.gameEndMeters.appendChild(gauge.card));
         if (gauges.length) void playGameEndPresentation(gauges, totals);
+        else if (modeHomeResults) void exitGame();
       }
 
       function buildStageThreePlaceholderMarkup(card) {
@@ -40933,12 +40931,12 @@
       }
 
       async function exitGame({ returnToLevelSelector = false } = {}) {
-        if (state.game.gameModeHomeSessionActive) returnToLevelSelector = false;
-        if (gameModeAutoReturnTimer) window.clearTimeout(gameModeAutoReturnTimer);
+        const returningFromGameModeHome = Boolean(state.game.gameModeHomeSessionActive);
+        const playUnlockCueAfterHome = returningFromGameModeHome && gameModeUnlockCuePending;
+        if (returningFromGameModeHome) returnToLevelSelector = false;
         if (gameModeUnlockCueTimer) window.clearTimeout(gameModeUnlockCueTimer);
-        gameModeAutoReturnTimer = 0;
         gameModeUnlockCueTimer = 0;
-        gameModeUnlockCuePending = false;
+        gameModeUnlockCuePending = playUnlockCueAfterHome;
         gameModeResultsShownAt = 0;
         if (gameModeUnlockAudio) {
           gameModeUnlockAudio.pause();
@@ -41019,6 +41017,7 @@
         els.game?.classList.remove('is-level-switching');
         els.game?.classList.remove('is-level-switching-reset');
         els.game?.classList.remove('is-level-text-mode');
+        els.game?.classList.remove('is-game-mode-home-results');
         els.game?.classList.remove('is-mode-two-repeat', 'is-watching-mode');
         resetGameSwipeTracking();
         syncFooterGuardState(null);
@@ -41032,7 +41031,10 @@
         els.topbar.classList.add('is-hidden');
         if (!returnToLevelSelector) refreshLibrary();
         syncWelcomeGate();
-        if (!returnToLevelSelector && gameModeHomeProgress.introCompleted) showGameModeHome();
+        if (!returnToLevelSelector && gameModeHomeProgress.introCompleted) {
+          showGameModeHome();
+          if (playUnlockCueAfterHome) scheduleGameModeUnlockCueAfterHome();
+        }
         if (exitingJourneyPhase && journeyPhaseRuntime === exitingJourneyPhase) {
           journeyPhaseRuntime = null;
           state.options.mode = exitingJourneyPhase.previousMode;
@@ -42130,9 +42132,7 @@
               gameModeUnlockCuePending = false;
               gameModeNewlyUnlockedId = 0;
               if (gameModeUnlockCueTimer) window.clearTimeout(gameModeUnlockCueTimer);
-              if (gameModeAutoReturnTimer) window.clearTimeout(gameModeAutoReturnTimer);
               gameModeUnlockCueTimer = 0;
-              gameModeAutoReturnTimer = 0;
               syncGameModeHome();
             }
 
