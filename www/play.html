@@ -217,6 +217,18 @@
       pointer-events: none !important;
     }
 
+    body.game-mode-home-active .welcome-gate {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    body.game-mode-home-active .flashcards-footer-nav {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
     button { font: inherit; color: inherit; cursor: pointer; border: 0; }
     img { display: block; max-width: 100%; }
 
@@ -24410,6 +24422,7 @@
       }
 
       async function handleLoggedOutState(message) {
+        document.body.classList.remove('game-mode-home-active');
         clearGameStatusRankTimer();
         closeUserMedalTransitionModal();
         if (state.game.active) {
@@ -25195,6 +25208,7 @@
       function showGameModeHome() {
         if (!state.user?.id || !els.gameModeHome) return false;
         state.entry.welcomeVisible = false;
+        document.body.classList.add('game-mode-home-active');
         document.body.classList.remove('welcome-active');
         els.welcomeGate?.classList.remove('is-visible');
         els.gameModeHome.hidden = false;
@@ -25212,6 +25226,7 @@
         if (els.gameModeHome) els.gameModeHome.hidden = true;
         if (els.gameModeIntroSplash) els.gameModeIntroSplash.hidden = true;
         if (els.gameModeHomeReturnBtn) els.gameModeHomeReturnBtn.hidden = false;
+        document.body.classList.remove('game-mode-home-active');
         state.entry.welcomeVisible = true;
         document.body.classList.add('welcome-active');
         els.welcomeGate?.classList.add('is-visible');
