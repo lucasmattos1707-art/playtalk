@@ -23255,10 +23255,12 @@
           }
           if (normalizedAction === 'out') {
             state.entry.pendingFlashSessionOut = false;
-            state.game.sessionClockActive = false;
-            state.game.sessionClockStagePrimeKey = '';
-            setStageSpeedLoading(false);
-            stopFlashcardSessionTick();
+            if (!options.backgroundExit) {
+              state.game.sessionClockActive = false;
+              state.game.sessionClockStagePrimeKey = '';
+              setStageSpeedLoading(false);
+              stopFlashcardSessionTick();
+            }
           }
           if (
             !state.entry.forceProgressResetPending
@@ -40938,6 +40940,7 @@
       async function exitGame({ returnToLevelSelector = false } = {}) {
         const returningFromGameModeHome = Boolean(state.game.gameModeHomeSessionActive);
         const playUnlockCueAfterHome = returningFromGameModeHome && gameModeUnlockCuePending;
+        let backgroundGameModeHomeExitClock = null;
         if (returningFromGameModeHome) returnToLevelSelector = false;
         if (gameModeUnlockCueTimer) window.clearTimeout(gameModeUnlockCueTimer);
         gameModeUnlockCueTimer = 0;
@@ -40958,7 +40961,12 @@
         state.game.sessionClockActive = false;
         stopFlashcardSessionTick();
         if (!babyModeSessionActive) {
-          if (returnToLevelSelector) {
+          if (returningFromGameModeHome) {
+            backgroundGameModeHomeExitClock = signalFlashcardSessionClock('out', {
+              forceNetwork: true,
+              backgroundExit: true
+            });
+          } else if (returnToLevelSelector) {
             void signalFlashcardSessionClock('out', { forceNetwork: true })
               .then(() => flushDeferredGameplayNetworkSync())
               .catch((error) => console.warn('Falha ao finalizar o relógio da rodada em segundo plano:', error));
@@ -41034,11 +41042,16 @@
         els.game.classList.remove('is-visible');
         els.catalog.classList.add('is-hidden');
         els.topbar.classList.add('is-hidden');
-        if (!returnToLevelSelector) refreshLibrary();
+        if (!returnToLevelSelector && !returningFromGameModeHome) refreshLibrary();
         syncWelcomeGate();
         if (!returnToLevelSelector && gameModeHomeProgress.introCompleted) {
           showGameModeHome();
           if (playUnlockCueAfterHome) scheduleGameModeUnlockCueAfterHome();
+        }
+        if (backgroundGameModeHomeExitClock) {
+          void backgroundGameModeHomeExitClock
+            .then(() => flushDeferredGameplayNetworkSync())
+            .catch((error) => console.warn('Falha ao sincronizar a sessao em segundo plano:', error));
         }
         if (exitingJourneyPhase && journeyPhaseRuntime === exitingJourneyPhase) {
           journeyPhaseRuntime = null;
