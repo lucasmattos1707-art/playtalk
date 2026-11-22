@@ -1763,7 +1763,7 @@
     .game-mode-tile.is-unlocked img { filter: drop-shadow(0 0 22px rgba(72, 226, 160, .22)); }
     .game-mode-tile.is-current img { filter: drop-shadow(0 0 28px rgba(72, 226, 160, .38)); }
     .game-mode-tile:focus-visible { outline: 2px solid #77edb1; outline-offset: 5px; }
-    .game-mode-tile img { width: min(78%, 250px); aspect-ratio: 1; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0,0,0,.28)); }
+    .game-mode-tile img { width: min(78%, 250px); aspect-ratio: 1; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0,0,0,.28)); pointer-events: none; user-select: none; -webkit-user-drag: none; }
     .game-mode-tile:disabled { color: #f7fbff; }
     .game-mode-tile[aria-disabled="true"] { cursor: default; -webkit-touch-callout: none; user-select: none; }
 
@@ -25209,8 +25209,7 @@
       }
 
       function beginGameModeAdminUnlockHold(event) {
-        const logo = event.target.closest('.game-mode-tile img');
-        const button = logo?.closest('[data-game-mode]');
+        const button = gameModeTileButtonFromEvent(event);
         const modeId = Number(button?.getAttribute('data-game-mode'));
         if (!button || !isAdminUser() || !modeId || gameModeIsUnlocked(modeId)) return;
         if (event.pointerType === 'mouse' && event.button !== 0) return;
@@ -37217,7 +37216,8 @@
           });
         }
         renderFifthStarPortugueseDisplay(card, stageConfig.key);
-        if (isSimpleStarPhase && !textOnlyMode) {
+        const keepModeThreeEnglishWordVisible = isCardsModeSecondSpeakingEntry(entry);
+        if (isSimpleStarPhase && !textOnlyMode && !keepModeThreeEnglishWordVisible) {
           els.gameWord.parentElement?.classList.remove('is-stage-one-swap');
           els.gameWord.classList.remove('is-stage-swap-hidden');
           els.gameSubword.classList.remove('is-stage-swap-hidden');
@@ -37235,7 +37235,9 @@
           els.gameWord.style.display = 'none';
           els.gameSubword.style.display = 'none';
         }
-        if ((!isSimpleStarPhase || textOnlyMode) && (!typingStage || textOnlyMode) && !stageOneSwapActive) {
+        if ((!isSimpleStarPhase || textOnlyMode || keepModeThreeEnglishWordVisible)
+          && (!typingStage || textOnlyMode)
+          && !stageOneSwapActive) {
           els.gameWord.classList.toggle('is-hidden', stageConfig.showWord === false);
           els.gameSubword.classList.toggle('is-hidden', !subword);
           els.gameSubword.style.display = subword ? '' : 'none';
