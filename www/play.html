@@ -352,7 +352,7 @@
       visibility: visible;
     }
 
-    body.playtalk-loader-active .welcome-gate {
+    body.playtalk-loader-active:not(.game-mode-home-active) .welcome-gate {
       opacity: 0 !important;
       visibility: hidden !important;
       pointer-events: none !important;
@@ -1757,6 +1757,7 @@
     .game-mode-tile:focus-visible { outline: 2px solid #77edb1; outline-offset: 5px; }
     .game-mode-tile img { width: min(78%, 250px); aspect-ratio: 1; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0,0,0,.28)); }
     .game-mode-tile:disabled { color: #f7fbff; }
+    .game-mode-tile[aria-disabled="true"] { cursor: default; -webkit-touch-callout: none; user-select: none; }
 
     .game-mode-intro {
       position: fixed;
@@ -1771,6 +1772,7 @@
     .game-mode-intro.is-fading { opacity: 0; pointer-events: none; }
     .game-mode-intro.is-playing { background: rgba(10, 9, 17, .28); }
     .game-mode-intro__brand { position: absolute; width: min(62vw, 520px); max-height: 34vh; object-fit: contain; opacity: 0; transition: opacity 1.5s ease; }
+    .game-mode-intro__brand--second { transition-duration: .9s; }
     .game-mode-intro__brand.is-visible { opacity: 1; }
     .game-mode-intro__brand--first { width: min(48vw, 440px); }
     .game-mode-intro__prompt {
@@ -14183,17 +14185,17 @@
         </button>
       </header>
       <div class="game-mode-grid" id="gameModeGrid" aria-label="Seis modos de jogo">
-        <button class="game-mode-tile" type="button" data-game-mode="1" aria-label="Modo 1: Digitação" disabled><img src="/medalhas/modo-4.png" alt=""></button>
-        <button class="game-mode-tile" type="button" data-game-mode="2" aria-label="Modo 2: Falar em inglês" disabled><img src="/medalhas/modo-3.png" alt=""></button>
-        <button class="game-mode-tile" type="button" data-game-mode="3" aria-label="Modo 3: Ouvir e repetir" disabled><img src="/medalhas/modo-2.png" alt=""></button>
-        <button class="game-mode-tile" type="button" data-game-mode="4" aria-label="Modo 4: Ouvir e falar" disabled><img src="/medalhas/modo-1.png" alt=""></button>
-        <button class="game-mode-tile" type="button" data-game-mode="5" aria-label="Modo 5: Watching" disabled><img src="/medalhas/modo-watching.webp" alt=""></button>
-        <button class="game-mode-tile" type="button" data-game-mode="6" aria-label="Modo 6: Modo Fire" disabled><img src="/medalhas/modo-5.png" alt=""></button>
+        <button class="game-mode-tile" type="button" data-game-mode="1" aria-label="Modo 1: Digitação" aria-disabled="true"><img src="/medalhas/modo-4.png" alt=""></button>
+        <button class="game-mode-tile" type="button" data-game-mode="2" aria-label="Modo 2: Falar em inglês" aria-disabled="true"><img src="/medalhas/modo-3.png" alt=""></button>
+        <button class="game-mode-tile" type="button" data-game-mode="3" aria-label="Modo 3: Ouvir e repetir" aria-disabled="true"><img src="/medalhas/modo-2.png" alt=""></button>
+        <button class="game-mode-tile" type="button" data-game-mode="4" aria-label="Modo 4: Ouvir e falar" aria-disabled="true"><img src="/medalhas/modo-1.png" alt=""></button>
+        <button class="game-mode-tile" type="button" data-game-mode="5" aria-label="Modo 5: Watching" aria-disabled="true"><img src="/medalhas/modo-watching.webp" alt=""></button>
+        <button class="game-mode-tile" type="button" data-game-mode="6" aria-label="Modo 6: Modo Fire" aria-disabled="true"><img src="/medalhas/modo-5.png" alt=""></button>
       </div>
     </section>
     <section class="game-mode-intro" id="gameModeIntroSplash" aria-label="Apresentacao inicial" hidden>
-      <img class="game-mode-intro__brand game-mode-intro__brand--first is-visible" id="gameModeIntroFirstLogo" src="/arquivos-codex/welcome-gate/fluent-level-up.png" alt="Fluent LevelUp">
-      <img class="game-mode-intro__brand" id="gameModeIntroSecondLogo" src="/arquivos-codex/welcome-gate/fluent-level-up-wordmark.png" alt="Fluent LevelUp">
+      <img class="game-mode-intro__brand game-mode-intro__brand--first is-visible" id="gameModeIntroFirstLogo" src="/arquivos-codex/welcome-gate/levelup.png" alt="Fluent LevelUp">
+      <img class="game-mode-intro__brand game-mode-intro__brand--second" id="gameModeIntroSecondLogo" src="/arquivos-codex/welcome-gate/fluent-level-up-wordmark.png" alt="Fluent LevelUp">
       <button class="game-mode-intro__prompt" id="gameModeIntroStartBtn" type="button" aria-label="Toque em qualquer lugar para começar"><span>Toque para começar</span></button>
       <p class="game-mode-intro__status" id="gameModeIntroStatus" aria-live="polite"></p>
     </section>
@@ -16655,6 +16657,8 @@
       let gameModeIntroAudio = null;
       let gameModeIntroFrame = 0;
       let gameModeIntroModeUnlocked = false;
+      let gameModeAdminUnlockTimer = 0;
+      let gameModeAdminUnlockButton = null;
       let gameModePrestartAudio = null;
       let gameModePrestartReady = false;
       let gameModePrestartAudioFinished = false;
@@ -22469,6 +22473,7 @@
       }
 
       function shouldShowWelcomeGate() {
+        if (document.body.classList.contains('game-mode-home-active')) return false;
         if (state.ui.soundTestOpen || state.ui.micCheckOpen) return false;
         if (state.entry.authRequired || state.watch.active) return false;
         if (state.game.active && !state.ui.gamePausedAtWelcome) return false;
@@ -25090,12 +25095,56 @@
           const modeId = Number(button.getAttribute('data-game-mode'));
           const introUnlocked = Boolean(gameModeIntroModeUnlocked && modeId === 1);
           const unlocked = gameModeIsUnlocked(modeId) || introUnlocked;
-          button.disabled = !unlocked;
+          button.disabled = false;
           button.classList.toggle('is-unlocked', unlocked);
           button.classList.toggle('is-current', unlocked && modeId === Number(gameModeHomeProgress.mode || 1));
           button.classList.toggle('is-newly-unlocked', unlocked && modeId === Number(gameModeNewlyUnlockedId));
           button.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
         });
+      }
+
+      function cancelGameModeAdminUnlockHold() {
+        if (gameModeAdminUnlockTimer) window.clearTimeout(gameModeAdminUnlockTimer);
+        gameModeAdminUnlockTimer = 0;
+        gameModeAdminUnlockButton = null;
+      }
+
+      async function unlockGameModeForAdmin(modeId) {
+        if (!isAdminUser() || gameModeIsUnlocked(modeId)) return false;
+        const response = await fetch(buildApiUrl('/api/flashcards/game-mode-progress/admin-unlock'), {
+          method: 'POST', credentials: 'include',
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ mode: Number(modeId) })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.success || !payload?.progress) {
+          throw new Error(payload?.message || 'Nao foi possivel liberar este modo.');
+        }
+        gameModeHomeProgress = {
+          level: Math.max(1, Number(payload.progress.level) || 1),
+          mode: Math.max(1, Math.min(6, Number(payload.progress.mode) || modeId)),
+          introCompleted: Boolean(payload.progress.introCompleted)
+        };
+        gameModeNewlyUnlockedId = Number(modeId);
+        syncGameModeHome();
+        return true;
+      }
+
+      function beginGameModeAdminUnlockHold(event) {
+        const logo = event.target.closest('.game-mode-tile img');
+        const button = logo?.closest('[data-game-mode]');
+        const modeId = Number(button?.getAttribute('data-game-mode'));
+        if (!button || !isAdminUser() || !modeId || gameModeIsUnlocked(modeId)) return;
+        if (event.pointerType === 'mouse' && event.button !== 0) return;
+        cancelGameModeAdminUnlockHold();
+        gameModeAdminUnlockButton = button;
+        gameModeAdminUnlockTimer = window.setTimeout(() => {
+          gameModeAdminUnlockTimer = 0;
+          gameModeAdminUnlockButton = null;
+          void unlockGameModeForAdmin(modeId).catch((error) => {
+            console.warn('Falha ao liberar modo para admin:', error);
+          });
+        }, 2000);
       }
 
       async function fetchGameModeHomeProgress() {
@@ -25274,7 +25323,8 @@
         if (!audio || !els.gameModeHome) return;
         const time = Math.max(0, Number(audio.currentTime) || 0);
         if (time >= 1.5) els.gameModeIntroFirstLogo?.classList.remove('is-visible');
-        if (time >= 2) els.gameModeIntroSecondLogo?.classList.add('is-visible');
+        if (time >= 2 && time < 3) els.gameModeIntroSecondLogo?.classList.add('is-visible');
+        else if (time >= 3) els.gameModeIntroSecondLogo?.classList.remove('is-visible');
         const tiles = Array.from(els.gameModeGrid?.querySelectorAll('[data-game-mode]') || []);
         tiles.forEach((tile, index) => {
           tile.classList.toggle('is-intro-visible', time >= 4 + index);
@@ -25290,6 +25340,8 @@
 
       async function startGameModeHomeIntro() {
         if (gameModeIntroAudio || !els.gameModeIntroSplash || !els.gameModeHome) return;
+        els.gameModeIntroFirstLogo?.classList.add('is-visible');
+        els.gameModeIntroSecondLogo?.classList.remove('is-visible');
         gameModeIntroAudio = new Audio('/audiostuto/mode-intros/intro.mp3');
         gameModeIntroAudio.preload = 'auto';
         gameModeIntroAudio.addEventListener('ended', async () => {
@@ -42166,8 +42218,24 @@
         });
         els.gameModeGrid?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-game-mode]');
-          if (!button || button.disabled) return;
+          if (!button || button.getAttribute('aria-disabled') === 'true') return;
           openGameModePrestart(Number(button.getAttribute('data-game-mode')));
+        });
+        els.gameModeGrid?.addEventListener('pointerdown', beginGameModeAdminUnlockHold);
+        window.addEventListener('pointerup', cancelGameModeAdminUnlockHold, true);
+        window.addEventListener('pointercancel', cancelGameModeAdminUnlockHold, true);
+        window.addEventListener('pointermove', (event) => {
+          const button = gameModeAdminUnlockButton;
+          if (!button) return;
+          const rect = button.getBoundingClientRect();
+          if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) {
+            cancelGameModeAdminUnlockHold();
+          }
+        }, true);
+        els.gameModeGrid?.addEventListener('contextmenu', (event) => {
+          if (!isAdminUser()) return;
+          const button = event.target.closest('[data-game-mode]');
+          if (button?.getAttribute('aria-disabled') === 'true') event.preventDefault();
         });
         els.gameModeIntroStartBtn?.addEventListener('click', () => { void startGameModeHomeIntro(); });
         els.gameModePrestartBackBtn?.addEventListener('click', closeGameModePrestart);
@@ -43134,6 +43202,7 @@
       }
 
       async function init() {
+        document.body.classList.add('game-mode-home-active');
         const searchParams = new URLSearchParams(window.location.search);
         const requestedView = searchParams.get('view');
         const requestedLaunch = safeText(searchParams.get('launch')).toLowerCase();

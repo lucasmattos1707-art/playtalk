@@ -20931,6 +20931,54 @@ app.post('/api/flashcards/game-mode-progress/intro-complete', express.json({ lim
   }
 });
 
+app.post('/api/flashcards/game-mode-progress/admin-unlock', express.json({ limit: '16kb' }), async (req, res) => {
+  try {
+    if (!pool) {
+      res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
+      return;
+    }
+    const authUser = await readAuthenticatedUserFromRequest(req);
+    if (!authUser?.id) {
+      clearAuthCookie(res);
+      res.status(401).json({ success: false, message: 'Sessao invalida ou expirada.' });
+      return;
+    }
+    if (!isAdminUserRecord(authUser)) {
+      res.status(403).json({ success: false, message: 'Apenas administradores podem liberar modos.' });
+      return;
+    }
+    const mode = Number(req.body?.mode);
+    if (!Number.isInteger(mode) || mode < 1 || mode > 6) {
+      res.status(400).json({ success: false, message: 'Modo invalido.' });
+      return;
+    }
+    await ensureFlashcardGameModeProgressTable();
+    const result = await pool.query(
+      `INSERT INTO public.user_flashcard_game_mode_progress (user_id, current_level, current_mode, intro_completed)
+       VALUES ($1, 1, $2, true)
+       ON CONFLICT (user_id) DO UPDATE SET
+         current_mode = GREATEST(public.user_flashcard_game_mode_progress.current_mode, EXCLUDED.current_mode),
+         intro_completed = true,
+         updated_at = now()
+       RETURNING current_level, current_mode, intro_completed, updated_at`,
+      [Number(authUser.id), mode]
+    );
+    const row = result.rows[0] || {};
+    res.json({
+      success: true,
+      progress: {
+        level: Math.max(1, Number(row.current_level) || 1),
+        mode: Math.max(1, Math.min(6, Number(row.current_mode) || mode)),
+        introCompleted: Boolean(row.intro_completed),
+        updatedAt: row.updated_at || null
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao liberar modo para admin:', error);
+    res.status(500).json({ success: false, message: 'Erro ao liberar o modo.' });
+  }
+});
+
 app.post('/api/flashcards/game-mode-progress/complete', express.json({ limit: '16kb' }), async (req, res) => {
   if (!pool) {
     res.status(503).json({ success: false, message: 'DATABASE_URL nao configurada.' });
