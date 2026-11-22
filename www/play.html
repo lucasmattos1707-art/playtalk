@@ -243,6 +243,12 @@
       pointer-events: none !important;
     }
 
+    body.game-mode-home-active #flashcardLevelProgress {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+    }
+
     button { font: inherit; color: inherit; cursor: pointer; border: 0; }
     img { display: block; max-width: 100%; }
 
@@ -17283,7 +17289,7 @@
 
       function isGameModeHomeLegacyLevelFlowDisabled() {
         const modeId = Number(state.game.cardsModeModeId) || 0;
-        return Boolean(state.game.gameModeHomeSessionActive && modeId >= 2 && modeId <= 6);
+        return Boolean(state.game.gameModeHomeSessionActive && modeId >= 1 && modeId <= 6);
       }
 
       function isJourneyGameMode() {
@@ -29375,7 +29381,7 @@
       function updateLevelProgressBar() {
         if (!els.flashcardLevelProgress || !els.flashcardLevelProgressBar) return;
         const gameModeHidesLevelProgress = state.game.gameModeHomeSessionActive
-          && Number(state.game.cardsModeModeId) >= 2
+          && Number(state.game.cardsModeModeId) >= 1
           && Number(state.game.cardsModeModeId) <= 6;
         const show = Boolean(state.game.active && !state.ui.gamePausedAtWelcome && !gameModeHidesLevelProgress);
         els.flashcardLevelProgress.hidden = !show;
@@ -41117,7 +41123,7 @@
       async function exitGame({ returnToLevelSelector = false } = {}) {
         const returningFromGameModeHome = Boolean(state.game.gameModeHomeSessionActive);
         const exitingGameModeHomeId = Number(state.game.cardsModeModeId) || 0;
-        const skipLegacyLevelFlow = returningFromGameModeHome && exitingGameModeHomeId >= 2 && exitingGameModeHomeId <= 6;
+        const skipLegacyLevelFlow = returningFromGameModeHome && exitingGameModeHomeId >= 1 && exitingGameModeHomeId <= 6;
         const playUnlockCueAfterHome = returningFromGameModeHome && gameModeUnlockCuePending;
         let backgroundGameModeHomeExitClock = null;
         if (returningFromGameModeHome) returnToLevelSelector = false;
