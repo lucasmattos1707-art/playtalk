@@ -218,9 +218,23 @@
     }
 
     body.game-mode-home-active .welcome-gate {
-      opacity: 0 !important;
-      visibility: hidden !important;
+      opacity: 1 !important;
+      visibility: visible !important;
       pointer-events: none !important;
+    }
+
+    body.game-mode-home-active .welcome-gate__bg,
+    body.game-mode-home-active .welcome-gate__touch {
+      display: none !important;
+    }
+
+    body.game-mode-home-active .game-mode-home,
+    body.game-mode-home-active .game-mode-intro,
+    body.game-mode-home-active .game-mode-home-return,
+    body.game-mode-home-active .game-mode-prestart,
+    body.game-mode-home-active .game-mode-watch-forward {
+      visibility: visible !important;
+      pointer-events: auto;
     }
 
     body.game-mode-home-active .flashcards-footer-nav {
@@ -1761,19 +1775,31 @@
     .game-mode-intro__brand--first { width: min(48vw, 440px); }
     .game-mode-intro__prompt {
       position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      color: transparent;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .game-mode-intro__prompt span {
+      position: absolute;
       top: calc(50% + min(25vh, 190px));
-      padding: 14px 24px;
-      border: 1px solid rgba(220, 240, 255, .45);
-      border-radius: 999px;
+      left: 50%;
+      padding: 8px 12px;
       color: #ecf7ff;
-      background: rgba(7, 17, 29, .78);
       font: 700 clamp(15px, 2vw, 21px)/1.2 system-ui, sans-serif;
       letter-spacing: .03em;
-      cursor: pointer;
+      white-space: nowrap;
+      transform: translateX(-50%);
       transition: opacity 1.5s ease, transform 1.5s ease;
     }
 
-    .game-mode-intro.is-playing .game-mode-intro__prompt { opacity: 0; transform: translateY(10px); pointer-events: none; }
+    .game-mode-intro.is-playing .game-mode-intro__prompt span { opacity: 0; transform: translate(-50%, 10px); pointer-events: none; }
     .game-mode-intro__status { position: absolute; bottom: 28px; color: #91a8bf; font-size: 13px; }
 
     .game-mode-prestart {
@@ -1837,7 +1863,7 @@
       .game-mode-prestart__start { width: min(60vw, 320px); }
       .game-mode-intro__brand { width: min(86vw, 430px); }
       .game-mode-intro__brand--first { width: min(74vw, 360px); }
-      .game-mode-intro__prompt { top: calc(50% + 22vh); }
+      .game-mode-intro__prompt span { top: calc(50% + 22vh); }
     }
 
     .cards-battle-search {
@@ -14168,7 +14194,7 @@
     <section class="game-mode-intro" id="gameModeIntroSplash" aria-label="Apresentacao inicial" hidden>
       <img class="game-mode-intro__brand game-mode-intro__brand--first is-visible" id="gameModeIntroFirstLogo" src="/arquivos-codex/welcome-gate/fluent-level-up.png" alt="Fluent LevelUp">
       <img class="game-mode-intro__brand" id="gameModeIntroSecondLogo" src="/arquivos-codex/welcome-gate/fluent-level-up-wordmark.png" alt="Fluent LevelUp">
-      <button class="game-mode-intro__prompt" id="gameModeIntroStartBtn" type="button">Toque para começar</button>
+      <button class="game-mode-intro__prompt" id="gameModeIntroStartBtn" type="button" aria-label="Toque em qualquer lugar para começar"><span>Toque para começar</span></button>
       <p class="game-mode-intro__status" id="gameModeIntroStatus" aria-live="polite"></p>
     </section>
     <button class="game-mode-home-return" id="gameModeHomeReturnBtn" type="button" aria-label="Voltar aos modos de jogo" hidden>&larr;</button>
@@ -43247,7 +43273,8 @@
           }).catch((settingsError) => {
             console.warn('Falha ao aquecer settings do jogo em segundo plano:', settingsError);
           });
-          if (!isAdminUser() && resolveAudioCheckCompletedState() && !readMicCheckCompletedFlag()) {
+          if (!document.body.classList.contains('game-mode-home-active')
+            && !isAdminUser() && resolveAudioCheckCompletedState() && !readMicCheckCompletedFlag()) {
             openMicCheck();
           }
           if (!hasSpeechRecognitionSupport()) {
