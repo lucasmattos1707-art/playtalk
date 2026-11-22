@@ -21103,7 +21103,13 @@ app.post('/api/flashcards/game-rankings/round', express.json({ limit: '32kb' }),
     await pool.query(`INSERT INTO public.game_ranking_rounds (user_id, round_id, mode, heard, spoken, duration_ms, speed, scores)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb) ON CONFLICT DO NOTHING`,
       [Number(user.id), id, m, bounded(heard, 100000), bounded(spoken, 100000), bounded(durationMs, 86400000), safeSpeed, JSON.stringify(cleanScores)]);
-    return res.json({ success: true });
+    const totals = await pool.query(`SELECT COALESCE(SUM(heard),0)::bigint AS heard, COALESCE(SUM(spoken),0)::bigint AS spoken,
+      COALESCE(MAX(heard) FILTER (WHERE round_id = $2),0)::int AS round_heard,
+      COALESCE(MAX(spoken) FILTER (WHERE round_id = $2),0)::int AS round_spoken
+      FROM public.game_ranking_rounds WHERE user_id = $1`, [Number(user.id), id]);
+    const row = totals.rows[0];
+    return res.json({ success: true, totals: { heard: Number(row.heard), spoken: Number(row.spoken),
+      previousHeard: Number(row.heard) - Number(row.round_heard), previousSpoken: Number(row.spoken) - Number(row.round_spoken) } });
   } catch (error) {
     console.error('Erro ao registrar rodada dos rankings:', error);
     return res.status(500).json({ success: false });

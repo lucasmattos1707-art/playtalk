@@ -5791,6 +5791,8 @@
     }
     .game.is-game-mode-home-results .game-end__meter--minimal .game-end__dial { width: min(100%, 520px); margin: 0 auto; }
     .game.is-game-mode-home-results .game-end__meter--minimal .game-end__readout { margin-top: -8px; }
+    .game.is-game-mode-home-results .game-end__totals { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+    .game.is-game-mode-home-results .game-end__total { border: 0; background: transparent; padding: 8px; }
 
     .game-end h3 {
       margin: 0;
@@ -14900,8 +14902,8 @@
             <div class="game-end__presentation" id="gameEndPresentation" hidden>
               <div class="game-end__meters" id="gameEndMeters" aria-live="polite"></div>
               <div class="game-end__totals" id="gameEndTotals" hidden>
-                <div class="game-end__total">Palavras ditas<strong id="gameEndWordsSpoken">+0</strong></div>
-                <div class="game-end__total">Palavras ouvidas<strong id="gameEndWordsHeard">+0</strong></div>
+              <div class="game-end__total">Listening<strong id="gameEndWordsHeard">0</strong></div>
+              <div class="game-end__total">Speaking<strong id="gameEndWordsSpoken">0</strong></div>
               </div>
               <p class="game-end__error-count" id="gameEndErrors" hidden></p>
             </div>
@@ -31584,15 +31586,19 @@
         const speed = Number(round.modeId) === 1 && typingRound?.completed
           ? (Math.max(0, Number(typingRound.characters) || 0) / elapsedSeconds) * 60 * (Number(round.speedMultiplier) || 1)
           : null;
-        void fetch(buildApiUrl('/api/flashcards/game-rankings/round'), {
+        round.rankingSavePromise = fetch(buildApiUrl('/api/flashcards/game-rankings/round'), {
           method: 'POST', credentials: 'include', keepalive: true,
           headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ roundId: round.roundId, mode: round.modeId,
             heard: round.wordsHeard, spoken: round.wordsSpoken,
             durationMs: Math.max(0, Date.now() - (Number(state.game.sessionStartedAt) || Date.now())),
             speed, scores: round.pronunciationScores || [] })
-        }).then(response => { if (!response.ok) throw new Error('Falha ao salvar rodada'); })
-          .catch(error => console.warn('Falha ao registrar rodada para rankings:', error));
+        }).then(async response => {
+          if (!response.ok) throw new Error('Falha ao salvar rodada');
+          const payload = await response.json();
+          if (!payload.success || !payload.totals) throw new Error('Totais indisponíveis');
+          return payload.totals;
+        }).catch(error => { console.warn('Falha ao registrar rodada para rankings:', error); return null; });
       }
 
       function finishCardsModeRound() {
@@ -34887,11 +34893,11 @@
         });
       }
 
-      function animateGameEndWordTotal(element, value, token) {
+      function animateGameEndWordTotal(element, value, token, startValue = 0, duration = 650, showPlus = true) {
         return new Promise((resolve) => {
           const target = Math.max(0, Math.round(Number(value) || 0));
+          const start = Math.max(0, Math.round(Number(startValue) || 0));
           const startAt = performance.now();
-          const duration = 650;
           const frame = (now) => {
             if (token !== gameEndPresentationToken) {
               resolve();
@@ -34899,14 +34905,14 @@
             }
             const progress = Math.min(1, (now - startAt) / duration);
             const eased = 1 - Math.pow(1 - progress, 3);
-            element.textContent = `+${Math.round(target * eased).toLocaleString('pt-BR')}`;
+            element.textContent = `${showPlus ? '+' : ''}${Math.round(start + (target - start) * eased).toLocaleString('pt-BR')}`;
             if (progress < 1) {
               window.requestAnimationFrame(frame);
               return;
             }
             resolve();
           };
-          element.textContent = '+0';
+          element.textContent = `${showPlus ? '+' : ''}${start.toLocaleString('pt-BR')}`;
           window.requestAnimationFrame(frame);
         });
       }
@@ -34927,10 +34933,32 @@
           await wait(360);
         }
         if (totals) {
-          els.gameEndTotals.hidden = false;
-          await animateGameEndWordTotal(els.gameEndWordsSpoken, totals.spoken, token);
-          await wait(180);
-          await animateGameEndWordTotal(els.gameEndWordsHeard, totals.heard, token);
+          if (autoReturnHome) {
+            const saved = await Promise.race([
+              state.game.cardsModeRound?.rankingSavePromise || Promise.resolve(null),
+              wait(5000).then(() => null)
+            ]);
+            if (token !== gameEndPresentationToken) return;
+            if (saved) {
+              els.gameEndWordsHeard.textContent = Number(saved.previousHeard).toLocaleString('pt-BR');
+              els.gameEndWordsSpoken.textContent = Number(saved.previousSpoken).toLocaleString('pt-BR');
+              els.gameEndTotals.hidden = false;
+              await wait(1000);
+              await Promise.all([
+                animateGameEndWordTotal(els.gameEndWordsHeard, saved.heard, token, saved.previousHeard, 1000, false),
+                animateGameEndWordTotal(els.gameEndWordsSpoken, saved.spoken, token, saved.previousSpoken, 1000, false)
+              ]);
+            } else {
+              els.gameEndWordsHeard.textContent = `+${totals.heard.toLocaleString('pt-BR')}`;
+              els.gameEndWordsSpoken.textContent = `+${totals.spoken.toLocaleString('pt-BR')}`;
+              els.gameEndTotals.hidden = false;
+            }
+          } else {
+            els.gameEndTotals.hidden = false;
+            await animateGameEndWordTotal(els.gameEndWordsSpoken, totals.spoken, token);
+            await wait(180);
+            await animateGameEndWordTotal(els.gameEndWordsHeard, totals.heard, token);
+          }
         }
         if (token === gameEndPresentationToken) {
           if (autoReturnHome) {
@@ -35050,7 +35078,6 @@
             || gauges.find((gauge) => gauge.kind === 'pronunciation')
             || gauges[0];
           gauges = resultGauge ? [resultGauge] : [];
-          totals = null;
           els.gameEndErrors.hidden = true;
           els.gameEndTotals.hidden = true;
           els.gameEndMenuBtn.hidden = true;
