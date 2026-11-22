@@ -1828,10 +1828,15 @@
     .game-mode-prestart__start { position: absolute; inset: 0; width: 100%; height: 100%; display: grid; place-items: end center; padding: 0 20px max(34px, env(safe-area-inset-bottom)); border: 0; border-radius: 0; color: transparent; background: transparent; box-shadow: none; font-size: 20px; font-weight: 400; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
     .game-mode-prestart__start[hidden] { display: none; }
     .game-mode-prestart__start span { position: absolute; top: calc(50% + min(29vh, 220px) + 14px); left: 50%; transform: translateX(-50%); color: #f4f8ff; font-weight: 400; white-space: nowrap; text-shadow: 0 2px 14px rgba(0,0,0,.52); }
+    .game-mode-audio-progress { position: absolute; top: calc(50% + min(29vh, 220px) + 23px); left: 50%; width: min(40vw, 420px); min-width: 200px; height: 4px; overflow: hidden; border-radius: 999px; background: rgba(172,208,235,.22); transform: translateX(-50%); pointer-events: none; }
+    .game-mode-audio-progress[hidden] { display: none !important; }
+    .game-mode-audio-progress__fill { display: block; width: 0; height: 100%; border-radius: inherit; background: #75dcff; transition: width .12s linear; }
     .game-mode-prestart__start:disabled { opacity: 1; cursor: default; }
     .game-mode-home-return { position: fixed; z-index: 31; top: 18px; left: 18px; width: 46px; height: 46px; border: 1px solid rgba(145,191,224,.32); border-radius: 50%; color: #eaf6ff; background: rgba(6,17,31,.88); font-size: 24px; cursor: pointer; }
     .game-mode-watch-forward { position: fixed; z-index: 42; right: max(22px, env(safe-area-inset-right)); bottom: max(22px, env(safe-area-inset-bottom)); width: 62px; height: 62px; display: grid; place-items: center; border: 1px solid rgba(117,214,255,.56); border-radius: 50%; color: #effaff; background: rgba(8,31,52,.9); box-shadow: 0 0 24px rgba(65,188,255,.22); cursor: pointer; }
     .game-mode-watch-forward[hidden] { display: none !important; }
+    .game.is-game-mode-home-session #gameTouchBtn { display: none !important; }
+    .game.is-game-mode-home-fire .game-card__coin-badge { display: none !important; }
     .game.is-mode-two-repeat .game-card__content,
     .game.is-mode-two-repeat #gameStep,
     .game.is-mode-two-repeat #gameWord,
@@ -1861,6 +1866,7 @@
       .game-mode-prestart__logo { width: min(82vw, 430px); max-height: 44vh; }
       .game-mode-prestart__body { width: 100%; }
       .game-mode-prestart__start span { top: calc(50% + min(22vh, 180px) + 12px); }
+      .game-mode-audio-progress { top: calc(50% + min(22vh, 180px) + 21px); width: min(60vw, 320px); }
       .game-mode-intro__brand { width: min(86vw, 430px); }
       .game-mode-intro__brand--first { width: min(74vw, 360px); }
       .game-mode-intro__prompt span { top: calc(50% + 22vh); }
@@ -14223,6 +14229,7 @@
       <button class="game-mode-prestart__back" id="gameModePrestartBackBtn" type="button" aria-label="Voltar aos modos">&larr;</button>
       <div class="game-mode-prestart__logo-wrap"><img class="game-mode-prestart__logo" id="gameModePrestartLogo" alt=""></div>
       <div class="game-mode-prestart__body">
+        <div class="game-mode-audio-progress" id="gameModeAudioProgress" role="progressbar" aria-label="Progresso do audio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="game-mode-audio-progress__fill" id="gameModeAudioProgressFill"></span></div>
         <button class="game-mode-prestart__start" id="gameModePrestartStartBtn" type="button" aria-label="Toque em qualquer lugar para começar" hidden><span>Toque para começar</span></button>
       </div>
     </section>
@@ -15930,6 +15937,8 @@
         { id: 5, title: 'Watching', stage: 1, image: '/medalhas/modo-watching.webp', audio: '/audiostuto/mode-intros/watching.mp3', needsMic: false },
         { id: 6, title: 'Modo Fire', stage: 5, image: '/medalhas/modo-5.png', audio: '/audiostuto/mode-intros/fire.mp3', needsMic: true }
       ];
+      const GAME_MODE_AUDIO_SEEN_STORAGE_KEY = 'fluent-levelup-game-mode-audio-seen-v1';
+      const GAME_MODE_PLAYED_STORAGE_KEY = 'fluent-levelup-game-mode-played-v1';
       const LEVEL_MODE_ACQUISITION_STAGE_SEQUENCE = [4, 1, 3];
       const GAME_STAGE_PROGRESS_WEIGHTS = Object.freeze([25, 25, 10, 25, 15]);
       const GAME_STAGE_PROGRESS_TOTAL = Math.max(
@@ -16680,6 +16689,7 @@
       let gameModePrestartAudio = null;
       let gameModePrestartReady = false;
       let gameModePrestartAudioFinished = false;
+      let gameModePrestartCanSkip = false;
       let gameModePrestartModeId = 0;
       let gameModeCardsPreloadPromise = null;
       let gameModeResultsShownAt = 0;
@@ -16717,6 +16727,8 @@
         gameModePrestart: document.getElementById('gameModePrestart'),
         gameModePrestartBackBtn: document.getElementById('gameModePrestartBackBtn'),
         gameModePrestartLogo: document.getElementById('gameModePrestartLogo'),
+        gameModeAudioProgress: document.getElementById('gameModeAudioProgress'),
+        gameModeAudioProgressFill: document.getElementById('gameModeAudioProgressFill'),
         gameModePrestartStartBtn: document.getElementById('gameModePrestartStartBtn'),
         gameModeWatchForwardBtn: document.getElementById('gameModeWatchForwardBtn'),
         welcomeBgBase: document.getElementById('welcomeBgBase'),
@@ -17238,6 +17250,11 @@
 
       function currentGameMode() {
         return normalizeGameOptionValue('mode', state.options?.mode);
+      }
+
+      function isGameModeHomeLegacyLevelFlowDisabled() {
+        const modeId = Number(state.game.cardsModeModeId) || 0;
+        return Boolean(state.game.gameModeHomeSessionActive && modeId >= 2 && modeId <= 6);
       }
 
       function isJourneyGameMode() {
@@ -23160,6 +23177,7 @@
       }
 
       function requestFlashcardSessionClockTick(force = false) {
+        if (isGameModeHomeLegacyLevelFlowDisabled()) return;
         if (!state.user?.id) return;
         if (!state.game.active || state.game.paused || state.ui.gamePausedAtWelcome) return;
         if (!state.game.sessionClockActive) return;
@@ -23200,7 +23218,7 @@
 
       function startFlashcardSessionTick() {
         stopFlashcardSessionTick();
-        if (!state.user?.id) return;
+        if (!state.user?.id || isGameModeHomeLegacyLevelFlowDisabled()) return;
         state.game.sessionClockLastTickAt = Date.now();
         state.game.sessionClockTickTimer = window.setInterval(() => {
           maybeReleaseTimedGameCard();
@@ -23215,6 +23233,12 @@
           : action === 'tick'
             ? 'tick'
             : 'in';
+        if (isGameModeHomeLegacyLevelFlowDisabled()) {
+          state.game.sessionClockActive = false;
+          if (normalizedAction === 'out') state.entry.pendingFlashSessionOut = false;
+          stopFlashcardSessionTick();
+          return null;
+        }
         if (shouldDeferGameplayNetworkSync() && !options.forceNetwork) {
           if (normalizedAction === 'out') {
             state.entry.pendingFlashSessionOut = true;
@@ -25380,10 +25404,59 @@
         }
       }
 
+      function readStoredGameModeHistory(storageKey) {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(storageKeyForUser(storageKey, state.user?.id)) || '[]');
+          return new Set(Array.isArray(parsed) ? parsed.map(Number).filter((value) => value >= 1 && value <= 6) : []);
+        } catch (_error) {
+          return new Set();
+        }
+      }
+
+      function markStoredGameModeHistory(storageKey, modeId) {
+        const mode = Math.max(1, Math.min(6, Number(modeId) || 0));
+        const history = readStoredGameModeHistory(storageKey);
+        history.add(mode);
+        try {
+          localStorage.setItem(storageKeyForUser(storageKey, state.user?.id), JSON.stringify(Array.from(history).sort((a, b) => a - b)));
+        } catch (_error) {
+          // Keep the current visit usable if browser storage is unavailable.
+        }
+      }
+
+      function canSkipGameModeAudio(modeId) {
+        const mode = Number(modeId) || 0;
+        return readStoredGameModeHistory(GAME_MODE_AUDIO_SEEN_STORAGE_KEY).has(mode)
+          || readStoredGameModeHistory(GAME_MODE_PLAYED_STORAGE_KEY).has(mode)
+          || (gameModeHomeProgress.introCompleted && mode > 0 && mode < Number(gameModeHomeProgress.mode || 0));
+      }
+
+      function updateGameModeAudioProgress() {
+        if (!els.gameModeAudioProgressFill || !els.gameModeAudioProgress) return;
+        const duration = Number(gameModePrestartAudio?.duration) || 0;
+        const currentTime = Number(gameModePrestartAudio?.currentTime) || 0;
+        const progress = duration > 0 ? Math.max(0, Math.min(100, currentTime / duration * 100)) : 0;
+        els.gameModeAudioProgressFill.style.width = `${progress}%`;
+        els.gameModeAudioProgress.setAttribute('aria-valuenow', String(Math.round(progress)));
+      }
+
       function updateGameModePrestartButton() {
         if (!els.gameModePrestartStartBtn) return;
-        const ready = gameModePrestartReady && gameModePrestartAudioFinished;
+        const hasLevelOneAudio = gameModeHomeProgress.level === 1;
+        const ready = gameModePrestartCanSkip
+          || (gameModePrestartReady && gameModePrestartAudioFinished);
+        const showProgress = hasLevelOneAudio && !gameModePrestartCanSkip && !ready;
         els.gameModePrestartStartBtn.hidden = !ready;
+        if (els.gameModeAudioProgress) els.gameModeAudioProgress.hidden = !showProgress;
+        if (els.gameModePrestartStartBtn) {
+          const label = gameModePrestartCanSkip && hasLevelOneAudio && !gameModePrestartAudioFinished
+            ? 'Toque para pular'
+            : 'Toque para começar';
+          const labelNode = els.gameModePrestartStartBtn.querySelector('span');
+          if (labelNode) labelNode.textContent = label;
+          els.gameModePrestartStartBtn.setAttribute('aria-label', label);
+        }
+        updateGameModeAudioProgress();
       }
 
       function closeGameModePrestart() {
@@ -25395,8 +25468,11 @@
         gameModeCardsPreloadPromise = null;
         gameModePrestartReady = false;
         gameModePrestartAudioFinished = false;
+        gameModePrestartCanSkip = false;
         if (els.gameModePrestart) els.gameModePrestart.hidden = true;
         if (els.gameModePrestartStartBtn) els.gameModePrestartStartBtn.hidden = true;
+        if (els.gameModeAudioProgress) els.gameModeAudioProgress.hidden = true;
+        if (els.gameModeAudioProgressFill) els.gameModeAudioProgressFill.style.width = '0%';
       }
 
       function openGameModePrestart(modeId) {
@@ -25409,6 +25485,8 @@
         setSelectedGameLevel(gameModeHomeProgress.level);
         gameModePrestartReady = false;
         gameModePrestartAudioFinished = gameModeHomeProgress.level !== 1;
+        gameModePrestartCanSkip = canSkipGameModeAudio(mode.id);
+        if (els.gameModeAudioProgressFill) els.gameModeAudioProgressFill.style.width = '0%';
         if (els.gameModePrestartLogo) {
           els.gameModePrestartLogo.src = mode.image;
           els.gameModePrestartLogo.alt = '';
@@ -25421,6 +25499,7 @@
             updateGameModePrestartButton();
           });
         gameModeCardsPreloadPromise.catch(() => {});
+        updateGameModePrestartButton();
 
         if (gameModeHomeProgress.level !== 1) {
           updateGameModePrestartButton();
@@ -25428,8 +25507,11 @@
         }
         gameModePrestartAudio = new Audio(mode.audio);
         gameModePrestartAudio.preload = 'auto';
+        gameModePrestartAudio.addEventListener('timeupdate', updateGameModeAudioProgress);
+        gameModePrestartAudio.addEventListener('durationchange', updateGameModeAudioProgress);
         gameModePrestartAudio.addEventListener('ended', () => {
           gameModePrestartAudioFinished = true;
+          markStoredGameModeHistory(GAME_MODE_AUDIO_SEEN_STORAGE_KEY, mode.id);
           updateGameModePrestartButton();
         }, { once: true });
         gameModePrestartAudio.addEventListener('error', () => {
@@ -29244,7 +29326,10 @@
 
       function updateLevelProgressBar() {
         if (!els.flashcardLevelProgress || !els.flashcardLevelProgressBar) return;
-        const show = Boolean(state.game.active && !state.ui.gamePausedAtWelcome);
+        const gameModeHidesLevelProgress = state.game.gameModeHomeSessionActive
+          && Number(state.game.cardsModeModeId) >= 2
+          && Number(state.game.cardsModeModeId) <= 6;
+        const show = Boolean(state.game.active && !state.ui.gamePausedAtWelcome && !gameModeHidesLevelProgress);
         els.flashcardLevelProgress.hidden = !show;
         els.flashcardLevelProgress.style.display = show ? 'block' : 'none';
         els.flashcardLevelProgress.style.visibility = show ? 'visible' : 'hidden';
@@ -31445,7 +31530,11 @@
         const scoreType = stage === 4 ? 'speed_cpm' : 'pronunciation';
         if (stage === 4) {
           const elapsedSeconds = Math.max(1, (Number(state.game.typingRound?.elapsedMs) || 0) / 1000);
-          score = (Math.max(0, Number(state.game.typingRound?.characters) || 0) / elapsedSeconds) * 60;
+          const rawSpeed = (Math.max(0, Number(state.game.typingRound?.characters) || 0) / elapsedSeconds) * 60;
+          const speedMultiplier = Number(round.modeId) === 1
+            ? Math.max(1, Math.min(2, Number(round.speedMultiplier) || 1))
+            : 1;
+          score = rawSpeed * speedMultiplier;
         } else {
           const samples = Array.isArray(round.pronunciationScores)
             ? round.pronunciationScores.map(Number).filter(Number.isFinite)
@@ -34742,7 +34831,11 @@
           }));
           if (Number(cardsModeRound.stage) === 4 && state.game.typingRound?.completed) {
             const elapsedSeconds = Math.max(1, (Number(state.game.typingRound.elapsedMs) || 0) / 1000);
-            const charactersPerMinute = (Math.max(0, Number(state.game.typingRound.characters) || 0) / elapsedSeconds) * 60;
+            const rawSpeed = (Math.max(0, Number(state.game.typingRound.characters) || 0) / elapsedSeconds) * 60;
+            const speedMultiplier = Number(cardsModeRound.modeId) === 1
+              ? Math.max(1, Math.min(2, Number(cardsModeRound.speedMultiplier) || 1))
+              : 1;
+            const charactersPerMinute = rawSpeed * speedMultiplier;
             gauges.push(createGameEndGauge({
               kind: 'speed', title: 'Velocidade', description: 'Caracteres por minuto',
               value: charactersPerMinute, max: 500, unit: 'CPM'
@@ -34909,6 +35002,12 @@
 
       function countTypingDisplayLetters(value) {
         return normalizeTypingSource(value).replace(/\s+/g, '').length;
+      }
+
+      function modeOneTypingSpeedMultiplier(totalTargetLetters) {
+        const letters = Number(totalTargetLetters) || 0;
+        if (letters <= 0) return 1;
+        return Math.max(1, Math.min(2, Number((3 - (letters / 220)).toFixed(2))));
       }
 
       function getTypingDisplayWords(text) {
@@ -35224,6 +35323,23 @@
 
       function gateCustomFourthStageInputUntilEnglishAudio(entry, card, grid, advanceBtn = null) {
         if (state.game.gameModeHomeSessionActive && Number(state.game.cardsModeModeId) === 1) {
+          const promptKey = safeText(entry?.id);
+          if (promptKey
+            && entry._gameModeOneEnglishPromptPlayedKey !== promptKey
+            && !entry._gameModeOneEnglishPromptPromise) {
+            entry._gameModeOneEnglishPromptPromise = Promise.resolve(playPromptAudio(card, {
+              rate: 0.8,
+              enableMicDuringPlayback: false
+            }))
+              .then((played) => {
+                if (played && state.game.currentId === entry.id) {
+                  entry._gameModeOneEnglishPromptPlayedKey = promptKey;
+                }
+                return Boolean(played);
+              })
+              .catch(() => false)
+              .finally(() => { entry._gameModeOneEnglishPromptPromise = null; });
+          }
           startTypingRoundAttempt(entry);
           grid?.classList.remove('is-audio-waiting');
           setTypingKeysDisabled(grid, false);
@@ -36865,6 +36981,9 @@
         }
         const stageConfig = resolveGameStageConfig(entry);
         els.game.dataset.phaseKey = stageConfig.key || '';
+        const gameModeHomeSession = Boolean(state.game.gameModeHomeSessionActive);
+        els.game.classList.toggle('is-game-mode-home-session', gameModeHomeSession);
+        els.game.classList.toggle('is-game-mode-home-fire', gameModeHomeSession && Number(state.game.cardsModeModeId) === 6);
         if (isCardsModeFixedStageActive()) {
           els.game.dataset.cardsFixedStage = String(selectedCardsModePracticeStage());
         } else {
@@ -40430,6 +40549,12 @@
         const cardsModeRoundStage = selectedCardsModePracticeStage();
         const cardsModeRoundModeId = Math.max(1, Math.min(6, Number(state.game.cardsModeModeId) || 1));
         const typingRoundActive = cardsModeRoundActive && cardsModeRoundStage === 4;
+        const typingLevelTargetLetters = typingRoundActive && cardsModeRoundModeId === 1
+          ? sourceCards.reduce((sum, card) => sum + safeText(card?.english).toUpperCase().replace(/[^A-Z]/g, '').length, 0)
+          : 0;
+        const typingSpeedMultiplier = cardsModeRoundModeId === 1
+          ? modeOneTypingSpeedMultiplier(typingLevelTargetLetters)
+          : 1;
         state.game.cardsModeRound = {
           active: cardsModeRoundActive,
           completed: false,
@@ -40447,6 +40572,8 @@
           processingAttemptKey: '',
           stage: cardsModeRoundStage,
           source: normalizeGameOptionValue('cardSource', state.options?.cardSource),
+          speedMultiplier: typingSpeedMultiplier,
+          targetLetters: typingLevelTargetLetters,
           total: cardsModeRoundActive ? 25 : 0
         };
         state.game.typingRound = {
@@ -40462,6 +40589,8 @@
           activeAttemptKey: '',
           promptRevision: 0,
           level,
+          speedMultiplier: typingSpeedMultiplier,
+          targetLetters: typingLevelTargetLetters,
           total: typingRoundActive ? 25 : 0
         };
         const roundCount = cardsModeRoundActive
@@ -40939,6 +41068,8 @@
 
       async function exitGame({ returnToLevelSelector = false } = {}) {
         const returningFromGameModeHome = Boolean(state.game.gameModeHomeSessionActive);
+        const exitingGameModeHomeId = Number(state.game.cardsModeModeId) || 0;
+        const skipLegacyLevelFlow = returningFromGameModeHome && exitingGameModeHomeId >= 2 && exitingGameModeHomeId <= 6;
         const playUnlockCueAfterHome = returningFromGameModeHome && gameModeUnlockCuePending;
         let backgroundGameModeHomeExitClock = null;
         if (returningFromGameModeHome) returnToLevelSelector = false;
@@ -40961,16 +41092,16 @@
         state.game.sessionClockActive = false;
         stopFlashcardSessionTick();
         if (!babyModeSessionActive) {
-          if (returningFromGameModeHome) {
+          if (returningFromGameModeHome && !skipLegacyLevelFlow) {
             backgroundGameModeHomeExitClock = signalFlashcardSessionClock('out', {
               forceNetwork: true,
               backgroundExit: true
             });
-          } else if (returnToLevelSelector) {
+          } else if (!returningFromGameModeHome && returnToLevelSelector) {
             void signalFlashcardSessionClock('out', { forceNetwork: true })
               .then(() => flushDeferredGameplayNetworkSync())
               .catch((error) => console.warn('Falha ao finalizar o relógio da rodada em segundo plano:', error));
-          } else {
+          } else if (!returningFromGameModeHome) {
             await signalFlashcardSessionClock('out', { forceNetwork: true });
             await flushDeferredGameplayNetworkSync();
           }
@@ -41031,6 +41162,7 @@
         els.game?.classList.remove('is-level-switching-reset');
         els.game?.classList.remove('is-level-text-mode');
         els.game?.classList.remove('is-game-mode-home-results');
+        els.game?.classList.remove('is-game-mode-home-session', 'is-game-mode-home-fire');
         els.game?.classList.remove('is-mode-two-repeat', 'is-watching-mode');
         resetGameSwipeTracking();
         syncFooterGuardState(null);
@@ -41052,6 +41184,8 @@
           void backgroundGameModeHomeExitClock
             .then(() => flushDeferredGameplayNetworkSync())
             .catch((error) => console.warn('Falha ao sincronizar a sessao em segundo plano:', error));
+        } else if (skipLegacyLevelFlow) {
+          void flushDeferredGameplayNetworkSync().catch((error) => console.warn('Falha ao sincronizar a sessao em segundo plano:', error));
         }
         if (exitingJourneyPhase && journeyPhaseRuntime === exitingJourneyPhase) {
           journeyPhaseRuntime = null;
@@ -41459,7 +41593,9 @@
             if (shouldGatePremiumAccess()) {
               setPremiumStatus('Monte uma chave premium tocando nas imagens.');
             }
-            const earnedCoins = journeyPhaseRuntime ? 0 : Math.max(0, flashcardCoinValue(card));
+            const suppressGameModeCoins = state.game.gameModeHomeSessionActive
+              && Number(state.game.cardsModeModeId) === 6;
+            const earnedCoins = journeyPhaseRuntime || suppressGameModeCoins ? 0 : Math.max(0, flashcardCoinValue(card));
             const earnedXp = journeyPhaseRuntime ? 0 : Math.max(0, flashcardXpValue(card));
             state.stats.coinsDelta = Math.max(0, Number(state.stats.coinsDelta) || 0) + earnedCoins;
             state.stats.coinsTotal = Math.max(0, Number(state.stats.coinsTotal) || 0) + earnedCoins;
@@ -42180,6 +42316,9 @@
             if (resolveCardsModeLevel() !== cardsLevel) {
               throw new Error('O nivel mudou durante a preparacao. Toque em Play novamente.');
             }
+            if (options.fromGameModeHome) {
+              markStoredGameModeHistory(GAME_MODE_PLAYED_STORAGE_KEY, state.game.cardsModeModeId);
+            }
             state.entry.pendingPlayStart = false;
             state.entry.welcomeStartRequested = true;
             state.entry.welcomeFlashStartAt = Date.now();
@@ -42260,10 +42399,24 @@
         els.gameModePrestart?.addEventListener('click', (event) => {
           if (event.target === els.gameModePrestart) closeGameModePrestart();
         });
-        els.gameModePrestartStartBtn?.addEventListener('click', (event) => {
+        els.gameModePrestartStartBtn?.addEventListener('click', async (event) => {
           event.preventDefault();
           event.stopPropagation();
-          if (!gameModePrestartReady || !gameModePrestartAudioFinished) return;
+          if (gameModePrestartCanSkip && !gameModePrestartAudioFinished) {
+            gameModePrestartAudio?.pause();
+            if (gameModePrestartAudio) gameModePrestartAudio.src = '';
+            gameModePrestartAudio = null;
+            gameModePrestartAudioFinished = true;
+          }
+          if (!gameModePrestartAudioFinished) return;
+          if (!gameModePrestartReady) {
+            try {
+              await gameModeCardsPreloadPromise;
+            } catch (_error) {
+              return;
+            }
+          }
+          if (!gameModePrestartReady || els.gameModePrestart?.hidden) return;
           const mode = gameModeHomeConfig(gameModePrestartModeId);
           if (!mode) return;
           state.game.cardsModeModeId = mode.id;
@@ -42932,6 +43085,27 @@
           });
         });
         els.game.addEventListener('click', (event) => {
+          if (state.game.gameModeHomeSessionActive && state.game.active) {
+            const mode = gameModeHomeConfig(state.game.cardsModeModeId);
+            const target = event.target instanceof Element ? event.target : null;
+            const clickedControl = target?.closest('button, a, input, textarea, select, [role="button"], [contenteditable="true"]');
+            if (mode?.needsMic && !clickedControl) {
+              event.preventDefault();
+              event.stopPropagation();
+              const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+              if (!entry || isTypingStage(entry)) return;
+              const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
+              if (phaseKey === 'first-star') {
+                void handleFirstStarTouchFlow();
+              } else if (phaseKey === 'second-star' || phaseKey === 'fourth-star') {
+                void playCurrentStagePromptAudio({ rate: phaseKey === 'fourth-star' ? 0.8 : 1 });
+              } else {
+                void startRecognition();
+              }
+              return;
+            }
+            if (event.target === els.game) return;
+          }
           if (event.target === els.game) {
             exitGame();
           }
