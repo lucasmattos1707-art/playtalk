@@ -37333,10 +37333,14 @@
           state.game.canListen = nativeAudioReady;
           renderGameTouchButton(stageConfig, entry);
           if (!nativeAudioReady && state.game.secondStarNativeAudioPlayingEntryKey !== playbackKey) {
+            const readingLeadMs = state.game.gameModeHomeSessionActive
+              && Number(state.game.cardsModeModeId) === 3
+              ? 1400
+              : 120;
             window.setTimeout(() => {
               if (!state.game.active || state.game.currentId !== entry.id || state.game.paused || state.game.listening) return;
               void playCardsModeSecondStarNativeAudio(entry, card);
-            }, 120);
+            }, readingLeadMs);
           }
           return;
         }
