@@ -249,6 +249,19 @@
       opacity: 0 !important;
     }
 
+    .game-rankings { position: fixed; inset: 0; z-index: 1000; background: #071321; color: #f6fbff; padding: max(18px, env(safe-area-inset-top)) 18px; overflow-y: auto; }
+    .game-rankings[hidden] { display: none; }
+    .game-rankings__inner { max-width: 720px; margin: auto; }
+    .game-rankings__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .game-rankings__close { background: transparent; font-size: 30px; color: white; }
+    .game-rankings__tabs { display: flex; overflow-x: auto; gap: 8px; padding: 12px 0; }
+    .game-rankings__tabs button { white-space: nowrap; border-radius: 20px; padding: 9px 14px; background: #193750; color: white; }
+    .game-rankings__tabs button[aria-selected="true"] { background: #168e76; }
+    .game-rankings__row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid #28435a; }
+    .game-rankings__avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; touch-action: manipulation; }
+    .game-rankings__name { flex: 1; overflow-wrap: anywhere; }
+    .game-rankings__value { font-weight: 700; white-space: nowrap; }
+
     button { font: inherit; color: inherit; cursor: pointer; border: 0; }
     img { display: block; max-width: 100%; }
 
@@ -5765,7 +5778,6 @@
     }
     .game.is-game-mode-home-results .game-end h3,
     .game.is-game-mode-home-results .game-end p,
-    .game.is-game-mode-home-results .game-end__totals,
     .game.is-game-mode-home-results .game-end__menu-btn { display: none !important; }
     .game.is-game-mode-home-results .game-end__inner,
     .game.is-game-mode-home-results .game-end__presentation { width: 100%; gap: 0; }
@@ -14194,11 +14206,11 @@
             </span>
             <span class="welcome-gate__action-label">Ajustes</span>
           </button>
-          <button class="welcome-gate__action-btn welcome-gate__action-btn--books" id="welcomeBooksBtn" type="button" aria-label="Álbuns">
+          <button class="welcome-gate__action-btn welcome-gate__action-btn--books" id="welcomeBooksBtn" type="button" aria-label="Rankings">
             <span class="welcome-gate__action-circle" aria-hidden="true">
-              <svg viewBox="0 0 64 64" focusable="false"><path d="M32 17.4c-4.9-4.2-11-6.3-18.4-6.3A3.6 3.6 0 0 0 10 14.7v32.1a3.6 3.6 0 0 0 3.7 3.6c6.9 0 12.2 1.8 16.1 5.4 1.2 1.1 3.2 1.1 4.4 0 3.9-3.6 9.2-5.4 16.1-5.4a3.6 3.6 0 0 0 3.7-3.6V14.7a3.6 3.6 0 0 0-3.6-3.6c-7.4 0-13.5 2.1-18.4 6.3Zm-3.2 29.4c-3.3-2.1-7.4-3.3-12.3-3.7V17.9c5.1.4 9.2 2.1 12.3 5v23.9Zm6.4 0V22.9c3.1-2.9 7.2-4.6 12.3-5v25.2c-4.9.4-9 1.6-12.3 3.7Z"></path></svg>
+              <svg viewBox="0 0 64 64" focusable="false"><path d="M18 8h28v6h10v7c0 10-5 15-14 16-2 5-5 8-8 9v6h10v5H20v-5h10v-6c-3-1-6-4-8-9-9-1-14-6-14-16v-7h10V8zm0 11h-5v2c0 6 2 9 7 10-1-4-2-8-2-12zm28 0c0 4-1 8-2 12 5-1 7-4 7-10v-2h-5z"></path></svg>
             </span>
-            <span class="welcome-gate__action-label">Álbuns</span>
+            <span class="welcome-gate__action-label">Rankings</span>
           </button>
         </div>
         <div class="welcome-gate__energy" id="welcomeEnergy">
@@ -15142,6 +15154,10 @@
     </div>
   </section>
 
+  <section class="game-rankings" id="gameRankings" hidden aria-label="Rankings">
+    <div class="game-rankings__inner"><header class="game-rankings__header"><h2>Rankings</h2><button class="game-rankings__close" id="gameRankingsClose" type="button" aria-label="Fechar">×</button></header><div class="game-rankings__tabs" id="gameRankingsTabs" role="tablist"></div><div id="gameRankingsList" aria-live="polite"></div></div>
+    <input id="gameRankingsPhoto" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+  </section>
   <div class="flashcard-level-progress" id="flashcardLevelProgress" hidden aria-hidden="true">
     <span class="flashcard-level-progress__bar" id="flashcardLevelProgressBar"></span>
   </div>
@@ -31560,6 +31576,25 @@
         return true;
       }
 
+      function saveGameRankingRound(round) {
+        if (!state.game.gameModeHomeSessionActive || !round?.roundId || round.rankingSaveStarted) return;
+        round.rankingSaveStarted = true;
+        const typingRound = state.game.typingRound;
+        const elapsedSeconds = Math.max(1, (Number(typingRound?.elapsedMs) || 0) / 1000);
+        const speed = Number(round.modeId) === 1 && typingRound?.completed
+          ? (Math.max(0, Number(typingRound.characters) || 0) / elapsedSeconds) * 60 * (Number(round.speedMultiplier) || 1)
+          : null;
+        void fetch(buildApiUrl('/api/flashcards/game-rankings/round'), {
+          method: 'POST', credentials: 'include', keepalive: true,
+          headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ roundId: round.roundId, mode: round.modeId,
+            heard: round.wordsHeard, spoken: round.wordsSpoken,
+            durationMs: Math.max(0, Date.now() - (Number(state.game.sessionStartedAt) || Date.now())),
+            speed, scores: round.pronunciationScores || [] })
+        }).then(response => { if (!response.ok) throw new Error('Falha ao salvar rodada'); })
+          .catch(error => console.warn('Falha ao registrar rodada para rankings:', error));
+      }
+
       function finishCardsModeRound() {
         const round = state.game.cardsModeRound;
         if (!round?.active) return false;
@@ -31582,6 +31617,7 @@
         state.game.currentId = null;
         const roundSucceeded = Number(round.attempts) === 25 && Number(round.errors) < 5;
         round.succeeded = roundSucceeded;
+        saveGameRankingRound(round);
         void saveCardsModeRoundBestResult(round);
         if (roundSucceeded) {
           void advanceGameModeHomeProgress(round).then(() => {
@@ -33351,7 +33387,11 @@
           audio.playbackRate = rate;
           audio.defaultPlaybackRate = rate;
           audio.preservesPitch = true;
-          await playAudioWithSoftEnd(audio, { registerAsActive: true });
+          await playAudioWithSoftEnd(audio, { registerAsActive: true, onPlaying: () => {
+            if (state.game.gameModeHomeSessionActive && state.game.cardsModeRound?.active) {
+              state.game.cardsModeRound.wordsHeard += countPracticeWords(resolveSourceLanguageText(card, normalizedLanguage));
+            }
+          } });
           addListeningCharsForCard(card);
           updateGameChips();
           return true;
@@ -33361,6 +33401,11 @@
         stopActiveAudio();
         await new Promise((resolve) => {
           const utterance = new SpeechSynthesisUtterance(fallbackText);
+          utterance.onstart = () => {
+            if (state.game.gameModeHomeSessionActive && state.game.cardsModeRound?.active) {
+              state.game.cardsModeRound.wordsHeard += countPracticeWords(fallbackText);
+            }
+          };
           utterance.lang = normalizedLanguage === 'english'
             ? (pickCardAccent(card) === 'british' ? 'en-GB' : 'en-US')
             : (FLASHCARD_LANGUAGE_OPTIONS[normalizedLanguage]?.speechCode || currentTargetSpeechCode());
@@ -34877,11 +34922,6 @@
           await wait(80);
           await animateGameEndGauge(gauge, token);
           if (token !== gameEndPresentationToken) return;
-          if (autoReturnHome) {
-            await wait(1000);
-            if (token === gameEndPresentationToken && state.game.gameModeHomeSessionActive) void exitGame();
-            return;
-          }
           await wait(620);
           gauge.card.classList.remove('is-active');
           await wait(360);
@@ -34893,7 +34933,12 @@
           await animateGameEndWordTotal(els.gameEndWordsHeard, totals.heard, token);
         }
         if (token === gameEndPresentationToken) {
-          els.gameEndMenuBtn.hidden = false;
+          if (autoReturnHome) {
+            await wait(1000);
+            if (token === gameEndPresentationToken && state.game.gameModeHomeSessionActive) void exitGame();
+          } else {
+            els.gameEndMenuBtn.hidden = false;
+          }
         }
       }
 
@@ -34954,7 +34999,10 @@
           }
           els.gameEndPresentation.hidden = false;
           if (modeHomeResults) {
-            totals = null;
+            totals = {
+              spoken: Math.max(0, Number(cardsModeRound.wordsSpoken) || 0),
+              heard: Math.max(0, Number(cardsModeRound.wordsHeard) || 0)
+            };
             errors = 0;
             els.gameEndErrors.hidden = true;
             if (els.gameEndCopy) els.gameEndCopy.hidden = true;
@@ -41170,6 +41218,7 @@
 
       async function exitGame({ returnToLevelSelector = false } = {}) {
         const returningFromGameModeHome = Boolean(state.game.gameModeHomeSessionActive);
+        if (returningFromGameModeHome && state.game.cardsModeRound?.active) saveGameRankingRound(state.game.cardsModeRound);
         const exitingGameModeHomeId = Number(state.game.cardsModeModeId) || 0;
         const skipLegacyLevelFlow = returningFromGameModeHome && exitingGameModeHomeId >= 1 && exitingGameModeHomeId <= 6;
         const playUnlockCueAfterHome = returningFromGameModeHome && gameModeUnlockCuePending;
@@ -42302,6 +42351,78 @@
         return result;
       });
 
+      const gameRankingMetrics = [
+        ['listening', 'Listening'], ['speaking', 'Speaking'], ['pronunciation', 'Pronúncia'],
+        ['level', 'Nível'], ['building', 'Building'], ['meaning', 'Meaning'],
+        ['consistency', 'Consistência'], ['practice', 'Prática']
+      ];
+      let gameRankingUsers = [];
+      let gameRankingMetric = 'listening';
+      let gameRankingPhotoUser = 0;
+
+      async function updateGameRankingBot(userId, data) {
+        const response = await fetch(buildApiUrl(`/api/admin/game-ranking-bots/${userId}`), {
+          method: 'PATCH', credentials: 'include', headers: buildAuthHeaders({'Content-Type': 'application/json'}), body: JSON.stringify(data)
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) throw new Error(payload.message || 'Não foi possível atualizar o bot.');
+        await loadGameRankings();
+      }
+
+      function uploadGameRankingBotPhoto(userId, file) {
+        if (!file || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024) {
+          alert('Escolha uma imagem JPEG, PNG ou WebP de até 8 MB.'); return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => { void updateGameRankingBot(userId, {imageDataUrl: reader.result}).catch(error => alert(error.message)); };
+        reader.readAsDataURL(file);
+      }
+
+      function bindRankingHold(element, action) {
+        let timer = 0, x = 0, y = 0;
+        const cancel = () => { if (timer) clearTimeout(timer); timer = 0; };
+        element.addEventListener('pointerdown', event => { if (event.button !== 0) return; cancel(); x = event.clientX; y = event.clientY; timer = window.setTimeout(() => { timer = 0; action(); }, 1000); });
+        element.addEventListener('pointermove', event => { if (Math.hypot(event.clientX-x, event.clientY-y) > 12) cancel(); });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach(name => element.addEventListener(name, cancel));
+        element.addEventListener('contextmenu', event => event.preventDefault());
+      }
+
+      function renderGameRankings() {
+        const tabs = document.getElementById('gameRankingsTabs');
+        const list = document.getElementById('gameRankingsList');
+        tabs.replaceChildren(); list.replaceChildren();
+        gameRankingMetrics.forEach(([key, label]) => {
+          const tab = document.createElement('button'); tab.type = 'button'; tab.textContent = label;
+          tab.setAttribute('role', 'tab'); tab.setAttribute('aria-selected', String(key === gameRankingMetric));
+          tab.addEventListener('click', () => { gameRankingMetric = key; renderGameRankings(); }); tabs.append(tab);
+        });
+        const sorted = gameRankingUsers.slice().sort((a,b) => Number(b.values[gameRankingMetric]) - Number(a.values[gameRankingMetric]) || a.name.localeCompare(b.name));
+        sorted.forEach((user, index) => {
+          const row = document.createElement('div'); row.className = 'game-rankings__row';
+          const rank = document.createElement('span'); rank.textContent = `${index + 1}º`;
+          const avatar = document.createElement('img'); avatar.className = 'game-rankings__avatar'; avatar.src = user.avatar || '/Avatar/profile-neon-blue.svg'; avatar.alt = '';
+          const name = document.createElement('span'); name.className = 'game-rankings__name'; name.textContent = user.name;
+          const value = document.createElement('span'); value.className = 'game-rankings__value';
+          const number = Number(user.values[gameRankingMetric]) || 0;
+          value.textContent = new Intl.NumberFormat('pt-BR', {maximumFractionDigits: ['pronunciation', 'meaning', 'building', 'practice'].includes(gameRankingMetric) ? 1 : 0}).format(number)
+            + (['pronunciation', 'meaning'].includes(gameRankingMetric) ? '%' : gameRankingMetric === 'building' ? ' CPM' : gameRankingMetric === 'practice' ? ' min' : '');
+          if (isAdminUser() && user.isBot) {
+            bindRankingHold(name, () => { const next = prompt('Novo nome do bot:', user.name); if (next && next !== user.name) void updateGameRankingBot(user.id, {name: next}).catch(error => alert(error.message)); });
+            bindRankingHold(avatar, () => { gameRankingPhotoUser = user.id; document.getElementById('gameRankingsPhoto').click(); });
+            avatar.addEventListener('dragover', event => event.preventDefault());
+            avatar.addEventListener('drop', event => { event.preventDefault(); uploadGameRankingBotPhoto(user.id, event.dataTransfer?.files?.[0]); });
+          }
+          row.append(rank, avatar, name, value); list.append(row);
+        });
+      }
+
+      async function loadGameRankings() {
+        const response = await fetch(buildApiUrl('/api/flashcards/game-rankings'), {credentials:'include', cache:'no-store', headers:buildAuthHeaders()});
+        const payload = await response.json();
+        if (!response.ok || !payload.success) throw new Error('Não foi possível carregar os rankings.');
+        gameRankingUsers = payload.users || []; renderGameRankings();
+      }
+
       function bindEvents() {
         let cardsModeStartInFlight = false;
         const startLevelModeFromWelcome = async (event, options = {}) => {
@@ -42564,8 +42685,7 @@
               setAuthStatus('Entre para liberar treino e desafio.', 'error');
               return;
             }
-            state.options.mode = 'journey';
-            openWelcomeModeModal('cards');
+            showGameModeHome();
           })();
         });
         els.welcomeMissionBtn?.addEventListener('click', () => {
@@ -42578,7 +42698,14 @@
           showWelcomeGate();
         });
         els.welcomeBooksBtn?.addEventListener('click', () => {
-          void openAlbumsModal();
+          document.getElementById('gameRankings').hidden = false;
+          document.getElementById('gameRankingsList').textContent = 'Carregando rankings...';
+          void loadGameRankings().catch(error => { document.getElementById('gameRankingsList').textContent = error.message; });
+        });
+        document.getElementById('gameRankingsClose')?.addEventListener('click', () => { document.getElementById('gameRankings').hidden = true; });
+        document.getElementById('gameRankingsPhoto')?.addEventListener('change', event => {
+          const file = event.target.files?.[0]; if (file && gameRankingPhotoUser) uploadGameRankingBotPhoto(gameRankingPhotoUser, file);
+          event.target.value = '';
         });
         els.welcomeLanguageStrip?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-welcome-language]');

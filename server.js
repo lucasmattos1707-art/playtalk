@@ -2886,6 +2886,24 @@ const ensureFlashcardGameModeProgressTable = async () => {
   return true;
 };
 
+let gameRankingTablesReady;
+async function ensureGameRankingTables() {
+  if (!gameRankingTablesReady) gameRankingTablesReady = (async () => {
+    await pool.query(`CREATE TABLE IF NOT EXISTS public.game_ranking_rounds (
+      user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+      round_id text NOT NULL, mode smallint NOT NULL, heard integer NOT NULL DEFAULT 0,
+      spoken integer NOT NULL DEFAULT 0, duration_ms bigint NOT NULL DEFAULT 0,
+      speed numeric, scores jsonb NOT NULL DEFAULT '[]'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (user_id, round_id)
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS public.game_ranking_unlock_days (
+      user_id integer NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+      day date NOT NULL, PRIMARY KEY (user_id, day)
+    )`);
+  })().catch(error => { gameRankingTablesReady = null; throw error; });
+  return gameRankingTablesReady;
+}
+
 const ensurePremiumAccessTables = async () => {
   if (!pool) return false;
 
@@ -21004,6 +21022,7 @@ app.post('/api/flashcards/game-mode-progress/complete', express.json({ limit: '1
   let client;
   try {
     await ensureFlashcardGameModeProgressTable();
+    await ensureGameRankingTables();
     client = await pool.connect();
     await client.query('BEGIN');
     const userId = Number(authUser.id);
@@ -21049,6 +21068,8 @@ app.post('/api/flashcards/game-mode-progress/complete', express.json({ limit: '1
        RETURNING current_level, current_mode, intro_completed, updated_at`,
       [userId, nextLevel, nextMode, roundId]
     );
+    await client.query(`INSERT INTO public.game_ranking_unlock_days (user_id, day)
+      VALUES ($1, (now() AT TIME ZONE 'America/Sao_Paulo')::date) ON CONFLICT DO NOTHING`, [userId]);
     await client.query('COMMIT');
     const row = saved.rows[0] || {};
     res.json({ success: true, advanced: true, progress: {
@@ -21064,6 +21085,98 @@ app.post('/api/flashcards/game-mode-progress/complete', express.json({ limit: '1
   } finally {
     client?.release();
   }
+});
+
+app.post('/api/flashcards/game-rankings/round', express.json({ limit: '32kb' }), async (req, res) => {
+  try {
+    if (!pool) return res.status(503).json({ success: false });
+    const user = await readAuthenticatedUserFromRequest(req);
+    if (!user?.id) return res.status(401).json({ success: false });
+    const { roundId, mode, heard, spoken, durationMs, speed, scores } = req.body || {};
+    const id = String(roundId || '').trim().slice(0, 100);
+    const m = Number(mode);
+    if (!id || !Number.isInteger(m) || m < 1 || m > 6 || !Array.isArray(scores) || scores.length > 25) return res.status(400).json({ success: false });
+    const bounded = (value, max) => Math.max(0, Math.min(max, Math.floor(Number(value) || 0)));
+    const cleanScores = scores.map(Number).filter(value => Number.isFinite(value) && value >= 0 && value <= 100);
+    const safeSpeed = Number.isFinite(Number(speed)) && Number(speed) > 0 ? Math.min(10000, Number(speed)) : null;
+    await ensureGameRankingTables();
+    await pool.query(`INSERT INTO public.game_ranking_rounds (user_id, round_id, mode, heard, spoken, duration_ms, speed, scores)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb) ON CONFLICT DO NOTHING`,
+      [Number(user.id), id, m, bounded(heard, 100000), bounded(spoken, 100000), bounded(durationMs, 86400000), safeSpeed, JSON.stringify(cleanScores)]);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Erro ao registrar rodada dos rankings:', error);
+    return res.status(500).json({ success: false });
+  }
+});
+
+app.patch('/api/admin/game-ranking-bots/:userId', express.json({limit:'12mb'}), async (req,res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const result = await pool.query('SELECT id, username, avatar_image, bot_config FROM public.users WHERE id=$1 AND is_bot=true', [Number(req.params.userId)]);
+    const bot = result.rows[0];
+    if (!bot) return res.status(404).json({success:false, message:'Bot não encontrado.'});
+    let username = bot.username;
+    if (req.body?.name != null) {
+      username = normalizeUsername(req.body.name);
+      if (!isValidUsername(username)) return res.status(400).json({success:false, message:'Nome inválido para usuário.'});
+      const duplicate = await pool.query('SELECT 1 FROM public.users WHERE lower(username)=lower($1) AND id<>$2 LIMIT 1', [username, bot.id]);
+      if (duplicate.rows.length) return res.status(409).json({success:false, message:'Nome já está em uso.'});
+    }
+    const avatar = req.body?.imageDataUrl ? await saveBattleBotPhoto(bot, req.body.imageDataUrl) : bot.avatar_image;
+    const config = readRawBotConfig(bot.bot_config);
+    if (req.body?.name != null) { config.username = username; config.displayName = username; }
+    await pool.query('UPDATE public.users SET username=$2, avatar_image=$3, bot_config=$4::jsonb WHERE id=$1 AND is_bot=true', [bot.id, username, avatar, JSON.stringify(config)]);
+    return res.json({success:true});
+  } catch (error) { return res.status(error.statusCode || 500).json({success:false, message:error.message || 'Erro ao atualizar bot.'}); }
+});
+
+app.get('/api/flashcards/game-rankings', async (req, res) => {
+  try {
+    if (!pool) return res.status(503).json({ success: false });
+    const auth = await readAuthenticatedUserFromRequest(req);
+    if (!auth?.id) return res.status(401).json({ success: false });
+    await ensureGameRankingTables();
+    await ensureFlashcardGameModeProgressTable();
+    const visibility = isAdminUserRecord(auth) ? '' : `WHERE u.is_bot = true OR (COALESCE(u.offline_mode, false) = false
+      AND LOWER(COALESCE(NULLIF(u.username, ''), u.email)) NOT IN ('admin', 'adm', 'adminst', 'admin2')
+      AND UPPER(COALESCE(NULLIF(u.username, ''), u.email)) NOT LIKE '%USER%')`;
+    const [users, rounds, days] = await Promise.all([
+      pool.query(`SELECT u.id, u.username, u.avatar_image, u.is_bot, u.bot_config, p.current_level
+        FROM public.users u LEFT JOIN public.user_flashcard_game_mode_progress p ON p.user_id=u.id ${visibility}`),
+      pool.query('SELECT user_id, mode, heard, spoken, duration_ms, speed, scores FROM public.game_ranking_rounds ORDER BY created_at DESC, round_id DESC'),
+      pool.query("SELECT user_id, to_char(day, 'YYYY-MM-DD') AS day FROM public.game_ranking_unlock_days ORDER BY day DESC")
+    ]);
+    const bots = users.rows.filter(u => u.is_bot);
+    const power = u => { const c = readRawBotConfig(u.bot_config); const a = Number(c.pronunciationMin), b = Number(c.pronunciationMax); return Number.isFinite(a) && Number.isFinite(b) ? (a + b) / 2 : (Number(c.pronunciationBase) || 0); };
+    const powers = bots.map(power); const low = Math.min(...powers), high = Math.max(...powers);
+    const stats = users.rows.map(u => {
+      const own = rounds.rows.filter(r => Number(r.user_id) === Number(u.id));
+      const scores = own.filter(r => Number(r.mode) !== 6).flatMap(r => Array.isArray(r.scores) ? r.scores.slice().reverse() : []).slice(0, 100);
+      const meaning = own.filter(r => Number(r.mode) === 6).flatMap(r => Array.isArray(r.scores) ? r.scores : []);
+      const speeds = own.filter(r => Number(r.mode) === 1 && Number(r.speed) > 0).map(r => Number(r.speed));
+      const avg = values => values.length ? values.reduce((a, b) => a + Number(b), 0) / values.length : 0;
+      const ownDays = days.rows.filter(d => Number(d.user_id) === Number(u.id)).map(d => d.day);
+      let streak = 0;
+      if (ownDays.length) {
+        const today = new Date(new Date().toLocaleString('en-US', {timeZone:'America/Sao_Paulo'}));
+        const todayKey = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+        let previous = Date.parse(ownDays[0] + 'T00:00:00Z');
+        if (todayKey - previous <= 86400000) {
+          streak = 1;
+          for (const day of ownDays.slice(1)) { const next = Date.parse(day + 'T00:00:00Z'); if (previous - next !== 86400000) break; streak++; previous = next; }
+        }
+      }
+      let values = { listening: own.reduce((n,r)=>n+Number(r.heard),0), speaking: own.reduce((n,r)=>n+Number(r.spoken),0), pronunciation: avg(scores), level:Number(u.current_level)||1, building:avg(speeds), meaning:avg(meaning), consistency:streak, practice:own.reduce((n,r)=>n+Number(r.duration_ms),0)/60000 };
+      if (u.is_bot) {
+        const t = high > low ? (power(u) - low) / (high - low) : 1;
+        const lerp = (min,max) => min + t * (max-min);
+        values = { listening:lerp(1500,80000), speaking:lerp(750,40000), pronunciation:lerp(61,98.7), level:lerp(6,141), building:lerp(150,470), meaning:lerp(25,92), consistency:lerp(1,91), practice:lerp(15,1800) };
+      }
+      return { id:Number(u.id), name:String(u.username || 'Usuário'), avatar:String(u.avatar_image || ''), isBot:Boolean(u.is_bot), values };
+    });
+    return res.json({success:true, users:stats});
+  } catch (error) { console.error('Erro ao carregar rankings:', error); return res.status(500).json({success:false}); }
 });
 
 app.get('/api/flashcards/mode-records', async (req, res) => {
