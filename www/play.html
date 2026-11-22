@@ -25495,6 +25495,7 @@
       }
 
       function closeGameModePrestart() {
+        gameModeTileTouchActivation = { modeId: 0, at: 0 };
         if (gameModePrestartAudio) {
           gameModePrestartAudio.pause();
           gameModePrestartAudio.src = '';
@@ -25565,18 +25566,25 @@
         return target?.closest('#gameModeGrid [data-game-mode]') || null;
       }
 
+      function openGameModeTileFromTouch(button) {
+        if (!button || button.getAttribute('aria-disabled') === 'true') return false;
+        const modeId = Number(button.getAttribute('data-game-mode')) || 0;
+        if (gameModeTileTouchActivation.modeId === modeId
+          && Date.now() - gameModeTileTouchActivation.at < 1200) return true;
+        if (!openGameModePrestart(modeId)) return false;
+        gameModeTileTouchActivation = { modeId, at: Date.now() };
+        return true;
+      }
+
       function activateGameModeTileFromPointer(event) {
-        if (!['touch', 'pen'].includes(event.pointerType) || !event.isPrimary || event.button !== 0) return;
+        if (!['touch', 'pen'].includes(event.pointerType) || !event.isPrimary) return;
         const button = gameModeTileButtonFromEvent(event);
         const pressed = gameModeTilePointerDown;
         gameModeTilePointerDown = null;
         if (!button || button !== pressed?.button || event.pointerId !== pressed.pointerId
           || button.getAttribute('aria-disabled') === 'true') return;
         event.preventDefault();
-        const modeId = Number(button.getAttribute('data-game-mode')) || 0;
-        if (openGameModePrestart(modeId)) {
-          gameModeTileTouchActivation = { modeId, at: Date.now() };
-        }
+        openGameModeTileFromTouch(button);
       }
 
       function stopGameModeWatchPlayback() {
@@ -42436,11 +42444,15 @@
           openGameModePrestart(modeId);
         });
         els.gameModeGrid?.addEventListener('pointerdown', (event) => {
-          if (!['touch', 'pen'].includes(event.pointerType) || !event.isPrimary || event.button !== 0) return;
+          if (!['touch', 'pen'].includes(event.pointerType) || !event.isPrimary) return;
           const button = gameModeTileButtonFromEvent(event);
           gameModeTilePointerDown = button && button.getAttribute('aria-disabled') !== 'true'
             ? { button, pointerId: event.pointerId }
             : null;
+          if (gameModeTilePointerDown && openGameModeTileFromTouch(button)) {
+            event.preventDefault();
+            gameModeTilePointerDown = null;
+          }
         }, true);
         els.gameModeGrid?.addEventListener('pointerup', activateGameModeTileFromPointer);
         window.addEventListener('pointercancel', (event) => {
