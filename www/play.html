@@ -16334,6 +16334,9 @@
           preloadImages: new Map(),
           preloadImagePromises: new Map(),
           cardsModePreparedCardIds: [],
+          cardsModePreparedLevel: 0,
+          cardsModePreparedLanguagePair: '',
+          cardsModePreparedGeneralLevelsVersion: '',
           cardsModeRemainingCardIds: [],
           cardsModeCompletedCardIds: [],
           cardsModePracticeStage: null,
@@ -18742,7 +18745,16 @@
         }
       }
 
-      async function prepareCardsModeLevelFromGeneralLevels(level = selectedGameLevel()) {
+      function hasPreparedCardsModeLevel(level = selectedGameLevel()) {
+        const normalizedLevel = normalizeUserLevel(Number(level) > 0 ? level : currentUserLevel());
+        return Number(state.game.cardsModePreparedLevel) === normalizedLevel
+          && Array.isArray(state.game.cardsModePreparedCardIds)
+          && state.game.cardsModePreparedCardIds.length >= FINAL_CHALLENGE_CARD_COUNT
+          && safeText(state.game.cardsModePreparedLanguagePair) === finalChallengeGeneralLevelsPairKey()
+          && safeText(state.game.cardsModePreparedGeneralLevelsVersion) === finalChallengeGeneralLevelsVersion();
+      }
+
+      async function prepareCardsModeLevelFromGeneralLevels(level = selectedGameLevel(), options = {}) {
         const cardsLevel = normalizeUserLevel(Number(level) > 0 ? level : currentUserLevel());
         await Promise.all([
           loadFinalChallengeGeneralLevels(),
@@ -18759,6 +18771,9 @@
         const bufferRevision = Math.max(0, Number(state.game.cardsModeBufferRevision) || 0) + 1;
         state.game.cardsModeBufferRevision = bufferRevision;
         state.game.cardsModePreparedCardIds = preparedCards.map((card) => safeText(card?.id)).filter(Boolean);
+        state.game.cardsModePreparedLevel = cardsLevel;
+        state.game.cardsModePreparedLanguagePair = finalChallengeGeneralLevelsPairKey();
+        state.game.cardsModePreparedGeneralLevelsVersion = finalChallengeGeneralLevelsVersion();
         state.game.cardsModeRemainingCardIds = state.game.cardsModePreparedCardIds.slice();
         state.game.cardsModeCompletedCardIds = [];
         state.game.cardsModeInitialDeckSize = state.game.cardsModePreparedCardIds.length;
@@ -18766,7 +18781,21 @@
         if (!firstCard) {
           throw new Error(nativeUiText('download_unavailable'));
         }
-        await waitForCardImageBuffer(firstCard, CARDS_IMAGE_BUFFER_WAIT_MS);
+        if (options.preloadWholePhase) {
+          const cardMediaPromises = preparedCards.map((card) => waitForCardImageBuffer(card, 6000).catch(() => false));
+          const firstAudioLanguage = Number(options.modeId) === 3
+            ? currentNativeLanguage()
+            : currentTargetLanguage();
+          const firstAudioSrc = firstAudioLanguage
+            ? resolveCardAudioUrlForLanguage(firstCard, firstAudioLanguage)
+            : '';
+          if (firstAudioSrc) {
+            cardMediaPromises.push(prepareRuntimeAudioSource(firstAudioSrc, 5000).then(Boolean).catch(() => false));
+          }
+          await Promise.all(cardMediaPromises);
+        } else {
+          await waitForCardImageBuffer(firstCard, CARDS_IMAGE_BUFFER_WAIT_MS);
+        }
         void bufferCardsModeImagesInBackground(preparedCards, bufferRevision);
         return { ...selection, firstCard };
       }
@@ -25479,8 +25508,8 @@
       function updateGameModePrestartButton() {
         if (!els.gameModePrestartStartBtn) return;
         const hasLevelOneAudio = gameModeHomeProgress.level === 1;
-        const ready = gameModePrestartCanSkip
-          || (gameModePrestartReady && gameModePrestartAudioFinished);
+        const ready = gameModePrestartReady
+          && (gameModePrestartCanSkip || gameModePrestartAudioFinished);
         const showProgress = hasLevelOneAudio && !gameModePrestartCanSkip && !ready;
         els.gameModePrestartStartBtn.hidden = !ready;
         if (els.gameModeAudioProgress) els.gameModeAudioProgress.hidden = !showProgress;
@@ -25530,7 +25559,10 @@
         }
         if (els.gameModePrestart) els.gameModePrestart.hidden = false;
 
-        gameModeCardsPreloadPromise = prepareCardsModeLevelFromGeneralLevels(gameModeHomeProgress.level)
+        gameModeCardsPreloadPromise = prepareCardsModeLevelFromGeneralLevels(gameModeHomeProgress.level, {
+          preloadWholePhase: true,
+          modeId: mode.id
+        })
           .then(() => {
             gameModePrestartReady = true;
             updateGameModePrestartButton();
@@ -40855,7 +40887,7 @@
             syncWelcomeGate();
             return;
           }
-        } else if (!journeyPhaseRuntime && isJourneyGameMode()) {
+        } else if (!journeyPhaseRuntime && isJourneyGameMode() && !hasPreparedCardsModeLevel(selectedGameLevel())) {
           setWelcomeCopy('Preparando as 25 cartas do nível...');
           try {
             const prepared = await prepareCardsModeLevelFromGeneralLevels(selectedGameLevel());
@@ -42372,8 +42404,11 @@
 
             let timeoutId = 0;
             try {
+              const preparedPhase = options.fromGameModeHome && hasPreparedCardsModeLevel(cardsLevel)
+                ? Promise.resolve(true)
+                : prepareCardsModeLevelFromGeneralLevels(cardsLevel);
               await Promise.race([
-                prepareCardsModeLevelFromGeneralLevels(cardsLevel),
+                preparedPhase,
                 new Promise((_resolve, reject) => {
                   timeoutId = window.setTimeout(() => {
                     reject(new Error('A carga deste nivel demorou demais. Toque em Play para tentar novamente.'));
@@ -42393,7 +42428,7 @@
             state.entry.welcomeStartRequested = true;
             state.entry.welcomeFlashStartAt = Date.now();
             closeWelcomeModeModal();
-            if (gameModeHomeConfig(state.game.cardsModeModeId)?.needsMic) {
+            if (gameModeHomeConfig(state.game.cardsModeModeId)?.needsMic && !options.fromGameModeHome) {
               await openAudioCheck();
             } else {
               state.entry.welcomeStartRequested = false;
