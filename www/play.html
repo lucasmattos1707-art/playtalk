@@ -249,18 +249,19 @@
       opacity: 0 !important;
     }
 
-    body > .game-rankings { position: fixed; inset: 0; z-index: 2200; background: #071321; color: #f6fbff; padding: max(18px, env(safe-area-inset-top)) 18px; overflow-y: auto; }
+    body > .game-rankings { position: fixed; inset: 0; z-index: 2200; background: #071321; color: #f6fbff; padding: max(18px, env(safe-area-inset-top)) 18px; overflow-y: auto; overflow-x: hidden; }
     .game-rankings[hidden] { display: none; }
     .game-rankings__inner { max-width: 720px; margin: auto; }
     .game-rankings__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     .game-rankings__close { background: transparent; font-size: 30px; color: white; }
-    .game-rankings__tabs { display: flex; overflow-x: auto; gap: 8px; padding: 12px 0; }
-    .game-rankings__tabs button { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; padding: 10px; background: #193750; color: white; touch-action: manipulation; }
-    .game-rankings__tabs svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+    .game-rankings__tabs { position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: clamp(2px, 1vw, 8px); padding: 12px 0; background: #071321; }
+    .game-rankings__tabs button { width: 100%; min-width: 0; max-width: 46px; aspect-ratio: 1; display: grid; place-items: center; border-radius: 12px; padding: 6px; background: #193750; color: white; touch-action: manipulation; }
+    .game-rankings__tabs svg { width: min(100%, 26px); height: auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
     .game-rankings__tabs button[aria-selected="true"] { background: #168e76; }
     .game-rankings__row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid #28435a; }
-    .game-rankings__avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; touch-action: manipulation; }
-    .game-rankings__name { flex: 1; overflow-wrap: anywhere; }
+    .game-rankings__row.is-current-user { background: rgba(27, 167, 100, .28); border-radius: 12px; }
+    .game-rankings__avatar { flex: 0 0 62.4px; width: 62.4px; height: 62.4px; border-radius: 50%; object-fit: cover; touch-action: manipulation; }
+    .game-rankings__name { flex: 1; min-width: 0; font-size: 1.3em; overflow-wrap: anywhere; }
     .game-rankings__value { font-weight: 700; white-space: nowrap; }
 
     button { font: inherit; color: inherit; cursor: pointer; border: 0; }
@@ -42428,6 +42429,7 @@
       function renderGameRankings() {
         const tabs = document.getElementById('gameRankingsTabs');
         const list = document.getElementById('gameRankingsList');
+        let currentUserRow = null;
         tabs.replaceChildren(); list.replaceChildren();
         gameRankingMetrics.forEach(([key, label]) => {
           const tab = document.createElement('button'); tab.type = 'button';
@@ -42439,6 +42441,11 @@
         const sorted = gameRankingUsers.slice().sort((a,b) => Number(b.values[gameRankingMetric]) - Number(a.values[gameRankingMetric]) || a.name.localeCompare(b.name));
         sorted.forEach((user, index) => {
           const row = document.createElement('div'); row.className = 'game-rankings__row';
+          if (Number(user.id) === Number(state.user?.id)) {
+            row.classList.add('is-current-user');
+            row.setAttribute('aria-label', 'Sua posição no ranking');
+            currentUserRow = row;
+          }
           const rank = document.createElement('span'); rank.textContent = `${index + 1}º`;
           const avatar = document.createElement('img'); avatar.className = 'game-rankings__avatar'; avatar.src = user.avatar || '/Avatar/profile-neon-blue.svg'; avatar.alt = '';
           const name = document.createElement('span'); name.className = 'game-rankings__name'; name.textContent = user.name;
@@ -42454,6 +42461,16 @@
           }
           row.append(rank, avatar, name, value); list.append(row);
         });
+        if (currentUserRow) {
+          window.requestAnimationFrame(() => {
+            const panel = document.getElementById('gameRankings');
+            if (!panel || panel.hidden || !currentUserRow.isConnected) return;
+            const panelRect = panel.getBoundingClientRect();
+            const rowRect = currentUserRow.getBoundingClientRect();
+            const top = panel.scrollTop + rowRect.top - panelRect.top - Math.max(tabs.offsetHeight, (panel.clientHeight - rowRect.height) / 2);
+            panel.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+          });
+        }
       }
 
       async function loadGameRankings() {

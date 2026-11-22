@@ -21144,12 +21144,13 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
     if (!auth?.id) return res.status(401).json({ success: false });
     await ensureGameRankingTables();
     await ensureFlashcardGameModeProgressTable();
-    const visibility = isAdminUserRecord(auth) ? '' : `WHERE u.is_bot = true OR (COALESCE(u.offline_mode, false) = false
+    const visibility = isAdminUserRecord(auth) ? '' : `WHERE u.id = $1 OR u.is_bot = true OR (COALESCE(u.offline_mode, false) = false
       AND LOWER(COALESCE(NULLIF(u.username, ''), u.email)) NOT IN ('admin', 'adm', 'adminst', 'admin2')
       AND UPPER(COALESCE(NULLIF(u.username, ''), u.email)) NOT LIKE '%USER%')`;
     const [users, rounds, days] = await Promise.all([
       pool.query(`SELECT u.id, u.username, u.avatar_image, u.is_bot, u.bot_config, p.current_level
-        FROM public.users u LEFT JOIN public.user_flashcard_game_mode_progress p ON p.user_id=u.id ${visibility}`),
+        FROM public.users u LEFT JOIN public.user_flashcard_game_mode_progress p ON p.user_id=u.id ${visibility}`,
+        isAdminUserRecord(auth) ? [] : [Number(auth.id)]),
       pool.query('SELECT user_id, mode, heard, spoken, duration_ms, speed, scores FROM public.game_ranking_rounds ORDER BY created_at DESC, round_id DESC'),
       pool.query("SELECT user_id, to_char(day, 'YYYY-MM-DD') AS day FROM public.game_ranking_unlock_days ORDER BY day DESC")
     ]);
