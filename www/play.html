@@ -1824,7 +1824,7 @@
     .game-mode-prestart__back { position: absolute; z-index: 2; top: 24px; left: 24px; width: 48px; height: 48px; border: 1px solid rgba(148,190,224,.32); border-radius: 50%; color: #eaf6ff; background: rgba(10,24,41,.8); font-size: 24px; cursor: pointer; }
     .game-mode-prestart__logo-wrap { position: absolute; inset: 0; width: 100%; display: grid; place-items: center; pointer-events: none; }
     .game-mode-prestart__logo { display: block; width: min(68vw, 680px); max-height: 58vh; object-fit: contain; }
-    .game-mode-prestart__body { position: absolute; inset: 0; width: 100%; pointer-events: none; }
+    .game-mode-prestart__body { position: absolute; inset: 0; width: 100%; pointer-events: auto; }
     .game-mode-prestart__start { position: absolute; inset: 0; width: 100%; height: 100%; display: grid; place-items: end center; padding: 0 20px max(34px, env(safe-area-inset-bottom)); border: 0; border-radius: 0; color: transparent; background: transparent; box-shadow: none; font-size: 20px; font-weight: 400; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
     .game-mode-prestart__start[hidden] { display: none; }
     .game-mode-prestart__start span { position: absolute; top: calc(50% + min(29vh, 220px) + 14px); left: 50%; transform: translateX(-50%); color: #f4f8ff; font-weight: 400; white-space: nowrap; text-shadow: 0 2px 14px rgba(0,0,0,.52); }
@@ -35221,6 +35221,13 @@
       }
 
       function gateCustomFourthStageInputUntilEnglishAudio(entry, card, grid, advanceBtn = null) {
+        if (state.game.gameModeHomeSessionActive && Number(state.game.cardsModeModeId) === 1) {
+          startTypingRoundAttempt(entry);
+          grid?.classList.remove('is-audio-waiting');
+          setTypingKeysDisabled(grid, false);
+          if (advanceBtn && !isTrainingMode()) syncGameAdvanceButton(entry);
+          return false;
+        }
         if (!shouldPlayCustomFourthStageEnglishBeforeInput(entry) || !grid) return false;
         const allowInputDuringPlayback = isTypingRoundStageFourActive();
         const earnedStars = Math.max(0, Math.min(GAME_STAR_TARGET, Number(entry?.stars) || 0));
