@@ -6511,13 +6511,15 @@ function buildBotDerivedStats(user, now = new Date()) {
   }
 
   const createdAtMs = Date.parse(String(user?.created_at || '').trim());
-  const updateDateKey = resolveBotUpdateDateKey(now, botConfig.updateHour);
-  const currentDateKey = String(updateDateKey || '');
+  const botCardsFreezeAt = new Date('2026-11-22T23:48:44Z');
+  const effectiveCardsDate = now < botCardsFreezeAt ? now : botCardsFreezeAt;
+  const currentDateKey = String(resolveBotUpdateDateKey(now, botConfig.updateHour) || '');
+  const cardsDateKey = String(resolveBotUpdateDateKey(effectiveCardsDate, botConfig.updateHour) || '');
   let daysSinceCreation = 0;
   if (Number.isFinite(createdAtMs) && createdAtMs > 0) {
     const createdDateKey = resolveBotUpdateDateKey(new Date(createdAtMs), botConfig.updateHour);
     const createdLocal = new Date(`${createdDateKey}T00:00:00`);
-    const currentLocal = new Date(`${currentDateKey}T00:00:00`);
+    const currentLocal = new Date(`${cardsDateKey}T00:00:00`);
     const deltaDays = Math.floor((currentLocal - createdLocal) / 86400000);
     daysSinceCreation = Math.max(0, deltaDays);
   }
@@ -21155,7 +21157,7 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
       pool.query("SELECT user_id, to_char(day, 'YYYY-MM-DD') AS day FROM public.game_ranking_unlock_days ORDER BY day DESC")
     ]);
     const bots = users.rows.filter(u => u.is_bot);
-    const power = u => { const c = readRawBotConfig(u.bot_config); const a = Number(c.pronunciationMin), b = Number(c.pronunciationMax); return Number.isFinite(a) && Number.isFinite(b) ? (a + b) / 2 : (Number(c.pronunciationBase) || 0); };
+    const power = u => { const c = readRawBotConfig(u.bot_config); const rankingPower = Number(c.gameRankingPower); const a = Number(c.pronunciationMin), b = Number(c.pronunciationMax); return c.gameRankingPower != null && Number.isFinite(rankingPower) ? rankingPower : Number.isFinite(a) && Number.isFinite(b) ? (a + b) / 2 : (Number(c.pronunciationBase) || 0); };
     const powers = bots.map(power); const low = Math.min(...powers), high = Math.max(...powers);
     const botListeningOrder = bots.slice().sort((a, b) => power(b) - power(a) || Number(a.id) - Number(b.id));
     const botMetricFactors = new Map();
