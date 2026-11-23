@@ -5751,10 +5751,10 @@
     .game-end__track { width:min(340px,68%); height:7px; background:#1b314c; border-radius:10px; margin:clamp(8px,2vh,18px) auto 0; overflow:hidden; box-shadow:0 0 18px rgba(0,0,0,.25); }
     .game-end__track-fill { height:100%; width:0; background:linear-gradient(90deg,var(--metric-accent),#fff); border-radius:10px; transition:width 1.9s cubic-bezier(.2,.8,.2,1); box-shadow:0 0 14px var(--metric-accent); }
     .game-end__rank-viewport { width:min(680px,96%); height:min(72dvh,calc(100dvh - 185px)); margin:clamp(4px,1vh,9px) auto 0; overflow:hidden; mask-image:linear-gradient(to bottom,transparent,#000 4%,#000 96%,transparent); }
-    .game-end__rank-rows { width:100%; }
-    .game-end__rank-row { height:min(9.7dvh,78px); display:grid; grid-template-columns:clamp(42px,7dvh,68px) clamp(58px,10dvh,92px) minmax(0,1fr); align-items:center; gap:clamp(8px,1.5vw,16px); padding:3px clamp(10px,2vw,20px); border-bottom:1px solid rgba(129,164,207,.16); color:#c4d8ef; font-family:'Rajdhani','Exo 2',sans-serif; font-size:clamp(15px,2.5dvh,21px); text-align:left; transition:transform .2s,opacity .2s; }
+    .game-end__rank-rows { width:100%; height:100%; position:relative; }
+    .game-end__rank-row { position:absolute; top:50%; left:0; width:100%; box-sizing:border-box; height:min(9.7dvh,78px); display:grid; grid-template-columns:clamp(42px,7dvh,68px) clamp(58px,10dvh,92px) minmax(0,1fr); align-items:center; gap:clamp(8px,1.5vw,16px); padding:3px clamp(10px,2vw,20px); border-bottom:1px solid rgba(129,164,207,.16); color:#c4d8ef; font-family:'Rajdhani','Exo 2',sans-serif; font-size:clamp(15px,2.5dvh,21px); text-align:left; will-change:transform; }
     .game-end__rank-row[hidden] { display:none !important; }
-    .game-end__rank-row.is-player { border:1px solid rgba(78,182,255,.8); border-radius:9px; background:linear-gradient(90deg,rgba(12,109,201,.47),rgba(12,79,153,.24)); box-shadow:inset 4px 0 #4dc7ff; color:#fff; font-weight:700; }
+    .game-end__rank-row.is-player { z-index:2; border:1px solid rgba(78,182,255,.8); border-radius:9px; background:linear-gradient(90deg,rgba(12,109,201,.47),rgba(12,79,153,.24)); box-shadow:inset 4px 0 #4dc7ff; color:#fff; font-weight:700; }
     .game-end__rank-row.is-empty { visibility:hidden; }
     @keyframes gameEndRankStepUp { from { opacity:.35; transform:translateY(12px); } to { opacity:1; transform:none; } }
     @keyframes gameEndRankStepDown { from { opacity:.35; transform:translateY(-12px); } to { opacity:1; transform:none; } }
@@ -34802,70 +34802,60 @@
         viewport.setAttribute('aria-label', 'Jogadores próximos na classificação geral');
         const rows = document.createElement('div');
         rows.className = 'game-end__rank-rows';
-        const visibleRows = [];
-        for (let index = 0; index < 7; index += 1) {
-          const row = document.createElement('div');
-          row.className = 'game-end__rank-row';
-          const place = document.createElement('span');
-          place.className = 'game-end__rank-place';
-          const avatar = document.createElement('img');
-          avatar.className = 'game-end__rank-avatar';
-          avatar.alt = '';
-          avatar.loading = 'lazy';
-          const name = document.createElement('span');
-          name.className = 'game-end__rank-name';
-          row.append(place, avatar, name);
-          rows.appendChild(row);
-          visibleRows.push({ row, place, avatar, name });
-        }
         viewport.appendChild(rows);
         slide.append(heading, logo, value, viewport);
         slide._startRanking = startRanking;
         slide._finalRanking = finalRanking;
         slide._userId = Number(userId);
-        slide._visibleRows = visibleRows;
+        slide._rankRows = rows;
+        slide._rowByUser = new Map();
         slide.dataset.startRank = String(startRank);
         slide.dataset.finalRank = String(finalRank);
         updateGameEndRankWindow(slide, startRank, 0, false);
         return slide;
       }
 
-      function updateGameEndRankWindow(slide, centerRank, progress = 1, animateRows = true) {
-        const finalRanking = slide._finalRanking || [];
-        const users = finalRanking.slice().sort((left, right) => Number(left.rank) - Number(right.rank));
-        const visibleRows = slide._visibleRows || [];
-        const player = users.find((user) => Number(user.id) === Number(slide._userId))
-          || (slide._startRanking || []).find((user) => Number(user.id) === Number(slide._userId));
-        const otherUsers = users.filter((user) => Number(user.id) !== Number(slide._userId));
-        const center = Math.max(1, Math.min(users.length || 1, Math.round(centerRank)));
-        visibleRows.forEach(({ row, place, avatar, name }, index) => {
-          const offset = index - 3;
-          const position = center + offset;
-          const otherPosition = position < center ? position : position - 1;
-          const user = offset === 0 ? player : (position >= 1 && position <= users.length ? otherUsers[otherPosition - 1] : null);
-          const isPlayer = Number(user?.id) === Number(slide._userId);
-          const userId = user ? String(user.id) : '';
-          const rowChanged = row.dataset.userId !== userId;
-          row.hidden = false;
-          row.classList.toggle('is-empty', !user);
+      function updateGameEndRankWindow(slide, centerRank) {
+        const users = (slide._finalRanking || []).slice().sort((a, b) => Number(a.rank) - Number(b.rank));
+        const player = users.find((user) => Number(user.id) === slide._userId);
+        if (!player) return;
+        const others = users.filter((user) => Number(user.id) !== slide._userId);
+        const center = Math.max(1, Math.min(users.length, centerRank));
+        const rowHeight = Math.min(window.innerHeight * 0.097, window.innerWidth <= 600 ? 68 : 78);
+        const visible = [{ user: player, position: center, isPlayer: true }];
+        others.forEach((user, index) => {
+          const base = index + 1;
+          // Move the empty slot smoothly through the list alongside the player.
+          const position = base + Math.max(0, Math.min(1, base + 1 - center));
+          if (Math.abs(position - center) < 5.5) visible.push({ user, position, isPlayer: false });
+        });
+        const activeIds = new Set(visible.map(({ user }) => Number(user.id)));
+        slide._rowByUser.forEach((row, id) => {
+          if (!activeIds.has(id)) { row.remove(); slide._rowByUser.delete(id); }
+        });
+        visible.forEach(({ user, position, isPlayer }) => {
+          const id = Number(user.id);
+          let row = slide._rowByUser.get(id);
+          if (!row) {
+            row = document.createElement('div');
+            row.className = 'game-end__rank-row';
+            const place = document.createElement('span');
+            place.className = 'game-end__rank-place';
+            const avatar = document.createElement('img');
+            avatar.className = 'game-end__rank-avatar';
+            avatar.alt = '';
+            avatar.src = user.avatar || '/Avatar/profile-neon-blue.svg';
+            const name = document.createElement('span');
+            name.className = 'game-end__rank-name';
+            name.textContent = user.name || '';
+            name.title = user.name || '';
+            row.append(place, avatar, name);
+            slide._rankRows.appendChild(row);
+            slide._rowByUser.set(id, row);
+          }
           row.classList.toggle('is-player', isPlayer);
-          if (animateRows && rowChanged) {
-            row.classList.remove('is-shifting');
-            void row.offsetWidth;
-            row.classList.add('is-shifting');
-          } else if (!animateRows || !rowChanged) {
-            row.classList.remove('is-shifting');
-          }
-          row.dataset.userId = userId;
-          place.textContent = user ? `${position}º` : '';
-          name.textContent = user?.name || '';
-          name.title = user?.name || '';
-          const avatarUrl = user ? (user.avatar || '/Avatar/profile-neon-blue.svg') : '';
-          if (avatarUrl) {
-            if (avatar.getAttribute('src') !== avatarUrl) avatar.src = avatarUrl;
-          } else {
-            avatar.removeAttribute('src');
-          }
+          row.firstChild.textContent = Math.round(isPlayer ? center : position) + 'º';
+          row.style.transform = 'translateY(' + ((position - center - 0.5) * rowHeight) + 'px)';
         });
       }
 
@@ -34884,7 +34874,8 @@
             if (token !== gameEndPresentationToken) { resolve(); return; }
             const progress = Math.min(1, (now - startAt) / duration);
             const eased = 1 - Math.pow(1 - progress, 3);
-            const currentRank = Math.round(startRank + (finalRank - startRank) * eased);
+            const animatedRank = startRank + (finalRank - startRank) * eased;
+            const currentRank = Math.round(animatedRank);
             value.textContent = `${currentRank}º`;
             if (currentRank !== lastRenderedRank || progress === 1) {
               lastRenderedRank = currentRank;
