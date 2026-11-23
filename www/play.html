@@ -1853,16 +1853,9 @@
     .game.is-mode-two-repeat #gameStarCopy,
     .game.is-mode-two-repeat #gameStatusWrap,
     .game.is-mode-two-repeat .game-touch__label { display: none !important; }
-    .game.is-mode-three-repeat #gameSubword {
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      color: #fff !important;
-      font-size: clamp(24px, 4vw, 34px) !important;
-      font-weight: 800 !important;
-      line-height: 1.2 !important;
-      margin-top: 8px !important;
-    }
+    .game.is-mode-three-repeat #gameSubword,
+    .game.is-mode-three-repeat .game-card__phase-flag,
+    .game.is-mode-three-repeat .game-card__flag { display: none !important; }
     .game.is-watching-mode .game-card__content { display: grid !important; }
     .game.is-watching-mode #gameStep,
     .game.is-watching-mode #gameSubword,
@@ -31965,10 +31958,14 @@
             key: 'mode-three-repeat',
             instruction: 'Fale ingles',
             expected: 'english',
+            inputMode: 'speaking',
+            typingMode: undefined,
             autoAudio: false,
             showWord: true,
-            wordType: 'portuguese',
-            subtitleType: 'english'
+            wordType: 'english',
+            subtitleType: 'none',
+            overlayFlag: null,
+            overlayClassName: ''
           };
         }
         if (isCardsModeSecondSpeakingEntry(entry)) {
@@ -32087,7 +32084,7 @@
         const useBooksMic = useModeVoiceMic || (!isFiveStarCardsModeActive()
           && (!isLevelAudioModeActive() || isLevelTextModeActive())
           && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5));
-        const useStagePlay = (stageNumber === 2 && !cardsModeSecondSpeaking) || stageNumber === 4;
+        const useStagePlay = (stageNumber === 2 && !cardsModeSecondSpeaking && !isCardsModeListenRepeatEntry(entry)) || stageNumber === 4;
         const micListeningActive = Boolean(state.game.listening);
         const showMissionHud = stageNumber >= 1 && stageNumber <= 5;
         els.gameTouchBtn.parentElement.hidden = !showMissionHud;
@@ -35030,7 +35027,7 @@
       }
 
       function isTypingStage(entry) {
-        if (isCardsModeSecondSpeakingEntry(entry)) return false;
+        if (isCardsModeSecondSpeakingEntry(entry) || isCardsModeListenRepeatEntry(entry)) return false;
         const stageConfig = STAGES[resolveEntryStageNumber(entry)] || STAGES[1];
         return stageConfig.inputMode === 'typing';
       }
@@ -37232,7 +37229,7 @@
           });
         }
         renderFifthStarPortugueseDisplay(card, stageConfig.key);
-        const keepModeThreeEnglishWordVisible = isCardsModeSecondSpeakingEntry(entry);
+        const keepModeThreeEnglishWordVisible = isCardsModeSecondSpeakingEntry(entry) || isCardsModeListenRepeatEntry(entry);
         if (isSimpleStarPhase && !textOnlyMode && !keepModeThreeEnglishWordVisible) {
           els.gameWord.parentElement?.classList.remove('is-stage-one-swap');
           els.gameWord.classList.remove('is-stage-swap-hidden');
@@ -37259,19 +37256,16 @@
           els.gameSubword.style.display = subword ? '' : 'none';
         }
         if (isCardsModeListenRepeatEntry(entry)) {
-          const portuguesePrompt = capitalizeWords(
-            resolveSourceLanguageText(card, 'portuguese') || card.portuguese || card.english || card.deckTitle || ''
-          );
           const englishPrompt = capitalizeWords(
             resolveSourceLanguageText(card, 'english') || card.english || card.deckTitle || ''
           );
-          renderChipText(els.gameWord, portuguesePrompt);
+          renderChipText(els.gameWord, englishPrompt);
           els.gameWord.classList.remove('is-hidden', 'is-stage-swap-hidden');
           els.gameWord.style.display = '';
-          renderChipText(els.gameSubword, englishPrompt);
-          els.gameSubword.classList.remove('is-hidden', 'is-stage-swap-hidden');
-          els.gameSubword.style.display = '';
-          els.gameSubword.setAttribute('lang', 'en');
+          els.gameSubword.textContent = '';
+          els.gameSubword.classList.add('is-hidden');
+          els.gameSubword.style.display = 'none';
+          els.gameSubword.removeAttribute('lang');
         } else {
           els.gameSubword.removeAttribute('lang');
         }
