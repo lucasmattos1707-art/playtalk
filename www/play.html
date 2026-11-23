@@ -1858,6 +1858,7 @@
     .game.is-mode-two-repeat #gameStatusWrap,
     .game.is-mode-two-repeat .game-touch__label { display: none !important; }
     .game.is-mode-three-repeat #gameSubword,
+    .game.is-mode-three-repeat #gameStatusWrap,
     .game.is-mode-three-repeat .game-card__phase-flag,
     .game.is-mode-three-repeat .game-card__flag { display: none !important; }
     .game.is-watching-mode .game-card__content { display: grid !important; }
@@ -8119,6 +8120,37 @@
       padding: 0;
       text-align: center;
       line-height: 1.35;
+    }
+
+    .game.is-mode-three-repeat[data-phase-key="fifth-star"] .game-card__content #gameWord {
+      width: min(80vw, 900px);
+      max-width: 80vw;
+      max-height: 30dvh;
+      padding: 0;
+      margin: 0 auto;
+      border: 0;
+      border-radius: 0;
+      color: #ffffff;
+      background: transparent !important;
+      box-shadow: none !important;
+      animation: none !important;
+      font-family: "Exo 2", "Open Sans", Arial, sans-serif;
+      font-size: clamp(24px, 5vw, 38px);
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: 0;
+      text-align: center;
+      text-transform: none;
+      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.48);
+      white-space: normal;
+      overflow-wrap: anywhere;
+      -webkit-line-clamp: 4;
+    }
+
+    .game.is-mode-three-repeat[data-phase-key="fifth-star"] .game-card__content #gameWord::before,
+    .game.is-mode-three-repeat[data-phase-key="fifth-star"] .game-card__content #gameWord::after {
+      display: none !important;
+      content: none !important;
     }
 
     .game #gameVisual.is-neon-touch::after {
