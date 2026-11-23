@@ -5758,7 +5758,7 @@
     .game-end__track-fill { height:100%; width:0; background:linear-gradient(90deg,var(--metric-accent),#fff); border-radius:10px; transition:width 1.9s cubic-bezier(.2,.8,.2,1); box-shadow:0 0 14px var(--metric-accent); }
     .game-end__rank-viewport { width:min(680px,96%); height:min(72dvh,calc(100dvh - 185px)); margin:clamp(4px,1vh,9px) auto 0; overflow:hidden; mask-image:linear-gradient(to bottom,transparent,#000 4%,#000 96%,transparent); }
     .game-end__rank-rows { width:100%; height:100%; position:relative; }
-    .game-end__rank-row { position:absolute; top:50%; left:0; width:100%; box-sizing:border-box; height:min(9.7dvh,78px); display:grid; grid-template-columns:clamp(42px,7dvh,68px) clamp(58px,10dvh,92px) minmax(0,1fr); align-items:center; gap:clamp(8px,1.5vw,16px); padding:3px clamp(10px,2vw,20px); border-bottom:1px solid rgba(129,164,207,.16); color:#c4d8ef; font-family:'Rajdhani','Exo 2',sans-serif; font-size:clamp(15px,2.5dvh,21px); text-align:left; will-change:transform; }
+    .game-end__rank-row { position:absolute; top:50%; left:0; width:100%; box-sizing:border-box; height:min(9.7dvh,78px); display:grid; grid-template-columns:clamp(42px,7dvh,68px) clamp(58px,10dvh,92px) minmax(0,1fr) auto; align-items:center; gap:clamp(8px,1.5vw,16px); padding:3px clamp(10px,2vw,20px); border-bottom:1px solid rgba(129,164,207,.16); color:#c4d8ef; font-family:'Rajdhani','Exo 2',sans-serif; font-size:clamp(15px,2.5dvh,21px); text-align:left; will-change:transform; }
     .game-end__rank-row[hidden] { display:none !important; }
     .game-end__rank-row.is-player { z-index:2; border:1px solid rgba(78,182,255,.8); border-radius:9px; background:linear-gradient(90deg,rgba(12,109,201,.47),rgba(12,79,153,.24)); box-shadow:inset 4px 0 #4dc7ff; color:#fff; font-weight:700; }
     .game-end__rank-row.is-empty { visibility:hidden; }
@@ -5769,6 +5769,7 @@
     .game-end__rank-place { color:#d6e7fa; font-family:'Orbitron','Rajdhani',sans-serif; font-size:clamp(12px,2.2dvh,18px); text-align:center; }
     .game-end__rank-avatar { width:min(8.2dvh,72px); height:min(8.2dvh,72px); border-radius:50%; object-fit:cover; background:#17314f; border:2px solid rgba(190,220,255,.5); box-shadow:0 0 16px rgba(57,157,255,.3); }
     .game-end__rank-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .game-end__rank-score { font-variant-numeric:tabular-nums; font-weight:700; white-space:nowrap; color:#d6e7fa; }
     .game-end__classification h4 { margin:0 0 2px; font-size:clamp(17px,2.4dvh,23px); }
     .game-end__classification { position:absolute; inset:0; width:100%; height:100%; min-height:0; align-self:stretch; justify-self:stretch; }
     .game-end__classification .game-end__slide-icon { width:clamp(36px,5.5dvh,52px); height:clamp(36px,5.5dvh,52px); margin:0 auto 1px; }
@@ -5819,7 +5820,7 @@
       .game-end__slide-icon { width:clamp(76px,17dvh,120px); height:clamp(76px,17dvh,120px); }
       .game-end__slide-value { font-size:clamp(38px,8dvh,58px); }
       .game-end__rank-viewport { width:min(680px,98%); height:min(72dvh,calc(100dvh - 170px)); }
-      .game-end__rank-row { height:min(9.7dvh,68px); grid-template-columns:clamp(38px,6.5dvh,54px) clamp(50px,9dvh,70px) minmax(0,1fr); gap:8px; padding:2px 8px; font-size:clamp(14px,2.3dvh,18px); }
+      .game-end__rank-row { height:min(9.7dvh,68px); grid-template-columns:clamp(38px,6.5dvh,54px) clamp(50px,9dvh,70px) minmax(0,1fr) auto; gap:8px; padding:2px 8px; font-size:clamp(14px,2.3dvh,18px); }
       .game-end__rank-avatar { width:min(7.8dvh,60px); height:min(7.8dvh,60px); }
       .game-end__classification .game-end__rank-viewport { height:min(72dvh,calc(100dvh - 170px)); }
       .game-end__menu-btn { min-width:0; width:min(100%,320px); padding:11px 18px; margin:6px auto max(0px, env(safe-area-inset-bottom)); }
@@ -34817,7 +34818,7 @@
         void audio.play().catch(() => {});
       }
 
-      function createGameEndClassificationSlide(startRanking, finalRanking, userId, title = 'Classificação geral') {
+      function createGameEndClassificationSlide(startRanking, finalRanking, userId, title = 'Classificação geral', metric = null) {
         const startUser = startRanking.find((user) => Number(user.id) === Number(userId));
         const finalUser = finalRanking.find((user) => Number(user.id) === Number(userId));
         if (!finalUser) return null;
@@ -34848,6 +34849,7 @@
         slide._startRanking = startRanking;
         slide._finalRanking = finalRanking;
         slide._userId = Number(userId);
+        slide._metric = metric;
         slide._rankRows = rows;
         slide._rowByUser = new Map();
         slide.dataset.startRank = String(startRank);
@@ -34856,13 +34858,13 @@
         return slide;
       }
 
-      function updateGameEndRankWindow(slide, centerRank) {
+      function updateGameEndRankWindow(slide, centerRank, progress = 1) {
         const users = (slide._finalRanking || []).slice().sort((a, b) => Number(a.rank) - Number(b.rank));
         const player = users.find((user) => Number(user.id) === slide._userId);
         if (!player) return;
         const others = users.filter((user) => Number(user.id) !== slide._userId);
         const center = Math.max(1, Math.min(users.length, centerRank));
-        const rowHeight = Math.min(window.innerHeight * 0.097, window.innerWidth <= 600 ? 68 : 78);
+        const rowHeight = Math.min(window.innerHeight * 0.097, window.innerWidth <= 520 ? 68 : 78);
         const visible = [{ user: player, position: center, isPlayer: true }];
         others.forEach((user, index) => {
           const base = index + 1;
@@ -34890,13 +34892,18 @@
             name.className = 'game-end__rank-name';
             name.textContent = user.name || '';
             name.title = user.name || '';
-            row.append(place, avatar, name);
+            const score = document.createElement('span');
+            score.className = 'game-end__rank-score';
+            const numericValue = Number(slide._metric ? user.values?.[slide._metric] : user.score) || 0;
+            score.textContent = numericValue.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+            row.append(place, avatar, name, score);
             slide._rankRows.appendChild(row);
             slide._rowByUser.set(id, row);
           }
           row.classList.toggle('is-player', isPlayer);
           row.firstChild.textContent = Math.round(isPlayer ? center : position) + 'º';
-          row.style.transform = 'translateY(' + ((position - center - 0.5) * rowHeight) + 'px)';
+          const lift = isPlayer && Number(slide.dataset.startRank) !== Number(slide.dataset.finalRank) ? Math.sin(Math.PI * progress) : 0;
+          row.style.transform = 'translate3d(' + (lift * 14) + 'px,' + ((position - center - 0.5) * rowHeight) + 'px,0) scale(' + (1 - lift * 0.04) + ')';
         });
       }
 
@@ -34908,8 +34915,7 @@
         slide.classList.toggle('is-climbing', isClimbing);
         slide.classList.toggle('is-falling', finalRank > startRank);
         const startAt = performance.now();
-        const duration = Math.min(8000, Math.max(900, Math.abs(finalRank - startRank) * 180));
-        let lastRenderedRank = startRank;
+        const duration = startRank === finalRank ? 900 : 3000;
         return new Promise((resolve) => {
           const frame = (now) => {
             if (token !== gameEndPresentationToken) { resolve(); return; }
@@ -34918,10 +34924,7 @@
             const animatedRank = startRank + (finalRank - startRank) * eased;
             const currentRank = Math.round(animatedRank);
             value.textContent = `${currentRank}º`;
-            if (currentRank !== lastRenderedRank || progress === 1) {
-              lastRenderedRank = currentRank;
-              updateGameEndRankWindow(slide, currentRank, eased, true);
-            }
+            updateGameEndRankWindow(slide, animatedRank, progress);
             if (progress < 1) window.requestAnimationFrame(frame);
             else resolve();
           };
@@ -35106,7 +35109,7 @@
               const improvedMetric = bestChangedGameRankingMetric(startRanking, finalRanking, state.user.id);
               if (!improvedMetric) return [generalSlide];
               const metricSlide = createGameEndClassificationSlide(
-                improvedMetric.startUsers, improvedMetric.finalUsers, state.user.id, improvedMetric.title
+                improvedMetric.startUsers, improvedMetric.finalUsers, state.user.id, improvedMetric.title, improvedMetric.metric
               );
               return metricSlide ? [generalSlide, metricSlide] : [generalSlide];
             })()
