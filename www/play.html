@@ -34625,6 +34625,7 @@
       }
 
       let gameEndPresentationToken = 0;
+      let gameEndRankingContinueResolver = null;
       const GAME_END_AUDIO = {
         correct: '/gamesounds/results/correct.mp3',
         listening: '/gamesounds/results/listening.mp3',
@@ -34690,6 +34691,34 @@
           : { maximumFractionDigits: 0 });
       }
 
+      function buildMetricGameRanking(users, metric) {
+        return (Array.isArray(users) ? users : [])
+          .slice()
+          .sort((left, right) => (Number(right.values?.[metric]) || 0) - (Number(left.values?.[metric]) || 0)
+            || String(left.name || '').localeCompare(String(right.name || '')))
+          .map((user, index) => ({ ...user, rank: index + 1 }));
+      }
+
+      function bestImprovedGameRankingMetric(startRanking, finalRanking, userId) {
+        const labels = {
+          listening: 'Palavras ouvidas', speaking: 'Palavras faladas', pronunciation: 'Pronúncia',
+          level: 'Níveis', building: 'Construção', meaning: 'Significado', consistency: 'Consistência',
+          practice: 'Prática', xp: 'XP'
+        };
+        let best = null;
+        GAME_GENERAL_RANKING_METRICS.forEach((metric) => {
+          const startUser = buildMetricGameRanking(startRanking, metric).find((user) => Number(user.id) === Number(userId));
+          const finalUsers = buildMetricGameRanking(finalRanking, metric);
+          const finalUser = finalUsers.find((user) => Number(user.id) === Number(userId));
+          if (!startUser || !finalUser) return;
+          const movement = Number(startUser.rank) - Number(finalUser.rank);
+          if (movement > (best?.movement || 0)) {
+            best = { metric, title: `Ranking ${labels[metric] || metric}`, movement, startUsers: buildMetricGameRanking(startRanking, metric), finalUsers };
+          }
+        });
+        return best;
+      }
+
       function createGameEndSlide(metric) {
         const card = document.createElement('article');
         card.className = 'game-end__slide';
@@ -34724,20 +34753,20 @@
         void audio.play().catch(() => {});
       }
 
-      function createGameEndClassificationSlide(startRanking, finalRanking, userId) {
+      function createGameEndClassificationSlide(startRanking, finalRanking, userId, title = 'Classificação geral') {
         const startUser = startRanking.find((user) => Number(user.id) === Number(userId));
         const finalUser = finalRanking.find((user) => Number(user.id) === Number(userId));
         if (!finalUser) return null;
         const startRank = Number(startUser?.rank) || Number(finalUser.rank);
         const finalRank = Number(finalUser.rank);
-        const rangeStart = Math.max(1, Math.min(startRank, finalRank) - 3);
-        const rangeEnd = Math.min(finalRanking.length, Math.max(startRank, finalRank) + 3);
+        const rangeStart = Math.max(1, finalRank - 3);
+        const rangeEnd = Math.min(finalRanking.length, finalRank + 3);
         const slide = document.createElement('article');
         slide.className = 'game-end__slide game-end__classification';
         slide.style.setProperty('--metric-accent', '#ffcf55');
         slide.dataset.metric = 'ranking';
         const heading = document.createElement('h4');
-        heading.textContent = 'Classificação geral';
+        heading.textContent = title;
         const logo = document.createElement('div');
         logo.className = 'game-end__slide-icon';
         logo.setAttribute('aria-hidden', 'true');
@@ -34810,8 +34839,6 @@
         const fill = slide.querySelector('.game-end__track-fill');
         const startRank = Number(slide.dataset.startRank) || 1;
         const finalRank = Number(slide.dataset.finalRank) || startRank;
-        let lastRenderedRank = startRank;
-        updateGameEndRankWindow(slide, startRank);
         fill.style.transition = 'none';
         fill.style.width = '0';
         window.requestAnimationFrame(() => {
@@ -34828,10 +34855,6 @@
             const eased = 1 - Math.pow(1 - progress, 3);
             const currentRank = Math.round(startRank + (finalRank - startRank) * eased);
             value.textContent = `${currentRank}º`;
-            if (currentRank !== lastRenderedRank) {
-              lastRenderedRank = currentRank;
-              updateGameEndRankWindow(slide, currentRank);
-            }
             if (progress < 1) window.requestAnimationFrame(frame);
             else resolve();
           };
@@ -34863,6 +34886,10 @@
 
       async function playGameEndPresentation(slides, classificationPromise = null) {
         const token = ++gameEndPresentationToken;
+        if (gameEndRankingContinueResolver) {
+          gameEndRankingContinueResolver(false);
+          gameEndRankingContinueResolver = null;
+        }
         const autoReturnHome = Boolean(state.game.gameModeHomeSessionActive);
         for (let index = 0; index < slides.length; index += 1) {
           if (token !== gameEndPresentationToken) return;
@@ -34873,36 +34900,44 @@
           if (token !== gameEndPresentationToken) return;
           await wait(index === slides.length - 1 ? 1250 : 900);
         }
-        let showedClassification = false;
+        let classificationSlides = [];
         if (classificationPromise && token === gameEndPresentationToken) {
-          const classification = await classificationPromise;
+          const resolvedSlides = await classificationPromise;
           if (token !== gameEndPresentationToken) return;
-          if (classification) {
-            showedClassification = true;
-            els.gameEndStage.appendChild(classification);
-            slides.push(classification);
-            slides.forEach((slide) => slide.classList.remove('is-active'));
-            classification.classList.add('is-active');
-            playGameEndSound('ranking');
-            await animateGameEndClassification(classification, token);
-            await wait(900);
+          classificationSlides = Array.isArray(resolvedSlides) ? resolvedSlides.filter(Boolean) : (resolvedSlides ? [resolvedSlides] : []);
+          if (classificationSlides.length) {
+            await Promise.race([
+              state.game.cardsModeRound?.rankingSavePromise || Promise.resolve(null),
+              wait(5000).then(() => null)
+            ]);
+            for (let index = 0; index < classificationSlides.length; index += 1) {
+              if (token !== gameEndPresentationToken) return;
+              const classification = classificationSlides[index];
+              els.gameEndStage.appendChild(classification);
+              els.gameEndStage.querySelectorAll('.game-end__slide').forEach((slide) => slide.classList.remove('is-active'));
+              classification.classList.add('is-active');
+              playGameEndSound('ranking');
+              await wait(2000);
+              if (token !== gameEndPresentationToken) return;
+              await animateGameEndClassification(classification, token);
+              if (token !== gameEndPresentationToken) return;
+              els.gameEndMenuBtn.textContent = 'Próximo';
+              els.gameEndMenuBtn.hidden = false;
+              if (index < classificationSlides.length - 1) {
+                const shouldContinue = await new Promise((resolve) => { gameEndRankingContinueResolver = resolve; });
+                gameEndRankingContinueResolver = null;
+                if (!shouldContinue || token !== gameEndPresentationToken) return;
+                els.gameEndMenuBtn.hidden = true;
+              }
+            }
           }
         }
         if (autoReturnHome) {
-          await Promise.race([
-            state.game.cardsModeRound?.rankingSavePromise || Promise.resolve(null),
-            wait(5000).then(() => null)
-          ]);
           if (token === gameEndPresentationToken && state.game.gameModeHomeSessionActive) {
-            if (showedClassification) {
-              els.gameEndMenuBtn.textContent = 'Próximo';
-              els.gameEndMenuBtn.hidden = false;
-            } else {
-              void exitGame();
-            }
+            if (!classificationSlides.length) void exitGame();
           }
         } else if (token === gameEndPresentationToken) {
-          if (showedClassification) els.gameEndMenuBtn.textContent = 'Próximo';
+          if (classificationSlides.length) els.gameEndMenuBtn.textContent = 'Próximo';
           els.gameEndMenuBtn.hidden = false;
         }
       }
@@ -34979,9 +35014,19 @@
                   return null;
                 })
               ]);
-              return Array.isArray(startRanking) && Array.isArray(finalRanking)
-                ? createGameEndClassificationSlide(startRanking, finalRanking, state.user.id)
-                : null;
+              if (!Array.isArray(startRanking) || !Array.isArray(finalRanking)) return null;
+              const generalSlide = createGameEndClassificationSlide(startRanking, finalRanking, state.user.id);
+              if (!generalSlide) return null;
+              const startUser = startRanking.find((user) => Number(user.id) === Number(state.user.id));
+              const finalUser = finalRanking.find((user) => Number(user.id) === Number(state.user.id));
+              const generalMovement = Number(startUser?.rank) - Number(finalUser?.rank);
+              if (generalMovement !== 0) return [generalSlide];
+              const improvedMetric = bestImprovedGameRankingMetric(startRanking, finalRanking, state.user.id);
+              if (!improvedMetric) return [generalSlide];
+              const metricSlide = createGameEndClassificationSlide(
+                improvedMetric.startUsers, improvedMetric.finalUsers, state.user.id, improvedMetric.title
+              );
+              return metricSlide ? [generalSlide, metricSlide] : [generalSlide];
             })()
           : null;
         void playGameEndPresentation(slides, classificationPromise);
@@ -43176,6 +43221,13 @@
         els.exitGameBtn?.addEventListener('click', exitGame);
         els.gameEndMenuBtn?.addEventListener('click', async () => {
           if (els.gameEndMenuBtn.disabled) return;
+          if (gameEndRankingContinueResolver) {
+            const continueRanking = gameEndRankingContinueResolver;
+            gameEndRankingContinueResolver = null;
+            els.gameEndMenuBtn.hidden = true;
+            continueRanking(true);
+            return;
+          }
           const returningToGameModeHome = Boolean(state.game.gameModeHomeSessionActive);
           gameEndPresentationToken += 1;
           els.gameEndMenuBtn.disabled = true;
