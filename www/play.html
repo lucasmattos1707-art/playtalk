@@ -5703,8 +5703,7 @@
       overflow: hidden;
     }
     .game.is-game-mode-home-results .game-end > .game-end__inner > h3,
-    .game.is-game-mode-home-results .game-end > .game-end__inner > #gameEndCopy,
-    .game.is-game-mode-home-results .game-end__menu-btn { display: none !important; }
+    .game.is-game-mode-home-results .game-end > .game-end__inner > #gameEndCopy { display: none !important; }
     .game.is-game-mode-home-results .game-end__inner,
     .game.is-game-mode-home-results .game-end__presentation { width: 100%; gap: 0; }
 
@@ -5752,19 +5751,25 @@
     .game-end__slide.is-active { display:block; }
     @keyframes gameEndSlideIn { from { opacity:0; transform:translateY(24px) scale(.98); filter:blur(7px); } to { opacity:1; transform:none; filter:none; } }
     .game-end__slide h4 { margin:0 0 clamp(8px,2vh,18px); color:#f8fbff; font-family:'Orbitron','Rajdhani',sans-serif; font-size:clamp(20px,3.4vw,32px); font-weight:800; letter-spacing:.07em; text-transform:uppercase; text-shadow:0 0 24px color-mix(in srgb,var(--metric-accent) 30%,transparent); }
-    .game-end__slide-icon { width:clamp(82px,19dvh,150px); height:clamp(82px,19dvh,150px); margin:0 auto clamp(7px,1.8vh,16px); display:grid; place-items:center; color:#fff; font-size:clamp(58px,13dvh,106px); line-height:1; filter:drop-shadow(0 0 28px color-mix(in srgb,var(--metric-accent) 45%,transparent)); animation:gameEndLogoPulse 1.8s ease-in-out infinite alternate; }
+    .game-end__slide-icon { width:clamp(82px,19dvh,150px); height:clamp(82px,19dvh,150px); margin:0 auto clamp(7px,1.8vh,16px); display:grid; place-items:center; color:#fff; line-height:1; filter:drop-shadow(0 0 28px color-mix(in srgb,var(--metric-accent) 45%,transparent)); animation:gameEndLogoPulse 1.8s ease-in-out infinite alternate; }
+    .game-end__slide-icon svg { display:block; width:72%; height:72%; overflow:visible; fill:none; stroke:#fff; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
     @keyframes gameEndLogoPulse { from { transform:scale(.96); } to { transform:scale(1.04); } }
     .game-end__slide-value { color:#fff; font-family:'Orbitron','Rajdhani',sans-serif; font-size:clamp(42px,9dvh,76px); line-height:1.08; letter-spacing:-.045em; font-weight:800; font-variant-numeric:tabular-nums; text-shadow:0 0 35px color-mix(in srgb,var(--metric-accent) 40%,transparent); }
     .game-end__track { width:min(340px,68%); height:7px; background:#1b314c; border-radius:10px; margin:clamp(8px,2vh,18px) auto 0; overflow:hidden; box-shadow:0 0 18px rgba(0,0,0,.25); }
     .game-end__track-fill { height:100%; width:0; background:linear-gradient(90deg,var(--metric-accent),#fff); border-radius:10px; transition:width 1.9s cubic-bezier(.2,.8,.2,1); box-shadow:0 0 14px var(--metric-accent); }
-    .game-end__rank-viewport { width:min(430px,92%); height:min(210px,35dvh); margin:clamp(6px,1.5vh,12px) auto 0; overflow:hidden; mask-image:linear-gradient(to bottom,transparent,#000 7%,#000 93%,transparent); }
+    .game-end__rank-viewport { width:min(680px,96%); height:min(72dvh,calc(100dvh - 185px)); margin:clamp(4px,1vh,9px) auto 0; overflow:hidden; mask-image:linear-gradient(to bottom,transparent,#000 4%,#000 96%,transparent); }
     .game-end__rank-rows { width:100%; }
-    .game-end__rank-row { height:min(30px,5dvh); display:grid; grid-template-columns:38px 27px minmax(0,1fr); align-items:center; gap:8px; padding:1px 9px; border-bottom:1px solid rgba(129,164,207,.12); color:#a7bfdc; font-family:'Rajdhani','Exo 2',sans-serif; font-size:clamp(11px,2dvh,14px); text-align:left; transition:transform .2s,opacity .2s; }
+    .game-end__rank-row { height:min(9.7dvh,78px); display:grid; grid-template-columns:clamp(42px,7dvh,68px) clamp(58px,10dvh,92px) minmax(0,1fr); align-items:center; gap:clamp(8px,1.5vw,16px); padding:3px clamp(10px,2vw,20px); border-bottom:1px solid rgba(129,164,207,.16); color:#c4d8ef; font-family:'Rajdhani','Exo 2',sans-serif; font-size:clamp(15px,2.5dvh,21px); text-align:left; transition:transform .2s,opacity .2s; }
     .game-end__rank-row[hidden] { display:none !important; }
     .game-end__rank-row.is-player { border:1px solid rgba(78,182,255,.8); border-radius:9px; background:linear-gradient(90deg,rgba(12,109,201,.47),rgba(12,79,153,.24)); box-shadow:inset 4px 0 #4dc7ff; color:#fff; font-weight:700; }
-    .game-end__rank-place { color:#b8cbe3; font-family:'Orbitron','Rajdhani',sans-serif; font-size:10px; text-align:center; }
-    .game-end__rank-avatar { width:min(24px,4dvh); height:min(24px,4dvh); border-radius:50%; object-fit:cover; background:#17314f; }
+    .game-end__rank-place { color:#d6e7fa; font-family:'Orbitron','Rajdhani',sans-serif; font-size:clamp(12px,2.2dvh,18px); text-align:center; }
+    .game-end__rank-avatar { width:min(8.2dvh,72px); height:min(8.2dvh,72px); border-radius:50%; object-fit:cover; background:#17314f; border:2px solid rgba(190,220,255,.5); box-shadow:0 0 16px rgba(57,157,255,.3); }
     .game-end__rank-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .game-end__classification h4 { margin:0 0 2px; font-size:clamp(18px,2.7dvh,26px); }
+    .game-end__classification .game-end__slide-icon { width:clamp(42px,7dvh,62px); height:clamp(42px,7dvh,62px); margin:0 auto 1px; }
+    .game-end__classification .game-end__slide-icon svg { width:82%; height:82%; }
+    .game-end__classification .game-end__slide-value { font-size:clamp(30px,5dvh,44px); line-height:1; }
+    .game-end__classification .game-end__track { height:5px; margin:4px auto 0; }
 
     .game-end__presentation[hidden],
     .game-end__menu-btn[hidden] {
@@ -5806,10 +5811,12 @@
     @media (max-width: 520px) {
       .game-end__presentation { padding: 6px 4px; }
       .game-end__slide h4 { margin-bottom:clamp(6px,1.5vh,12px); font-size:clamp(17px,5vw,25px); }
-      .game-end__slide-icon { width:clamp(76px,17dvh,120px); height:clamp(76px,17dvh,120px); font-size:clamp(54px,11dvh,82px); }
+      .game-end__slide-icon { width:clamp(76px,17dvh,120px); height:clamp(76px,17dvh,120px); }
       .game-end__slide-value { font-size:clamp(38px,8dvh,58px); }
-      .game-end__rank-viewport { height:min(210px,32dvh); }
-      .game-end__rank-row { height:min(30px,4.5dvh); }
+      .game-end__rank-viewport { width:min(680px,98%); height:min(72dvh,calc(100dvh - 170px)); }
+      .game-end__rank-row { height:min(9.7dvh,68px); grid-template-columns:clamp(38px,6.5dvh,54px) clamp(50px,9dvh,70px) minmax(0,1fr); gap:8px; padding:2px 8px; font-size:clamp(14px,2.3dvh,18px); }
+      .game-end__rank-avatar { width:min(7.8dvh,60px); height:min(7.8dvh,60px); }
+      .game-end__classification .game-end__rank-viewport { height:min(72dvh,calc(100dvh - 170px)); }
       .game-end__menu-btn { min-width:0; width:min(100%,320px); padding:11px 18px; margin:6px auto max(0px, env(safe-area-inset-bottom)); }
     }
 
@@ -34638,6 +34645,15 @@
         speed: { kind: 'speed', title: 'Velocidade', accent: '#43e5db' }
       };
 
+      const GAME_END_ICONS = {
+        correct: '<svg viewBox="0 0 48 48"><path d="M24 5.5 29.2 9l6.2.2 2.1 5.8 4.7 4.1-1.6 6 1.6 6-4.7 4.1-2.1 5.8-6.2.2L24 44.5 18.8 41l-6.2-.2-2.1-5.8-4.7-4.1 1.6-6-1.6-6 4.7-4.1 2.1-5.8 6.2-.2L24 5.5Z"/><path d="m16 24 5.2 5.2L32.5 18"/></svg>',
+        listening: '<svg viewBox="0 0 48 48"><path d="M8 25v-3a16 16 0 0 1 32 0v3"/><rect x="6" y="23" width="8" height="14" rx="4"/><rect x="34" y="23" width="8" height="14" rx="4"/><path d="M38 37a8 8 0 0 1-8 6h-4"/><circle cx="24" cy="43" r="2"/></svg>',
+        speaking: '<svg viewBox="0 0 48 48"><rect x="18" y="5" width="12" height="25" rx="6"/><path d="M11 22v2a13 13 0 0 0 26 0v-2M24 37v7M17 44h14"/><path d="M13 11v7m22-7v7M7 16v5m34-5v5"/></svg>',
+        pronunciation: '<svg viewBox="0 0 48 48"><path d="M5 25h5l4-11 7 22 7-28 7 25 4-8h5"/><circle cx="24" cy="24" r="20"/></svg>',
+        speed: '<svg viewBox="0 0 48 48"><rect x="5" y="8" width="38" height="25" rx="4"/><path d="M10 15h3m5 0h3m5 0h3m5 0h3M10 22h3m5 0h3m5 0h3m5 0h3M13 29h22M17 40h14m-7-7v7"/><path d="m27 9-8 12h7l-3 8 9-13h-7l2-7Z"/></svg>',
+        ranking: '<svg viewBox="0 0 48 48"><path d="M16 6h16v11a8 8 0 0 1-16 0V6Z"/><path d="M16 10H8v5a9 9 0 0 0 9 9m15-14h8v5a9 9 0 0 1-9 9M24 25v10m-9 7h18l-2-7H17l-2 7Z"/><path d="m24 8 1.6 3.2 3.5.5-2.5 2.4.6 3.5-3.2-1.7-3.2 1.7.6-3.5-2.5-2.4 3.5-.5L24 8Z"/></svg>'
+      };
+
       const GAME_GENERAL_RANKING_METRICS = ['listening', 'speaking', 'pronunciation', 'level', 'building', 'meaning', 'consistency', 'practice', 'xp'];
 
       function buildGeneralGameRanking(users) {
@@ -34687,7 +34703,7 @@
         const icon = document.createElement('div');
         icon.className = 'game-end__slide-icon';
         icon.setAttribute('aria-hidden', 'true');
-        icon.textContent = '✨';
+        icon.innerHTML = GAME_END_ICONS[metric.kind] || GAME_END_ICONS.correct;
         const value = document.createElement('div');
         value.className = 'game-end__slide-value';
         value.textContent = formatGameEndValue(metric.value, metric.decimal);
@@ -34728,7 +34744,7 @@
         const logo = document.createElement('div');
         logo.className = 'game-end__slide-icon';
         logo.setAttribute('aria-hidden', 'true');
-        logo.textContent = '🏆';
+        logo.innerHTML = GAME_END_ICONS.ranking;
         const value = document.createElement('div');
         value.className = 'game-end__slide-value';
         value.dataset.rankStart = String(startRank);
@@ -34860,10 +34876,12 @@
           if (token !== gameEndPresentationToken) return;
           await wait(index === slides.length - 1 ? 1250 : 900);
         }
+        let showedClassification = false;
         if (classificationPromise && token === gameEndPresentationToken) {
           const classification = await classificationPromise;
           if (token !== gameEndPresentationToken) return;
           if (classification) {
+            showedClassification = true;
             els.gameEndStage.appendChild(classification);
             slides.push(classification);
             slides.forEach((slide) => slide.classList.remove('is-active'));
@@ -34878,8 +34896,16 @@
             state.game.cardsModeRound?.rankingSavePromise || Promise.resolve(null),
             wait(5000).then(() => null)
           ]);
-          if (token === gameEndPresentationToken && state.game.gameModeHomeSessionActive) void exitGame();
+          if (token === gameEndPresentationToken && state.game.gameModeHomeSessionActive) {
+            if (showedClassification) {
+              els.gameEndMenuBtn.textContent = 'Próximo';
+              els.gameEndMenuBtn.hidden = false;
+            } else {
+              void exitGame();
+            }
+          }
         } else if (token === gameEndPresentationToken) {
+          if (showedClassification) els.gameEndMenuBtn.textContent = 'Próximo';
           els.gameEndMenuBtn.hidden = false;
         }
       }
