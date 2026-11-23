@@ -21170,29 +21170,36 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
       pool.query('SELECT user_id, mode, heard, spoken, duration_ms, speed, scores FROM public.game_ranking_rounds ORDER BY created_at DESC, round_id DESC'),
       pool.query("SELECT user_id, to_char(day, 'YYYY-MM-DD') AS day FROM public.game_ranking_unlock_days ORDER BY day DESC")
     ]);
-    const botMetricRanges = { listening: [1500, 80000], speaking: [750, 40000], pronunciation: [61, 98.7],
-      level: [6, 141], building: [150, 470], meaning: [25, 92], consistency: [1, 91], practice: [15, 1800],
+    const botRankingValuesVersion = 2;
+    const botMetricRanges = { listening: [1500, 11478], speaking: [750, 7432], pronunciation: [44, 99.4],
+      level: [6, 46], building: [150, 523.4], meaning: [25, 92], consistency: [1, 15], practice: [15, 751],
       xp: [10000, 2500000] };
+    const botMetricsToRebalance = new Set(['listening', 'speaking', 'pronunciation', 'level', 'building', 'consistency', 'practice']);
     const botMetricKeys = Object.keys(botMetricRanges);
     for (const bot of users.rows.filter(u => u.is_bot)) {
       const config = readRawBotConfig(bot.bot_config);
       const existing = config.gameRankingValues;
-      if (existing && botMetricKeys.every(key => typeof existing[key] === 'number' && Number.isFinite(existing[key]))) continue;
+      const needsRebalance = Number(config.gameRankingValuesVersion) < botRankingValuesVersion;
+      if (existing && botMetricKeys.every(key => typeof existing[key] === 'number' && Number.isFinite(existing[key])) && !needsRebalance) continue;
       const rawPower = Number(config.gameRankingPower ?? config.pronunciationBase);
       const base = Math.max(0, Math.min(1, ((Number.isFinite(rawPower) ? rawPower : 62) - 30) / 64));
       const values = existing && typeof existing === 'object' && !Array.isArray(existing) ? { ...existing } : {};
       for (const metric of botMetricKeys) {
-        if (typeof values[metric] === 'number' && Number.isFinite(values[metric])) continue;
+        const hasExistingValue = typeof values[metric] === 'number' && Number.isFinite(values[metric]);
+        if (metric === 'meaning' && hasExistingValue) continue;
+        if (metric === 'xp' && hasExistingValue) continue;
+        if (hasExistingValue && (!needsRebalance || !botMetricsToRebalance.has(metric))) continue;
         const [min, max] = botMetricRanges[metric];
         const variation = metric === 'listening' ? 0 : (seededUnitInterval(`game-ranking-fixed:${metric}:${bot.id}`) - 0.5) * 0.12;
         const factor = Math.max(0, Math.min(1, base + variation));
-        const growth = 1.0147 + 0.0174 * seededUnitInterval(`game-ranking-peak:${metric}`);
-        const peak = ['pronunciation', 'meaning'].includes(metric) ? Math.min(100, max * growth) : max * growth;
+        const growth = metric === 'meaning' ? 1.0147 + 0.0174 * seededUnitInterval(`game-ranking-peak:${metric}`) : 1;
+        const peak = metric === 'meaning' ? Math.min(100, max * growth) : max;
         values[metric] = min * 0.02 + factor * (peak - min * 0.02);
       }
-      const saved = await pool.query(`UPDATE public.users SET bot_config = jsonb_set(COALESCE(bot_config, '{}'::jsonb), '{gameRankingValues}', $2::jsonb, true)
+      const updatedConfig = { ...config, gameRankingValues: values, gameRankingValuesVersion: botRankingValuesVersion };
+      const saved = await pool.query(`UPDATE public.users SET bot_config = $2::jsonb
         WHERE id = $1 AND is_bot = true RETURNING bot_config`,
-        [Number(bot.id), JSON.stringify(values)]);
+        [Number(bot.id), JSON.stringify(updatedConfig)]);
       if (saved.rows[0]) bot.bot_config = saved.rows[0].bot_config;
       else {
         const current = await pool.query('SELECT bot_config FROM public.users WHERE id = $1 AND is_bot = true', [Number(bot.id)]);

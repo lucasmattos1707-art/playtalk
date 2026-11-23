@@ -31473,7 +31473,13 @@
           progress.textContent = 'Carta ' + (index + 1) + ' de ' + cards.length + ' · inglês'; text.textContent = safeText(card.english || card.deckTitle || ''); await playReviewAudio(card, 'english');
           if (cancelled) break; progress.textContent = 'Carta ' + (index + 1) + ' de ' + cards.length + ' · português'; text.textContent = safeText(card.portuguese || ''); await playReviewAudio(card, 'portuguese');
         }
-        if (!cancelled) { progress.textContent = 'Revisão concluída'; text.textContent = ''; close.textContent = 'Fechar'; }
+        if (!cancelled) {
+          progress.textContent = 'Revisão concluída';
+          text.textContent = '';
+          close.textContent = 'Fechar';
+          await wait(1200);
+        }
+        panel.remove();
       }
 
       function createCardsModeRoundId() {
@@ -37066,14 +37072,32 @@
             }
             clearGameSessionLocally();
             els.gameCard.style.display = 'none';
-            updateGameEndMessageForCurrentLanguage();
+            const fireRound = state.game.cardsModeRound;
+            const fireReviewCards = fireRound?.missedCards?.filter(Boolean) || [];
+            const needsFireReview = Number(fireRound?.modeId) === 6 && !fireRound?.succeeded && fireReviewCards.length > 0;
+            if (needsFireReview) {
+              const heading = els.gameEnd.querySelector('h3');
+              if (heading) heading.hidden = true;
+              if (els.gameEndCopy) els.gameEndCopy.hidden = true;
+              els.gameEndPresentation.hidden = true;
+              els.gameEndMenuBtn.hidden = true;
+              els.gameEnd.classList.add('is-visible');
+              document.body.classList.add('game-end-open');
+              void startFireGameOverReview(fireRound).then(() => {
+                if (state.game.cardsModeRound !== fireRound) return;
+                updateGameEndMessageForCurrentLanguage();
+                els.gameEnd.classList.add('is-visible');
+                document.body.classList.add('game-end-open');
+              });
+            } else {
+              updateGameEndMessageForCurrentLanguage();
+              els.gameEnd.classList.add('is-visible');
+              document.body.classList.add('game-end-open');
+            }
             if (state.game.typingRound?.completed) {
               renderTypingRoundHearts();
               if (els.gameStarCopy) els.gameStarCopy.textContent = 'Modo 4 · Digitação por palavras';
             }
-            els.gameEnd.classList.add('is-visible');
-            document.body.classList.add('game-end-open');
-            if (state.game.cardsModeRound?.modeId === 6 && !state.game.cardsModeRound?.succeeded) void startFireGameOverReview(state.game.cardsModeRound);
             markGameModeResultsScreenShown();
           }
           updateGuestFirstStarResultsBanner(null, false);
