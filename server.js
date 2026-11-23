@@ -736,8 +736,9 @@ const buildFlashcardRankingCteSql = (periodId) => {
         ON r.user_id = u.id
       LEFT JOIN progress_counts
         ON progress_counts.user_id = u.id
-      WHERE COALESCE(u.is_admin, false) = false
-        AND LOWER(COALESCE(NULLIF(u.username, ''), u.email)) NOT IN ('admin', 'adm', 'adminst', 'admin2')
+      WHERE LOWER(COALESCE(u.username, '')) NOT IN ('admin', 'adm', 'adminst', 'admin2')
+        AND LOWER(COALESCE(u.email, '')) NOT IN ('admin', 'adm', 'adminst', 'admin2')
+        AND LOWER(SPLIT_PART(COALESCE(u.email, ''), '@', 1)) NOT IN ('admin', 'adm', 'adminst', 'admin2')
     ),
     ranked AS (
       SELECT
@@ -21150,10 +21151,12 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
     await ensureFlashcardGameModeProgressTable();
     const viewerIsAdmin = isAdminUserRecord(auth);
     const visibility = viewerIsAdmin
-      ? `WHERE COALESCE(u.is_admin, false) = false
-        AND LOWER(COALESCE(NULLIF(u.username, ''), u.email)) NOT IN ('admin', 'adm', 'adminst', 'admin2')`
-      : `WHERE COALESCE(u.is_admin, false) = false
-        AND LOWER(COALESCE(NULLIF(u.username, ''), u.email)) NOT IN ('admin', 'adm', 'adminst', 'admin2')
+      ? `WHERE LOWER(COALESCE(u.username, '')) NOT IN ('admin', 'adm', 'adminst', 'admin2')
+        AND LOWER(COALESCE(u.email, '')) NOT IN ('admin', 'adm', 'adminst', 'admin2')
+        AND LOWER(SPLIT_PART(COALESCE(u.email, ''), '@', 1)) NOT IN ('admin', 'adm', 'adminst', 'admin2')`
+      : `WHERE LOWER(COALESCE(u.username, '')) NOT IN ('admin', 'adm', 'adminst', 'admin2')
+        AND LOWER(COALESCE(u.email, '')) NOT IN ('admin', 'adm', 'adminst', 'admin2')
+        AND LOWER(SPLIT_PART(COALESCE(u.email, ''), '@', 1)) NOT IN ('admin', 'adm', 'adminst', 'admin2')
         AND (u.id = $1 OR u.is_bot = true OR (COALESCE(u.offline_mode, false) = false
           AND UPPER(COALESCE(NULLIF(u.username, ''), u.email)) NOT LIKE '%USER%'))`;
     const [users, rounds, days] = await Promise.all([
