@@ -21158,9 +21158,20 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
     ]);
     const bots = users.rows.filter(u => u.is_bot);
     const power = u => { const c = readRawBotConfig(u.bot_config); const rankingPower = Number(c.gameRankingPower); const a = Number(c.pronunciationMin), b = Number(c.pronunciationMax); return c.gameRankingPower != null && Number.isFinite(rankingPower) ? rankingPower : Number.isFinite(a) && Number.isFinite(b) ? (a + b) / 2 : (Number(c.pronunciationBase) || 0); };
-    const powers = bots.map(power); const low = Math.min(...powers), high = Math.max(...powers);
     const botListeningOrder = bots.slice().sort((a, b) => power(b) - power(a) || Number(a.id) - Number(b.id));
     const botMetricFactors = new Map();
+    const botMetricCurves = new Map();
+    const botMetricKeys = ['listening', 'speaking', 'pronunciation', 'level', 'building', 'meaning', 'consistency', 'practice'];
+    for (const metric of botMetricKeys) {
+      const weights = Array.from({ length: Math.max(0, botListeningOrder.length - 1) }, (_, index) =>
+        0.25 + 1.5 * seededUnitInterval(`game-ranking-gap:${metric}:${index}`));
+      const total = weights.reduce((sum, value) => sum + value, 0);
+      const curve = [0];
+      let accumulated = 0;
+      for (const weight of weights) { accumulated += weight; curve.push(total ? accumulated / total : 0); }
+      botMetricCurves.set(metric, curve);
+    }
+    const listeningPositions = new Map(botListeningOrder.map((bot, index) => [Number(bot.id), index]));
     for (const metric of ['speaking', 'pronunciation', 'level', 'building', 'meaning', 'consistency', 'practice']) {
       const factors = new Map();
       for (let start = 0; start < botListeningOrder.length; start += 13) {
@@ -21169,8 +21180,7 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
           seededUnitInterval(`game-ranking:${metric}:${a.id}`) - seededUnitInterval(`game-ranking:${metric}:${b.id}`)
           || Number(a.id) - Number(b.id));
         shuffled.forEach((bot, index) => {
-          const sourcePower = power(original[index]);
-          factors.set(Number(bot.id), high > low ? (sourcePower - low) / (high - low) : 1);
+          factors.set(Number(bot.id), start + index);
         });
       }
       botMetricFactors.set(metric, factors);
@@ -21194,8 +21204,15 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
       }
       let values = { listening: own.reduce((n,r)=>n+Number(r.heard),0), speaking: own.reduce((n,r)=>n+Number(r.spoken),0), pronunciation: avg(scores), level:Number(u.current_level)||1, building:avg(speeds), meaning:avg(meaning), consistency:streak, practice:own.reduce((n,r)=>n+Number(r.duration_ms),0)/60000 };
       if (u.is_bot) {
-        const t = high > low ? (power(u) - low) / (high - low) : 1;
-        const lerp = (metric,min,max) => min + (metric === 'listening' ? t : botMetricFactors.get(metric).get(Number(u.id))) * (max-min);
+        const lerp = (metric,min,max) => {
+          const position = metric === 'listening' ? listeningPositions.get(Number(u.id)) : botMetricFactors.get(metric).get(Number(u.id));
+          const curve = botMetricCurves.get(metric);
+          const factor = curve.length > 1 ? 1 - curve[position] : 1;
+          const growth = 1.0147 + 0.0174 * seededUnitInterval(`game-ranking-peak:${metric}`);
+          const peak = ['pronunciation', 'meaning'].includes(metric) ? Math.min(100, max * growth) : max * growth;
+          const floor = min * 0.02;
+          return floor + factor * (peak - floor);
+        };
         values = { listening:lerp('listening',1500,80000), speaking:lerp('speaking',750,40000), pronunciation:lerp('pronunciation',61,98.7), level:lerp('level',6,141), building:lerp('building',150,470), meaning:lerp('meaning',25,92), consistency:lerp('consistency',1,91), practice:lerp('practice',15,1800) };
       }
       return { id:Number(u.id), name:String(u.username || 'Usuário'), avatar:String(u.avatar_image || ''), isBot:Boolean(u.is_bot), values };
