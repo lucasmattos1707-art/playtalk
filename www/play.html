@@ -42795,7 +42795,8 @@
           if (!panel || !frame) return;
           const query = new URLSearchParams({
             viewerId: String(Number(state.user?.id) || 0),
-            admin: isAdminUser() ? '1' : '0'
+            admin: isAdminUser() ? '1' : '0',
+            openedAt: String(Date.now())
           });
           panel.hidden = false;
           frame.src = `/rankings-premium.html?${query.toString()}`;
