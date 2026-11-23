@@ -1683,9 +1683,10 @@
     }
 
     .game-mode-home__top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: clamp(10px, 2vw, 24px);
       min-height: 84px;
     }
 
@@ -1694,9 +1695,13 @@
       aspect-ratio: 1;
       display: grid;
       place-items: center;
+      justify-self: start;
+      padding: 0;
+      border: 0;
       color: #07111d;
       font-size: clamp(24px, 4vw, 42px);
       font-weight: 900;
+      cursor: pointer;
       background: #ffd33d;
       clip-path: polygon(50% 0%, 61% 34%, 98% 35%, 68% 57%, 79% 94%, 50% 72%, 21% 94%, 32% 57%, 2% 35%, 39% 34%);
       filter: drop-shadow(0 0 20px rgba(255, 211, 61, .32));
@@ -1705,9 +1710,29 @@
       transition: opacity .75s ease, transform .75s ease;
     }
 
+    .game-mode-level-star:hover { filter: drop-shadow(0 0 25px rgba(255, 211, 61, .55)); }
+    .game-mode-level-star:focus-visible { outline: 3px solid #fff; outline-offset: 5px; }
+
+    .game-mode-user-level {
+      justify-self: center;
+      margin: 0;
+      color: #fff;
+      font-family: 'Orbitron', 'Exo 2', 'Open Sans', sans-serif;
+      font-size: clamp(16px, 3.6vw, 30px);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: .035em;
+      text-align: center;
+      text-shadow: 0 0 14px rgba(255, 255, 255, .32), 0 0 24px rgba(77, 184, 255, .22);
+      opacity: 0;
+      transform: translateY(5px);
+      transition: opacity .75s ease, transform .75s ease;
+    }
+
     .game-mode-profile {
       width: clamp(62px, 8vw, 92px);
       aspect-ratio: 1;
+      justify-self: end;
       padding: 4px;
       border: 2px solid rgba(134, 216, 255, .62);
       border-radius: 50%;
@@ -1725,6 +1750,9 @@
     .game-mode-home.is-intro-star-visible .game-mode-level-star,
     .game-mode-home.is-ready .game-mode-profile,
     .game-mode-home.is-ready .game-mode-level-star { opacity: 1; transform: scale(1); }
+    .game-mode-home.is-intro-profile-visible .game-mode-user-level,
+    .game-mode-home.is-intro-star-visible .game-mode-user-level,
+    .game-mode-home.is-ready .game-mode-user-level { opacity: 1; transform: translateY(0); }
 
     .game-mode-grid {
       width: min(1120px, 100%);
@@ -14194,7 +14222,10 @@
     </div>
     <section class="game-mode-home" id="gameModeHome" aria-label="Modos de jogo" hidden>
       <header class="game-mode-home__top">
-        <div class="game-mode-level-star" id="gameModeLevelStar" aria-label="Nivel atual"><span id="gameModeLevelValue">1</span></div>
+        <button class="game-mode-level-star" id="gameModeLevelStar" type="button" aria-label="Abrir rankings" title="Abrir rankings">
+          <span id="gameModeLevelValue">1</span>
+        </button>
+        <p class="game-mode-user-level" id="gameModeUserLevelText">Nível 1</p>
         <button class="game-mode-profile" id="gameModeProfileBtn" type="button" aria-label="Abrir a home e o perfil">
           <img id="gameModeProfileImage" src="/Avatar/profile-neon-blue.svg" alt="Foto do usuario">
         </button>
@@ -16701,7 +16732,9 @@
         gameModeGrid: document.getElementById('gameModeGrid'),
         gameModeProfileBtn: document.getElementById('gameModeProfileBtn'),
         gameModeProfileImage: document.getElementById('gameModeProfileImage'),
+        gameModeLevelStar: document.getElementById('gameModeLevelStar'),
         gameModeLevelValue: document.getElementById('gameModeLevelValue'),
+        gameModeUserLevelText: document.getElementById('gameModeUserLevelText'),
         gameModeIntroSplash: document.getElementById('gameModeIntroSplash'),
         gameModeIntroFirstLogo: document.getElementById('gameModeIntroFirstLogo'),
         gameModeIntroSecondLogo: document.getElementById('gameModeIntroSecondLogo'),
@@ -25137,7 +25170,13 @@
         if (!els.gameModeHome) return;
         const avatarSrc = safeText(els.welcomeAvatarPreview?.currentSrc || els.welcomeAvatarPreview?.src);
         if (avatarSrc && els.gameModeProfileImage) els.gameModeProfileImage.src = avatarSrc;
-        if (els.gameModeLevelValue) els.gameModeLevelValue.textContent = String(Math.max(1, Number(gameModeHomeProgress.level) || 1));
+        const userLevel = Math.max(1, Number(gameModeHomeProgress.level) || 1);
+        if (els.gameModeLevelValue) els.gameModeLevelValue.textContent = String(userLevel);
+        if (els.gameModeUserLevelText) els.gameModeUserLevelText.textContent = `Nível ${userLevel}`;
+        if (els.gameModeLevelStar) {
+          els.gameModeLevelStar.setAttribute('aria-label', `Nível ${userLevel}. Abrir rankings`);
+          els.gameModeLevelStar.title = `Nível ${userLevel} · Abrir rankings`;
+        }
         els.gameModeGrid?.querySelectorAll('[data-game-mode]').forEach((button) => {
           const modeId = Number(button.getAttribute('data-game-mode'));
           const introUnlocked = Boolean(gameModeIntroModeUnlocked && modeId === 1);
@@ -42863,6 +42902,19 @@
         gameRankingUsers = payload.users || []; renderGameRankings();
       }
 
+      function openGameRankingsModal() {
+        const panel = document.getElementById('gameRankings');
+        const frame = document.getElementById('gameRankingsFrame');
+        if (!panel || !frame) return;
+        const query = new URLSearchParams({
+          viewerId: String(Number(state.user?.id) || 0),
+          admin: isAdminUser() ? '1' : '0',
+          openedAt: String(Date.now())
+        });
+        panel.hidden = false;
+        frame.src = `/rankings-premium.html?${query.toString()}`;
+      }
+
       function bindEvents() {
         let cardsModeStartInFlight = false;
         const startLevelModeFromWelcome = async (event, options = {}) => {
@@ -43033,6 +43085,7 @@
           }
         };
         els.gameModeProfileBtn?.addEventListener('click', openLegacyHomeFromGameModeProfile);
+        els.gameModeLevelStar?.addEventListener('click', openGameRankingsModal);
         els.gameModeHomeReturnBtn?.addEventListener('click', () => {
           if (els.gameModeHomeReturnBtn) els.gameModeHomeReturnBtn.hidden = true;
           state.entry.welcomeVisible = false;
@@ -43139,16 +43192,7 @@
           showWelcomeGate();
         });
         els.welcomeBooksBtn?.addEventListener('click', () => {
-          const panel = document.getElementById('gameRankings');
-          const frame = document.getElementById('gameRankingsFrame');
-          if (!panel || !frame) return;
-          const query = new URLSearchParams({
-            viewerId: String(Number(state.user?.id) || 0),
-            admin: isAdminUser() ? '1' : '0',
-            openedAt: String(Date.now())
-          });
-          panel.hidden = false;
-          frame.src = `/rankings-premium.html?${query.toString()}`;
+          openGameRankingsModal();
         });
         window.addEventListener('message', (event) => {
           const frame = document.getElementById('gameRankingsFrame');
