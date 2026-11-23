@@ -21156,34 +21156,32 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
       pool.query('SELECT user_id, mode, heard, spoken, duration_ms, speed, scores FROM public.game_ranking_rounds ORDER BY created_at DESC, round_id DESC'),
       pool.query("SELECT user_id, to_char(day, 'YYYY-MM-DD') AS day FROM public.game_ranking_unlock_days ORDER BY day DESC")
     ]);
-    const bots = users.rows.filter(u => u.is_bot);
-    const power = u => { const c = readRawBotConfig(u.bot_config); const rankingPower = Number(c.gameRankingPower); const a = Number(c.pronunciationMin), b = Number(c.pronunciationMax); return c.gameRankingPower != null && Number.isFinite(rankingPower) ? rankingPower : Number.isFinite(a) && Number.isFinite(b) ? (a + b) / 2 : (Number(c.pronunciationBase) || 0); };
-    const botListeningOrder = bots.slice().sort((a, b) => power(b) - power(a) || Number(a.id) - Number(b.id));
-    const botMetricFactors = new Map();
-    const botMetricCurves = new Map();
-    const botMetricKeys = ['listening', 'speaking', 'pronunciation', 'level', 'building', 'meaning', 'consistency', 'practice'];
-    for (const metric of botMetricKeys) {
-      const weights = Array.from({ length: Math.max(0, botListeningOrder.length - 1) }, (_, index) =>
-        0.25 + 1.5 * seededUnitInterval(`game-ranking-gap:${metric}:${index}`));
-      const total = weights.reduce((sum, value) => sum + value, 0);
-      const curve = [0];
-      let accumulated = 0;
-      for (const weight of weights) { accumulated += weight; curve.push(total ? accumulated / total : 0); }
-      botMetricCurves.set(metric, curve);
-    }
-    const listeningPositions = new Map(botListeningOrder.map((bot, index) => [Number(bot.id), index]));
-    for (const metric of ['speaking', 'pronunciation', 'level', 'building', 'meaning', 'consistency', 'practice']) {
-      const factors = new Map();
-      for (let start = 0; start < botListeningOrder.length; start += 13) {
-        const original = botListeningOrder.slice(start, start + 13);
-        const shuffled = original.slice().sort((a, b) =>
-          seededUnitInterval(`game-ranking:${metric}:${a.id}`) - seededUnitInterval(`game-ranking:${metric}:${b.id}`)
-          || Number(a.id) - Number(b.id));
-        shuffled.forEach((bot, index) => {
-          factors.set(Number(bot.id), start + index);
-        });
+    const botMetricRanges = { listening: [1500, 80000], speaking: [750, 40000], pronunciation: [61, 98.7],
+      level: [6, 141], building: [150, 470], meaning: [25, 92], consistency: [1, 91], practice: [15, 1800] };
+    const botMetricKeys = Object.keys(botMetricRanges);
+    for (const bot of users.rows.filter(u => u.is_bot)) {
+      const config = readRawBotConfig(bot.bot_config);
+      const existing = config.gameRankingValues;
+      if (existing && botMetricKeys.every(key => typeof existing[key] === 'number' && Number.isFinite(existing[key]))) continue;
+      const rawPower = Number(config.gameRankingPower ?? config.pronunciationBase);
+      const base = Math.max(0, Math.min(1, ((Number.isFinite(rawPower) ? rawPower : 62) - 30) / 64));
+      const values = {};
+      for (const metric of botMetricKeys) {
+        const [min, max] = botMetricRanges[metric];
+        const variation = metric === 'listening' ? 0 : (seededUnitInterval(`game-ranking-fixed:${metric}:${bot.id}`) - 0.5) * 0.12;
+        const factor = Math.max(0, Math.min(1, base + variation));
+        const growth = 1.0147 + 0.0174 * seededUnitInterval(`game-ranking-peak:${metric}`);
+        const peak = ['pronunciation', 'meaning'].includes(metric) ? Math.min(100, max * growth) : max * growth;
+        values[metric] = min * 0.02 + factor * (peak - min * 0.02);
       }
-      botMetricFactors.set(metric, factors);
+      const saved = await pool.query(`UPDATE public.users SET bot_config = jsonb_set(COALESCE(bot_config, '{}'::jsonb), '{gameRankingValues}', $2::jsonb, true)
+        WHERE id = $1 AND is_bot = true AND NOT (COALESCE(bot_config, '{}'::jsonb) ? 'gameRankingValues') RETURNING bot_config`,
+        [Number(bot.id), JSON.stringify(values)]);
+      if (saved.rows[0]) bot.bot_config = saved.rows[0].bot_config;
+      else {
+        const current = await pool.query('SELECT bot_config FROM public.users WHERE id = $1 AND is_bot = true', [Number(bot.id)]);
+        bot.bot_config = current.rows[0]?.bot_config || bot.bot_config;
+      }
     }
     const stats = users.rows.map(u => {
       const own = rounds.rows.filter(r => Number(r.user_id) === Number(u.id));
@@ -21204,16 +21202,7 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
       }
       let values = { listening: own.reduce((n,r)=>n+Number(r.heard),0), speaking: own.reduce((n,r)=>n+Number(r.spoken),0), pronunciation: avg(scores), level:Number(u.current_level)||1, building:avg(speeds), meaning:avg(meaning), consistency:streak, practice:own.reduce((n,r)=>n+Number(r.duration_ms),0)/60000 };
       if (u.is_bot) {
-        const lerp = (metric,min,max) => {
-          const position = metric === 'listening' ? listeningPositions.get(Number(u.id)) : botMetricFactors.get(metric).get(Number(u.id));
-          const curve = botMetricCurves.get(metric);
-          const factor = curve.length > 1 ? 1 - curve[position] : 1;
-          const growth = 1.0147 + 0.0174 * seededUnitInterval(`game-ranking-peak:${metric}`);
-          const peak = ['pronunciation', 'meaning'].includes(metric) ? Math.min(100, max * growth) : max * growth;
-          const floor = min * 0.02;
-          return floor + factor * (peak - floor);
-        };
-        values = { listening:lerp('listening',1500,80000), speaking:lerp('speaking',750,40000), pronunciation:lerp('pronunciation',61,98.7), level:lerp('level',6,141), building:lerp('building',150,470), meaning:lerp('meaning',25,92), consistency:lerp('consistency',1,91), practice:lerp('practice',15,1800) };
+        values = readRawBotConfig(u.bot_config).gameRankingValues || {};
       }
       return { id:Number(u.id), name:String(u.username || 'Usuário'), avatar:String(u.avatar_image || ''), isBot:Boolean(u.is_bot), values };
     });
