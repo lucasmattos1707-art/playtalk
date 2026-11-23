@@ -1850,6 +1850,16 @@
     .game.is-mode-two-repeat #gameStarCopy,
     .game.is-mode-two-repeat #gameStatusWrap,
     .game.is-mode-two-repeat .game-touch__label { display: none !important; }
+    .game.is-mode-three-repeat #gameSubword {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      color: #fff !important;
+      font-size: clamp(24px, 4vw, 34px) !important;
+      font-weight: 800 !important;
+      line-height: 1.2 !important;
+      margin-top: 8px !important;
+    }
     .game.is-watching-mode .game-card__content { display: grid !important; }
     .game.is-watching-mode #gameStep,
     .game.is-watching-mode #gameSubword,
@@ -36989,6 +36999,7 @@
           return;
         }
         els.game?.classList.toggle('is-mode-two-repeat', isModeTwoEnglishRepeatEntry(entry));
+        els.game?.classList.toggle('is-mode-three-repeat', isCardsModeListenRepeatEntry(entry));
         if (!isWatchingModeActive()) {
           els.game?.classList.remove('is-watching-mode');
           if (els.gameModeWatchForwardBtn) els.gameModeWatchForwardBtn.hidden = true;
@@ -37195,6 +37206,15 @@
           els.gameWord.classList.toggle('is-hidden', stageConfig.showWord === false);
           els.gameSubword.classList.toggle('is-hidden', !subword);
           els.gameSubword.style.display = subword ? '' : 'none';
+        }
+        if (isCardsModeListenRepeatEntry(entry)) {
+          const englishPrompt = capitalizeWords(card.english || card.deckTitle || '');
+          renderChipText(els.gameSubword, englishPrompt);
+          els.gameSubword.classList.remove('is-hidden', 'is-stage-swap-hidden');
+          els.gameSubword.style.display = '';
+          els.gameSubword.setAttribute('lang', 'en');
+        } else {
+          els.gameSubword.removeAttribute('lang');
         }
         if (shouldShowStageHintLoop(entry)) {
           startStageHintLoop(entry);
@@ -41187,7 +41207,7 @@
         els.game?.classList.remove('is-level-text-mode');
         els.game?.classList.remove('is-game-mode-home-results');
         els.game?.classList.remove('is-game-mode-home-session', 'is-game-mode-home-fire');
-        els.game?.classList.remove('is-mode-two-repeat', 'is-watching-mode');
+        els.game?.classList.remove('is-mode-two-repeat', 'is-mode-three-repeat', 'is-watching-mode');
         resetGameSwipeTracking();
         syncFooterGuardState(null);
         syncGameLevelNavigator();
