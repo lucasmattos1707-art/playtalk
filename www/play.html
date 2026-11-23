@@ -5728,6 +5728,7 @@
     .fire-game-over-review__image { display: block; width: clamp(116px, 28dvh, 220px); height: clamp(116px, 28dvh, 220px); object-fit: cover; border-radius: 50%; }
     .fire-game-over-review__english { margin: 0; color: #fff; font: 800 clamp(30px, 7vw, 54px)/1.12 'Exo 2', 'Open Sans', sans-serif; }
     .fire-game-over-review__translation { margin: 0; color: rgba(226, 239, 255, .72); font: 600 clamp(19px, 4.5vw, 28px)/1.2 'Exo 2', 'Open Sans', sans-serif; }
+    .fire-game-over-review__next { width: min(100%, 280px); margin-top: 4px; }
     .fire-game-over-review__actions { width: min(100%, 520px); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .fire-game-over-review__button { min-height: 54px; display: inline-flex; justify-content: center; align-items: center; gap: 9px; padding: 12px 16px; border: 1px solid rgba(208, 230, 255, .22); border-radius: 16px; color: #fff; background: rgba(255, 255, 255, .08); font: 800 16px/1 'Exo 2', 'Open Sans', sans-serif; cursor: pointer; transition: transform 150ms ease, filter 150ms ease; }
     .fire-game-over-review__button:hover, .fire-game-over-review__button:focus-visible { transform: translateY(-1px); filter: brightness(1.12); }
@@ -31613,7 +31614,12 @@
         english.className = 'fire-game-over-review__english';
         const translation = document.createElement('p');
         translation.className = 'fire-game-over-review__translation';
-        cardView.append(image, english, translation);
+        const nextButton = document.createElement('button');
+        nextButton.type = 'button';
+        nextButton.className = 'fire-game-over-review__button fire-game-over-review__button--continue fire-game-over-review__next';
+        nextButton.textContent = 'Próxima';
+        nextButton.hidden = true;
+        cardView.append(image, english, translation, nextButton);
         const actions = document.createElement('div');
         actions.className = 'fire-game-over-review__actions';
         const replayCardButton = document.createElement('button');
@@ -31728,6 +31734,8 @@
             if (!finished && index >= cards.length) showCompletion();
             return;
           }
+          nextButton.hidden = true;
+          skipButton.hidden = false;
           const card = cards[index];
           image.src = safeText(card.imageUrl || card.image || card.image_url) || '/Avatar/profile-neon-blue.svg';
           image.alt = safeText(card.english || card.portuguese || 'Carta para revisar');
@@ -31737,9 +31745,16 @@
           if (finished || runId !== playbackId) return;
           await playReviewAudio(card, 'portuguese', runId);
           if (finished || runId !== playbackId) return;
-          currentIndex = index + 1;
+          nextButton.hidden = false;
+          skipButton.hidden = true;
+        };
+        const advanceToNextCard = () => {
+          if (finished || currentIndex >= cards.length) return;
+          playbackId += 1;
+          stopPlayback();
+          currentIndex += 1;
           if (currentIndex >= cards.length) showCompletion();
-          else void runCard(currentIndex, runId);
+          else void runCard(currentIndex, playbackId);
         };
         const restartCurrentCard = () => {
           if (finished || currentIndex >= cards.length) return;
@@ -31749,11 +31764,7 @@
         };
         const skipCurrentCard = () => {
           if (finished || currentIndex >= cards.length) return;
-          playbackId += 1;
-          stopPlayback();
-          currentIndex += 1;
-          if (currentIndex >= cards.length) showCompletion();
-          else void runCard(currentIndex, playbackId);
+          advanceToNextCard();
         };
         const replayAllCards = () => {
           playbackId += 1;
@@ -31775,6 +31786,7 @@
         };
         replayCardButton.addEventListener('click', restartCurrentCard);
         skipButton.addEventListener('click', skipCurrentCard);
+        nextButton.addEventListener('click', advanceToNextCard);
         replayAllButton.addEventListener('click', replayAllCards);
         continueButton.addEventListener('click', finish);
         void runCard(currentIndex, playbackId);
