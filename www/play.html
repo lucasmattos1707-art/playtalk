@@ -34699,7 +34699,7 @@
           .map((user, index) => ({ ...user, rank: index + 1 }));
       }
 
-      function bestImprovedGameRankingMetric(startRanking, finalRanking, userId) {
+      function bestChangedGameRankingMetric(startRanking, finalRanking, userId) {
         const labels = {
           listening: 'Palavras ouvidas', speaking: 'Palavras faladas', pronunciation: 'Pronúncia',
           level: 'Níveis', building: 'Construção', meaning: 'Significado', consistency: 'Consistência',
@@ -34712,7 +34712,7 @@
           const finalUser = finalUsers.find((user) => Number(user.id) === Number(userId));
           if (!startUser || !finalUser) return;
           const movement = Number(startUser.rank) - Number(finalUser.rank);
-          if (movement > (best?.movement || 0)) {
+          if (!best || movement > best.movement) {
             best = { metric, title: `Ranking ${labels[metric] || metric}`, movement, startUsers: buildMetricGameRanking(startRanking, metric), finalUsers };
           }
         });
@@ -34839,12 +34839,13 @@
         const fill = slide.querySelector('.game-end__track-fill');
         const startRank = Number(slide.dataset.startRank) || 1;
         const finalRank = Number(slide.dataset.finalRank) || startRank;
+        const isDescending = finalRank > startRank;
         fill.style.transition = 'none';
-        fill.style.width = '0';
+        fill.style.width = isDescending ? '100%' : '0';
         window.requestAnimationFrame(() => {
           if (token !== gameEndPresentationToken) return;
           fill.style.transition = 'width 1.8s cubic-bezier(.2,.8,.2,1)';
-          fill.style.width = '100%';
+          fill.style.width = isDescending ? '0%' : (finalRank < startRank ? '100%' : '0%');
         });
         const startAt = performance.now();
         const duration = 1800;
@@ -35020,8 +35021,8 @@
               const startUser = startRanking.find((user) => Number(user.id) === Number(state.user.id));
               const finalUser = finalRanking.find((user) => Number(user.id) === Number(state.user.id));
               const generalMovement = Number(startUser?.rank) - Number(finalUser?.rank);
-              if (generalMovement !== 0) return [generalSlide];
-              const improvedMetric = bestImprovedGameRankingMetric(startRanking, finalRanking, state.user.id);
+              if (generalMovement > 0) return [generalSlide];
+              const improvedMetric = bestChangedGameRankingMetric(startRanking, finalRanking, state.user.id);
               if (!improvedMetric) return [generalSlide];
               const metricSlide = createGameEndClassificationSlide(
                 improvedMetric.startUsers, improvedMetric.finalUsers, state.user.id, improvedMetric.title
