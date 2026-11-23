@@ -21149,6 +21149,7 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
     if (!auth?.id) return res.status(401).json({ success: false });
     await ensureGameRankingTables();
     await ensureFlashcardGameModeProgressTable();
+    await ensureUserBooksEnergyXpStatsTable();
     const viewerIsAdmin = isAdminUserRecord(auth);
     const visibility = viewerIsAdmin
       ? `WHERE LOWER(COALESCE(u.username, '')) NOT IN ('admin', 'adm', 'adminst', 'admin2')
@@ -21160,14 +21161,18 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
         AND (u.id = $1 OR u.is_bot = true OR (COALESCE(u.offline_mode, false) = false
           AND UPPER(COALESCE(NULLIF(u.username, ''), u.email)) NOT LIKE '%USER%'))`;
     const [users, rounds, days] = await Promise.all([
-      pool.query(`SELECT u.id, u.username, u.avatar_image, u.is_bot, u.bot_config, p.current_level
-        FROM public.users u LEFT JOIN public.user_flashcard_game_mode_progress p ON p.user_id=u.id ${visibility}`,
+      pool.query(`SELECT u.id, u.username, u.avatar_image, u.is_bot, u.bot_config, p.current_level,
+          COALESCE(xp.energy_xp_total, 0)::numeric AS energy_xp_total
+        FROM public.users u
+        LEFT JOIN public.user_flashcard_game_mode_progress p ON p.user_id=u.id
+        LEFT JOIN public.user_books_energy_xp_stats xp ON xp.user_id=u.id ${visibility}`,
         viewerIsAdmin ? [] : [Number(auth.id)]),
       pool.query('SELECT user_id, mode, heard, spoken, duration_ms, speed, scores FROM public.game_ranking_rounds ORDER BY created_at DESC, round_id DESC'),
       pool.query("SELECT user_id, to_char(day, 'YYYY-MM-DD') AS day FROM public.game_ranking_unlock_days ORDER BY day DESC")
     ]);
     const botMetricRanges = { listening: [1500, 80000], speaking: [750, 40000], pronunciation: [61, 98.7],
-      level: [6, 141], building: [150, 470], meaning: [25, 92], consistency: [1, 91], practice: [15, 1800] };
+      level: [6, 141], building: [150, 470], meaning: [25, 92], consistency: [1, 91], practice: [15, 1800],
+      xp: [10000, 2500000] };
     const botMetricKeys = Object.keys(botMetricRanges);
     for (const bot of users.rows.filter(u => u.is_bot)) {
       const config = readRawBotConfig(bot.bot_config);
@@ -21175,8 +21180,9 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
       if (existing && botMetricKeys.every(key => typeof existing[key] === 'number' && Number.isFinite(existing[key]))) continue;
       const rawPower = Number(config.gameRankingPower ?? config.pronunciationBase);
       const base = Math.max(0, Math.min(1, ((Number.isFinite(rawPower) ? rawPower : 62) - 30) / 64));
-      const values = {};
+      const values = existing && typeof existing === 'object' && !Array.isArray(existing) ? { ...existing } : {};
       for (const metric of botMetricKeys) {
+        if (typeof values[metric] === 'number' && Number.isFinite(values[metric])) continue;
         const [min, max] = botMetricRanges[metric];
         const variation = metric === 'listening' ? 0 : (seededUnitInterval(`game-ranking-fixed:${metric}:${bot.id}`) - 0.5) * 0.12;
         const factor = Math.max(0, Math.min(1, base + variation));
@@ -21185,7 +21191,7 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
         values[metric] = min * 0.02 + factor * (peak - min * 0.02);
       }
       const saved = await pool.query(`UPDATE public.users SET bot_config = jsonb_set(COALESCE(bot_config, '{}'::jsonb), '{gameRankingValues}', $2::jsonb, true)
-        WHERE id = $1 AND is_bot = true AND NOT (COALESCE(bot_config, '{}'::jsonb) ? 'gameRankingValues') RETURNING bot_config`,
+        WHERE id = $1 AND is_bot = true RETURNING bot_config`,
         [Number(bot.id), JSON.stringify(values)]);
       if (saved.rows[0]) bot.bot_config = saved.rows[0].bot_config;
       else {
@@ -21210,7 +21216,7 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
           for (const day of ownDays.slice(1)) { const next = Date.parse(day + 'T00:00:00Z'); if (previous - next !== 86400000) break; streak++; previous = next; }
         }
       }
-      let values = { listening: own.reduce((n,r)=>n+Number(r.heard),0), speaking: own.reduce((n,r)=>n+Number(r.spoken),0), pronunciation: avg(scores), level:Number(u.current_level)||1, building:avg(speeds), meaning:avg(meaning), consistency:streak, practice:own.reduce((n,r)=>n+Number(r.duration_ms),0)/60000 };
+      let values = { listening: own.reduce((n,r)=>n+Number(r.heard),0), speaking: own.reduce((n,r)=>n+Number(r.spoken),0), pronunciation: avg(scores), level:Number(u.current_level)||1, building:avg(speeds), meaning:avg(meaning), consistency:streak, practice:own.reduce((n,r)=>n+Number(r.duration_ms),0)/60000, xp:Number(u.energy_xp_total)||0 };
       if (u.is_bot) {
         values = readRawBotConfig(u.bot_config).gameRankingValues || {};
       }

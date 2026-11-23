@@ -243,20 +243,10 @@
       pointer-events: none !important;
     }
 
-    body > .game-rankings { position: fixed; inset: 0; z-index: 2200; background: #071321; color: #f6fbff; padding: max(18px, env(safe-area-inset-top)) 18px; overflow-y: auto; overflow-x: hidden; }
+    body > .game-rankings { position: fixed; inset: 0; z-index: 2200; background: #06101f; color: #f6fbff; padding: 0; overflow: hidden; }
     .game-rankings[hidden] { display: none; }
-    .game-rankings__inner { max-width: 720px; margin: auto; }
-    .game-rankings__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-    .game-rankings__close { background: transparent; font-size: 30px; color: white; }
-    .game-rankings__tabs { position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: clamp(2px, 1vw, 8px); padding: 12px 0; background: #071321; }
-    .game-rankings__tabs button { width: 100%; min-width: 0; max-width: 46px; aspect-ratio: 1; display: grid; place-items: center; border-radius: 12px; padding: 6px; background: #193750; color: white; touch-action: manipulation; }
-    .game-rankings__tabs svg { width: min(100%, 26px); height: auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
-    .game-rankings__tabs button[aria-selected="true"] { background: #168e76; }
-    .game-rankings__row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid #28435a; }
-    .game-rankings__row.is-current-user { background: rgba(27, 167, 100, .28); border-radius: 12px; }
-    .game-rankings__avatar { flex: 0 0 62.4px; width: 62.4px; height: 62.4px; border-radius: 50%; object-fit: cover; touch-action: manipulation; }
-    .game-rankings__name { flex: 1; min-width: 0; font-size: 1.3em; overflow-wrap: anywhere; }
-    .game-rankings__value { font-weight: 700; white-space: nowrap; }
+    .game-rankings__inner { width: 100%; height: 100%; margin: 0; }
+    .game-rankings__frame { display: block; width: 100%; height: 100%; border: 0; }
 
     button { font: inherit; color: inherit; cursor: pointer; border: 0; }
     img { display: block; max-width: 100%; }
@@ -15039,8 +15029,7 @@
   </section>
 
   <section class="game-rankings" id="gameRankings" hidden aria-label="Rankings">
-    <div class="game-rankings__inner"><header class="game-rankings__header"><h2>Rankings</h2><button class="game-rankings__close" id="gameRankingsClose" type="button" aria-label="Fechar">×</button></header><div class="game-rankings__tabs" id="gameRankingsTabs" role="tablist"></div><div id="gameRankingsList" aria-live="polite"></div></div>
-    <input id="gameRankingsPhoto" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+    <div class="game-rankings__inner"><iframe class="game-rankings__frame" id="gameRankingsFrame" title="Rankings" loading="lazy"></iframe></div>
   </section>
   <div class="flashcard-level-progress" id="flashcardLevelProgress" hidden aria-hidden="true">
     <span class="flashcard-level-progress__bar" id="flashcardLevelProgressBar"></span>
@@ -25090,7 +25079,7 @@
       }
 
       function gameModeIsUnlocked(modeId) {
-        return Boolean(gameModeHomeProgress.introCompleted && Number(modeId) <= Number(gameModeHomeProgress.mode));
+        return Boolean(gameModeHomeProgress.introCompleted && Number(modeId) === Number(gameModeHomeProgress.mode));
       }
 
       function syncGameModeHome() {
@@ -42692,14 +42681,23 @@
           showWelcomeGate();
         });
         els.welcomeBooksBtn?.addEventListener('click', () => {
-          document.getElementById('gameRankings').hidden = false;
-          document.getElementById('gameRankingsList').textContent = 'Carregando rankings...';
-          void loadGameRankings().catch(error => { document.getElementById('gameRankingsList').textContent = error.message; });
+          const panel = document.getElementById('gameRankings');
+          const frame = document.getElementById('gameRankingsFrame');
+          if (!panel || !frame) return;
+          const query = new URLSearchParams({
+            viewerId: String(Number(state.user?.id) || 0),
+            admin: isAdminUser() ? '1' : '0'
+          });
+          panel.hidden = false;
+          frame.src = `/rankings-premium.html?${query.toString()}`;
         });
-        document.getElementById('gameRankingsClose')?.addEventListener('click', () => { document.getElementById('gameRankings').hidden = true; });
-        document.getElementById('gameRankingsPhoto')?.addEventListener('change', event => {
-          const file = event.target.files?.[0]; if (file && gameRankingPhotoUser) uploadGameRankingBotPhoto(gameRankingPhotoUser, file);
-          event.target.value = '';
+        window.addEventListener('message', (event) => {
+          const frame = document.getElementById('gameRankingsFrame');
+          if (event.source !== frame?.contentWindow
+            || event.origin !== window.location.origin
+            || event.data?.type !== 'close-premium-rankings') return;
+          document.getElementById('gameRankings').hidden = true;
+          if (frame) frame.src = 'about:blank';
         });
         els.welcomeLanguageStrip?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-welcome-language]');
