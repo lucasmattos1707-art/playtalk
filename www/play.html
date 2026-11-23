@@ -1841,7 +1841,10 @@
     .game-mode-audio-progress__fill { display: block; width: 0; height: 100%; border-radius: inherit; background: #75dcff; transition: width .12s linear; }
     .game-mode-prestart__start:disabled { opacity: 1; cursor: default; }
     .game-mode-home-return { position: fixed; z-index: 31; top: 18px; left: 18px; width: 46px; height: 46px; border: 1px solid rgba(145,191,224,.32); border-radius: 50%; color: #eaf6ff; background: rgba(6,17,31,.88); font-size: 24px; cursor: pointer; }
-    .game-mode-watch-forward { position: fixed; z-index: 42; right: max(22px, env(safe-area-inset-right)); bottom: max(22px, env(safe-area-inset-bottom)); width: 62px; height: 62px; display: grid; place-items: center; border: 1px solid rgba(117,214,255,.56); border-radius: 50%; color: #effaff; background: rgba(8,31,52,.9); box-shadow: 0 0 24px rgba(65,188,255,.22); cursor: pointer; }
+    .game-mode-watch-forward { position: fixed; z-index: 42; right: max(22px, env(safe-area-inset-right)); bottom: max(22px, env(safe-area-inset-bottom)); min-width: 128px; min-height: 58px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; padding: 0 20px; border: 0; border-radius: 18px; color: #fff; background: #00d95f; box-shadow: 0 8px 24px rgba(0,217,95,.38); font: 800 20px/1 "Exo 2", Arial, sans-serif; cursor: pointer; touch-action: manipulation; transition: background .15s ease, transform .15s ease; }
+    .game-mode-watch-forward:hover { background: #00c953; }
+    .game-mode-watch-forward:active { transform: scale(.96); }
+    .game-mode-watch-forward svg { flex: 0 0 22px; width: 22px; height: 22px; }
     .game-mode-watch-forward[hidden] { display: none !important; }
     .game.is-game-mode-home-session #gameTouchBtn { display: none !important; }
     .game.is-game-mode-home-fire .game-card__coin-badge { display: none !important; }
@@ -1859,7 +1862,7 @@
     .game.is-watching-mode .game-card__content { display: grid !important; }
     .game.is-watching-mode #gameStep,
     .game.is-watching-mode #gameSubword,
-    .game.is-watching-mode #gamePhaseWord { display: none !important; }
+    .game.is-watching-mode #gameStars { display: none !important; }
     .game.is-watching-mode .game-touch__label,
     .game.is-watching-mode .game-status-wrap,
     .game.is-watching-mode .game-controls-proxy,
@@ -14106,7 +14109,7 @@
         <button class="game-mode-prestart__start" id="gameModePrestartStartBtn" type="button" aria-label="Toque em qualquer lugar para começar" hidden><span>Toque para começar</span></button>
       </div>
     </section>
-    <button class="game-mode-watch-forward" id="gameModeWatchForwardBtn" type="button" aria-label="Pular para a proxima carta" hidden><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M5 5v14l9-7-9-7Zm10 0v14l8-7-8-7Z"></path></svg></button>
+    <button class="game-mode-watch-forward" id="gameModeWatchForwardBtn" type="button" aria-label="Next: próxima frase" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13l10-6.5-10-6.5Z"></path></svg><span>Next</span></button>
     <div class="welcome-mode-modal" id="welcomeModeModal" aria-hidden="true">
       <div class="welcome-mode-modal__panel">
         <div class="welcome-mode-modal__top">
@@ -25472,11 +25475,11 @@
         gameModeWatchProgress = Math.max(0, Math.min(1, elapsed / gameModeWatchDurationMs));
       }
 
-      function playWatchingSpeechSynthesis(text, rate, passIndex, token, estimatedDurationSec) {
+      function playWatchingSpeechSynthesis(text, language, rate, passIndex, token, estimatedDurationSec) {
         if (!window.speechSynthesis || !safeText(text)) return Promise.resolve(false);
         return new Promise((resolve) => {
           const utterance = new SpeechSynthesisUtterance(safeText(text));
-          utterance.lang = 'en-US';
+          utterance.lang = language === 'portuguese' ? 'pt-BR' : 'en-US';
           utterance.rate = rate;
           const startedAt = performance.now();
           if (gameModeWatchTickTimer) window.clearInterval(gameModeWatchTickTimer);
@@ -25539,8 +25542,8 @@
         gameModeWatchProgress = 0;
         gameModeWatchDurationMs = 0;
         if (els.gameModeWatchForwardBtn) {
-          els.gameModeWatchForwardBtn.hidden = true;
-          els.gameModeWatchForwardBtn.setAttribute('aria-label', 'Avançar para a próxima frase');
+          els.gameModeWatchForwardBtn.hidden = false;
+          els.gameModeWatchForwardBtn.setAttribute('aria-label', 'Next: próxima frase');
         }
         if (els.gameWord) {
           els.gameWord.textContent = '';
@@ -25551,8 +25554,9 @@
           els.gameSubword.className = 'game-subword is-hidden';
         }
         if (els.gamePhaseWord) {
-          els.gamePhaseWord.textContent = '';
-          els.gamePhaseWord.classList.remove('is-visible', 'is-english', 'is-portuguese', 'is-fading');
+          renderChipText(els.gamePhaseWord, capitalizeWords(card.english || card.sourceEnglish || card.deckTitle || ''));
+          els.gamePhaseWord.classList.remove('is-portuguese', 'is-fading');
+          els.gamePhaseWord.classList.add('is-visible', 'is-english');
         }
         if (els.gameTouchBtn?.parentElement) els.gameTouchBtn.parentElement.hidden = true;
         if (els.gameKeyboardHost) els.gameKeyboardHost.hidden = true;
@@ -25560,35 +25564,60 @@
         if (els.gameStatus) els.gameStatus.textContent = '';
         els.game?.classList.add('is-watching-mode');
 
+        const english = safeText(card.english || card.sourceEnglish || card.deckTitle || '');
+        const portuguese = safeText(card.portuguese || resolveSourceLanguageText(card, 'portuguese') || card.deckTitle || '');
+        const estimatedDurationSec = Math.max(1.2, countPracticeWords(english) * 0.42);
         const src = resolveCardAudioUrlForLanguage(card, 'english', {
           accent: currentLanguageBackgroundAccent()
         });
-        let playableSource = '';
+        let englishSource = '';
         if (src) {
           try {
             await ensureRuntimeAudioSource(src);
-            playableSource = runtimeAudioSourceFor(src);
+            englishSource = runtimeAudioSourceFor(src);
           } catch (_error) {
-            playableSource = '';
+            englishSource = '';
           }
         }
         if (token !== gameModeWatchToken || !state.game.active || state.game.currentId !== entry.id) return;
-        const english = safeText(card.english || card.sourceEnglish || card.deckTitle || '');
-        const estimatedDurationSec = Math.max(1.2, countPracticeWords(english) * 0.42);
-        gameModeWatchDurationMs = estimatedDurationSec * 1000 * (1 + (1 / 0.7));
-        for (const [passIndex, rate] of [1, 0.7].entries()) {
+        const portugueseSrc = resolveCardAudioUrlForLanguage(card, 'portuguese', {
+          accent: currentLanguageBackgroundAccent()
+        });
+        let portugueseSource = '';
+        if (portugueseSrc) {
+          try {
+            await ensureRuntimeAudioSource(portugueseSrc);
+            portugueseSource = runtimeAudioSourceFor(portugueseSrc);
+          } catch (_error) {
+            portugueseSource = '';
+          }
+        }
+        if (token !== gameModeWatchToken || !state.game.active || state.game.currentId !== entry.id) return;
+        const passes = [
+          { text: english, language: 'english', source: englishSource },
+          { text: portuguese, language: 'portuguese', source: portugueseSource }
+        ];
+        gameModeWatchDurationMs = passes.reduce((total, pass) => (
+          total + Math.max(1.2, countPracticeWords(pass.text) * 0.42) * 1000
+        ), 0);
+        for (const [passIndex, pass] of passes.entries()) {
+          if (token !== gameModeWatchToken || !state.game.active || state.game.currentId !== entry.id) return;
+          if (els.gamePhaseWord) {
+            renderChipText(els.gamePhaseWord, capitalizeWords(pass.text));
+            els.gamePhaseWord.classList.toggle('is-english', pass.language === 'english');
+            els.gamePhaseWord.classList.toggle('is-portuguese', pass.language === 'portuguese');
+            els.gamePhaseWord.classList.add('is-visible');
+          }
+          const passDuration = Math.max(1.2, countPracticeWords(pass.text) * 0.42);
           let played = false;
-          if (playableSource) played = await playWatchingAudioElement(playableSource, rate, passIndex, token);
+          if (pass.source) played = await playWatchingAudioElement(pass.source, 1, passIndex, token);
           if (!played && token === gameModeWatchToken) {
-            played = await playWatchingSpeechSynthesis(english, rate, passIndex, token, estimatedDurationSec);
+            played = await playWatchingSpeechSynthesis(pass.text, pass.language, 1, passIndex, token, passDuration);
           }
           if (token !== gameModeWatchToken || !state.game.active || state.game.currentId !== entry.id) return;
-          if (!played) break;
+          if (!played && pass.language === 'english') break;
         }
-        if (token === gameModeWatchToken && state.game.active && state.game.currentId === entry.id) {
-          gameModeWatchProgress = 1;
-          if (els.gameModeWatchForwardBtn) els.gameModeWatchForwardBtn.hidden = false;
-        }
+        if (token === gameModeWatchToken && state.game.active && state.game.currentId === entry.id) gameModeWatchProgress = 1;
       }
 
       async function finishWatchingModeCard(entry, skipped = false) {
@@ -25597,10 +25626,8 @@
         const attemptKey = `watch:${safeText(entry.id)}`;
         if (round.processingAttemptKey === attemptKey) return false;
         round.processingAttemptKey = attemptKey;
-        const losesLife = Boolean(skipped && gameModeWatchProgress < 0.8);
+        // Watching tracks listening only: advancing never awards correctness or costs a life.
         round.attempts = Math.max(0, Number(round.attempts) || 0) + 1;
-        if (losesLife) round.errors = Math.max(0, Number(round.errors) || 0) + 1;
-        else round.correct = Math.max(0, Number(round.correct) || 0) + 1;
         round.wordsHeard = Math.max(0, Number(round.wordsHeard) || 0) + countPracticeWords(cardById(entry.id)?.english || '');
         round.processingAttemptKey = '';
         renderTypingRoundHearts();
@@ -31500,6 +31527,7 @@
       async function saveCardsModeRoundBestResult(round) {
         if (!round || round.recordSaveStarted) return false;
         round.recordSaveStarted = true;
+        if (Number(round.modeId) === 5) return false;
         const stage = Number(round.stage);
         const completedCards = Math.max(0, Number(round.attempts) || 0);
         if (!round.completed || Number(round.total) !== 25 || completedCards !== 25 || stage < 1 || stage > 5 || !state.user?.id) {
@@ -34988,7 +35016,7 @@
         if (cardsModeRound?.completed) {
           if (heading) heading.textContent = '';
           const correct = Math.max(0, Number(cardsModeRound.correct) || 0);
-          if (Number.isFinite(Number(cardsModeRound.correct))) {
+          if (Number(cardsModeRound.modeId) !== 5 && Number.isFinite(Number(cardsModeRound.correct))) {
             metrics.push({ ...GAME_END_METRICS.correct, value: correct, progress: correct / Math.max(1, Number(cardsModeRound.correct) + Number(cardsModeRound.errors || 0)) * 100 });
           }
           const heard = Math.max(0, Number(cardsModeRound.wordsHeard) || 0);
@@ -43191,7 +43219,7 @@
           event.stopPropagation();
           if (!isWatchingModeActive()) return;
           const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
-          if (!entry || gameModeWatchProgress < 0.999) return;
+          if (!entry) return;
           stopGameModeWatchPlayback();
           void finishWatchingModeCard(entry, false);
         });
