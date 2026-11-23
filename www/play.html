@@ -1841,10 +1841,10 @@
     .game-mode-audio-progress__fill { display: block; width: 0; height: 100%; border-radius: inherit; background: #75dcff; transition: width .12s linear; }
     .game-mode-prestart__start:disabled { opacity: 1; cursor: default; }
     .game-mode-home-return { position: fixed; z-index: 31; top: 18px; left: 18px; width: 46px; height: 46px; border: 1px solid rgba(145,191,224,.32); border-radius: 50%; color: #eaf6ff; background: rgba(6,17,31,.88); font-size: 24px; cursor: pointer; }
-    .game-mode-watch-forward { position: fixed; z-index: 42; right: max(22px, env(safe-area-inset-right)); bottom: max(22px, env(safe-area-inset-bottom)); min-width: 128px; min-height: 58px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; padding: 0 20px; border: 0; border-radius: 18px; color: #fff; background: #00d95f; box-shadow: 0 8px 24px rgba(0,217,95,.38); font: 800 20px/1 "Exo 2", Arial, sans-serif; cursor: pointer; touch-action: manipulation; transition: background .15s ease, transform .15s ease; }
+    .game-mode-watch-forward { position: relative; z-index: 42; min-width: 168px; min-height: 68px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin: 16px auto 0; padding: 0 24px; border: 0; border-radius: 20px; color: #fff; background: #00d95f; box-shadow: 0 8px 24px rgba(0,217,95,.38); font: 800 22px/1 "Exo 2", Arial, sans-serif; cursor: pointer; pointer-events: auto; touch-action: manipulation; transition: background .15s ease, transform .15s ease; }
     .game-mode-watch-forward:hover { background: #00c953; }
     .game-mode-watch-forward:active { transform: scale(.96); }
-    .game-mode-watch-forward svg { flex: 0 0 22px; width: 22px; height: 22px; }
+    .game-mode-watch-forward svg { flex: 0 0 26px; width: 26px; height: 26px; }
     .game-mode-watch-forward[hidden] { display: none !important; }
     .game.is-game-mode-home-session #gameTouchBtn { display: none !important; }
     .game.is-game-mode-home-fire .game-card__coin-badge { display: none !important; }
@@ -1860,6 +1860,9 @@
     .game.is-mode-three-repeat .game-card__phase-flag,
     .game.is-mode-three-repeat .game-card__flag { display: none !important; }
     .game.is-watching-mode .game-card__content { display: grid !important; }
+    .game.is-watching-mode #gameStatusSlot { min-height: 0; height: auto; flex: 0 0 auto; flex-direction: column; align-items: center; justify-content: flex-start; gap: 0; overflow: visible; pointer-events: auto; }
+    .game.is-watching-mode #gamePhaseWord { display: block !important; width: min(92vw, 820px); pointer-events: none; }
+    .game.is-watching-mode .game-mode-watch-forward { position: relative; inset: auto; transform: none; }
     .game.is-watching-mode #gameStep,
     .game.is-watching-mode #gameSubword,
     .game.is-watching-mode #gameStars { display: none !important; }
@@ -8201,6 +8204,17 @@
       padding-bottom: clamp(10px, 3vh, 28px);
     }
 
+    .game.is-watching-mode .textscreen {
+      height: auto;
+      min-height: 0;
+      flex: 0 0 auto;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 8px 14px max(18px, env(safe-area-inset-bottom));
+      overflow: visible;
+    }
+
     .game[data-phase-key="first-star"] .textscreen .game-status-wrap {
       display: none;
     }
@@ -14109,7 +14123,6 @@
         <button class="game-mode-prestart__start" id="gameModePrestartStartBtn" type="button" aria-label="Toque em qualquer lugar para começar" hidden><span>Toque para começar</span></button>
       </div>
     </section>
-    <button class="game-mode-watch-forward" id="gameModeWatchForwardBtn" type="button" aria-label="Next: próxima frase" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13l10-6.5-10-6.5Z"></path></svg><span>Next</span></button>
     <div class="welcome-mode-modal" id="welcomeModeModal" aria-hidden="true">
       <div class="welcome-mode-modal__panel">
         <div class="welcome-mode-modal__top">
@@ -14703,6 +14716,7 @@
 
         <div class="game-status-slot textscreen" id="gameStatusSlot" aria-live="polite" aria-atomic="true">
           <h3 class="game-phase-word container-translations" id="gamePhaseWord" aria-live="polite"></h3>
+          <button class="game-mode-watch-forward" id="gameModeWatchForwardBtn" type="button" aria-label="Next: próxima frase" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13l10-6.5-10-6.5Z"></path></svg><span>Next</span></button>
           <div class="game-status-wrap" id="gameStatusWrap">
             <img class="game-status-icon" id="gameStatusIcon" alt="">
             <p class="game-status" id="gameStatus">Carregando rodada...</p>
@@ -25580,42 +25594,29 @@
           }
         }
         if (token !== gameModeWatchToken || !state.game.active || state.game.currentId !== entry.id) return;
-        const portugueseSrc = resolveCardAudioUrlForLanguage(card, 'portuguese', {
-          accent: currentLanguageBackgroundAccent()
-        });
-        let portugueseSource = '';
-        if (portugueseSrc) {
-          try {
-            await ensureRuntimeAudioSource(portugueseSrc);
-            portugueseSource = runtimeAudioSourceFor(portugueseSrc);
-          } catch (_error) {
-            portugueseSource = '';
-          }
-        }
-        if (token !== gameModeWatchToken || !state.game.active || state.game.currentId !== entry.id) return;
         const passes = [
-          { text: english, language: 'english', source: englishSource },
-          { text: portuguese, language: 'portuguese', source: portugueseSource }
+          { text: english, displayText: english, displayLanguage: 'english' },
+          { text: english, displayText: portuguese, displayLanguage: 'portuguese' }
         ];
         gameModeWatchDurationMs = passes.reduce((total, pass) => (
-          total + Math.max(1.2, countPracticeWords(pass.text) * 0.42) * 1000
+          total + estimatedDurationSec * 1000
         ), 0);
         for (const [passIndex, pass] of passes.entries()) {
           if (token !== gameModeWatchToken || !state.game.active || state.game.currentId !== entry.id) return;
           if (els.gamePhaseWord) {
-            renderChipText(els.gamePhaseWord, capitalizeWords(pass.text));
-            els.gamePhaseWord.classList.toggle('is-english', pass.language === 'english');
-            els.gamePhaseWord.classList.toggle('is-portuguese', pass.language === 'portuguese');
+            renderChipText(els.gamePhaseWord, capitalizeWords(pass.displayText));
+            els.gamePhaseWord.classList.toggle('is-english', pass.displayLanguage === 'english');
+            els.gamePhaseWord.classList.toggle('is-portuguese', pass.displayLanguage === 'portuguese');
             els.gamePhaseWord.classList.add('is-visible');
           }
-          const passDuration = Math.max(1.2, countPracticeWords(pass.text) * 0.42);
+          const passDuration = estimatedDurationSec;
           let played = false;
-          if (pass.source) played = await playWatchingAudioElement(pass.source, 1, passIndex, token);
+          if (englishSource) played = await playWatchingAudioElement(englishSource, 1, passIndex, token);
           if (!played && token === gameModeWatchToken) {
-            played = await playWatchingSpeechSynthesis(pass.text, pass.language, 1, passIndex, token, passDuration);
+            played = await playWatchingSpeechSynthesis(pass.text, 'english', 1, passIndex, token, passDuration);
           }
           if (token !== gameModeWatchToken || !state.game.active || state.game.currentId !== entry.id) return;
-          if (!played && pass.language === 'english') break;
+          if (!played) break;
         }
         if (token === gameModeWatchToken && state.game.active && state.game.currentId === entry.id) gameModeWatchProgress = 1;
       }
@@ -32090,7 +32091,8 @@
         clearGameLanguageSwapTimer();
         if (!els.gamePhaseWord || !entry || (!isFirstStarEntry(entry) && !isCardsModeSecondSpeakingEntry(entry)) || !card) return;
         const hideTargetUntilAnswer = isFiveStarCardsModeActive();
-        const useTargetLanguage = !hideTargetUntilAnswer && isLevelModeAcquisitionFlowActive();
+        const useTargetLanguage = isWatchingModeActive()
+          || (!hideTargetUntilAnswer && isLevelModeAcquisitionFlowActive());
         const primaryText = useTargetLanguage
           ? capitalizeWords(card.english || card.portuguese || card.deckTitle || '')
           : capitalizeWords(card.portuguese || card.english || card.deckTitle || '');
@@ -40664,7 +40666,7 @@
 
         const useCardSlideAnimation = !isLevelModeActive();
         state.game.transitioning = true;
-        if (isFiveStarCardsModeActive()) {
+        if (isFiveStarCardsModeActive() && !isWatchingModeActive()) {
           const nextCard = cardById(state.game.queue[0]);
           await waitForCardImageBuffer(nextCard, CARDS_IMAGE_BUFFER_WAIT_MS);
           if (!state.game.active || state.game.paused || state.ui.gameEventModalOpen) {
@@ -43214,7 +43216,7 @@
             pauseFlashcardsGameToWelcome();
           }
         });
-        els.gameModeWatchForwardBtn?.addEventListener('click', (event) => {
+        const advanceWatchingModeImmediately = (event) => {
           event.preventDefault();
           event.stopPropagation();
           if (!isWatchingModeActive()) return;
@@ -43222,6 +43224,10 @@
           if (!entry) return;
           stopGameModeWatchPlayback();
           void finishWatchingModeCard(entry, false);
+        };
+        els.gameModeWatchForwardBtn?.addEventListener('pointerup', advanceWatchingModeImmediately);
+        els.gameModeWatchForwardBtn?.addEventListener('click', (event) => {
+          if (event.detail === 0) advanceWatchingModeImmediately(event);
         });
         els.gameOptionsCloseBtn?.addEventListener('click', closeGameOptionsModal);
         els.gameOptionsContinueBtn?.addEventListener('click', (event) => {
