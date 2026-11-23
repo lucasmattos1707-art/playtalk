@@ -31933,6 +31933,7 @@
         if (isCardsModeListenRepeatEntry(entry)) {
           return {
             ...STAGES[2],
+            key: 'mode-three-repeat',
             instruction: 'Fale ingles',
             expected: 'english',
             autoAudio: false,
@@ -37208,7 +37209,15 @@
           els.gameSubword.style.display = subword ? '' : 'none';
         }
         if (isCardsModeListenRepeatEntry(entry)) {
-          const englishPrompt = capitalizeWords(card.english || card.deckTitle || '');
+          const portuguesePrompt = capitalizeWords(
+            resolveSourceLanguageText(card, 'portuguese') || card.portuguese || card.english || card.deckTitle || ''
+          );
+          const englishPrompt = capitalizeWords(
+            resolveSourceLanguageText(card, 'english') || card.english || card.deckTitle || ''
+          );
+          renderChipText(els.gameWord, portuguesePrompt);
+          els.gameWord.classList.remove('is-hidden', 'is-stage-swap-hidden');
+          els.gameWord.style.display = '';
           renderChipText(els.gameSubword, englishPrompt);
           els.gameSubword.classList.remove('is-hidden', 'is-stage-swap-hidden');
           els.gameSubword.style.display = '';
