@@ -1846,7 +1846,8 @@
     .game-mode-watch-forward:active { transform: scale(.96); }
     .game-mode-watch-forward svg { flex: 0 0 26px; width: 26px; height: 26px; }
     .game-mode-watch-forward[hidden] { display: none !important; }
-    .game.is-game-mode-home-session #gameTouchBtn { display: none !important; }
+    .game.is-game-mode-home-session #gameTouchBtn,
+    .game.is-game-mode-home-session .game-card__coin-badge { display: none !important; }
     .game.is-game-mode-home-fire .game-card__coin-badge { display: none !important; }
     .game.is-mode-two-repeat .game-card__content,
     .game.is-mode-two-repeat #gameStep,
@@ -7929,6 +7930,10 @@
       max-width: 100vw;
       transform: none !important;
       pointer-events: auto;
+    }
+
+    .game.is-mode-three-repeat[data-phase-key="fifth-star"] .circlescreen .game-card__content {
+      display: flex !important;
     }
 
     .game[data-phase-key="first-star"] .game-card__content > div.is-stage-one-swap,
@@ -41616,9 +41621,7 @@
         els.game?.classList.remove('is-level-switching-reset');
         els.game?.classList.remove('is-level-text-mode');
         els.game?.classList.remove('is-game-mode-home-results');
-        els.game?.classList.remove('is-game-mode-home-session', 'is-game-mode-home-fire');
         document.body.classList.remove('game-end-open');
-        els.game?.classList.remove('is-mode-two-repeat', 'is-mode-three-repeat', 'is-watching-mode');
         resetGameSwipeTracking();
         syncFooterGuardState(null);
         syncGameLevelNavigator();
@@ -41627,6 +41630,13 @@
         closeGameReportMenu();
         if (!returnToLevelSelector) await wait(180);
         els.game.classList.remove('is-visible');
+        els.game?.classList.remove(
+          'is-game-mode-home-session',
+          'is-game-mode-home-fire',
+          'is-mode-two-repeat',
+          'is-mode-three-repeat',
+          'is-watching-mode'
+        );
         els.catalog.classList.add('is-hidden');
         els.topbar.classList.add('is-hidden');
         if (!returnToLevelSelector && !returningFromGameModeHome) refreshLibrary();
