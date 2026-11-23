@@ -32074,6 +32074,17 @@
       }
 
       function renderGameTouchButton(stageConfig, entry) {
+        if (isWatchingModeActive()) {
+          if (els.gameTouchBtn?.parentElement) els.gameTouchBtn.parentElement.hidden = true;
+          if (els.gameTouchBtn) els.gameTouchBtn.disabled = true;
+          if (els.gameRememberBtn) els.gameRememberBtn.hidden = true;
+          if (els.gameControlsProxy) {
+            els.gameControlsProxy.hidden = true;
+            els.gameControlsProxy.classList.add('is-hidden');
+          }
+          syncLevelTextModeControls();
+          return;
+        }
         const stageNumber = resolveEntryStageNumber(entry);
         const phaseKey = safeText(stageConfig?.key || '');
         const cardsModeSecondSpeaking = isCardsModeSecondSpeakingEntry(entry);
@@ -34935,7 +34946,10 @@
         }
         if (autoReturnHome) {
           if (token === gameEndPresentationToken && state.game.gameModeHomeSessionActive) {
-            if (!classificationSlides.length) void exitGame();
+            if (!classificationSlides.length) {
+              els.gameEndMenuBtn.textContent = 'Próximo';
+              els.gameEndMenuBtn.hidden = false;
+            }
           }
         } else if (token === gameEndPresentationToken) {
           if (classificationSlides.length) els.gameEndMenuBtn.textContent = 'Próximo';
@@ -41125,6 +41139,8 @@
 
       function pauseFlashcardsGameToWelcome() {
         if (!state.game.active) return;
+        if (state.game.gameModeHomeSessionActive
+          && (state.game.cardsModeRound?.completed || els.gameEnd?.classList.contains('is-visible'))) return;
         clearGameIdleAutoPauseTimer();
         state.game.sessionClockActive = false;
         stopFlashcardSessionTick();
@@ -41208,7 +41224,10 @@
         return true;
       }
 
-      async function exitGame({ returnToLevelSelector = false } = {}) {
+      async function exitGame({ returnToLevelSelector = false, confirmGameEnd = false } = {}) {
+        if (state.game.gameModeHomeSessionActive
+          && (state.game.cardsModeRound?.completed || els.gameEnd?.classList.contains('is-visible'))
+          && !confirmGameEnd) return false;
         const returningFromGameModeHome = Boolean(state.game.gameModeHomeSessionActive);
         if (returningFromGameModeHome && state.game.cardsModeRound?.active) saveGameRankingRound(state.game.cardsModeRound);
         const exitingGameModeHomeId = Number(state.game.cardsModeModeId) || 0;
@@ -41898,6 +41917,7 @@
       }
 
       async function startRecognition() {
+        if (isWatchingModeActive()) return;
         if (!state.game.active || state.game.transitioning || state.game.listening || state.game.paused) return;
         hideGameStageTutorial({ resume: false });
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
@@ -42222,6 +42242,7 @@
       }
 
       async function handleFirstStarTouchFlow() {
+        if (isWatchingModeActive()) return false;
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
         const firstStage = Number(entry?.stage) === 1;
         const secondSpeakingStage = isCardsModeSecondSpeakingEntry(entry);
@@ -43233,7 +43254,7 @@
           gameEndPresentationToken += 1;
           els.gameEndMenuBtn.disabled = true;
           els.gameEndMenuBtn.textContent = returningToGameModeHome ? 'Voltando aos modos...' : 'Voltando ao menu...';
-          await exitGame({ returnToLevelSelector: true });
+          await exitGame({ returnToLevelSelector: true, confirmGameEnd: true });
           if (els.gameEndMenuBtn) {
             els.gameEndMenuBtn.disabled = false;
             els.gameEndMenuBtn.textContent = returningToGameModeHome ? 'Voltar aos modos' : 'Voltar ao menu dos níveis';
