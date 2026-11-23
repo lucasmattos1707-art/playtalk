@@ -5682,23 +5682,11 @@
       background: transparent;
       overflow: hidden;
     }
-    .game.is-game-mode-home-results .game-end h3,
-    .game.is-game-mode-home-results .game-end p,
+    .game.is-game-mode-home-results .game-end > .game-end__inner > h3,
+    .game.is-game-mode-home-results .game-end > .game-end__inner > #gameEndCopy,
     .game.is-game-mode-home-results .game-end__menu-btn { display: none !important; }
     .game.is-game-mode-home-results .game-end__inner,
     .game.is-game-mode-home-results .game-end__presentation { width: 100%; gap: 0; }
-    .game.is-game-mode-home-results .game-end__meter--minimal {
-      width: min(100%, 640px);
-      padding: 0;
-      border: 0;
-      border-radius: 0;
-      background: transparent;
-      box-shadow: none;
-    }
-    .game.is-game-mode-home-results .game-end__meter--minimal .game-end__dial { width: min(100%, 520px); margin: 0 auto; }
-    .game.is-game-mode-home-results .game-end__meter--minimal .game-end__readout { margin-top: -8px; }
-    .game.is-game-mode-home-results .game-end__totals { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-    .game.is-game-mode-home-results .game-end__total { border: 0; background: transparent; padding: 8px; }
 
     .game-end h3 {
       margin: 0;
@@ -5713,131 +5701,51 @@
     }
 
     .game-end__inner {
-      width: min(100%, 640px);
+      width: min(100%, 1150px);
       display: grid;
-      justify-items: center;
-      gap: 12px;
+      justify-items: stretch;
+      gap: 0;
       margin: auto;
     }
 
     .game-end__presentation {
       width: 100%;
       display: grid;
-      gap: 14px;
+      gap: 0;
+      min-height: min(100%, 680px);
+      padding: 26px 30px 32px;
+      color: #f8fbff;
+      font-family: Inter, system-ui, sans-serif;
+      text-align: center;
+      background: radial-gradient(ellipse at 18% 20%, rgba(18,92,181,.24), transparent 45%), radial-gradient(ellipse at 78% 72%, rgba(102,43,168,.18), transparent 44%), linear-gradient(140deg,#061120,#061829 60%,#070e20);
     }
+
+    .game-end__brand { display:flex; align-items:center; gap:15px; text-align:left; }
+    .game-end__brand-icon { width:57px; height:57px; flex:none; border-radius:18px; display:grid; place-items:center; background:linear-gradient(140deg,#1568d0,#13335c); border:1px solid rgba(117,182,255,.45); box-shadow:0 10px 32px rgba(19,110,235,.18); font-size:28px; }
+    .game-end__eyebrow { color:#59bfff; font-size:11px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; }
+    .game-end__title { margin:2px 0; color:#f8fbff; font-size:clamp(26px,4vw,36px); font-weight:850; letter-spacing:-.05em; }
+    .game-end__dots { display:flex; justify-content:center; gap:9px; margin:26px 0 10px; }
+    .game-end__dot { height:6px; width:25px; border-radius:20px; background:#27415f; transition:background .3s,width .3s; }
+    .game-end__dot.is-active { width:46px; background:linear-gradient(90deg,#00bff4,#708aff); box-shadow:0 0 17px rgba(0,176,255,.4); }
+    .game-end__dot.is-done { background:#3d9bb5; }
+    .game-end__stage { min-height:390px; display:grid; place-items:center; position:relative; }
+    .game-end__slide { width:100%; display:none; text-align:center; animation:gameEndSlideIn .55s cubic-bezier(.2,.8,.2,1) both; }
+    .game-end__slide.is-active { display:block; }
+    @keyframes gameEndSlideIn { from { opacity:0; transform:translateY(24px) scale(.98); filter:blur(7px); } to { opacity:1; transform:none; filter:none; } }
+    .game-end__slide-icon { height:82px; width:82px; margin:0 auto 20px; border-radius:24px; display:grid; place-items:center; font-size:40px; box-shadow:0 16px 65px color-mix(in srgb, var(--metric-accent) 20%, transparent), inset 0 1px rgba(255,255,255,.3); border:1px solid rgba(255,255,255,.2); background:var(--metric-grad); }
+    .game-end__slide-kicker { color:var(--metric-accent); font-size:12px; font-weight:800; letter-spacing:.21em; text-transform:uppercase; margin:0 0 9px; }
+    .game-end__slide h4 { font-size:clamp(24px,4vw,35px); font-weight:850; letter-spacing:-.035em; margin:0; color:#f8fbff; }
+    .game-end__slide-desc { font-size:15px; color:#a3b6d0; margin:12px auto 24px; max-width:500px; line-height:1.55; }
+    .game-end__slide-value { font-size:clamp(62px,12vw,126px); line-height:1.07; letter-spacing:-.07em; font-weight:900; font-variant-numeric:tabular-nums; text-shadow:0 0 55px color-mix(in srgb, var(--metric-accent) 22%, transparent); }
+    .game-end__slide-unit { font-size:clamp(17px,2vw,23px); font-weight:600; letter-spacing:0; color:#b4c9e3; margin-left:7px; }
+    .game-end__track { width:min(360px,72%); height:5px; background:#1b314c; border-radius:10px; margin:27px auto 0; overflow:hidden; }
+    .game-end__track-fill { height:100%; width:0; background:var(--metric-grad); border-radius:10px; transition:width 1.9s cubic-bezier(.2,.8,.2,1); }
+    .game-end__complete-icon { font-size:66px; filter:drop-shadow(0 12px 40px #27b2ff66); }
+    .game-end__complete h4 { font-size:clamp(30px,5vw,48px); letter-spacing:-.05em; margin:16px 0 10px; }
 
     .game-end__presentation[hidden],
-    .game-end__totals[hidden],
-    .game-end__error-count[hidden],
     .game-end__menu-btn[hidden] {
       display: none !important;
-    }
-
-    .game-end__meter {
-      display: none;
-      width: min(100%, 560px);
-      margin: 0 auto;
-      padding: 18px 14px 16px;
-      border: 1px solid rgba(98, 157, 221, 0.48);
-      border-radius: 24px;
-      background: linear-gradient(155deg, rgba(23, 39, 68, 0.98), rgba(13, 23, 43, 0.98));
-      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
-      opacity: 0;
-      transform: scale(0.97);
-      transition: opacity 420ms ease, transform 420ms ease;
-    }
-
-    .game-end__meter.is-active {
-      display: block;
-      opacity: 1;
-      transform: scale(1);
-    }
-
-    .game-end__meter h4 {
-      margin: 0;
-      font-size: 19px;
-    }
-
-    .game-end__meter-desc {
-      margin-top: 3px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .game-end__dial {
-      display: block;
-      width: min(100%, 390px);
-      margin: 8px auto -4px;
-      overflow: visible;
-    }
-
-    .game-end__arc-bg,
-    .game-end__segment {
-      fill: none;
-      stroke-width: 23;
-      stroke-linecap: round;
-    }
-
-    .game-end__arc-bg { stroke: #26334a; }
-    .game-end__segment { stroke-linecap: butt; }
-    .game-end__tick { stroke: #a9b9d0; stroke-width: 2; opacity: 0.65; }
-    .game-end__scale-label { fill: #9eb5d6; font-size: 13px; font-weight: 700; }
-    .game-end__needle { stroke: #f5f9ff; stroke-width: 5; stroke-linecap: round; filter: drop-shadow(0 0 6px rgba(255,255,255,.5)); }
-    .game-end__needle-hub { fill: #f4faff; stroke: #537cae; stroke-width: 5; }
-
-    .game-end__readout {
-      margin-top: -4px;
-      color: #fff;
-      font-size: clamp(34px, 8vw, 54px);
-      font-weight: 900;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: -0.05em;
-    }
-
-    .game-end__unit {
-      margin-left: 4px;
-      color: #a9c0e3;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0;
-    }
-
-    .game-end__status {
-      min-height: 22px;
-      margin-top: 5px;
-      color: #c6d6ed;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.12em;
-    }
-
-    .game-end__totals {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: 10px;
-    }
-
-    .game-end__total {
-      padding: 12px;
-      border: 1px solid rgba(125, 203, 255, 0.2);
-      border-radius: 16px;
-      background: rgba(17, 29, 53, 0.88);
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .game-end__total strong {
-      display: block;
-      color: #fff;
-      font-size: clamp(27px, 6vw, 36px);
-      line-height: 1.1;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .game-end__error-count {
-      margin: 0 !important;
-      color: #ffb8bf !important;
-      font-size: 13px;
     }
 
     .game-end__menu-btn {
@@ -5870,10 +5778,13 @@
 
     @media (max-width: 520px) {
       .game-end { padding: 12px 10px; }
-      .game-end__inner { gap: 9px; }
-      .game-end__meter { padding: 14px 10px 12px; }
-      .game-end__dial { width: min(100%, 330px); }
-      .game-end__totals { gap: 7px; }
+      .game-end__presentation { padding: 20px 15px 26px; }
+      .game-end__brand-icon { width:48px; height:48px; font-size:24px; border-radius:14px; }
+      .game-end__stage { min-height:340px; }
+      .game-end__slide-icon { width:72px; height:72px; font-size:35px; margin-bottom:17px; }
+      .game-end__slide-desc { font-size:13px; padding:0 10px; }
+      .game-end__slide-value { font-size:clamp(59px,16vw,91px); }
+      .game-end__slide-unit { display:block; margin:9px 0 0; font-size:17px; }
     }
 
     .watch-popover-card {
@@ -14772,12 +14683,9 @@
             <h3>Sem cartas disponiveis para jogar.</h3>
             <p id="gameEndCopy">Voce ja ganhou todos os cards carregados, ou ainda nao existem cartas suficientes fora de Meus flashcards para montar a rodada.</p>
             <div class="game-end__presentation" id="gameEndPresentation" hidden>
-              <div class="game-end__meters" id="gameEndMeters" aria-live="polite"></div>
-              <div class="game-end__totals" id="gameEndTotals" hidden>
-              <div class="game-end__total">Listening<strong id="gameEndWordsHeard">0</strong></div>
-              <div class="game-end__total">Speaking<strong id="gameEndWordsSpoken">0</strong></div>
-              </div>
-              <p class="game-end__error-count" id="gameEndErrors" hidden></p>
+              <header class="game-end__brand"><div class="game-end__brand-icon" aria-hidden="true">✨</div><div><div class="game-end__eyebrow">FluentLevelUp</div><h2 class="game-end__title">Seus resultados</h2></div></header>
+              <nav class="game-end__dots" id="gameEndDots" aria-label="Etapas de resultados"></nav>
+              <div class="game-end__stage" id="gameEndStage" aria-live="polite"></div>
             </div>
             <button class="game-end__menu-btn" id="gameEndMenuBtn" type="button" hidden>Voltar ao menu dos níveis</button>
           </div>
@@ -16921,11 +16829,8 @@
         gameEnd: document.getElementById('gameEnd'),
         gameEndCopy: document.getElementById('gameEndCopy'),
         gameEndPresentation: document.getElementById('gameEndPresentation'),
-        gameEndMeters: document.getElementById('gameEndMeters'),
-        gameEndTotals: document.getElementById('gameEndTotals'),
-        gameEndWordsSpoken: document.getElementById('gameEndWordsSpoken'),
-        gameEndWordsHeard: document.getElementById('gameEndWordsHeard'),
-        gameEndErrors: document.getElementById('gameEndErrors'),
+        gameEndDots: document.getElementById('gameEndDots'),
+        gameEndStage: document.getElementById('gameEndStage'),
         gameEndMenuBtn: document.getElementById('gameEndMenuBtn'),
         gameCard: document.getElementById('gameCard'),
         gameVisual: document.getElementById('gameVisual'),
@@ -34693,201 +34598,124 @@
 
       let gameEndPresentationToken = 0;
 
-      function gameEndSvgNode(tag, attributes = {}, parent = null) {
-        const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
-        Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, String(value)));
-        if (parent) parent.appendChild(node);
-        return node;
+      const GAME_END_METRICS = {
+        correct: { icon: '✅', kicker: 'Precisão', title: 'Cartas concluídas com acerto.', description: 'Cada resposta correta fortalece seu inglês.', unit: 'acertos', accent: '#5cbcff', grad: 'linear-gradient(135deg,#209eff,#0750bd)' },
+        listening: { icon: '🎧', kicker: 'Listening', title: 'Cada palavra conta.', description: 'Você treinou seus ouvidos e fortaleceu sua compreensão do inglês.', unit: 'palavras ouvidas', accent: '#5cbcff', grad: 'linear-gradient(135deg,#209eff,#0750bd)' },
+        speaking: { icon: '🎙️', kicker: 'Speaking', title: 'Você colocou a voz no jogo!', description: 'Prática real de fala. Cada palavra ajuda a construir sua confiança.', unit: 'palavras faladas', accent: '#ff80a1', grad: 'linear-gradient(135deg,#ff648c,#cf1557)' },
+        pronunciation: { icon: '〰️', kicker: 'Pronúncia', title: 'Sua voz está evoluindo.', description: 'Sua precisão de pronúncia nesta sessão.', unit: '% de precisão', accent: '#c391ff', grad: 'linear-gradient(135deg,#ba5cff,#6826dc)' },
+        speed: { icon: '⌨️', kicker: 'Velocidade', title: 'Pensar rápido. Responder melhor.', description: 'Sua velocidade durante a atividade.', unit: 'caracteres / segundo', accent: '#43e5db', grad: 'linear-gradient(135deg,#1de0ce,#06868f)' }
+      };
+
+      function formatGameEndValue(value, decimal = false) {
+        return Number(value || 0).toLocaleString('pt-BR', decimal
+          ? { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+          : { maximumFractionDigits: 0 });
       }
 
-      function gameEndDialPoint(cx, cy, radius, degrees) {
-        const radians = degrees * Math.PI / 180;
-        return [cx + radius * Math.cos(radians), cy + radius * Math.sin(radians)];
-      }
-
-      function gameEndDialArc(start, end, radius = 131) {
-        const from = gameEndDialPoint(180, 180, radius, start);
-        const to = gameEndDialPoint(180, 180, radius, end);
-        return `M ${from[0]} ${from[1]} A ${radius} ${radius} 0 ${end - start > 180 ? 1 : 0} 1 ${to[0]} ${to[1]}`;
-      }
-
-      function formatGameEndGaugeValue(kind, value) {
-        const safeValue = Math.max(0, Number(value) || 0);
-        if (kind === 'speed') {
-          return safeValue.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-        }
-        if (kind === 'pronunciation') {
-          return safeValue.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
-        }
-        return Math.round(safeValue).toLocaleString('pt-BR');
-      }
-
-      function gameEndGaugeStatus(value, max) {
-        const ratio = max > 0 ? Math.max(0, Math.min(1, Number(value) / max)) : 0;
-        if (ratio >= 0.85) return 'EXCELENTE';
-        if (ratio >= 0.6) return 'MUITO BOM';
-        if (ratio >= 0.35) return 'BOM';
-        return 'CONTINUE EVOLUINDO';
-      }
-
-      function createGameEndGauge({ kind, title, description, value, max, unit }) {
-        const minimal = Boolean(state.game.gameModeHomeSessionActive);
+      function createGameEndSlide(metric, index) {
         const card = document.createElement('article');
-        card.className = `game-end__meter${minimal ? ' game-end__meter--minimal' : ''}`;
-        card.dataset.gameEndMeter = kind;
+        card.className = 'game-end__slide';
+        card.style.setProperty('--metric-accent', metric.accent);
+        card.style.setProperty('--metric-grad', metric.grad);
+        const icon = document.createElement('div');
+        icon.className = 'game-end__slide-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = metric.icon;
+        const kicker = document.createElement('p');
+        kicker.className = 'game-end__slide-kicker';
+        kicker.textContent = `${String(index + 1).padStart(2, '0')} · ${metric.kicker}`;
         const heading = document.createElement('h4');
-        heading.textContent = title;
-        heading.hidden = minimal;
-        const desc = document.createElement('div');
-        desc.className = 'game-end__meter-desc';
-        desc.textContent = description;
-        desc.hidden = minimal;
-        const dial = gameEndSvgNode('svg', { class: 'game-end__dial', viewBox: '0 0 360 235', role: 'img', 'aria-label': title || 'Resultado' });
-        gameEndSvgNode('path', { d: gameEndDialArc(150, 390), class: 'game-end__arc-bg' }, dial);
-        const colors = ['#ff465b', '#ffb13d', '#42a5ff', '#37dd91'];
-        colors.forEach((color, index) => {
-          const start = 150 + index * 60 + 1;
-          const end = 150 + (index + 1) * 60 - 1;
-          gameEndSvgNode('path', { d: gameEndDialArc(start, end), class: 'game-end__segment', stroke: color }, dial);
-        });
-        for (let index = 0; index <= 10; index += 1) {
-          const angle = 150 + index * 24;
-          const outer = gameEndDialPoint(180, 180, 105, angle);
-          const inner = gameEndDialPoint(180, 180, index % 2 === 0 ? 93 : 98, angle);
-          gameEndSvgNode('line', { x1: outer[0], y1: outer[1], x2: inner[0], y2: inner[1], class: 'game-end__tick' }, dial);
-        }
-        [0, max / 2, max].forEach((tickValue, index) => {
-          const point = gameEndDialPoint(180, 180, 74, [150, 270, 390][index]);
-          const label = gameEndSvgNode('text', {
-            x: point[0], y: point[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle', class: 'game-end__scale-label'
-          }, dial);
-          label.textContent = kind === 'speed'
-            ? Math.round(tickValue).toLocaleString('pt-BR')
-            : Math.round(tickValue).toLocaleString('pt-BR');
-        });
-        const needle = gameEndSvgNode('g', { transform: 'rotate(-120 180 180)' }, dial);
-        gameEndSvgNode('line', { x1: 180, y1: 180, x2: 180, y2: 76, class: 'game-end__needle' }, needle);
-        gameEndSvgNode('circle', { cx: 180, cy: 180, r: 11, class: 'game-end__needle-hub' }, dial);
-        const readout = document.createElement('div');
-        readout.className = 'game-end__readout';
-        readout.dataset.gaugeNumber = '';
-        readout.textContent = formatGameEndGaugeValue(kind, 0);
-        const unitNode = document.createElement('span');
-        unitNode.className = 'game-end__unit';
-        unitNode.textContent = unit;
-        if (!minimal && unit) readout.appendChild(unitNode);
-        const status = document.createElement('div');
-        status.className = 'game-end__status';
-        status.textContent = 'AGUARDANDO';
-        status.hidden = minimal;
-        card.append(heading, desc, dial, readout, status);
-        return { card, needle, readout, status, value, max, kind };
+        heading.textContent = metric.title;
+        const description = document.createElement('p');
+        description.className = 'game-end__slide-desc';
+        description.textContent = metric.description;
+        const value = document.createElement('div');
+        value.className = 'game-end__slide-value';
+        value.textContent = formatGameEndValue(metric.value, metric.decimal);
+        const unit = document.createElement('span');
+        unit.className = 'game-end__slide-unit';
+        unit.textContent = metric.unit;
+        value.appendChild(unit);
+        const track = document.createElement('div');
+        track.className = 'game-end__track';
+        const fill = document.createElement('div');
+        fill.className = 'game-end__track-fill';
+        track.appendChild(fill);
+        card.append(icon, kicker, heading, description, value, track);
+        card.dataset.value = String(metric.value);
+        card.dataset.decimal = metric.decimal ? 'true' : 'false';
+        card.dataset.progress = String(Math.max(10, Math.min(100, metric.progress || 72)));
+        return card;
       }
 
-      function animateGameEndGauge(gauge, token) {
+      function createGameEndCompleteSlide(index) {
+        const card = document.createElement('article');
+        card.className = 'game-end__slide game-end__complete';
+        const icon = document.createElement('div');
+        icon.className = 'game-end__complete-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = '🏆';
+        const kicker = document.createElement('p');
+        kicker.className = 'game-end__slide-kicker';
+        kicker.style.color = '#51c8ff';
+        kicker.textContent = `${String(index + 1).padStart(2, '0')} · Sessão concluída`;
+        const heading = document.createElement('h4');
+        heading.textContent = 'Você evoluiu hoje!';
+        const description = document.createElement('p');
+        description.className = 'game-end__slide-desc';
+        description.textContent = 'Todo treino deixa uma marca. O próximo nível está cada vez mais perto.';
+        card.append(icon, kicker, heading, description);
+        return card;
+      }
+
+      function animateGameEndSlide(card, token) {
+        const valueNode = card.querySelector('.game-end__slide-value');
+        if (!valueNode) return Promise.resolve();
+        const unit = valueNode.querySelector('.game-end__slide-unit');
+        const target = Math.max(0, Number(card.dataset.value) || 0);
+        const decimal = card.dataset.decimal === 'true';
+        const startedAt = performance.now();
+        const duration = 1500;
         return new Promise((resolve) => {
-          const startAt = performance.now();
-          const duration = 1900;
-          const safeValue = Math.max(0, Number(gauge.value) || 0);
-          const safeMax = Math.max(1, Number(gauge.max) || 1);
           const frame = (now) => {
-            if (token !== gameEndPresentationToken) {
-              resolve();
-              return;
-            }
-            const progress = Math.min(1, (now - startAt) / duration);
+            if (token !== gameEndPresentationToken) { resolve(); return; }
+            const progress = Math.min(1, (now - startedAt) / duration);
             const eased = 1 - Math.pow(1 - progress, 3);
-            const current = safeValue * eased;
-            const dialRatio = Math.max(0, Math.min(1, current / safeMax));
-            gauge.needle.setAttribute('transform', `rotate(${-120 + 240 * dialRatio} 180 180)`);
-            const unitNode = gauge.readout.querySelector('.game-end__unit');
-            gauge.readout.textContent = formatGameEndGaugeValue(gauge.kind, current);
-            if (unitNode) gauge.readout.appendChild(unitNode);
-            if (progress < 1) {
-              window.requestAnimationFrame(frame);
-              return;
-            }
-            gauge.status.textContent = gameEndGaugeStatus(safeValue, safeMax);
-            resolve();
+            valueNode.textContent = formatGameEndValue(target * eased, decimal);
+            if (unit) valueNode.appendChild(unit);
+            const fill = card.querySelector('.game-end__track-fill');
+            if (fill && progress > 0) fill.style.width = `${Number(card.dataset.progress) * progress}%`;
+            if (progress < 1) window.requestAnimationFrame(frame);
+            else resolve();
           };
           window.requestAnimationFrame(frame);
         });
       }
 
-      function animateGameEndWordTotal(element, value, token, startValue = 0, duration = 650, showPlus = true) {
-        return new Promise((resolve) => {
-          const target = Math.max(0, Math.round(Number(value) || 0));
-          const start = Math.max(0, Math.round(Number(startValue) || 0));
-          const startAt = performance.now();
-          const frame = (now) => {
-            if (token !== gameEndPresentationToken) {
-              resolve();
-              return;
-            }
-            const progress = Math.min(1, (now - startAt) / duration);
-            const eased = 1 - Math.pow(1 - progress, 3);
-            element.textContent = `${showPlus ? '+' : ''}${Math.round(start + (target - start) * eased).toLocaleString('pt-BR')}`;
-            if (progress < 1) {
-              window.requestAnimationFrame(frame);
-              return;
-            }
-            resolve();
-          };
-          element.textContent = `${showPlus ? '+' : ''}${start.toLocaleString('pt-BR')}`;
-          window.requestAnimationFrame(frame);
-        });
-      }
-
-      async function playGameEndPresentation(gauges, totals) {
+      async function playGameEndPresentation(slides) {
         const token = ++gameEndPresentationToken;
         const autoReturnHome = Boolean(state.game.gameModeHomeSessionActive);
-        await wait(160);
-        if (token !== gameEndPresentationToken) return;
-        for (const gauge of gauges) {
+        const dots = [...els.gameEndDots.children];
+        for (let index = 0; index < slides.length; index += 1) {
           if (token !== gameEndPresentationToken) return;
-          gauge.card.classList.add('is-active');
+          slides.forEach((slide, slideIndex) => slide.classList.toggle('is-active', slideIndex === index));
+          dots.forEach((dot, dotIndex) => {
+            dot.classList.toggle('is-active', dotIndex === index);
+            dot.classList.toggle('is-done', dotIndex < index);
+          });
           await wait(80);
-          await animateGameEndGauge(gauge, token);
+          await animateGameEndSlide(slides[index], token);
           if (token !== gameEndPresentationToken) return;
-          await wait(620);
-          gauge.card.classList.remove('is-active');
-          await wait(360);
+          await wait(index === slides.length - 1 ? 1250 : 900);
         }
-        if (totals) {
-          if (autoReturnHome) {
-            const saved = await Promise.race([
-              state.game.cardsModeRound?.rankingSavePromise || Promise.resolve(null),
-              wait(5000).then(() => null)
-            ]);
-            if (token !== gameEndPresentationToken) return;
-            if (saved) {
-              els.gameEndWordsHeard.textContent = Number(saved.previousHeard).toLocaleString('pt-BR');
-              els.gameEndWordsSpoken.textContent = Number(saved.previousSpoken).toLocaleString('pt-BR');
-              els.gameEndTotals.hidden = false;
-              await wait(1000);
-              await Promise.all([
-                animateGameEndWordTotal(els.gameEndWordsHeard, saved.heard, token, saved.previousHeard, 1000, false),
-                animateGameEndWordTotal(els.gameEndWordsSpoken, saved.spoken, token, saved.previousSpoken, 1000, false)
-              ]);
-            } else {
-              els.gameEndWordsHeard.textContent = `+${totals.heard.toLocaleString('pt-BR')}`;
-              els.gameEndWordsSpoken.textContent = `+${totals.spoken.toLocaleString('pt-BR')}`;
-              els.gameEndTotals.hidden = false;
-            }
-          } else {
-            els.gameEndTotals.hidden = false;
-            await animateGameEndWordTotal(els.gameEndWordsSpoken, totals.spoken, token);
-            await wait(180);
-            await animateGameEndWordTotal(els.gameEndWordsHeard, totals.heard, token);
-          }
-        }
-        if (token === gameEndPresentationToken) {
-          if (autoReturnHome) {
-            await wait(1000);
-            if (token === gameEndPresentationToken && state.game.gameModeHomeSessionActive) void exitGame();
-          } else {
-            els.gameEndMenuBtn.hidden = false;
-          }
+        if (autoReturnHome) {
+          await Promise.race([
+            state.game.cardsModeRound?.rankingSavePromise || Promise.resolve(null),
+            wait(5000).then(() => null)
+          ]);
+          if (token === gameEndPresentationToken && state.game.gameModeHomeSessionActive) void exitGame();
+        } else if (token === gameEndPresentationToken) {
+          els.gameEndMenuBtn.hidden = false;
         }
       }
 
@@ -34899,114 +34727,68 @@
         const cardsModeRound = state.game.cardsModeRound;
         const modeHomeResults = Boolean(state.game.gameModeHomeSessionActive);
         els.game?.classList.toggle('is-game-mode-home-results', modeHomeResults);
-        els.gameEndMeters.replaceChildren();
+        els.gameEndStage.replaceChildren();
+        els.gameEndDots.replaceChildren();
         els.gameEndPresentation.hidden = true;
-        els.gameEndTotals.hidden = true;
-        els.gameEndErrors.hidden = true;
         els.gameEndMenuBtn.hidden = true;
-        els.gameEndWordsSpoken.textContent = '+0';
-        els.gameEndWordsHeard.textContent = '+0';
+        if (els.gameEndCopy) els.gameEndCopy.hidden = false;
+        const metrics = [];
 
-        let gauges = [];
-        let totals = null;
-        let errors = 0;
         if (cardsModeRound?.completed) {
-          if (heading) heading.textContent = 'Resultados do treino';
+          if (heading) heading.textContent = '';
           const correct = Math.max(0, Number(cardsModeRound.correct) || 0);
-          errors = Math.max(0, Number(cardsModeRound.errors) || 0);
-          gauges.push(createGameEndGauge({
-            kind: 'correct', title: 'Acertos', description: 'Cartas concluídas corretamente',
-            value: correct, max: 25, unit: '/ 25'
-          }));
+          if (Number.isFinite(Number(cardsModeRound.correct))) {
+            metrics.push({ ...GAME_END_METRICS.correct, value: correct, progress: correct / Math.max(1, Number(cardsModeRound.correct) + Number(cardsModeRound.errors || 0)) * 100 });
+          }
+          const heard = Math.max(0, Number(cardsModeRound.wordsHeard) || 0);
+          const spoken = Math.max(0, Number(cardsModeRound.wordsSpoken) || 0);
+          if (heard > 0) metrics.push({ ...GAME_END_METRICS.listening, value: heard, progress: Math.min(100, heard / 25 * 100) });
+          if (spoken > 0) metrics.push({ ...GAME_END_METRICS.speaking, value: spoken, progress: Math.min(100, spoken / 25 * 100) });
+          const scores = Array.isArray(cardsModeRound.pronunciationScores)
+            ? cardsModeRound.pronunciationScores.map(Number).filter((score) => Number.isFinite(score) && score >= 0)
+            : [];
+          if (scores.length) {
+            const pronunciation = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+            metrics.push({ ...GAME_END_METRICS.pronunciation, value: pronunciation, decimal: true, progress: pronunciation });
+          }
           if (Number(cardsModeRound.stage) === 4 && state.game.typingRound?.completed) {
-            const elapsedSeconds = Math.max(1, (Number(state.game.typingRound.elapsedMs) || 0) / 1000);
-            const rawSpeed = (Math.max(0, Number(state.game.typingRound.characters) || 0) / elapsedSeconds) * 60;
-            const speedMultiplier = Number(cardsModeRound.modeId) === 1
-              ? Math.max(1, Math.min(2, Number(cardsModeRound.speedMultiplier) || 1))
-              : 1;
-            const charactersPerMinute = rawSpeed * speedMultiplier;
-            gauges.push(createGameEndGauge({
-              kind: 'speed', title: 'Velocidade', description: 'Caracteres por minuto',
-              value: charactersPerMinute, max: 500, unit: 'CPM'
-            }));
+            const typingRound = state.game.typingRound;
+            const elapsedSeconds = Math.max(0.001, (Number(typingRound.elapsedMs) || 0) / 1000);
+            const charactersPerSecond = Math.max(0, Number(typingRound.characters) || 0) / elapsedSeconds;
+            if (charactersPerSecond > 0) metrics.push({ ...GAME_END_METRICS.speed, value: charactersPerSecond, decimal: true, progress: Math.min(100, charactersPerSecond / 12 * 100) });
           }
-          if ([0, 1, 2, 3, 5].includes(Number(cardsModeRound.stage))) {
-            const scores = Array.isArray(cardsModeRound.pronunciationScores)
-              ? cardsModeRound.pronunciationScores.map(Number).filter(Number.isFinite)
-              : [];
-            const pronunciation = scores.length
-              ? scores.reduce((sum, value) => sum + value, 0) / scores.length
-              : 0;
-            gauges.push(createGameEndGauge({
-              kind: 'pronunciation', title: 'Pronúncia', description: 'Qualidade da pronúncia',
-              value: pronunciation, max: 100, unit: '%'
-            }));
-            totals = {
-              spoken: Math.max(0, Number(cardsModeRound.wordsSpoken) || 0),
-              heard: Math.max(0, Number(cardsModeRound.wordsHeard) || 0)
-            };
-          }
-          els.gameEndPresentation.hidden = false;
-          if (modeHomeResults) {
-            totals = {
-              spoken: Math.max(0, Number(cardsModeRound.wordsSpoken) || 0),
-              heard: Math.max(0, Number(cardsModeRound.wordsHeard) || 0)
-            };
-            errors = 0;
-            els.gameEndErrors.hidden = true;
-            if (els.gameEndCopy) els.gameEndCopy.hidden = true;
-          } else if (totals) {
-            els.gameEndErrors.hidden = true;
-          } else {
-            els.gameEndErrors.textContent = `Erros: ${errors}`;
-            els.gameEndErrors.hidden = false;
-          }
-          if (els.gameEndCopy) {
-            els.gameEndCopy.textContent = '';
-            els.gameEndCopy.hidden = true;
-          }
+          if (els.gameEndCopy) els.gameEndCopy.hidden = true;
         } else if (state.game.typingRound?.completed) {
-          if (heading) heading.textContent = 'Resumo do Modo 4';
+          if (heading) heading.textContent = '';
           const typingRound = state.game.typingRound;
-          const elapsedSeconds = Math.max(1, (Number(typingRound.elapsedMs) || 0) / 1000);
-          const charactersPerMinute = (Math.max(0, Number(typingRound.characters) || 0) / elapsedSeconds) * 60;
-          gauges = [
-            createGameEndGauge({ kind: 'correct', title: 'Acertos', description: 'Frases concluídas corretamente', value: typingRound.correct, max: 25, unit: '/ 25' }),
-            createGameEndGauge({ kind: 'speed', title: 'Velocidade', description: 'Caracteres por minuto', value: charactersPerMinute, max: 500, unit: 'CPM' })
-          ];
-          errors = Math.max(0, Number(typingRound.errors) || 0);
-          els.gameEndPresentation.hidden = false;
-          els.gameEndErrors.textContent = `Erros: ${errors}`;
-          els.gameEndErrors.hidden = false;
-          if (els.gameEndCopy) {
-            els.gameEndCopy.textContent = '';
-            els.gameEndCopy.hidden = true;
-          }
+          const correct = Math.max(0, Number(typingRound.correct) || 0);
+          metrics.push({ ...GAME_END_METRICS.correct, value: correct, progress: correct / Math.max(1, correct + Number(typingRound.errors || 0)) * 100 });
+          const elapsedSeconds = Math.max(0.001, (Number(typingRound.elapsedMs) || 0) / 1000);
+          const charactersPerSecond = Math.max(0, Number(typingRound.characters) || 0) / elapsedSeconds;
+          if (charactersPerSecond > 0) metrics.push({ ...GAME_END_METRICS.speed, value: charactersPerSecond, decimal: true, progress: Math.min(100, charactersPerSecond / 12 * 100) });
+          if (els.gameEndCopy) els.gameEndCopy.hidden = true;
         } else {
-          if (modeHomeResults) {
-            void exitGame();
-            return;
-          }
+          if (modeHomeResults) { void exitGame(); return; }
           if (heading) heading.textContent = 'Sem cartas disponíveis para jogar.';
           if (els.gameEndCopy) {
             els.gameEndCopy.hidden = false;
             els.gameEndCopy.textContent = `As cartas acabaram para ${currentTargetLanguageLabel()} neste nível, ou ainda não existem traduções suficientes para montar a rodada.`;
           }
           els.gameEndMenuBtn.hidden = false;
+          return;
         }
-        if (modeHomeResults && gauges.length) {
-          const resultGauge = gauges.find((gauge) => gauge.kind === 'speed')
-            || gauges.find((gauge) => gauge.kind === 'pronunciation')
-            || gauges[0];
-          gauges = resultGauge ? [resultGauge] : [];
-          els.gameEndErrors.hidden = true;
-          els.gameEndTotals.hidden = true;
-          els.gameEndMenuBtn.hidden = true;
-          if (heading) heading.hidden = true;
-        }
-        gauges.forEach((gauge) => els.gameEndMeters.appendChild(gauge.card));
-        if (gauges.length) void playGameEndPresentation(gauges, totals);
-        else if (modeHomeResults) void exitGame();
+
+        const slides = metrics.map((metric, index) => createGameEndSlide(metric, index));
+        slides.push(createGameEndCompleteSlide(slides.length));
+        slides.forEach((slide, index) => {
+          els.gameEndStage.appendChild(slide);
+          const dot = document.createElement('span');
+          dot.className = 'game-end__dot';
+          dot.setAttribute('aria-label', `Etapa ${index + 1} de ${slides.length}`);
+          els.gameEndDots.appendChild(dot);
+        });
+        els.gameEndPresentation.hidden = false;
+        void playGameEndPresentation(slides);
       }
 
       function buildStageThreePlaceholderMarkup(card) {
