@@ -5758,17 +5758,17 @@
     .game-end__rank-row.is-empty { visibility:hidden; }
     @keyframes gameEndRankStepUp { from { opacity:.35; transform:translateY(12px); } to { opacity:1; transform:none; } }
     @keyframes gameEndRankStepDown { from { opacity:.35; transform:translateY(-12px); } to { opacity:1; transform:none; } }
-    .game-end__classification.is-climbing .game-end__rank-row.is-shifting { animation:gameEndRankStepUp .2s ease-out both; }
-    .game-end__classification.is-falling .game-end__rank-row.is-shifting { animation:gameEndRankStepDown .2s ease-out both; }
+    .game-end__classification.is-climbing .game-end__rank-row.is-shifting { animation:gameEndRankStepUp .16s ease-out both; }
+    .game-end__classification.is-falling .game-end__rank-row.is-shifting { animation:gameEndRankStepDown .16s ease-out both; }
     .game-end__rank-place { color:#d6e7fa; font-family:'Orbitron','Rajdhani',sans-serif; font-size:clamp(12px,2.2dvh,18px); text-align:center; }
     .game-end__rank-avatar { width:min(8.2dvh,72px); height:min(8.2dvh,72px); border-radius:50%; object-fit:cover; background:#17314f; border:2px solid rgba(190,220,255,.5); box-shadow:0 0 16px rgba(57,157,255,.3); }
     .game-end__rank-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .game-end__classification h4 { margin:0 0 2px; font-size:clamp(17px,2.4dvh,23px); }
-    .game-end__classification { position:relative; height:100%; min-height:0; }
+    .game-end__classification { position:absolute; inset:0; width:100%; height:100%; min-height:0; align-self:stretch; justify-self:stretch; }
     .game-end__classification .game-end__slide-icon { width:clamp(36px,5.5dvh,52px); height:clamp(36px,5.5dvh,52px); margin:0 auto 1px; }
     .game-end__classification .game-end__slide-icon svg { width:82%; height:82%; }
     .game-end__classification .game-end__slide-value { font-size:clamp(28px,4.5dvh,38px); line-height:1; }
-    .game-end__classification .game-end__rank-viewport { position:absolute; top:50%; left:50%; height:min(72dvh,calc(100dvh - 185px)); margin:0; transform:translate(-50%,-50%); }
+    .game-end__classification .game-end__rank-viewport { position:absolute; top:50%; left:50%; height:min(72dvh,calc(100dvh - 185px)); margin:0; transform:translate3d(-50%,-50%,0); }
 
     .game-end__presentation[hidden],
     .game-end__menu-btn[hidden] {
@@ -34831,36 +34831,32 @@
       }
 
       function updateGameEndRankWindow(slide, centerRank, progress = 1, animateRows = true) {
-        const startRanking = slide._startRanking || [];
         const finalRanking = slide._finalRanking || [];
-        const startRanks = new Map(startRanking.map((user) => [Number(user.id), Number(user.rank)]));
-        const users = finalRanking.map((user) => {
-          const startRank = startRanks.get(Number(user.id));
-          const rank = Number(user.rank) || 1;
-          return { ...user, animatedRank: Number.isFinite(startRank) ? startRank + (rank - startRank) * progress : rank };
-        }).sort((left, right) => left.animatedRank - right.animatedRank
-          || Number(left.rank) - Number(right.rank)
-          || String(left.name || '').localeCompare(String(right.name || '')));
+        const users = finalRanking.slice().sort((left, right) => Number(left.rank) - Number(right.rank));
         const visibleRows = slide._visibleRows || [];
         const player = users.find((user) => Number(user.id) === Number(slide._userId))
-          || startRanking.find((user) => Number(user.id) === Number(slide._userId));
+          || (slide._startRanking || []).find((user) => Number(user.id) === Number(slide._userId));
+        const otherUsers = users.filter((user) => Number(user.id) !== Number(slide._userId));
         const center = Math.max(1, Math.min(users.length || 1, Math.round(centerRank)));
         visibleRows.forEach(({ row, place, avatar, name }, index) => {
           const offset = index - 3;
           const position = center + offset;
-          let user = offset === 0 ? player : (position >= 1 && position <= users.length ? users[position - 1] : null);
-          if (user && Number(user.id) === Number(slide._userId) && offset !== 0) user = null;
+          const otherPosition = position < center ? position : position - 1;
+          const user = offset === 0 ? player : (position >= 1 && position <= users.length ? otherUsers[otherPosition - 1] : null);
           const isPlayer = Number(user?.id) === Number(slide._userId);
+          const userId = user ? String(user.id) : '';
+          const rowChanged = row.dataset.userId !== userId;
           row.hidden = false;
           row.classList.toggle('is-empty', !user);
           row.classList.toggle('is-player', isPlayer);
-          if (animateRows) {
+          if (animateRows && rowChanged) {
             row.classList.remove('is-shifting');
             void row.offsetWidth;
             row.classList.add('is-shifting');
-          } else {
+          } else if (!animateRows || !rowChanged) {
             row.classList.remove('is-shifting');
           }
+          row.dataset.userId = userId;
           place.textContent = user ? `${position}º` : '';
           name.textContent = user?.name || '';
           name.title = user?.name || '';
@@ -34881,7 +34877,7 @@
         slide.classList.toggle('is-climbing', isClimbing);
         slide.classList.toggle('is-falling', finalRank > startRank);
         const startAt = performance.now();
-        const duration = Math.min(8000, Math.max(1800, Math.abs(finalRank - startRank) * 150));
+        const duration = Math.min(8000, Math.max(900, Math.abs(finalRank - startRank) * 180));
         let lastRenderedRank = startRank;
         return new Promise((resolve) => {
           const frame = (now) => {
