@@ -43377,9 +43377,16 @@
           });
         });
         els.game.addEventListener('click', (event) => {
+          const target = event.target instanceof Element ? event.target : null;
+          if (els.gameEnd?.classList.contains('is-visible')) {
+            if (!target?.closest('#gameEndMenuBtn')) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+            return;
+          }
           if (state.game.gameModeHomeSessionActive && state.game.active) {
             const mode = gameModeHomeConfig(state.game.cardsModeModeId);
-            const target = event.target instanceof Element ? event.target : null;
             const clickedControl = target?.closest('button, a, input, textarea, select, [role="button"], [contenteditable="true"]');
             if (mode?.needsMic && !clickedControl) {
               event.preventDefault();
