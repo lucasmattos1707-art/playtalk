@@ -32416,13 +32416,14 @@
           && (stageNumber === 1 || stageNumber === 3 || stageNumber === 5));
         const useStagePlay = (stageNumber === 2 && !cardsModeSecondSpeaking && !isCardsModeListenRepeatEntry(entry)) || stageNumber === 4;
         const micListeningActive = Boolean(state.game.listening);
+        const cardsModeAttemptBusy = Boolean(state.game.cardsModeRound?.active && state.game.cardsModeRound?.processingAttemptKey);
         const showMissionHud = stageNumber >= 1 && stageNumber <= 5;
         els.gameTouchBtn.parentElement.hidden = !showMissionHud;
         els.gameTouchBtn.className = 'game-touch';
         els.gameTouchBtn.textContent = '';
         els.gameTouchBtn.innerHTML = '';
         els.gameTouchBtn.setAttribute('aria-label', stageConfig.instruction || 'Ativar microfone');
-        els.gameTouchBtn.disabled = useStagePlay ? false : !state.game.canListen;
+        els.gameTouchBtn.disabled = useStagePlay ? false : (!state.game.canListen || cardsModeAttemptBusy);
         try {
           localStorage.setItem(GAME_TOUCH_ICON_STORAGE_KEY, GAME_TOUCH_ICON_MARKUP);
         } catch (_error) {
@@ -33805,6 +33806,26 @@
           await wait(500);
           await audioPlayback;
           return;
+        }
+      }
+
+      async function playCardsModeResponseSequence(stageNumber, card) {
+        const response = Promise.resolve()
+          .then(() => playStageResponseSequence(stageNumber, card))
+          .catch((error) => {
+            console.warn('[flashcards][mode-response]', error);
+          });
+        let timeoutId = 0;
+        const completed = await Promise.race([
+          response.then(() => true),
+          new Promise((resolve) => {
+            timeoutId = window.setTimeout(() => resolve(false), 8000);
+          })
+        ]);
+        if (timeoutId) window.clearTimeout(timeoutId);
+        if (!completed) {
+          try { stopActiveAudio(); } catch (_error) { /* ignore playback cleanup failures */ }
+          if (window.speechSynthesis) window.speechSynthesis.cancel();
         }
       }
 
@@ -41730,63 +41751,75 @@
         const attemptKey = `${safeText(entry.id)}:${Math.max(1, Number(evaluatedStage) || 1)}`;
         if (round.processingAttemptKey === attemptKey) return true;
         round.processingAttemptKey = attemptKey;
-        round.attempts = Math.max(0, Number(round.attempts) || 0) + 1;
-        if (inputMode === 'speech') {
-          round.wordsSpoken = Math.max(0, Number(round.wordsSpoken) || 0) + countPracticeWords(transcript);
-          round.pronunciationScores.push(Math.max(0, Math.min(100, Number(score) || 0)));
-        }
-        if (isHit) {
-          if (Number(round.stage) !== 0 || Number(evaluatedStage) === 5) {
-            round.correct = Math.max(0, Number(round.correct) || 0) + 1;
+        renderGameTouchButton(resolveGameStageConfig(entry), entry);
+        try {
+          round.attempts = Math.max(0, Number(round.attempts) || 0) + 1;
+          if (inputMode === 'speech') {
+            round.wordsSpoken = Math.max(0, Number(round.wordsSpoken) || 0) + countPracticeWords(transcript);
+            round.pronunciationScores.push(Math.max(0, Math.min(100, Number(score) || 0)));
           }
-          if (Number(evaluatedStage) === 4 && inputMode === 'typing') {
-            const typingState = resolveTypingStageState(entry, card);
-            state.game.typingRound.correct = Math.max(0, Number(state.game.typingRound.correct) || 0) + 1;
-            state.game.typingRound.characters = Math.max(0, Number(state.game.typingRound.characters) || 0)
-              + countTypingDisplayCharacters(typingState.sourceText || typingState.acceptedAnswer);
-            showTypingRoundSuccessTranslation(card);
-          }
-          setGameStatus('', 'hit');
-          await playStageResponseSequence(evaluatedStage, card);
-        } else {
-          if (Number(round.modeId) === 6) {
-            const missedCard = cardById(entry.id);
-            if (missedCard && !round.missedCards.some((item) => safeText(item?.id) === safeText(missedCard.id))) round.missedCards.push({ ...missedCard });
-          }
-          round.errors = Math.max(0, Number(round.errors) || 0) + 1;
-          renderTypingRoundHearts();
-          if (Number(evaluatedStage) === 4 && inputMode === 'typing') {
-            state.game.typingRound.errors = Math.max(0, Number(state.game.typingRound.errors) || 0) + 1;
+          if (isHit) {
+            if (Number(round.stage) !== 0 || Number(evaluatedStage) === 5) {
+              round.correct = Math.max(0, Number(round.correct) || 0) + 1;
+            }
+            if (Number(evaluatedStage) === 4 && inputMode === 'typing') {
+              const typingState = resolveTypingStageState(entry, card);
+              state.game.typingRound.correct = Math.max(0, Number(state.game.typingRound.correct) || 0) + 1;
+              state.game.typingRound.characters = Math.max(0, Number(state.game.typingRound.characters) || 0)
+                + countTypingDisplayCharacters(typingState.sourceText || typingState.acceptedAnswer);
+              showTypingRoundSuccessTranslation(card);
+            }
+            setGameStatus('', 'hit');
+            await playCardsModeResponseSequence(evaluatedStage, card);
           } else {
-            playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
-            await wait(350);
+            if (Number(round.modeId) === 6) {
+              const missedCard = cardById(entry.id);
+              if (missedCard && !round.missedCards.some((item) => safeText(item?.id) === safeText(missedCard.id))) round.missedCards.push({ ...missedCard });
+            }
+            round.errors = Math.max(0, Number(round.errors) || 0) + 1;
+            renderTypingRoundHearts();
+            if (Number(evaluatedStage) === 4 && inputMode === 'typing') {
+              state.game.typingRound.errors = Math.max(0, Number(state.game.typingRound.errors) || 0) + 1;
+            } else {
+              playCueAudio(ACCESSKEY_ERROR_SOUND_PATH);
+              await wait(350);
+            }
+            setGameStatus('', 'miss');
           }
-          setGameStatus('', 'miss');
-        }
-        updateGameChips();
-        if (!state.game.active || state.game.currentId !== entry.id) return true;
-        if (state.game.paused) {
-          round.processingAttemptKey = '';
-          return true;
-        }
+          updateGameChips();
+          if (!state.game.active || state.game.currentId !== entry.id) return true;
+          if (state.game.paused) {
+            round.processingAttemptKey = '';
+            return true;
+          }
 
-        if (round.stage === 0 && isHit && Number(evaluatedStage) < 5) {
-          round.processingAttemptKey = '';
-          entry.stage = Number(evaluatedStage) + 1;
-          entry.stars = 0;
-          renderCurrentCard();
-          return true;
-        }
+          if (round.stage === 0 && isHit && Number(evaluatedStage) < 5) {
+            round.processingAttemptKey = '';
+            entry.stage = Number(evaluatedStage) + 1;
+            entry.stars = 0;
+            renderCurrentCard();
+            return true;
+          }
 
-        state.game.entries.delete(entry.id);
-        state.game.currentId = null;
-        if (Number(round.errors) >= 5) {
-          finishCardsModeRound();
-          renderCurrentCard();
+          state.game.entries.delete(entry.id);
+          state.game.currentId = null;
+          if (Number(round.errors) >= 5) {
+            round.processingAttemptKey = '';
+            finishCardsModeRound();
+            renderCurrentCard();
+            return true;
+          }
+          await advanceToNextCard();
           return true;
+        } finally {
+          if (round.processingAttemptKey === attemptKey) {
+            round.processingAttemptKey = '';
+            const currentEntry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
+            if (currentEntry && state.game.active && !state.game.paused) {
+              renderGameTouchButton(resolveGameStageConfig(currentEntry), currentEntry);
+            }
+          }
         }
-        await advanceToNextCard();
-        return true;
       }
 
       async function handleRecognitionResult(transcript, inputMode = 'speech') {
@@ -42278,7 +42311,7 @@
       }
 
       async function startRecognition() {
-        if (isWatchingModeActive()) return;
+        if (isWatchingModeActive() || (state.game.cardsModeRound?.active && state.game.cardsModeRound?.processingAttemptKey)) return;
         if (!state.game.active || state.game.transitioning || state.game.listening || state.game.paused) return;
         hideGameStageTutorial({ resume: false });
         const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
