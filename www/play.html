@@ -25628,7 +25628,10 @@
         if (round.processingAttemptKey === attemptKey) return false;
         round.processingAttemptKey = attemptKey;
         // Watching tracks listening only: advancing never awards correctness or costs a life.
-        round.attempts = Math.max(0, Number(round.attempts) || 0) + 1;
+        round.attempts = Math.min(
+          Math.max(1, Number(round.total) || FINAL_CHALLENGE_CARD_COUNT),
+          Math.max(0, Number(round.attempts) || 0) + 1
+        );
         round.wordsHeard = Math.max(0, Number(round.wordsHeard) || 0) + countPracticeWords(cardById(entry.id)?.english || '');
         round.processingAttemptKey = '';
         renderTypingRoundHearts();
@@ -25636,6 +25639,13 @@
         stopGameModeWatchPlayback();
         state.game.entries.delete(entry.id);
         state.game.currentId = null;
+        const watchingRoundComplete = Number(round.modeId) === 5
+          && round.attempts >= Math.max(1, Number(round.total) || FINAL_CHALLENGE_CARD_COUNT);
+        if (watchingRoundComplete) {
+          finishCardsModeRound();
+          renderCurrentCard();
+          return true;
+        }
         if (Number(round.errors) >= 5) {
           finishCardsModeRound();
           renderCurrentCard();
@@ -31433,6 +31443,7 @@
           if (!response.ok) throw new Error('Falha ao salvar rodada');
           const payload = await response.json();
           if (!payload.success || !payload.totals) throw new Error('Totais indisponíveis');
+          round.rankingTotals = payload.totals;
           return payload.totals;
         }).catch(error => { console.warn('Falha ao registrar rodada para rankings:', error); return null; });
       }
@@ -35001,13 +35012,23 @@
         }
       }
 
-      function updateGameEndMessageForCurrentLanguage() {
+      async function updateGameEndMessageForCurrentLanguage() {
         if (!els.gameEnd) return;
         gameEndPresentationToken += 1;
-        const heading = els.gameEnd.querySelector('h3');
-        if (heading) heading.hidden = false;
+        const presentationToken = gameEndPresentationToken;
         const cardsModeRound = state.game.cardsModeRound;
         const modeHomeResults = Boolean(state.game.gameModeHomeSessionActive);
+        if (cardsModeRound?.completed && modeHomeResults && cardsModeRound.rankingSavePromise) {
+          const rankingTotals = await Promise.race([
+            cardsModeRound.rankingSavePromise,
+            wait(5000).then(() => null)
+          ]);
+          if (rankingTotals) cardsModeRound.rankingTotals = rankingTotals;
+          if (presentationToken !== gameEndPresentationToken || state.game.cardsModeRound !== cardsModeRound) return;
+        }
+        if (!els.gameEnd) return;
+        const heading = els.gameEnd.querySelector('h3');
+        if (heading) heading.hidden = false;
         els.game?.classList.toggle('is-game-mode-home-results', modeHomeResults);
         els.gameEndStage.replaceChildren();
         els.gameEndPresentation.hidden = true;
@@ -35021,10 +35042,12 @@
           if (Number(cardsModeRound.modeId) !== 5 && Number.isFinite(Number(cardsModeRound.correct))) {
             metrics.push({ ...GAME_END_METRICS.correct, value: correct, progress: correct / Math.max(1, Number(cardsModeRound.correct) + Number(cardsModeRound.errors || 0)) * 100 });
           }
-          const heard = Math.max(0, Number(cardsModeRound.wordsHeard) || 0);
-          const spoken = Math.max(0, Number(cardsModeRound.wordsSpoken) || 0);
-          if (heard > 0) metrics.push({ ...GAME_END_METRICS.listening, value: heard, progress: Math.min(100, heard / 25 * 100) });
-          if (spoken > 0) metrics.push({ ...GAME_END_METRICS.speaking, value: spoken, progress: Math.min(100, spoken / 25 * 100) });
+          const heard = Math.max(0, Number(cardsModeRound.rankingTotals?.heard ?? cardsModeRound.wordsHeard) || 0);
+          const spoken = Math.max(0, Number(cardsModeRound.rankingTotals?.spoken ?? cardsModeRound.wordsSpoken) || 0);
+          const roundHeard = Math.max(0, Number(cardsModeRound.wordsHeard) || 0);
+          const roundSpoken = Math.max(0, Number(cardsModeRound.wordsSpoken) || 0);
+          if (heard > 0) metrics.push({ ...GAME_END_METRICS.listening, value: heard, progress: Math.min(100, roundHeard / 25 * 100) });
+          if (spoken > 0) metrics.push({ ...GAME_END_METRICS.speaking, value: spoken, progress: Math.min(100, roundSpoken / 25 * 100) });
           const scores = Array.isArray(cardsModeRound.pronunciationScores)
             ? cardsModeRound.pronunciationScores.map(Number).filter((score) => Number.isFinite(score) && score >= 0)
             : [];
