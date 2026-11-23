@@ -21530,6 +21530,120 @@ app.post('/api/flashcards/general-levels/generate', express.json({ limit: '64kb'
   }
 });
 
+app.get('/api/admin/flashcards/general-levels/english', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const payload = await readFinalChallengeGeneralLevelsPayload();
+    if (!payload || !payload.pairs || typeof payload.pairs !== 'object') {
+      return res.status(404).json({ success: false, message: 'Lista global de níveis ainda não foi gerada.' });
+    }
+    const englishPairs = Object.values(payload.pairs)
+      .filter((pair) => normalizeFlashcardTargetLanguage(pair?.targetLanguage) === 'english')
+      .map((pair) => {
+        const nativeLanguage = normalizeFlashcardNativeLanguage(pair?.nativeLanguage);
+        const levels = pair?.levels && typeof pair.levels === 'object' ? pair.levels : {};
+        return {
+          targetLanguage: 'english',
+          nativeLanguage,
+          countPerLevel: Math.max(1, Number(pair?.countPerLevel) || FINAL_CHALLENGE_GENERAL_LEVEL_CARD_COUNT),
+          levelCount: Object.keys(levels).length
+        };
+      })
+      .sort((left, right) => left.nativeLanguage.localeCompare(right.nativeLanguage));
+    const requestedNativeLanguage = String(req.query?.nativeLanguage || '').trim().toLowerCase();
+    if (!requestedNativeLanguage) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.json({ success: true, generatedAt: payload.generatedAt || null, pairs: englishPairs });
+    }
+    const nativeLanguage = normalizeFlashcardNativeLanguage(requestedNativeLanguage);
+    const pair = payload.pairs[finalChallengeGeneralLevelsPairKey('english', nativeLanguage)];
+    if (!pair || normalizeFlashcardTargetLanguage(pair.targetLanguage) !== 'english') {
+      return res.status(404).json({ success: false, message: 'Níveis de inglês não encontrados para esse idioma de apoio.' });
+    }
+    const sequenceState = await resolveFlashcardsSequenceState();
+    const cardById = new Map();
+    for (const deck of (Array.isArray(sequenceState?.decks) ? sequenceState.decks : [])) {
+      const fallbackSource = String(deck?.source || '').trim();
+      for (const card of (Array.isArray(deck?.items) ? deck.items : [])) {
+        const source = String(card?.source || fallbackSource).trim();
+        const parsedIndex = Number.parseInt(card?.sourceIndex, 10);
+        const sourceIndex = Number.isInteger(parsedIndex) ? parsedIndex : parseSequenceCardIndexFromId(card?.id, source);
+        if (!source || !Number.isInteger(sourceIndex) || sourceIndex < 0) continue;
+        cardById.set(`${source}#${sourceIndex}`, card);
+      }
+    }
+    const levels = pair.levels && typeof pair.levels === 'object' ? pair.levels : {};
+    const selectedPair = {
+      targetLanguage: 'english',
+      nativeLanguage,
+      countPerLevel: Math.max(1, Number(pair.countPerLevel) || FINAL_CHALLENGE_GENERAL_LEVEL_CARD_COUNT),
+      levelCount: Object.keys(levels).length,
+      levels: Object.fromEntries(Object.entries(levels)
+        .sort(([left], [right]) => Number(left) - Number(right))
+        .map(([level, references]) => [String(level), (Array.isArray(references) ? references : []).map((reference) => {
+          const card = cardById.get(String(reference?.cardId || '').trim());
+          return {
+            ...sanitizeFinalChallengeGeneralCardReference(reference),
+            english: flashcardSequenceTextForLanguage(card, 'english'),
+            nativeText: flashcardSequenceTextForLanguage(card, nativeLanguage),
+            image: String(card?.image || '').trim()
+          };
+        })]))
+    };
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ success: true, generatedAt: payload.generatedAt || null, pairs: englishPairs, selectedPair });
+  } catch (error) {
+    console.error('Erro ao ler níveis de inglês para administração:', error);
+    return res.status(Number.isInteger(error?.statusCode) ? error.statusCode : 500).json({
+      success: false,
+      message: error?.message || 'Não foi possível carregar os níveis de inglês.'
+    });
+  }
+});
+
+app.post('/api/admin/flashcards/general-levels/english/reorder', express.json({ limit: '64kb' }), async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    const nativeLanguage = normalizeFlashcardNativeLanguage(req.body?.nativeLanguage);
+    if (nativeLanguage === 'english') {
+      return res.status(400).json({ success: false, message: 'Escolha um idioma de apoio diferente do inglês.' });
+    }
+    const payload = await readFinalChallengeGeneralLevelsPayload();
+    if (!payload || !payload.pairs || typeof payload.pairs !== 'object') {
+      return res.status(404).json({ success: false, message: 'Lista global de níveis ainda não foi gerada.' });
+    }
+    const pairKey = finalChallengeGeneralLevelsPairKey('english', nativeLanguage);
+    const pair = payload.pairs[pairKey];
+    if (!pair || normalizeFlashcardTargetLanguage(pair.targetLanguage) !== 'english') {
+      return res.status(404).json({ success: false, message: 'Níveis de inglês não encontrados para esse idioma de apoio.' });
+    }
+    const levels = pair.levels && typeof pair.levels === 'object' ? pair.levels : {};
+    const currentOrder = Object.keys(levels).sort((left, right) => Number(left) - Number(right));
+    const requestedOrder = Array.isArray(req.body?.levelOrder) ? req.body.levelOrder.map((value) => String(value)) : [];
+    if (requestedOrder.length !== currentOrder.length
+      || new Set(requestedOrder).size !== currentOrder.length
+      || currentOrder.some((level) => !requestedOrder.includes(level))) {
+      return res.status(400).json({ success: false, message: 'A ordem precisa incluir todos os níveis uma única vez.' });
+    }
+    pair.levels = Object.fromEntries(requestedOrder.map((oldLevel, index) => [String(index + 1), levels[oldLevel]]));
+    pair.levelCount = requestedOrder.length;
+    const saved = await writeFinalChallengeGeneralLevelsPayload(payload);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({
+      success: true,
+      pairKey,
+      levelCount: requestedOrder.length,
+      generatedAt: saved?.generatedAt || payload.generatedAt || null
+    });
+  } catch (error) {
+    console.error('Erro ao reordenar níveis de inglês:', error);
+    return res.status(Number.isInteger(error?.statusCode) ? error.statusCode : 500).json({
+      success: false,
+      message: error?.message || 'Não foi possível salvar a nova ordem dos níveis.'
+    });
+  }
+});
+
 app.post('/api/flashcards/training-result', express.json({ limit: '64kb' }), async (req, res) => {
   try {
     if (!pool) {
