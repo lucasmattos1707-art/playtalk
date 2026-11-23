@@ -243,12 +243,6 @@
       pointer-events: none !important;
     }
 
-    body.game-mode-home-active #flashcardLevelProgress {
-      display: none !important;
-      visibility: hidden !important;
-      opacity: 0 !important;
-    }
-
     body > .game-rankings { position: fixed; inset: 0; z-index: 2200; background: #071321; color: #f6fbff; padding: max(18px, env(safe-area-inset-top)) 18px; overflow-y: auto; overflow-x: hidden; }
     .game-rankings[hidden] { display: none; }
     .game-rankings__inner { max-width: 720px; margin: auto; }
@@ -8614,6 +8608,12 @@
 
     .first-star-progress[hidden] {
       display: none !important;
+    }
+
+
+    .game.is-game-mode-home-session:not(.is-game-mode-home-fire) .first-star-progress {
+      display: none !important;
+      visibility: hidden !important;
     }
 
     .first-star-progress__fill {
@@ -17314,7 +17314,7 @@
 
       function isGameModeHomeLegacyLevelFlowDisabled() {
         const modeId = Number(state.game.cardsModeModeId) || 0;
-        return Boolean(state.game.gameModeHomeSessionActive && modeId >= 1 && modeId <= 6);
+        return Boolean(state.game.gameModeHomeSessionActive && modeId >= 1 && modeId <= 5);
       }
 
       function isJourneyGameMode() {
@@ -25735,7 +25735,10 @@
         const token = gameModeWatchToken;
         gameModeWatchProgress = 0;
         gameModeWatchDurationMs = 0;
-        if (els.gameModeWatchForwardBtn) els.gameModeWatchForwardBtn.hidden = false;
+        if (els.gameModeWatchForwardBtn) {
+          els.gameModeWatchForwardBtn.hidden = true;
+          els.gameModeWatchForwardBtn.setAttribute('aria-label', 'Avançar para a próxima frase');
+        }
         if (els.gameWord) {
           els.gameWord.textContent = '';
           els.gameWord.className = 'game-word is-hidden';
@@ -25781,7 +25784,7 @@
         }
         if (token === gameModeWatchToken && state.game.active && state.game.currentId === entry.id) {
           gameModeWatchProgress = 1;
-          await finishWatchingModeCard(entry, false);
+          if (els.gameModeWatchForwardBtn) els.gameModeWatchForwardBtn.hidden = false;
         }
       }
 
@@ -29443,7 +29446,7 @@
         if (!els.flashcardLevelProgress || !els.flashcardLevelProgressBar) return;
         const gameModeHidesLevelProgress = state.game.gameModeHomeSessionActive
           && Number(state.game.cardsModeModeId) >= 1
-          && Number(state.game.cardsModeModeId) <= 6;
+          && Number(state.game.cardsModeModeId) <= 5;
         const show = Boolean(state.game.active && !state.ui.gamePausedAtWelcome && !gameModeHidesLevelProgress);
         els.flashcardLevelProgress.hidden = !show;
         els.flashcardLevelProgress.style.display = show ? 'block' : 'none';
@@ -31648,6 +31651,34 @@
         return true;
       }
 
+
+      async function startFireGameOverReview(round) {
+        if (!round || Number(round.modeId) !== 6 || round.succeeded || round.fireReviewStarted) return;
+        const cards = Array.isArray(round.missedCards) ? round.missedCards.filter(Boolean) : [];
+        if (!cards.length) return;
+        round.fireReviewStarted = true;
+        const panel = document.createElement('section'); panel.className = 'fire-game-over-review'; panel.setAttribute('aria-live', 'polite');
+        Object.assign(panel.style, { margin: '16px auto', padding: '16px', maxWidth: '560px', borderRadius: '18px', background: 'rgba(8,25,48,.94)', color: '#fff', textAlign: 'center' });
+        const heading = document.createElement('h3'); heading.textContent = 'Revise as cartas que errou';
+        const progress = document.createElement('p');
+        const image = document.createElement('img'); Object.assign(image.style, { width: 'min(42vw,180px)', height: 'min(42vw,180px)', objectFit: 'cover', borderRadius: '50%', margin: 'auto' });
+        const text = document.createElement('p'); Object.assign(text.style, { fontSize: 'clamp(22px,5vw,34px)', lineHeight: '1.2', margin: '12px 0' });
+        const close = document.createElement('button'); close.type = 'button'; close.textContent = 'Fechar revisão';
+        let cancelled = false; close.addEventListener('click', () => { cancelled = true; panel.remove(); });
+        panel.append(heading, progress, image, text, close); els.gameEnd.appendChild(panel);
+        const playReviewAudio = async (card, language) => {
+          const source = resolveCardAudioUrlForLanguage(card, language, { accent: currentLanguageBackgroundAccent() });
+          if (!source) { await wait(1800); return; }
+          try { await ensureRuntimeAudioSource(source); const audio = new Audio(runtimeAudioSourceFor(source)); audio.preload = 'auto'; audio.playbackRate = 1; await audio.play(); await new Promise((resolve) => { audio.addEventListener('ended', resolve, { once: true }); audio.addEventListener('error', resolve, { once: true }); }); } catch (_error) { await wait(1800); }
+        };
+        for (let index = 0; index < cards.length && !cancelled; index += 1) {
+          const card = cards[index]; image.src = safeText(card.imageUrl || card.image || card.image_url) || '/Avatar/profile-neon-blue.svg'; image.alt = safeText(card.english || card.portuguese || 'Carta para revisar');
+          progress.textContent = 'Carta ' + (index + 1) + ' de ' + cards.length + ' · inglês'; text.textContent = safeText(card.english || card.deckTitle || ''); await playReviewAudio(card, 'english');
+          if (cancelled) break; progress.textContent = 'Carta ' + (index + 1) + ' de ' + cards.length + ' · português'; text.textContent = safeText(card.portuguese || ''); await playReviewAudio(card, 'portuguese');
+        }
+        if (!cancelled) { progress.textContent = 'Revisão concluída'; text.textContent = ''; close.textContent = 'Fechar'; }
+      }
+
       function createCardsModeRoundId() {
         try {
           if (typeof crypto?.randomUUID === 'function') return crypto.randomUUID();
@@ -32029,7 +32060,7 @@
 
       function scheduleStageTwoHintLoop(entry) {
         clearStageTwoHintTimer();
-        if (!entry || entry.stage !== 2 || state.game.currentId !== entry.id || isTypingStage(entry)) return;
+        if (!entry || entry.stage !== 2 || state.game.currentId !== entry.id || isTypingStage(entry) || isCardsModeListenRepeatEntry(entry)) return;
 
         const showHint = () => {
           if (!state.game.active || state.game.currentId !== entry.id || entry.stage !== 2) {
@@ -32093,6 +32124,10 @@
 
       function isWatchingModeActive() {
         return Boolean(state.game.cardsModeRound?.active && Number(state.game.cardsModeRound?.modeId) === 5);
+      }
+
+      function isCardsModeListenRepeatEntry(entry) {
+        return Boolean(entry && state.game.cardsModeRound?.active && Number(state.game.cardsModeRound?.modeId) === 3 && Number(entry.stage) === 2);
       }
 
       function isModeTwoEnglishRepeatEntry(entry = null) {
@@ -32854,6 +32889,10 @@
       function showPersistentFifthStarCoinsStatus({ iconFlash = false } = {}) {
         const phaseKey = safeText(els.game?.dataset?.phaseKey || '');
         if (phaseKey !== 'fifth-star') return;
+        if (state.game.gameModeHomeSessionActive && Number(state.game.cardsModeModeId) === 6) {
+          setGameStatus('', '');
+          return;
+        }
         const fallbackCoins = Math.max(0, Math.round(Number(state.stats?.coinsTotal) || 0));
         const coinsTotal = Math.max(0, Math.round(Number(state.ui?.fifthStarDisplayedCoinsTotal) || fallbackCoins));
         setGameStatus(String(coinsTotal), 'flashcards-count', {
@@ -37115,6 +37154,7 @@
               if (els.gameStarCopy) els.gameStarCopy.textContent = 'Modo 4 · Digitação por palavras';
             }
             els.gameEnd.classList.add('is-visible');
+            if (state.game.cardsModeRound?.modeId === 6 && !state.game.cardsModeRound?.succeeded) void startFireGameOverReview(state.game.cardsModeRound);
             markGameModeResultsScreenShown();
           }
           updateGuestFirstStarResultsBanner(null, false);
@@ -37240,6 +37280,7 @@
         } else if (stageConfig.subtitleType === 'english') {
           subword = capitalizeWords(card.english || '');
         }
+        if (isCardsModeListenRepeatEntry(entry)) subword = capitalizeWords(card.english || card.deckTitle || '');
         const stageOneSwapActive = !isSimpleStarPhase && entry.stage === 1 && Boolean(subword);
         if (els.gamePhaseWord) {
           if (isModeTwoEnglishRepeatEntry(entry) || isCardsModeSecondSpeakingEntry(entry)) {
@@ -40741,6 +40782,7 @@
           errors: 0,
           attempts: 0,
           pronunciationScores: [],
+          missedCards: [],
           wordsSpoken: 0,
           wordsHeard: 0,
           roundId: createCardsModeRoundId(),
@@ -41405,6 +41447,10 @@
           setGameStatus('', 'hit');
           await playStageResponseSequence(evaluatedStage, card);
         } else {
+          if (Number(round.modeId) === 6) {
+            const missedCard = cardById(entry.id);
+            if (missedCard && !round.missedCards.some((item) => safeText(item?.id) === safeText(missedCard.id))) round.missedCards.push({ ...missedCard });
+          }
           round.errors = Math.max(0, Number(round.errors) || 0) + 1;
           renderTypingRoundHearts();
           if (Number(evaluatedStage) === 4 && inputMode === 'typing') {
@@ -43159,9 +43205,9 @@
           event.stopPropagation();
           if (!isWatchingModeActive()) return;
           const entry = state.game.currentId ? state.game.entries.get(state.game.currentId) : null;
-          if (!entry) return;
+          if (!entry || gameModeWatchProgress < 0.999) return;
           stopGameModeWatchPlayback();
-          void finishWatchingModeCard(entry, true);
+          void finishWatchingModeCard(entry, false);
         });
         els.gameOptionsCloseBtn?.addEventListener('click', closeGameOptionsModal);
         els.gameOptionsContinueBtn?.addEventListener('click', (event) => {
