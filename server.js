@@ -21179,7 +21179,7 @@ app.get('/api/flashcards/game-rankings', async (req, res) => {
     for (const bot of users.rows.filter(u => u.is_bot)) {
       const config = readRawBotConfig(bot.bot_config);
       const existing = config.gameRankingValues;
-      const needsRebalance = Number(config.gameRankingValuesVersion) < botRankingValuesVersion;
+      const needsRebalance = (Number(config.gameRankingValuesVersion) || 0) < botRankingValuesVersion;
       if (existing && botMetricKeys.every(key => typeof existing[key] === 'number' && Number.isFinite(existing[key])) && !needsRebalance) continue;
       const rawPower = Number(config.gameRankingPower ?? config.pronunciationBase);
       const base = Math.max(0, Math.min(1, ((Number.isFinite(rawPower) ? rawPower : 62) - 30) / 64));
