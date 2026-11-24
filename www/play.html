@@ -35220,7 +35220,7 @@
             const score = document.createElement('span');
             score.className = 'game-end__rank-score';
             const numericValue = Number(slide._metric ? user.values?.[slide._metric] : user.score) || 0;
-            score.textContent = numericValue.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+            score.textContent = numericValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
             row.append(place, avatar, name, score);
             slide._rankRows.appendChild(row);
             slide._rowByUser.set(id, row);
@@ -42875,7 +42875,7 @@
           const name = document.createElement('span'); name.className = 'game-rankings__name'; name.textContent = user.name;
           const value = document.createElement('span'); value.className = 'game-rankings__value';
           const number = Number(user.values[gameRankingMetric]) || 0;
-          value.textContent = new Intl.NumberFormat('pt-BR', {maximumFractionDigits: ['pronunciation', 'meaning', 'building', 'practice'].includes(gameRankingMetric) ? 1 : 0}).format(number)
+          value.textContent = new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 0}).format(number)
             + (['pronunciation', 'meaning'].includes(gameRankingMetric) ? '%' : gameRankingMetric === 'building' ? ' CPM' : gameRankingMetric === 'practice' ? ' min' : '');
           if (isAdminUser() && user.isBot) {
             bindRankingHold(name, () => { const next = prompt('Novo nome do bot:', user.name); if (next && next !== user.name) void updateGameRankingBot(user.id, {name: next}).catch(error => alert(error.message)); });

@@ -49,7 +49,7 @@ const icon=id=>`<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#${id}"/>
 const tabs=document.querySelector('#tabs'),board=document.querySelector('#board');
 const viewerId=Number(new URLSearchParams(location.search).get('viewerId'))||0;
 const isAdmin=new URLSearchParams(location.search).get('admin')==='1';
-const fmt=new Intl.NumberFormat('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const fmt=new Intl.NumberFormat('pt-BR',{maximumFractionDigits:0});
 let users=[],selected='geral',botPhotoUser=0;
 const pointsForRank=rank=>rank>300?0:Math.round((1000-(rank-1)*(990/299))*10)/10;
 function makeRankings(){
