@@ -35374,8 +35374,9 @@
           const spoken = Math.max(0, Number(cardsModeRound.rankingTotals?.spoken ?? cardsModeRound.wordsSpoken) || 0);
           const roundHeard = Math.max(0, Number(cardsModeRound.wordsHeard) || 0);
           const roundSpoken = Math.max(0, Number(cardsModeRound.wordsSpoken) || 0);
-          if (heard > 0) metrics.push({ ...GAME_END_METRICS.listening, value: heard, progress: Math.min(100, roundHeard / 25 * 100) });
-          if (spoken > 0) metrics.push({ ...GAME_END_METRICS.speaking, value: spoken, progress: Math.min(100, roundSpoken / 25 * 100) });
+          const watchingMode = Number(cardsModeRound.modeId) === 5;
+          if (heard > 0 || watchingMode) metrics.push({ ...GAME_END_METRICS.listening, value: heard, progress: Math.min(100, roundHeard / 25 * 100) });
+          if (spoken > 0 || watchingMode) metrics.push({ ...GAME_END_METRICS.speaking, value: spoken, progress: Math.min(100, roundSpoken / 25 * 100) });
           const scores = Array.isArray(cardsModeRound.pronunciationScores)
             ? cardsModeRound.pronunciationScores.map(Number).filter((score) => Number.isFinite(score) && score >= 0)
             : [];
@@ -35424,14 +35425,15 @@
                   return null;
                 })
               ]);
-              if (!Array.isArray(startRanking) || !Array.isArray(finalRanking)) return null;
-              const generalSlide = createGameEndClassificationSlide(startRanking, finalRanking, state.user.id);
+              if (!Array.isArray(finalRanking)) return null;
+              const rankingBeforeRound = Array.isArray(startRanking) ? startRanking : finalRanking;
+              const generalSlide = createGameEndClassificationSlide(rankingBeforeRound, finalRanking, state.user.id);
               if (!generalSlide) return null;
-              const startUser = startRanking.find((user) => Number(user.id) === Number(state.user.id));
+              const startUser = rankingBeforeRound.find((user) => Number(user.id) === Number(state.user.id));
               const finalUser = finalRanking.find((user) => Number(user.id) === Number(state.user.id));
               const generalMovement = Number(startUser?.rank) - Number(finalUser?.rank);
               if (generalMovement > 0) return [generalSlide];
-              const improvedMetric = bestChangedGameRankingMetric(startRanking, finalRanking, state.user.id);
+              const improvedMetric = bestChangedGameRankingMetric(rankingBeforeRound, finalRanking, state.user.id);
               if (!improvedMetric) return [generalSlide];
               const metricSlide = createGameEndClassificationSlide(
                 improvedMetric.startUsers, improvedMetric.finalUsers, state.user.id, improvedMetric.title, improvedMetric.metric
