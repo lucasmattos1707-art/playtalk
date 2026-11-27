@@ -44,6 +44,7 @@
     .category-grid{display:grid;grid-template-columns:1fr;gap:14px}
     .category{display:flex;min-height:82px;align-items:center;justify-content:space-between;gap:16px;padding:17px 22px;border:1px solid #2a342d;border-radius:18px;background:linear-gradient(145deg,#121713,#0b0c0d 78%);color:var(--white);text-align:left;cursor:pointer;box-shadow:0 16px 44px #0005;transition:border-color .18s,transform .18s,background .18s}
     .category:hover{border-color:var(--green);background:linear-gradient(145deg,#17221a,#0c0d0f 78%);transform:translateY(-2px)}
+    .category-icon{width:56px;height:56px;flex:none;display:grid;place-items:center;padding:6px;border:1px solid #2b343c;border-radius:13px;background:#080b0d}.category-icon svg{display:block;width:100%;height:100%}
     .category-title{font-size:17px;font-weight:680;letter-spacing:-.02em}
     .category-arrow{display:grid;width:34px;height:34px;flex:none;place-items:center;border:1px solid #354139;border-radius:50%;color:var(--green)}
     .category-arrow svg{width:16px;height:16px}
@@ -61,7 +62,7 @@
     .download-item .progress-row{margin-top:11px}
     .download-item .status{min-height:0;margin-top:6px}
     @keyframes move{to{transform:translateX(180%)}}
-    @media(max-width:720px){.grid,.special-grid{grid-template-columns:1fr;gap:14px}.category-grid{grid-template-columns:1fr;gap:12px}.category{min-height:82px;padding:17px 18px}.category-title{font-size:16px}}
+    @media(max-width:720px){.grid,.special-grid{grid-template-columns:1fr;gap:14px}.category-grid{grid-template-columns:1fr;gap:12px}.category{min-height:82px;padding:13px 15px;gap:12px}.category-icon{width:50px;height:50px}.category-title{font-size:16px}}
     @media(max-width:420px){main{padding-inline:12px}.card,.special-card{border-radius:15px}.card-body,.special-card{padding:13px}.filename{font-size:13px}.download{padding:9px 10px}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition:none!important}}
   </style>
@@ -85,6 +86,7 @@
     let controller=null;
     const svgDownload='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v3h14v-3"/></svg>';
     const svgArrow='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
+    const svgCategory=(active)=>`<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="4" y="4" width="92" height="15" rx="1.5" fill="${active==='top'?'#0aa4e8':'#697177'}"/><rect x="4" y="23" width="14" height="73" rx="1.5" fill="${active==='left'?'#0aa4e8':'#697177'}"/><rect x="22" y="23" width="56" height="73" rx="1.5" fill="${active==='main'?'#0aa4e8':'#697177'}"/><rect x="82" y="23" width="14" height="73" rx="1.5" fill="${active==='right'?'#0aa4e8':'#697177'}"/></svg>`;
     function safeName(name){return String(name).replace(/[\\/:*?"<>|]/g,'_');}
     function escapeHTML(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
     function setProgress(card,loaded,total){const percent=total?Math.min(100,Math.floor(loaded/total*100)):0;card.fill.style.width=`${percent}%`;card.percent.textContent=total?`${percent}%`:'…';card.fill.classList.toggle('indeterminate',!total);}
@@ -102,8 +104,8 @@
     async function init(){
       try{
         const [specialResponse,response]=await Promise.all([fetch('/downloads-kelly/special-downloads.json',{cache:'no-store'}),fetch('/downloads-kelly/videos.json',{cache:'no-store'})]);if(!response.ok||!specialResponse.ok)throw new Error('manifest');const extras=await specialResponse.json(),items=await response.json();
-        const categories=[{title:'Telão principal',items},{title:'Testeira Superior',items:extras.filter(item=>item.title==='Testeira Superior')},{title:'Lateral esquerda',items:extras.filter(item=>item.title==='Lateral esquerda')},{title:'Lateral direita',items:extras.filter(item=>item.title==='Lateral direita')}];
-        categoriesRoot.innerHTML=categories.map((category,index)=>`<button class="category" type="button" data-category="${index}"><span class="category-title">${escapeHTML(category.title)}</span><span class="category-arrow">${svgArrow}</span></button>`).join('');
+        const categories=[{title:'Telão principal',icon:svgCategory('main'),items},{title:'Testeira Superior',icon:svgCategory('top'),items:extras.filter(item=>item.title==='Testeira Superior')},{title:'Lateral esquerda',icon:svgCategory('left'),items:extras.filter(item=>item.title==='Lateral esquerda')},{title:'Lateral direita',icon:svgCategory('right'),items:extras.filter(item=>item.title==='Lateral direita')}];
+        categoriesRoot.innerHTML=categories.map((category,index)=>`<button class="category" type="button" data-category="${index}"><span class="category-icon">${category.icon}</span><span class="category-title">${escapeHTML(category.title)}</span><span class="category-arrow">${svgArrow}</span></button>`).join('');
         categoriesRoot.querySelectorAll('.category').forEach((button,index)=>button.addEventListener('click',()=>openCategory(categories[index])));
       }catch{categoriesRoot.innerHTML='<p>Não foi possível carregar os downloads agora.</p>'}
     }
@@ -116,9 +118,10 @@
   <section class="chat-panel" id="kelly-chat-panel" aria-label="Chat com o administrador" hidden>
     <header class="chat-panel__head"><div class="chat-panel__brand"><span class="chat-panel__mark">F</span><span><strong>Falar com Editor</strong><small>Tire suas dúvidas com o Editor</small></span></div><button class="chat-panel__close" id="kelly-chat-close" type="button" aria-label="Minimizar chat">×</button></header>
     <div class="chat-panel__feed" id="kelly-chat-feed" aria-live="polite"><p class="chat-panel__welcome">Oi! Mande sua mensagem e a gente responde por aqui.</p></div>
-    <form class="chat-panel__composer" id="kelly-chat-form"><textarea id="kelly-chat-input" maxlength="2000" rows="1" placeholder="Escreva uma mensagem..." aria-label="Escreva uma mensagem"></textarea><button type="submit" aria-label="Enviar mensagem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form>
+    <form class="chat-panel__composer" id="kelly-chat-form"><div class="chat-panel__attachment" id="kelly-chat-attachment" hidden><img alt="Imagem pronta para enviar"><button type="button" aria-label="Remover imagem">×</button><small>Toque para expandir</small></div><textarea id="kelly-chat-input" maxlength="2000" rows="1" placeholder="Escreva uma mensagem..." aria-label="Escreva uma mensagem"></textarea><button type="submit" aria-label="Enviar mensagem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form>
   </section>
   <dialog class="chat-notice" id="kelly-chat-notice" aria-labelledby="kelly-chat-notice-title"><div class="chat-notice__mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.6 8.6 0 0 1-4-.98L3 21l1.98-5.5A8.6 8.6 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3h.5a8.5 8.5 0 0 1 8 8v.5Z"/><path d="M8 12h8M8 15.5h5"/></svg></div><h2 id="kelly-chat-notice-title">Nova mensagem do Editor</h2><button id="kelly-chat-notice-ok" type="button">Ok</button></dialog>
+  <dialog class="chat-image-viewer" id="kelly-chat-image-viewer" aria-label="Imagem ampliada"><button type="button" aria-label="Fechar imagem">×</button><img alt="Imagem em tela cheia"></dialog>
   <script src="/downloads-kelly/chat-widget.js" defer></script>
 </body>
 </html>

@@ -30923,11 +30923,13 @@ async function ensureDownloadsKellyChatSchema() {
           session_id bigint NOT NULL REFERENCES public.downloads_kelly_chat_sessions(id) ON DELETE CASCADE,
           sender text NOT NULL CHECK (sender IN ('visitor', 'admin')),
           body text NOT NULL CHECK (char_length(body) BETWEEN 1 AND 2000),
+          image_data text NOT NULL DEFAULT '',
           created_at timestamptz NOT NULL DEFAULT now(),
           read_by_admin boolean NOT NULL DEFAULT false,
           read_by_visitor boolean NOT NULL DEFAULT false
         )
       `);
+      await pool.query("ALTER TABLE public.downloads_kelly_chat_messages ADD COLUMN IF NOT EXISTS image_data text NOT NULL DEFAULT ''");
       await pool.query(`CREATE INDEX IF NOT EXISTS downloads_kelly_chat_online_idx ON public.downloads_kelly_chat_sessions (last_seen DESC)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS downloads_kelly_chat_messages_idx ON public.downloads_kelly_chat_messages (session_id, id)`);
     })().catch((error) => {
@@ -30939,6 +30941,17 @@ async function ensureDownloadsKellyChatSchema() {
 }
 
 const downloadsKellyChatHash = (token) => crypto.createHash('sha256').update(String(token || '')).digest('hex');
+function normalizeDownloadsKellyChatImageData(rawValue) {
+  const value = String(rawValue || '').trim();
+  if (!value) return '';
+  const match = value.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/i);
+  if (!match) throw Object.assign(new Error('Envie uma imagem JPG válida.'), { statusCode: 400 });
+  const bytes = Buffer.from(match[1], 'base64');
+  if (!bytes.length || bytes.length > 1_000_000 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) {
+    throw Object.assign(new Error('A imagem deve ter até 1 MB.'), { statusCode: 400 });
+  }
+  return `data:image/jpeg;base64,${bytes.toString('base64')}`;
+}
 const downloadsKellyChatRateLimits = new Map();
 function allowDownloadsKellyChatAction(req, scope, limit, windowMs = 60_000) {
   const now = Date.now();
@@ -31026,7 +31039,7 @@ app.get('/api/downloads-kelly-chat/messages', async (req, res) => {
     const conversationId = Number(session.rows[0].id);
     if (session.rows[0].closed_at) return res.json({ success: true, closed: true, messages: [] });
     const messages = await pool.query(`
-      SELECT id, sender, body, created_at, read_by_visitor FROM public.downloads_kelly_chat_messages
+      SELECT id, sender, body, image_data, created_at, read_by_visitor FROM public.downloads_kelly_chat_messages
       WHERE session_id = $1 ORDER BY id ASC LIMIT 300
     `, [conversationId]);
     await pool.query(`UPDATE public.downloads_kelly_chat_messages SET read_by_visitor = true WHERE session_id = $1 AND sender = 'admin'`, [conversationId]);
@@ -31042,15 +31055,17 @@ app.post('/api/downloads-kelly-chat/messages', async (req, res) => {
     await ensureDownloadsKellyChatSchema();
     const token = parseCookies(req).kelly_chat_session || '';
     const body = String(req.body?.body || '').trim().slice(0, 2000);
-    if (!body) return res.status(400).json({ success: false, message: 'Escreva uma mensagem.' });
+    const imageData = normalizeDownloadsKellyChatImageData(req.body?.imageData);
+    const messageBody = body || (imageData ? '[Imagem]' : '');
+    if (!messageBody) return res.status(400).json({ success: false, message: 'Escreva uma mensagem ou envie uma imagem.' });
     const session = await pool.query('SELECT id, closed_at FROM public.downloads_kelly_chat_sessions WHERE session_key_hash = $1', [downloadsKellyChatHash(token)]);
     if (!session.rowCount) return res.status(401).json({ success: false });
     if (session.rows[0].closed_at) return res.status(409).json({ success: false, closed: true, message: 'Esta conversa foi encerrada.' });
     const conversationId = Number(session.rows[0].id);
     const result = await pool.query(`
-      INSERT INTO public.downloads_kelly_chat_messages (session_id, sender, body)
-      VALUES ($1, 'visitor', $2) RETURNING id, sender, body, created_at
-    `, [conversationId, body]);
+      INSERT INTO public.downloads_kelly_chat_messages (session_id, sender, body, image_data)
+      VALUES ($1, 'visitor', $2, $3) RETURNING id, sender, body, image_data, created_at
+    `, [conversationId, messageBody, imageData]);
     broadcastDownloadsKellyChat({ type: 'new_message', conversationId, message: result.rows[0] }, conversationId);
     res.json({ success: true, message: result.rows[0] });
   } catch (error) {
@@ -31090,7 +31105,7 @@ app.get('/api/downloads-kelly-chat/admin/conversations/:id/messages', async (req
     const conversationId = Number(req.params.id);
     if (!Number.isSafeInteger(conversationId) || conversationId <= 0) return res.status(400).json({ success: false });
     const result = await pool.query(`
-      SELECT id, sender, body, created_at FROM public.downloads_kelly_chat_messages
+      SELECT id, sender, body, image_data, created_at FROM public.downloads_kelly_chat_messages
       WHERE session_id = $1 ORDER BY id ASC LIMIT 300
     `, [conversationId]);
     await pool.query(`UPDATE public.downloads_kelly_chat_messages SET read_by_admin = true WHERE session_id = $1 AND sender = 'visitor'`, [conversationId]);
@@ -31106,7 +31121,9 @@ app.post('/api/downloads-kelly-chat/admin/conversations/:id/messages', async (re
     await ensureDownloadsKellyChatSchema();
     const conversationId = Number(req.params.id);
     const body = String(req.body?.body || '').trim().slice(0, 2000);
-    if (!Number.isSafeInteger(conversationId) || conversationId <= 0 || !body) return res.status(400).json({ success: false });
+    const imageData = normalizeDownloadsKellyChatImageData(req.body?.imageData);
+    const messageBody = body || (imageData ? '[Imagem]' : '');
+    if (!Number.isSafeInteger(conversationId) || conversationId <= 0 || !messageBody) return res.status(400).json({ success: false });
     if (body.toLocaleLowerCase('pt-BR') === 'exxit') {
       const closed = await pool.query(`
         UPDATE public.downloads_kelly_chat_sessions SET closed_at = now()
@@ -31120,9 +31137,9 @@ app.post('/api/downloads-kelly-chat/admin/conversations/:id/messages', async (re
     const exists = await pool.query('SELECT id FROM public.downloads_kelly_chat_sessions WHERE id = $1', [conversationId]);
     if (!exists.rowCount) return res.status(404).json({ success: false });
     const result = await pool.query(`
-      INSERT INTO public.downloads_kelly_chat_messages (session_id, sender, body)
-      VALUES ($1, 'admin', $2) RETURNING id, sender, body, created_at
-    `, [conversationId, body]);
+      INSERT INTO public.downloads_kelly_chat_messages (session_id, sender, body, image_data)
+      VALUES ($1, 'admin', $2, $3) RETURNING id, sender, body, image_data, created_at
+    `, [conversationId, messageBody, imageData]);
     broadcastDownloadsKellyChat({ type: 'new_message', conversationId, message: result.rows[0] }, conversationId);
     res.json({ success: true, message: result.rows[0] });
   } catch (error) {

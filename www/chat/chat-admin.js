@@ -3,11 +3,14 @@
   const layout = $('#layout'), peopleRoot = $('#people'), feed = $('#feed');
   const nameNode = $('#selected-name'), metaNode = $('#selected-meta');
   const input = $('#message-input'), sendButton = $('#send'), statusNode = $('#status');
+  const conversationRoot = $('#conversation'), attachment = $('#chat-attachment');
+  const imageViewer = $('#image-viewer'), imageViewerImage = imageViewer.querySelector('img');
   const conversations = new Map();
   const notificationAudio = new Audio('/downloads-kelly/mission-passou.mp3');
   notificationAudio.preload = 'auto';
   let selectedId = null, socket = null, retryTimer = null, soundEnabled = false;
   let notificationRun = 0, notificationRepeatsLeft = 0;
+  let pendingImageData = '';
 
   function setStatus(text, error = false) { statusNode.textContent = text || ''; statusNode.classList.toggle('error', error); }
   async function playNotificationRepeat(run) {
@@ -47,9 +50,47 @@
     peopleRoot.querySelectorAll('.person').forEach((button) => button.addEventListener('click', () => selectConversation(Number(button.dataset.id))));
   }
   function escapeText(value) { const node = document.createElement('span'); node.textContent = String(value || ''); return node.innerHTML; }
+  function openImageViewer(src) { imageViewerImage.src = src; imageViewer.showModal(); }
+  function makeJpegDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const image = new Image(), objectUrl = URL.createObjectURL(file);
+      image.onload = () => {
+        const scale = Math.min(1, 1400 / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height); URL.revokeObjectURL(objectUrl);
+        const toBlob = (quality) => new Promise((done) => canvas.toBlob(done, 'image/jpeg', quality));
+        (async () => {
+          let blob = await toBlob(.78); if (blob && blob.size > 1_000_000) blob = await toBlob(.58);
+          if (!blob || blob.size > 1_000_000) throw new Error('Essa imagem ficou grande demais.');
+          const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('Não foi possível ler a imagem.')); reader.readAsDataURL(blob);
+        })().catch(reject);
+      };
+      image.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Não foi possível abrir essa imagem.')); };
+      image.src = objectUrl;
+    });
+  }
+  async function setPendingImage(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    try { pendingImageData = await makeJpegDataUrl(file); attachment.querySelector('img').src = pendingImageData; attachment.hidden = false; input.focus({ preventScroll: true }); }
+    catch (error) { setStatus(error.message || 'Não foi possível adicionar essa imagem.', true); }
+  }
+  function clearAttachment() { pendingImageData = ''; attachment.querySelector('img').removeAttribute('src'); attachment.hidden = true; }
+  function hasFileDrag(event) { return Array.from(event.dataTransfer?.types || []).includes('Files'); }
+  function acceptDroppedImage(dataTransfer) { const file = Array.from(dataTransfer?.files || []).find((item) => item.type.startsWith('image/')); if (file) setPendingImage(file); }
   function renderMessages(messages) {
     if (!messages.length) { feed.innerHTML = '<div class="hint">Conversa aberta. Mande uma mensagem para começar.</div>'; return; }
-    feed.innerHTML = messages.map((message) => `<div class="bubble${message.sender === 'admin' ? ' admin' : ''}">${escapeText(message.body)}<time class="bubble-time">${timeLabel(message.created_at)}</time></div>`).join('');
+    feed.replaceChildren();
+    messages.forEach((message) => {
+      const bubble = document.createElement('div'); bubble.className = `bubble${message.sender === 'admin' ? ' admin' : ''}`;
+      if (message.image_data) {
+        const imageButton = document.createElement('button'); imageButton.type = 'button'; imageButton.className = 'bubble-image-button'; imageButton.setAttribute('aria-label', 'Toque para expandir a imagem');
+        const image = document.createElement('img'); image.src = message.image_data; image.alt = 'Imagem enviada no chat';
+        const hint = document.createElement('small'); hint.textContent = 'Toque para expandir';
+        imageButton.append(image, hint); imageButton.addEventListener('click', () => openImageViewer(image.src)); bubble.append(imageButton);
+      }
+      if (message.body && message.body !== '[Imagem]') { const body = document.createElement('div'); body.textContent = message.body; bubble.append(body); }
+      const time = document.createElement('time'); time.className = 'bubble-time'; time.textContent = timeLabel(message.created_at); bubble.append(time); feed.append(bubble);
+    });
     feed.scrollTop = feed.scrollHeight;
   }
   async function refreshMessages(id) {
@@ -117,15 +158,27 @@
       if (payload.type === 'chat_closed') closeConversation(Number(payload.conversationId));
     });
   }
+  input.addEventListener('paste', (event) => {
+    const item = Array.from(event.clipboardData?.items || []).find((clipboardItem) => clipboardItem.type.startsWith('image/'));
+    const file = item?.getAsFile(); if (file) { event.preventDefault(); setPendingImage(file); }
+  });
+  let dragDepth = 0;
+  conversationRoot.addEventListener('dragenter', (event) => { if (hasFileDrag(event)) { event.preventDefault(); dragDepth += 1; conversationRoot.classList.add('is-dragging'); } });
+  conversationRoot.addEventListener('dragover', (event) => { if (hasFileDrag(event)) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } });
+  conversationRoot.addEventListener('dragleave', (event) => { if (hasFileDrag(event)) { event.preventDefault(); dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) conversationRoot.classList.remove('is-dragging'); } });
+  conversationRoot.addEventListener('drop', (event) => { if (hasFileDrag(event)) { event.preventDefault(); dragDepth = 0; conversationRoot.classList.remove('is-dragging'); acceptDroppedImage(event.dataTransfer); } });
+  attachment.querySelector('button').addEventListener('click', clearAttachment);
+  imageViewer.querySelector('button').addEventListener('click', () => imageViewer.close());
+  imageViewer.addEventListener('click', (event) => { if (event.target === imageViewer) imageViewer.close(); });
   $('#back').addEventListener('click', () => layout.classList.remove('show-conversation'));
   $('#composer').addEventListener('submit', async (event) => {
-    event.preventDefault(); const body = input.value.trim(), conversationId = selectedId; if (!body || !conversationId) return;
+    event.preventDefault(); const body = input.value.trim(), conversationId = selectedId; if ((!body && !pendingImageData) || !conversationId) return;
     sendButton.disabled = true; setStatus('Enviando…');
     try {
-      const response = await fetch(`/api/downloads-kelly-chat/admin/conversations/${conversationId}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body }) });
+      const response = await fetch(`/api/downloads-kelly-chat/admin/conversations/${conversationId}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body, imageData: pendingImageData }) });
       const payload = await response.json(); if (!response.ok) throw new Error(payload.message || 'Não foi possível enviar.');
       if (payload.closed) { input.value = ''; closeConversation(conversationId); return; }
-      input.value = ''; await refreshMessages(selectedId); setStatus(''); refreshConversations().catch(() => {});
+      input.value = ''; clearAttachment(); await refreshMessages(selectedId); setStatus(''); refreshConversations().catch(() => {});
     } catch (error) { setStatus(error.message, true); }
     finally { sendButton.disabled = !selectedId; }
   });
