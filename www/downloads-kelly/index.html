@@ -41,7 +41,7 @@
     .percent{text-align:right;color:#aeb0b5;font-size:11px;font-variant-numeric:tabular-nums}
     .status{min-height:16px;margin-top:7px;color:var(--muted);font-size:11px}
     .status.ready{color:var(--green)}.status.error{color:#ff8d9b}
-    .category-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+    .category-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
     .category{display:flex;min-height:112px;align-items:center;justify-content:space-between;gap:16px;padding:22px;border:1px solid #2a342d;border-radius:18px;background:linear-gradient(145deg,#121713,#0b0c0d 78%);color:var(--white);text-align:left;cursor:pointer;box-shadow:0 16px 44px #0005;transition:border-color .18s,transform .18s,background .18s}
     .category:hover{border-color:var(--green);background:linear-gradient(145deg,#17221a,#0c0d0f 78%);transform:translateY(-2px)}
     .category-title{font-size:17px;font-weight:680;letter-spacing:-.02em}
@@ -101,7 +101,7 @@
     async function init(){
       try{
         const [specialResponse,response]=await Promise.all([fetch('/downloads-kelly/special-downloads.json',{cache:'no-store'}),fetch('/downloads-kelly/videos.json',{cache:'no-store'})]);if(!response.ok||!specialResponse.ok)throw new Error('manifest');const extras=await specialResponse.json(),items=await response.json();
-        const categories=[{title:'Testeira Superior',items:extras.filter(item=>item.title==='Testeira Superior')},{title:'Telas laterais',items:extras.filter(item=>item.title==='Telas laterais')},{title:'Faixas do musical',items}];
+        const categories=[{title:'Testeira Superior',items:extras.filter(item=>item.title==='Testeira Superior')},{title:'Lateral esquerda',items:extras.filter(item=>item.title==='Lateral esquerda')},{title:'Lateral direita',items:extras.filter(item=>item.title==='Lateral direita')},{title:'Faixas do musical',items}];
         categoriesRoot.innerHTML=categories.map((category,index)=>`<button class="category" type="button" data-category="${index}"><span class="category-title">${escapeHTML(category.title)}</span><span class="category-arrow">${svgArrow}</span></button>`).join('');
         categoriesRoot.querySelectorAll('.category').forEach((button,index)=>button.addEventListener('click',()=>openCategory(categories[index])));
       }catch{categoriesRoot.innerHTML='<p>Não foi possível carregar os downloads agora.</p>'}
