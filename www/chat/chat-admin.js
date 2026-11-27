@@ -4,6 +4,7 @@
   const nameNode = $('#selected-name'), metaNode = $('#selected-meta');
   const input = $('#message-input'), sendButton = $('#send'), statusNode = $('#status');
   const conversationRoot = $('#conversation'), attachment = $('#chat-attachment');
+  const attachButton = $('#attach-image'), imageFileInput = $('#chat-image-file');
   const imageViewer = $('#image-viewer'), imageViewerImage = imageViewer.querySelector('img');
   const conversations = new Map();
   const notificationAudio = new Audio('/downloads-kelly/mission-passou.mp3');
@@ -55,15 +56,23 @@
     return new Promise((resolve, reject) => {
       const image = new Image(), objectUrl = URL.createObjectURL(file);
       image.onload = () => {
-        const scale = Math.min(1, 1400 / Math.max(image.naturalWidth, image.naturalHeight));
-        const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height); URL.revokeObjectURL(objectUrl);
-        const toBlob = (quality) => new Promise((done) => canvas.toBlob(done, 'image/jpeg', quality));
         (async () => {
-          let blob = await toBlob(.78); if (blob && blob.size > 1_000_000) blob = await toBlob(.58);
-          if (!blob || blob.size > 1_000_000) throw new Error('Essa imagem ficou grande demais.');
+          let blob = null;
+          for (const maxSide of [1400, 1200, 1000, 800]) {
+            const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+            const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+            const context = canvas.getContext('2d'); if (!context) throw new Error('Não foi possível preparar essa imagem.');
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            for (const quality of [.78, .62, .48, .35]) {
+              blob = await new Promise((done) => canvas.toBlob(done, 'image/jpeg', quality));
+              if (blob && blob.type === 'image/jpeg' && blob.size <= 900_000) break;
+            }
+            if (blob && blob.type === 'image/jpeg' && blob.size <= 900_000) break;
+          }
+          URL.revokeObjectURL(objectUrl);
+          if (!blob || blob.type !== 'image/jpeg' || blob.size > 900_000) throw new Error('Não foi possível reduzir essa imagem para envio.');
           const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('Não foi possível ler a imagem.')); reader.readAsDataURL(blob);
-        })().catch(reject);
+        })().catch((error) => { URL.revokeObjectURL(objectUrl); reject(error); });
       };
       image.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Não foi possível abrir essa imagem.')); };
       image.src = objectUrl;
@@ -77,6 +86,8 @@
   function clearAttachment() { pendingImageData = ''; attachment.querySelector('img').removeAttribute('src'); attachment.hidden = true; }
   function hasFileDrag(event) { return Array.from(event.dataTransfer?.types || []).includes('Files'); }
   function acceptDroppedImage(dataTransfer) { const file = Array.from(dataTransfer?.files || []).find((item) => item.type.startsWith('image/')); if (file) setPendingImage(file); }
+  attachButton.addEventListener('click', () => imageFileInput.click());
+  imageFileInput.addEventListener('change', () => { const file = imageFileInput.files?.[0]; if (file) setPendingImage(file); imageFileInput.value = ''; });
   function renderMessages(messages) {
     if (!messages.length) { feed.innerHTML = '<div class="hint">Conversa aberta. Mande uma mensagem para começar.</div>'; return; }
     feed.replaceChildren();
@@ -104,7 +115,7 @@
   }
   async function selectConversation(id) {
     selectedId = Number(id); const item = conversations.get(selectedId);
-    layout.classList.add('show-conversation'); input.disabled = false; sendButton.disabled = false;
+    layout.classList.add('show-conversation'); input.disabled = false; sendButton.disabled = false; attachButton.disabled = false;
     nameNode.textContent = item?.label || `User ${id}`;
     metaNode.textContent = `${item?.ip_address || 'IP indisponível'} · ${item?.visit_count || 1} ${Number(item?.visit_count) === 1 ? 'entrada' : 'entradas'}`;
     renderPeople(); feed.innerHTML = '<div class="hint">Carregando conversa…</div>';
@@ -117,7 +128,7 @@
     conversations.delete(Number(id));
     if (Number(selectedId) === Number(id)) {
       selectedId = null; layout.classList.remove('show-conversation');
-      input.disabled = true; sendButton.disabled = true;
+      input.disabled = true; sendButton.disabled = true; attachButton.disabled = true;
       nameNode.textContent = 'Escolha uma conversa';
       metaNode.textContent = 'As novas mensagens aparecem aqui em tempo real';
       renderMessages([]);
@@ -132,7 +143,7 @@
     if (!response.ok) throw new Error('Não foi possível atualizar a lista.');
     const payload = await response.json(), previous = new Set(conversations.keys());
     conversations.clear(); (payload.conversations || []).forEach((item) => conversations.set(Number(item.id), item));
-    if (selectedId && !conversations.has(selectedId)) { selectedId = null; layout.classList.remove('show-conversation'); input.disabled = true; sendButton.disabled = true; nameNode.textContent = 'Escolha uma conversa'; metaNode.textContent = 'As novas mensagens aparecem aqui em tempo real'; renderMessages([]); }
+    if (selectedId && !conversations.has(selectedId)) { selectedId = null; layout.classList.remove('show-conversation'); input.disabled = true; sendButton.disabled = true; attachButton.disabled = true; nameNode.textContent = 'Escolha uma conversa'; metaNode.textContent = 'As novas mensagens aparecem aqui em tempo real'; renderMessages([]); }
     renderPeople();
     if (selectedId && !previous.has(selectedId)) refreshMessages(selectedId).catch(() => {});
   }
@@ -158,7 +169,7 @@
       if (payload.type === 'chat_closed') closeConversation(Number(payload.conversationId));
     });
   }
-  input.addEventListener('paste', (event) => {
+  conversationRoot.addEventListener('paste', (event) => {
     const item = Array.from(event.clipboardData?.items || []).find((clipboardItem) => clipboardItem.type.startsWith('image/'));
     const file = item?.getAsFile(); if (file) { event.preventDefault(); setPendingImage(file); }
   });

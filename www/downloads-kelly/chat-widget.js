@@ -4,10 +4,13 @@
   const close = document.querySelector('#kelly-chat-close');
   const feed = document.querySelector('#kelly-chat-feed');
   const form = document.querySelector('#kelly-chat-form');
+  const sendButton = form.querySelector('button[type="submit"]');
   const input = document.querySelector('#kelly-chat-input');
   const badge = document.querySelector('#kelly-chat-badge');
   const notice = document.querySelector('#kelly-chat-notice');
   const attachment = document.querySelector('#kelly-chat-attachment');
+  const attachButton = document.querySelector('#kelly-chat-attach');
+  const imageFileInput = document.querySelector('#kelly-chat-image-file');
   const imageViewer = document.querySelector('#kelly-chat-image-viewer');
   const imageViewerImage = imageViewer.querySelector('img');
   const notificationAudio = new Audio('/downloads-kelly/mission-passou.mp3');
@@ -41,16 +44,23 @@
     return new Promise((resolve, reject) => {
       const image = new Image(), objectUrl = URL.createObjectURL(file);
       image.onload = () => {
-        const scale = Math.min(1, 1400 / Math.max(image.naturalWidth, image.naturalHeight));
-        const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-        const context = canvas.getContext('2d'); context.drawImage(image, 0, 0, canvas.width, canvas.height); URL.revokeObjectURL(objectUrl);
-        const toBlob = (quality) => new Promise((done) => canvas.toBlob(done, 'image/jpeg', quality));
         (async () => {
-          let blob = await toBlob(.78);
-          if (blob && blob.size > 1_000_000) blob = await toBlob(.58);
-          if (!blob || blob.size > 1_000_000) throw new Error('Essa imagem ficou grande demais.');
+          let blob = null;
+          for (const maxSide of [1400, 1200, 1000, 800]) {
+            const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+            const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+            const context = canvas.getContext('2d'); if (!context) throw new Error('Não foi possível preparar essa imagem.');
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            for (const quality of [.78, .62, .48, .35]) {
+              blob = await new Promise((done) => canvas.toBlob(done, 'image/jpeg', quality));
+              if (blob && blob.type === 'image/jpeg' && blob.size <= 900_000) break;
+            }
+            if (blob && blob.type === 'image/jpeg' && blob.size <= 900_000) break;
+          }
+          URL.revokeObjectURL(objectUrl);
+          if (!blob || blob.type !== 'image/jpeg' || blob.size > 900_000) throw new Error('Não foi possível reduzir essa imagem para envio.');
           const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('Não foi possível ler a imagem.')); reader.readAsDataURL(blob);
-        })().catch(reject);
+        })().catch((error) => { URL.revokeObjectURL(objectUrl); reject(error); });
       };
       image.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Não foi possível abrir essa imagem.')); };
       image.src = objectUrl;
@@ -72,6 +82,8 @@
     const file = Array.from(dataTransfer?.files || []).find((item) => item.type.startsWith('image/'));
     if (file) setPendingImage(file);
   }
+  attachButton.addEventListener('click', () => imageFileInput.click());
+  imageFileInput.addEventListener('change', () => { const file = imageFileInput.files?.[0]; if (file) setPendingImage(file); imageFileInput.value = ''; });
   function updateBadge() { badge.hidden = unread < 1; badge.textContent = unread > 9 ? '9+' : String(unread); }
   function showNotice() { if (!notice.open && !chatClosed) notice.showModal(); }
   async function playNextSound(token) {
@@ -139,7 +151,7 @@
   });
   close.addEventListener('click', () => { panel.hidden = true; launcher.setAttribute('aria-expanded', 'false'); launcher.focus(); });
   attachment.querySelector('button').addEventListener('click', clearAttachment);
-  input.addEventListener('paste', (event) => {
+  panel.addEventListener('paste', (event) => {
     const item = Array.from(event.clipboardData?.items || []).find((clipboardItem) => clipboardItem.type.startsWith('image/'));
     const file = item?.getAsFile();
     if (file) { event.preventDefault(); setPendingImage(file); }
@@ -168,14 +180,14 @@
   notice.addEventListener('click', (event) => { if (event.target === notice) notice.close(); });
   form.addEventListener('submit', async (event) => {
     event.preventDefault(); const body = input.value.trim(); if ((!body && !pendingImageData) || !sessionReady) return;
-    const button = form.querySelector('button'); button.disabled = true;
+    sendButton.disabled = true;
     try {
       const response = await fetch('/api/downloads-kelly-chat/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body, imageData: pendingImageData }) });
       const payload = await response.json(); if (!response.ok) throw new Error(payload.message || 'Falha ao enviar.');
       input.value = ''; clearAttachment(); addMessage(payload.message);
-    } catch (_error) {
-      const notice = document.createElement('p'); notice.className = 'chat-panel__welcome'; notice.textContent = 'Não foi possível enviar. Tente novamente.'; feed.append(notice);
-    } finally { button.disabled = false; input.focus({ preventScroll: true }); }
+    } catch (error) {
+      const notice = document.createElement('p'); notice.className = 'chat-panel__welcome'; notice.textContent = error.message || 'Não foi possível enviar. Tente novamente.'; feed.append(notice);
+    } finally { sendButton.disabled = false; input.focus({ preventScroll: true }); }
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && sessionReady) fetch('/api/downloads-kelly-chat/presence', { method: 'POST', cache: 'no-store' }).catch(() => {}); });
   setInterval(() => { if (sessionReady && !document.hidden) fetch('/api/downloads-kelly-chat/presence', { method: 'POST', cache: 'no-store' }).catch(() => {}); }, 20000);
