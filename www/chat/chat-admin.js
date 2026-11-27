@@ -4,32 +4,33 @@
   const nameNode = $('#selected-name'), metaNode = $('#selected-meta');
   const input = $('#message-input'), sendButton = $('#send'), statusNode = $('#status');
   const conversations = new Map();
-  let selectedId = null, socket = null, retryTimer = null, soundEnabled = false, audioContext = null;
+  const notificationAudio = new Audio('/downloads-kelly/mission-passou.mp3');
+  notificationAudio.preload = 'auto';
+  let selectedId = null, socket = null, retryTimer = null, soundEnabled = false;
+  let notificationRun = 0, notificationRepeatsLeft = 0;
 
   function setStatus(text, error = false) { statusNode.textContent = text || ''; statusNode.classList.toggle('error', error); }
+  async function playNotificationRepeat(run) {
+    if (!soundEnabled || run !== notificationRun || notificationRepeatsLeft < 1) return;
+    notificationRepeatsLeft -= 1;
+    try { notificationAudio.currentTime = 0; await notificationAudio.play(); }
+    catch (_error) { notificationRepeatsLeft = 0; }
+  }
+  notificationAudio.addEventListener('ended', () => playNotificationRepeat(notificationRun));
   function playAlert() {
-    if (!soundEnabled || !audioContext) return;
-    try {
-      const now = audioContext.currentTime;
-      [0, .19].forEach((offset, index) => {
-        const oscillator = audioContext.createOscillator(), gain = audioContext.createGain();
-        oscillator.type = 'sine'; oscillator.frequency.value = index ? 880 : 660;
-        gain.gain.setValueAtTime(.0001, now + offset); gain.gain.exponentialRampToValueAtTime(.16, now + offset + .025); gain.gain.exponentialRampToValueAtTime(.0001, now + offset + .16);
-        oscillator.connect(gain); gain.connect(audioContext.destination); oscillator.start(now + offset); oscillator.stop(now + offset + .17);
-      });
-      if (navigator.vibrate) navigator.vibrate([70, 45, 70]);
-    } catch (_error) {}
+    if (!soundEnabled) return;
+    notificationRun += 1; notificationRepeatsLeft = 3;
+    notificationAudio.pause(); notificationAudio.currentTime = 0;
+    playNotificationRepeat(notificationRun);
+    if (navigator.vibrate) navigator.vibrate([70, 45, 70]);
   }
   $('#sound-toggle').addEventListener('click', async (event) => {
     if (!soundEnabled) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) { setStatus('Este navegador não oferece áudio de notificação.', true); return; }
-      audioContext = audioContext || new AudioContextClass();
-      if (audioContext.state === 'suspended') await audioContext.resume();
       soundEnabled = true; event.currentTarget.textContent = 'Som ativado'; event.currentTarget.style.borderColor = '#f260b4';
       playAlert(); setStatus('Notificações sonoras ativadas.'); setTimeout(() => setStatus(''), 2200);
     } else {
-      soundEnabled = false; event.currentTarget.textContent = 'Ativar som'; event.currentTarget.style.borderColor = '';
+      soundEnabled = false; notificationRun += 1; notificationRepeatsLeft = 0; notificationAudio.pause();
+      event.currentTarget.textContent = 'Ativar som'; event.currentTarget.style.borderColor = '';
     }
   });
 
