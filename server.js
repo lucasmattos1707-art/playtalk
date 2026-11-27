@@ -31111,15 +31111,13 @@ app.post('/api/downloads-kelly-chat/admin/conversations/:id/messages', async (re
   }
 });
 
-app.get('/chat', (req, res) => res.redirect(302, '/chat/'));
-
-app.get(['/chat/', '/chat/index.html'], async (req, res) => {
+app.get(['/chat', '/chat/', '/chat/index.html'], async (req, res) => {
   try {
     await requireAdminUserFromRequest(req);
     res.setHeader('Cache-Control', 'no-store');
     res.sendFile(path.join(staticDir, 'chat', 'index.html'));
   } catch (error) {
-    if (error.statusCode === 401) return res.redirect(`/entrar?return=${encodeURIComponent('/chat/')}`);
+    if (error.statusCode === 401) return res.redirect(`/entrar?return=${encodeURIComponent('/chat')}`);
     if (error.statusCode === 403) return res.status(403).send('Acesso restrito ao administrador.');
     res.status(error.statusCode || 500).send('Não foi possível abrir o painel de chat.');
   }
