@@ -1,36 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-  <title>Chat | Fluent LevelUp</title>
-  <meta name="description" content="Chat rapido da Fluent LevelUp com tela preta, respostas curtas e voz.">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css">
-  <script src="/config.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090a0b">
+  <title>Atendimento | Fluent LevelUp</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090a0b;--panel:#101214;--panel2:#151719;--edge:#272b2c;--white:#f5f7f6;--muted:#89918d;--green:#77ee9d;--pink:#f260b4;--online:#65e99a}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -30%,#19251d 0,#0a0c0b 48%,var(--bg) 78%);color:var(--white);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    .shell{width:min(1180px,100%);min-height:100dvh;margin:auto;padding:clamp(14px,3vw,32px);display:flex;flex-direction:column;gap:18px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:12px}.brand-mark{width:42px;height:42px;border:1px solid #41664c;border-radius:14px;display:grid;place-items:center;background:#132018;color:var(--green);font-size:20px;font-weight:800}.title{margin:0;font-size:clamp(19px,3vw,25px);letter-spacing:-.04em}.subtitle{margin:4px 0 0;color:var(--muted);font-size:13px}.top-actions{display:flex;align-items:center;gap:10px}.sound,.connection{border:1px solid var(--edge);border-radius:12px;background:#111415;color:#dce3df;padding:10px 13px;font:600 12px inherit}.sound{font:600 12px inherit;cursor:pointer}.sound:hover{border-color:var(--pink);color:#fff}.connection{display:flex;align-items:center;gap:8px;color:var(--muted)}.dot{width:8px;height:8px;border-radius:50%;background:#4e5752}.dot.live{background:var(--online);box-shadow:0 0 12px #65e99a99}
+    .layout{flex:1;min-height:580px;display:grid;grid-template-columns:320px minmax(0,1fr);overflow:hidden;border:1px solid var(--edge);border-radius:22px;background:#0e1011ed;box-shadow:0 26px 80px #0007}.sidebar{min-width:0;border-right:1px solid var(--edge);display:flex;flex-direction:column;background:#0c0e0f}.side-head{padding:19px 18px 14px;border-bottom:1px solid var(--edge)}.side-label{margin:0;font-size:12px;color:#d3dad6;font-weight:750;text-transform:uppercase;letter-spacing:.11em}.online-count{margin-top:6px;font-size:12px;color:var(--muted)}.people{overflow:auto;padding:8px}.person{width:100%;display:flex;align-items:center;gap:12px;padding:12px;border:1px solid transparent;border-radius:14px;background:transparent;color:inherit;text-align:left;cursor:pointer}.person:hover{background:#151918}.person.active{background:#152019;border-color:#34513b}.avatar{position:relative;width:40px;height:40px;flex:none;display:grid;place-items:center;border:1px solid #3d4e43;border-radius:50%;background:#19221c;color:var(--green);font-size:13px;font-weight:750}.avatar:after{content:"";position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border:2px solid #0c0e0f;border-radius:50%;background:var(--online)}.person-info{min-width:0;flex:1}.person-name{font-size:13px;font-weight:700}.person-ip{margin-top:4px;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.person-meta{display:grid;justify-items:end;gap:6px}.person-time{color:#7b837e;font-size:10px}.unread{min-width:19px;height:19px;padding:0 5px;display:grid;place-items:center;border-radius:50px;background:var(--pink);color:#160b12;font-size:10px;font-weight:800}.unread[hidden]{display:none}.empty-list{padding:24px 14px;color:var(--muted);font-size:13px;line-height:1.5;text-align:center}
+    .conversation{display:flex;min-width:0;flex-direction:column}.conversation-head{min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 20px;border-bottom:1px solid var(--edge)}.selected-name{margin:0;font-size:15px;font-weight:730}.selected-meta{margin:5px 0 0;color:var(--muted);font-size:11px}.back{display:none;border:0;background:transparent;color:var(--green);font:600 13px inherit;cursor:pointer}.feed{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:20px}.hint{margin:auto;color:#727a75;text-align:center;font-size:13px;line-height:1.6}.bubble{max-width:min(78%,550px);padding:11px 13px;border:1px solid #292f2b;border-radius:15px 15px 15px 4px;background:#171a19;color:#e8ece9;font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}.bubble.admin{align-self:flex-end;border-color:#4b3150;border-radius:15px 15px 4px 15px;background:linear-gradient(145deg,#311c31,#261b28);color:#fff}.bubble-time{display:block;margin-top:5px;color:#89908b;font-size:10px}.composer{display:flex;align-items:flex-end;gap:10px;padding:14px;border-top:1px solid var(--edge);background:#0d0f10}.composer textarea{flex:1;min-height:46px;max-height:120px;resize:vertical;border:1px solid #303633;border-radius:13px;background:#151817;color:#fff;padding:12px 13px;font:14px inherit;outline:none}.composer textarea:focus{border-color:#64886d}.send{width:46px;height:46px;flex:none;display:grid;place-items:center;border:0;border-radius:13px;background:linear-gradient(135deg,var(--green),#a4f7b7);color:#07100a;cursor:pointer}.send:disabled{opacity:.4;cursor:not-allowed}.send svg{width:19px;height:19px}.status{min-height:16px;padding:0 16px 10px;color:#818983;font-size:11px}.status.error{color:#ff889d}
+    @media(max-width:700px){.shell{padding:12px;gap:12px}.top{align-items:flex-start}.brand-mark{width:38px;height:38px;border-radius:12px}.subtitle{font-size:11px}.top-actions{flex-direction:column-reverse;align-items:flex-end;gap:6px}.sound,.connection{padding:8px 10px;font-size:11px}.layout{position:relative;min-height:calc(100dvh - 100px);grid-template-columns:1fr;border-radius:18px}.sidebar,.conversation{grid-column:1;grid-row:1}.conversation{display:none}.layout.show-conversation .sidebar{display:none}.layout.show-conversation .conversation{display:flex}.conversation-head{min-height:66px;padding:12px 15px}.back{display:block}.feed{padding:15px}.bubble{max-width:88%}.composer{padding:11px}.composer textarea{font-size:16px}.empty-list{padding:40px 25px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+  </style>
 </head>
-<body class="page-chat">
-  <main class="chat-page">
-    <section class="chat-stage">
-      <div class="chat-stage__top">
-        <p class="chat-kicker">Fluent LevelUp / GPT-5 mini</p>
-        <p class="chat-hint">Aperte R para gravar voz. Usuario ate 120 caracteres. GPT ate 140.</p>
-      </div>
-
-      <div id="chat-feed" class="chat-feed" aria-live="polite"></div>
-
-      <form id="chat-form" class="chat-dock">
-        <label class="chat-input-wrap" for="chat-input">
-          <textarea id="chat-input" maxlength="120" rows="2" placeholder="Escreva algo curto..."></textarea>
-        </label>
-        <div class="chat-dock__meta">
-          <span id="chat-count">0/120</span>
-          <span id="chat-recording-indicator">R para voz</span>
-        </div>
-      </form>
+<body>
+  <main class="shell">
+    <header class="top"><div class="brand"><div class="brand-mark" aria-hidden="true">F</div><div><h1 class="title">Atendimento</h1><p class="subtitle">Mensagens de quem está em Downloads da Kelly</p></div></div><div class="top-actions"><button class="sound" id="sound-toggle" type="button">Ativar som</button><div class="connection"><span class="dot" id="connection-dot"></span><span id="connection-label">Conectando</span></div></div></header>
+    <section class="layout" id="layout" aria-label="Painel de conversas">
+      <aside class="sidebar"><div class="side-head"><p class="side-label">Pessoas online</p><div class="online-count" id="online-count">0 pessoas</div></div><div class="people" id="people"><div class="empty-list">Aguardando visitantes em /downloads-kelly</div></div></aside>
+      <section class="conversation" aria-label="Conversa selecionada"><header class="conversation-head"><div><button class="back" id="back" type="button">‹ Pessoas online</button><h2 class="selected-name" id="selected-name">Escolha uma conversa</h2><p class="selected-meta" id="selected-meta">As novas mensagens aparecem aqui em tempo real</p></div></header><div class="feed" id="feed"><div class="hint">Selecione alguém para começar a conversar.</div></div><form class="composer" id="composer"><textarea id="message-input" maxlength="2000" rows="1" placeholder="Escreva sua mensagem..." aria-label="Mensagem" disabled></textarea><button class="send" id="send" type="submit" aria-label="Enviar" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></form><div class="status" id="status" aria-live="polite"></div></section>
     </section>
   </main>
-
-  <script src="/js/chat-page.js"></script>
+  <script src="/chat/chat-admin.js" defer></script>
 </body>
 </html>

@@ -1,4 +1,6 @@
 const express = require('express');
+const http = require('http');
+const WebSocket = require('ws');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
@@ -27,6 +29,7 @@ const { OZ_BADGES, badgeIsUnlocked } = require('./lib/oz-badges');
 const { normalizeCompletedRoundScores } = require('./lib/englishtraining-pronunciation');
 const { buildEnglishTrainingFlowExcerpts } = require('./lib/englishtraining-flow');
 const app = express();
+const chatWebSocketServer = new WebSocket.Server({ noServer: true });
 
 const PORT = process.env.PORT || 3000;
 const env = (value) => (typeof value === 'string' ? value.trim() : value);
@@ -30897,12 +30900,229 @@ app.use(async (req, res, next) => {
   next();
 });
 
-app.get('/chat', (req, res) => {
-  res.redirect(302, '/chat/');
+let downloadsKellyChatSchemaPromise = null;
+async function ensureDownloadsKellyChatSchema() {
+  if (!pool) throw Object.assign(new Error('Banco de dados indisponível.'), { statusCode: 503 });
+  if (!downloadsKellyChatSchemaPromise) {
+    downloadsKellyChatSchemaPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.downloads_kelly_chat_sessions (
+          id bigserial PRIMARY KEY,
+          session_key_hash text NOT NULL UNIQUE,
+          ip_address text NOT NULL DEFAULT 'unknown',
+          visit_count integer NOT NULL DEFAULT 0,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          last_seen timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.downloads_kelly_chat_messages (
+          id bigserial PRIMARY KEY,
+          session_id bigint NOT NULL REFERENCES public.downloads_kelly_chat_sessions(id) ON DELETE CASCADE,
+          sender text NOT NULL CHECK (sender IN ('visitor', 'admin')),
+          body text NOT NULL CHECK (char_length(body) BETWEEN 1 AND 2000),
+          created_at timestamptz NOT NULL DEFAULT now(),
+          read_by_admin boolean NOT NULL DEFAULT false,
+          read_by_visitor boolean NOT NULL DEFAULT false
+        )
+      `);
+      await pool.query(`CREATE INDEX IF NOT EXISTS downloads_kelly_chat_online_idx ON public.downloads_kelly_chat_sessions (last_seen DESC)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS downloads_kelly_chat_messages_idx ON public.downloads_kelly_chat_messages (session_id, id)`);
+    })().catch((error) => {
+      downloadsKellyChatSchemaPromise = null;
+      throw error;
+    });
+  }
+  await downloadsKellyChatSchemaPromise;
+}
+
+const downloadsKellyChatHash = (token) => crypto.createHash('sha256').update(String(token || '')).digest('hex');
+const downloadsKellyChatRateLimits = new Map();
+function allowDownloadsKellyChatAction(req, scope, limit, windowMs = 60_000) {
+  const now = Date.now();
+  const key = `${scope}:${getClientIp(req)}`;
+  const current = downloadsKellyChatRateLimits.get(key);
+  const entry = !current || now - current.startedAt >= windowMs ? { startedAt: now, count: 0 } : current;
+  entry.count += 1;
+  downloadsKellyChatRateLimits.set(key, entry);
+  return entry.count <= limit;
+}
+const downloadsKellyChatCookie = (res, token) => {
+  const parts = [`kelly_chat_session=${encodeURIComponent(token)}`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=2592000'];
+  if (NODE_ENV === 'production') parts.push('Secure');
+  res.append('Set-Cookie', parts.join('; '));
+};
+const downloadsKellyChatClients = new Set();
+function broadcastDownloadsKellyChat(event, conversationId = null) {
+  const message = JSON.stringify(event);
+  for (const client of downloadsKellyChatClients) {
+    if (client.readyState !== WebSocket.OPEN) continue;
+    if (client.chatRole === 'admin' || (conversationId && Number(client.chatConversationId) === Number(conversationId))) {
+      client.send(message);
+    }
+  }
+}
+
+app.post('/api/downloads-kelly-chat/session', async (req, res) => {
+  try {
+    if (!allowDownloadsKellyChatAction(req, 'visit', 24)) return res.status(429).json({ success: false, message: 'Aguarde um pouco para tentar novamente.' });
+    await ensureDownloadsKellyChatSchema();
+    let token = parseCookies(req).kelly_chat_session || '';
+    if (!/^[A-Za-z0-9_-]{40,64}$/.test(token)) token = crypto.randomBytes(32).toString('base64url');
+    const ip = getClientIp(req).slice(0, 128) || 'unknown';
+    const result = await pool.query(`
+      INSERT INTO public.downloads_kelly_chat_sessions (session_key_hash, ip_address, visit_count, last_seen)
+      VALUES ($1, $2, 1, now())
+      ON CONFLICT (session_key_hash) DO UPDATE
+        SET ip_address = EXCLUDED.ip_address,
+            visit_count = public.downloads_kelly_chat_sessions.visit_count + 1,
+            last_seen = now()
+      RETURNING id, visit_count
+    `, [downloadsKellyChatHash(token), ip]);
+    downloadsKellyChatCookie(res, token);
+    const session = result.rows[0];
+    const rankResult = await pool.query(`
+      SELECT COUNT(*)::int AS rank FROM (
+        SELECT ip_address, MIN(id) AS first_id
+        FROM public.downloads_kelly_chat_sessions GROUP BY ip_address
+      ) ips WHERE first_id <= (SELECT MIN(id) FROM public.downloads_kelly_chat_sessions WHERE ip_address = $1)
+    `, [ip]);
+    broadcastDownloadsKellyChat({
+      type: 'visitor_enter', conversationId: Number(session.id),
+      label: `User ${Number(rankResult.rows[0]?.rank) || Number(session.id)}`,
+      ip, at: new Date().toISOString()
+    });
+    res.json({ success: true, conversationId: Number(session.id) });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Não foi possível abrir o chat.' });
+  }
 });
 
-app.get(['/chat/', '/chat/index.html'], (req, res) => {
-  res.sendFile(path.join(staticDir, 'chat', 'index.html'));
+app.post('/api/downloads-kelly-chat/presence', async (req, res) => {
+  try {
+    await ensureDownloadsKellyChatSchema();
+    const token = parseCookies(req).kelly_chat_session || '';
+    if (!token) return res.status(401).json({ success: false });
+    await pool.query('UPDATE public.downloads_kelly_chat_sessions SET last_seen = now() WHERE session_key_hash = $1', [downloadsKellyChatHash(token)]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false });
+  }
+});
+
+app.get('/api/downloads-kelly-chat/messages', async (req, res) => {
+  try {
+    await ensureDownloadsKellyChatSchema();
+    const token = parseCookies(req).kelly_chat_session || '';
+    const session = await pool.query('SELECT id FROM public.downloads_kelly_chat_sessions WHERE session_key_hash = $1', [downloadsKellyChatHash(token)]);
+    if (!session.rowCount) return res.status(401).json({ success: false });
+    const conversationId = Number(session.rows[0].id);
+    const messages = await pool.query(`
+      SELECT id, sender, body, created_at FROM public.downloads_kelly_chat_messages
+      WHERE session_id = $1 ORDER BY id ASC LIMIT 300
+    `, [conversationId]);
+    await pool.query(`UPDATE public.downloads_kelly_chat_messages SET read_by_visitor = true WHERE session_id = $1 AND sender = 'admin'`, [conversationId]);
+    res.json({ success: true, messages: messages.rows });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false });
+  }
+});
+
+app.post('/api/downloads-kelly-chat/messages', async (req, res) => {
+  try {
+    if (!allowDownloadsKellyChatAction(req, 'visitor-message', 15)) return res.status(429).json({ success: false, message: 'Aguarde um pouco antes de enviar novas mensagens.' });
+    await ensureDownloadsKellyChatSchema();
+    const token = parseCookies(req).kelly_chat_session || '';
+    const body = String(req.body?.body || '').trim().slice(0, 2000);
+    if (!body) return res.status(400).json({ success: false, message: 'Escreva uma mensagem.' });
+    const session = await pool.query('SELECT id FROM public.downloads_kelly_chat_sessions WHERE session_key_hash = $1', [downloadsKellyChatHash(token)]);
+    if (!session.rowCount) return res.status(401).json({ success: false });
+    const conversationId = Number(session.rows[0].id);
+    const result = await pool.query(`
+      INSERT INTO public.downloads_kelly_chat_messages (session_id, sender, body)
+      VALUES ($1, 'visitor', $2) RETURNING id, sender, body, created_at
+    `, [conversationId, body]);
+    broadcastDownloadsKellyChat({ type: 'new_message', conversationId, message: result.rows[0] }, conversationId);
+    res.json({ success: true, message: result.rows[0] });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Falha ao enviar.' });
+  }
+});
+
+app.get('/api/downloads-kelly-chat/admin/conversations', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    await ensureDownloadsKellyChatSchema();
+    const result = await pool.query(`
+      WITH ip_labels AS (
+        SELECT ip_address, DENSE_RANK() OVER (ORDER BY MIN(id)) AS visitor_number
+        FROM public.downloads_kelly_chat_sessions GROUP BY ip_address
+      )
+      SELECT s.id, s.ip_address, s.visit_count, s.created_at, s.last_seen,
+        ('User ' || labels.visitor_number::text) AS label,
+        COUNT(m.id) FILTER (WHERE m.sender = 'visitor' AND m.read_by_admin = false)::int AS unread_count,
+        MAX(m.created_at) AS last_message_at
+      FROM public.downloads_kelly_chat_sessions s
+      JOIN ip_labels labels ON labels.ip_address = s.ip_address
+      LEFT JOIN public.downloads_kelly_chat_messages m ON m.session_id = s.id
+      WHERE s.last_seen > now() - interval '90 seconds'
+      GROUP BY s.id, labels.visitor_number ORDER BY COALESCE(MAX(m.created_at), s.last_seen) DESC
+    `);
+    res.json({ success: true, conversations: result.rows });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Acesso negado.' });
+  }
+});
+
+app.get('/api/downloads-kelly-chat/admin/conversations/:id/messages', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    await ensureDownloadsKellyChatSchema();
+    const conversationId = Number(req.params.id);
+    if (!Number.isSafeInteger(conversationId) || conversationId <= 0) return res.status(400).json({ success: false });
+    const result = await pool.query(`
+      SELECT id, sender, body, created_at FROM public.downloads_kelly_chat_messages
+      WHERE session_id = $1 ORDER BY id ASC LIMIT 300
+    `, [conversationId]);
+    await pool.query(`UPDATE public.downloads_kelly_chat_messages SET read_by_admin = true WHERE session_id = $1 AND sender = 'visitor'`, [conversationId]);
+    res.json({ success: true, messages: result.rows });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Acesso negado.' });
+  }
+});
+
+app.post('/api/downloads-kelly-chat/admin/conversations/:id/messages', async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    await ensureDownloadsKellyChatSchema();
+    const conversationId = Number(req.params.id);
+    const body = String(req.body?.body || '').trim().slice(0, 2000);
+    if (!Number.isSafeInteger(conversationId) || conversationId <= 0 || !body) return res.status(400).json({ success: false });
+    const exists = await pool.query('SELECT id FROM public.downloads_kelly_chat_sessions WHERE id = $1', [conversationId]);
+    if (!exists.rowCount) return res.status(404).json({ success: false });
+    const result = await pool.query(`
+      INSERT INTO public.downloads_kelly_chat_messages (session_id, sender, body)
+      VALUES ($1, 'admin', $2) RETURNING id, sender, body, created_at
+    `, [conversationId, body]);
+    broadcastDownloadsKellyChat({ type: 'new_message', conversationId, message: result.rows[0] }, conversationId);
+    res.json({ success: true, message: result.rows[0] });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Falha ao responder.' });
+  }
+});
+
+app.get('/chat', (req, res) => res.redirect(302, '/chat/'));
+
+app.get(['/chat/', '/chat/index.html'], async (req, res) => {
+  try {
+    await requireAdminUserFromRequest(req);
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(staticDir, 'chat', 'index.html'));
+  } catch (error) {
+    if (error.statusCode === 401) return res.redirect(`/entrar?return=${encodeURIComponent('/chat/')}`);
+    if (error.statusCode === 403) return res.status(403).send('Acesso restrito ao administrador.');
+    res.status(error.statusCode || 500).send('Não foi possível abrir o painel de chat.');
+  }
 });
 
 app.get(['/thata', '/thata/', '/thata.html'], (req, res) => {
@@ -36003,7 +36223,39 @@ app.use((req, res, next) => {
 });
 
 if (require.main === module) {
-  app.listen(PORT, () => {
+  const server = http.createServer(app);
+  server.on('upgrade', async (req, socket, head) => {
+    let pathname = '';
+    try { pathname = new URL(req.url, 'http://localhost').pathname; } catch (_error) { socket.destroy(); return; }
+    if (pathname !== '/ws/downloads-kelly-chat') { socket.destroy(); return; }
+    try {
+      const token = parseCookies(req).kelly_chat_session || '';
+      const admin = await readAuthenticatedUserFromRequest(req).catch(() => null);
+      if (admin && isAdminUserRecord(admin)) {
+        req.chatRole = 'admin';
+      } else if (/^[A-Za-z0-9_-]{40,64}$/.test(token)) {
+        await ensureDownloadsKellyChatSchema();
+        const result = await pool.query('SELECT id FROM public.downloads_kelly_chat_sessions WHERE session_key_hash = $1', [downloadsKellyChatHash(token)]);
+        if (!result.rowCount) { socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n'); socket.destroy(); return; }
+        req.chatRole = 'visitor';
+        req.chatConversationId = Number(result.rows[0].id);
+      } else {
+        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n'); socket.destroy(); return;
+      }
+      chatWebSocketServer.handleUpgrade(req, socket, head, (client) => {
+        client.chatRole = req.chatRole;
+        client.chatConversationId = req.chatConversationId || null;
+        downloadsKellyChatClients.add(client);
+        client.send(JSON.stringify({ type: 'connected' }));
+        client.on('close', () => downloadsKellyChatClients.delete(client));
+        client.on('error', () => downloadsKellyChatClients.delete(client));
+      });
+    } catch (_error) {
+      socket.write('HTTP/1.1 503 Service Unavailable\r\n\r\n');
+      socket.destroy();
+    }
+  });
+  server.listen(PORT, () => {
     console.log(`Serving static content from ${staticDir}`);
     console.log(`Server running on port ${PORT}`);
     logDatabaseConnectionStatus();
