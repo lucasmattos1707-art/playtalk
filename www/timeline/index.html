@@ -55,11 +55,15 @@
         <button class="skip" id="forward" type="button" aria-label="Avançar 5 segundos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5m-2-1v8m2-6-2-2"/></svg></button>
       </div>
       <div class="seek-row">
-        <span class="time" id="current">00:00</span>
-        <div class="range-wrap" id="track-range"><div class="track"><div class="track-fill"></div></div><input id="track-seek" type="range" min="0" max="1000" value="0" aria-label="Progresso da faixa"></div>
+        <span class="time" id="track-time">00:00</span>
+        <div class="range-wrap" id="track-range"><div class="track"><div class="track-fill"></div></div><input id="track-seek" type="range" min="0" max="1000" value="0" aria-label="Progresso da faixa selecionada"></div>
+        <span class="time" aria-hidden="true"></span>
+      </div>
+      <div class="seek-row musical">
+        <span class="time" aria-hidden="true"></span>
+        <div class="range-wrap" id="musical-range"><div class="track"><div class="track-fill"></div></div><input id="musical-seek" type="range" min="0" max="1000" value="0" aria-label="Posição no musical"></div>
         <span class="time" id="duration">00:00</span>
       </div>
-      <div class="range-wrap musical" id="musical-range"><div class="track"><div class="track-fill"></div></div><input id="musical-seek" type="range" min="0" max="1000" value="0" aria-label="Posição no musical"></div>
     </section>
     <ol class="chapters" id="chapters"></ol>
   </main>
@@ -75,13 +79,15 @@
     const audio=document.querySelector('#audio'), play=document.querySelector('#play'), playIcon=document.querySelector('#play-icon');
     const trackSeek=document.querySelector('#track-seek'), musicalSeek=document.querySelector('#musical-seek');
     const trackWrap=document.querySelector('#track-range'), musicalWrap=document.querySelector('#musical-range');
-    const currentLabel=document.querySelector('#current'), durationLabel=document.querySelector('#duration'), list=document.querySelector('#chapters');
+    const trackTimeLabel=document.querySelector('#track-time'), durationLabel=document.querySelector('#duration'), list=document.querySelector('#chapters');
     const fmt=n=>{n=Math.max(0,Math.floor(Number(n)||0));return `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`};
     list.innerHTML=marks.map((m,i)=>`<li><button class="chapter" type="button" data-index="${i}" aria-current="false"><span class="chapter-time">${m.time}</span><span class="chapter-name">${m.name}</span><span class="chapter-dot"></span></button></li>`).join('');
     function paintRange(input,wrap,value,max){const pct=max>0?Math.min(100,Math.max(0,value/max*100)):0;wrap.style.setProperty('--fill',`${pct}%`);input.value=String(Math.round(pct*10));}
-    function render(){const t=audio.currentTime||0,d=audio.duration||0;currentLabel.textContent=fmt(t);durationLabel.textContent=fmt(d);paintRange(trackSeek,trackWrap,t,d);paintRange(musicalSeek,musicalWrap,t,d);let active=-1;for(let i=0;i<marks.length;i++){if(t>=marks[i].seconds)active=i;else break}list.querySelectorAll('.chapter').forEach((el,i)=>el.setAttribute('aria-current',String(i===active)));}
+    function activeMarkIndex(time){let active=0;for(let i=1;i<marks.length;i++){if(time>=marks[i].seconds)active=i;else break}return active;}
+    function markEnd(index,duration){return index+1<marks.length?Math.min(duration,marks[index+1].seconds):duration;}
+    function render(){const t=audio.currentTime||0,d=audio.duration||0,index=activeMarkIndex(t),start=marks[index].seconds,end=Math.max(start,markEnd(index,d)),trackDuration=end-start;trackTimeLabel.textContent=fmt(t-start);durationLabel.textContent=fmt(d);paintRange(trackSeek,trackWrap,t-start,trackDuration);paintRange(musicalSeek,musicalWrap,t,d);list.querySelectorAll('.chapter').forEach((el,i)=>el.setAttribute('aria-current',String(i===index)));}
     function seek(value){if(Number.isFinite(audio.duration)){audio.currentTime=Math.max(0,Math.min(audio.duration,value));render();}}
-    function sliderSeek(input){if(audio.duration)seek(Number(input.value)/1000*audio.duration);}
+    function sliderSeek(input){if(!audio.duration)return;if(input===musicalSeek){seek(Number(input.value)/1000*audio.duration);return;}const index=activeMarkIndex(audio.currentTime||0),start=marks[index].seconds,end=Math.max(start,markEnd(index,audio.duration));seek(start+Number(input.value)/1000*(end-start));}
     play.addEventListener('click',()=>audio.paused?audio.play().catch(()=>{}):audio.pause());
     audio.addEventListener('play',()=>{play.setAttribute('aria-label','Pausar');playIcon.innerHTML='<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/>';});
     audio.addEventListener('pause',()=>{play.setAttribute('aria-label','Reproduzir');playIcon.innerHTML='<path d="M8 5.6c0-.8.87-1.28 1.54-.85l9.3 5.96a1.52 1.52 0 0 1 0 2.58l-9.3 5.96A1.02 1.02 0 0 1 8 18.4V5.6Z"/>';});
