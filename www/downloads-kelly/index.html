@@ -14,6 +14,10 @@
     h1{margin:0;font-size:clamp(27px,4vw,42px);font-weight:720;letter-spacing:-.045em}
     .subtitle{margin:8px 0 0;color:var(--muted);font-size:14px}
     .count{flex:none;border:1px solid #35433a;background:#101812;color:var(--green);border-radius:999px;padding:8px 13px;font-size:12px;font-weight:700;letter-spacing:.04em}
+    .special-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:0 0 34px}
+    .special-card{min-width:0;padding:17px 18px;border:1px solid #344139;border-radius:18px;background:linear-gradient(150deg,#131a15,#0c0d0f 80%);box-shadow:0 16px 44px #0005}
+    .special-title{margin:0 0 15px;color:var(--green);font-size:16px;font-weight:700;letter-spacing:-.015em}
+    .section-heading{margin:0 0 15px;color:#d6d7da;font-size:15px;font-weight:650;letter-spacing:.01em}
     .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
     .card{min-width:0;overflow:hidden;border:1px solid var(--edge);border-radius:18px;background:linear-gradient(160deg,#131416,#0c0d0f 80%);box-shadow:0 16px 44px #0005}
     .screen{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden}
@@ -38,21 +42,23 @@
     .status{min-height:16px;margin-top:7px;color:var(--muted);font-size:11px}
     .status.ready{color:var(--green)}.status.error{color:#ff8d9b}
     @keyframes move{to{transform:translateX(180%)}}
-    @media(max-width:720px){.grid{grid-template-columns:1fr;gap:14px}}
-    @media(max-width:420px){main{padding-inline:12px}.card{border-radius:15px}.card-body{padding:13px}.filename{font-size:13px}.download{padding:9px 10px}}
+    @media(max-width:720px){.grid,.special-grid{grid-template-columns:1fr;gap:14px}}
+    @media(max-width:420px){main{padding-inline:12px}.card,.special-card{border-radius:15px}.card-body,.special-card{padding:13px}.filename{font-size:13px}.download{padding:9px 10px}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition:none!important}}
   </style>
 </head>
 <body>
   <main>
     <header>
-      <div><h1>Vídeos da Kelly</h1><p class="subtitle">Escolha uma faixa para baixar e assistir.</p></div>
-      <span class="count" id="count">21 FAIXAS</span>
+      <div><h1>Vídeos da Kelly</h1><p class="subtitle">Downloads extras e faixas do musical.</p></div>
+      <span class="count" id="count">23 ARQUIVOS</span>
     </header>
+    <section class="special-grid" id="special-downloads" aria-label="Downloads extras"></section>
+    <h2 class="section-heading">Faixas do musical</h2>
     <section class="grid" id="videos" aria-label="Vídeos para assistir e baixar"></section>
   </main>
   <script>
-    const root=document.querySelector('#videos');
+    const root=document.querySelector('#videos'),specialRoot=document.querySelector('#special-downloads');
     let active=null, controller=null;
     const cards=[];
     const svgDownload='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v3h14v-3"/></svg>';
@@ -60,6 +66,16 @@
     function setProgress(card,loaded,total){const percent=total?Math.min(100,Math.floor(loaded/total*100)):0;card.fill.style.width=`${percent}%`;card.percent.textContent=total?`${percent}%`:'…';card.fill.classList.toggle('indeterminate',!total);}
     function saveBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=safeName(name);document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
     function clearActive(){if(!active)return;active.video.pause();active.video.removeAttribute('src');active.video.load();active.cover.hidden=false;if(active.url)URL.revokeObjectURL(active.url);active.blob=null;active.url='';active=null;}
+    async function downloadSpecial(card){
+      if(controller)controller.abort();
+      controller=new AbortController();const request=controller;card.button.disabled=true;card.status.className='status';card.status.textContent='Baixando…';card.fill.style.width='0%';card.percent.textContent='0%';card.fill.classList.remove('indeterminate');
+      try{
+        const response=await fetch(card.url,{signal:request.signal,mode:'cors',credentials:'omit'});if(!response.ok)throw new Error('download');
+        const total=Number(response.headers.get('content-length'))||0,reader=response.body.getReader(),chunks=[];let loaded=0;
+        while(true){const {done,value}=await reader.read();if(done)break;chunks.push(value);loaded+=value.byteLength;setProgress(card,loaded,total)}
+        const blob=new Blob(chunks,{type:'video/mp4'});saveBlob(blob,card.file);card.status.className='status ready';card.status.textContent='Download concluído';setProgress(card,loaded,total||loaded);card.button.disabled=false;if(controller===request)controller=null;
+      }catch(error){if(error.name==='AbortError'){card.status.textContent='Download pausado';card.button.disabled=false;if(controller===request)controller=null;return}card.status.className='status error';card.status.textContent='Não foi possível baixar. Tente novamente.';card.percent.textContent='—';card.fill.classList.remove('indeterminate');card.button.disabled=false;if(controller===request)controller=null;}
+    }
     async function fetchVideo(card,mode){
       if(controller)controller.abort();
       if(active&&active!==card)clearActive();
@@ -77,8 +93,10 @@
     }
     async function init(){
       try{
-        const response=await fetch('/downloads-kelly/videos.json',{cache:'no-store'});if(!response.ok)throw new Error('manifest');const items=await response.json();
-        document.querySelector('#count').textContent=`${items.length} FAIXAS`;
+        const [specialResponse,response]=await Promise.all([fetch('/downloads-kelly/special-downloads.json',{cache:'no-store'}),fetch('/downloads-kelly/videos.json',{cache:'no-store'})]);if(!response.ok||!specialResponse.ok)throw new Error('manifest');const extras=await specialResponse.json(),items=await response.json();
+        document.querySelector('#count').textContent=`${items.length+extras.length} ARQUIVOS`;
+        specialRoot.innerHTML=extras.map((item,index)=>`<article class="special-card" data-extra-id="${index}"><h2 class="special-title">${item.title}</h2><div class="row"><div class="filename">${item.file}</div><button class="download" type="button">${svgDownload}<span>Baixar</span></button></div><div class="progress-row"><div class="progress" role="progressbar" aria-label="Progresso do download"><div class="progress-fill"></div></div><span class="percent">0%</span></div><div class="status" aria-live="polite">Pronto para baixar</div></article>`).join('');
+        extras.forEach((item,index)=>{const element=specialRoot.querySelector(`[data-extra-id="${index}"]`),card={...item,fill:element.querySelector('.progress-fill'),percent:element.querySelector('.percent'),status:element.querySelector('.status'),button:element.querySelector('.download')};card.button.addEventListener('click',()=>downloadSpecial(card))});
         root.innerHTML=items.map((item,index)=>`<article class="card" data-id="${index}"><div class="screen"><video playsinline controls preload="none" aria-label="${item.file}"></video><button class="cover" type="button" aria-label="Baixar e reproduzir ${item.file}"><span class="cover-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.6c0-.8.87-1.28 1.54-.85l9.3 5.96a1.52 1.52 0 0 1 0 2.58l-9.3 5.96A1.02 1.02 0 0 1 8 18.4V5.6Z"/></svg></span></button></div><div class="card-body"><div class="row"><div class="filename">${item.file}</div><button class="download" type="button">${svgDownload}<span>Baixar</span></button></div><div class="progress-row"><div class="progress" role="progressbar" aria-label="Progresso do download"><div class="progress-fill"></div></div><span class="percent">0%</span></div><div class="status" aria-live="polite">Pronto para baixar</div></div></article>`).join('');
         cards.push(...items.map((item,index)=>{const element=root.querySelector(`[data-id="${index}"]`),card={...item,sourceUrl:item.url,video:element.querySelector('video'),cover:element.querySelector('.cover'),fill:element.querySelector('.progress-fill'),percent:element.querySelector('.percent'),status:element.querySelector('.status'),button:element.querySelector('.download'),blob:null,url:'',urlObject:'',coverLabel:element.querySelector('.cover')};card.cover.addEventListener('click',()=>fetchVideo(card,'play'));card.button.addEventListener('click',()=>fetchVideo(card,'download'));card.video.addEventListener('play',()=>{card.cover.hidden=true});card.video.addEventListener('ended',()=>{card.cover.hidden=false;card.coverLabel.setAttribute('aria-label','Assistir novamente')});return card}));
       }catch{root.innerHTML='<p>Não foi possível carregar os vídeos agora.</p>'}
