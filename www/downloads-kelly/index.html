@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#060607">
+  <title>Vídeos da Kelly</title>
+  <style>
+    :root{color-scheme:dark;--bg:#060607;--panel:#101113;--edge:#25262a;--white:#f7f7f8;--muted:#96989e;--green:#73ef9b;--pink:#f45cb3;--blue:#74b8ff}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -20%,#182019 0,#090a0b 43%,var(--bg) 76%);color:var(--white);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    main{width:min(1180px,100%);margin:0 auto;padding:clamp(28px,5vw,60px) clamp(16px,4vw,40px) 60px}
+    header{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:28px}
+    h1{margin:0;font-size:clamp(27px,4vw,42px);font-weight:720;letter-spacing:-.045em}
+    .subtitle{margin:8px 0 0;color:var(--muted);font-size:14px}
+    .count{flex:none;border:1px solid #35433a;background:#101812;color:var(--green);border-radius:999px;padding:8px 13px;font-size:12px;font-weight:700;letter-spacing:.04em}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+    .card{min-width:0;overflow:hidden;border:1px solid var(--edge);border-radius:18px;background:linear-gradient(160deg,#131416,#0c0d0f 80%);box-shadow:0 16px 44px #0005}
+    .screen{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden}
+    video{display:block;width:100%;height:100%;object-fit:contain;background:#000}
+    .cover{position:absolute;inset:0;display:grid;place-items:center;border:0;background:linear-gradient(145deg,#0a0d0b88,#030304a8);cursor:pointer;color:var(--white);transition:background .2s}
+    .cover:hover{background:linear-gradient(145deg,#0a0d0b55,#03030476)}
+    .cover[hidden]{display:none}
+    .cover-icon{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#07100a;box-shadow:0 0 35px #73ef9b55}
+    .cover-icon svg{width:24px;height:24px;margin-left:3px}
+    .card-body{padding:15px 16px 16px}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .filename{min-width:0;overflow-wrap:anywhere;font-size:14px;font-weight:630;line-height:1.35}
+    .download{flex:none;display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid #3b5945;border-radius:10px;background:#132018;color:#d9ffe4;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
+    .download:hover{background:#1b3224;border-color:var(--green);transform:translateY(-1px)}
+    .download:disabled{opacity:.55;cursor:wait;transform:none}
+    .download svg{width:15px;height:15px}
+    .progress-row{display:grid;grid-template-columns:1fr 42px;gap:10px;align-items:center;margin-top:14px}
+    .progress{height:5px;border-radius:99px;background:#292a2d;overflow:hidden}
+    .progress-fill{width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--green),var(--pink));box-shadow:0 0 12px #73ef9b66;transition:width .12s linear}
+    .progress-fill.indeterminate{width:35%;animation:move 1.1s ease-in-out infinite alternate}
+    .percent{text-align:right;color:#aeb0b5;font-size:11px;font-variant-numeric:tabular-nums}
+    .status{min-height:16px;margin-top:7px;color:var(--muted);font-size:11px}
+    .status.ready{color:var(--green)}.status.error{color:#ff8d9b}
+    @keyframes move{to{transform:translateX(180%)}}
+    @media(max-width:720px){.grid{grid-template-columns:1fr;gap:14px}}
+    @media(max-width:420px){main{padding-inline:12px}.card{border-radius:15px}.card-body{padding:13px}.filename{font-size:13px}.download{padding:9px 10px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div><h1>Vídeos da Kelly</h1><p class="subtitle">Escolha uma faixa para baixar e assistir.</p></div>
+      <span class="count" id="count">21 FAIXAS</span>
+    </header>
+    <section class="grid" id="videos" aria-label="Vídeos para assistir e baixar"></section>
+  </main>
+  <script>
+    const root=document.querySelector('#videos');
+    let active=null, controller=null;
+    const cards=[];
+    const svgDownload='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v3h14v-3"/></svg>';
+    function safeName(name){return String(name).replace(/[\\/:*?"<>|]/g,'_');}
+    function setProgress(card,loaded,total){const percent=total?Math.min(100,Math.floor(loaded/total*100)):0;card.fill.style.width=`${percent}%`;card.percent.textContent=total?`${percent}%`:'…';card.fill.classList.toggle('indeterminate',!total);}
+    function saveBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=safeName(name);document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+    function clearActive(){if(!active)return;active.video.pause();active.video.removeAttribute('src');active.video.load();active.cover.hidden=false;if(active.url)URL.revokeObjectURL(active.url);active.blob=null;active.url='';active=null;}
+    async function fetchVideo(card,mode){
+      if(controller)controller.abort();
+      if(active&&active!==card)clearActive();
+      if(card.blob){if(mode==='download')saveBlob(card.blob,card.file);else{card.cover.hidden=true;try{await card.video.play()}catch{card.cover.hidden=false;card.coverLabel.textContent='Toque para assistir'}}return}
+      controller=new AbortController();const request=controller;card.button.disabled=true;card.status.className='status';card.status.textContent='Baixando…';card.fill.style.width='0%';card.percent.textContent='0%';card.fill.classList.remove('indeterminate');
+      try{
+        const response=await fetch(card.sourceUrl,{signal:request.signal,mode:'cors',credentials:'omit'});if(!response.ok)throw new Error('download');
+        const total=Number(response.headers.get('content-length'))||0,reader=response.body.getReader(),chunks=[];let loaded=0;
+        while(true){const {done,value}=await reader.read();if(done)break;chunks.push(value);loaded+=value.byteLength;setProgress(card,loaded,total)}
+        const blob=new Blob(chunks,{type:'video/mp4'});card.blob=blob;card.urlObject=URL.createObjectURL(blob);card.status.className='status ready';card.status.textContent='Download concluído';setProgress(card,loaded,total||loaded);card.button.disabled=false;controller=null;
+        if(mode==='download'){saveBlob(blob,card.file);URL.revokeObjectURL(card.urlObject);card.urlObject='';card.blob=null;return}
+        if(active&&active!==card)clearActive();active=card;card.url=card.urlObject;card.video.src=card.url;card.video.load();card.cover.hidden=true;
+        try{await card.video.play()}catch{card.cover.hidden=false;card.coverLabel.setAttribute('aria-label','Toque para assistir');card.status.textContent='Pronto — toque para assistir'}
+      }catch(error){if(error.name==='AbortError'){card.status.textContent='Download pausado';card.button.disabled=false;if(controller===request)controller=null;return}card.status.className='status error';card.status.textContent='Não foi possível baixar. Tente novamente.';card.percent.textContent='—';card.fill.classList.remove('indeterminate');card.button.disabled=false;if(controller===request)controller=null;}
+    }
+    async function init(){
+      try{
+        const response=await fetch('/downloads-kelly/videos.json',{cache:'no-store'});if(!response.ok)throw new Error('manifest');const items=await response.json();
+        document.querySelector('#count').textContent=`${items.length} FAIXAS`;
+        root.innerHTML=items.map((item,index)=>`<article class="card" data-id="${index}"><div class="screen"><video playsinline controls preload="none" aria-label="${item.file}"></video><button class="cover" type="button" aria-label="Baixar e reproduzir ${item.file}"><span class="cover-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.6c0-.8.87-1.28 1.54-.85l9.3 5.96a1.52 1.52 0 0 1 0 2.58l-9.3 5.96A1.02 1.02 0 0 1 8 18.4V5.6Z"/></svg></span></button></div><div class="card-body"><div class="row"><div class="filename">${item.file}</div><button class="download" type="button">${svgDownload}<span>Baixar</span></button></div><div class="progress-row"><div class="progress" role="progressbar" aria-label="Progresso do download"><div class="progress-fill"></div></div><span class="percent">0%</span></div><div class="status" aria-live="polite">Pronto para baixar</div></div></article>`).join('');
+        cards.push(...items.map((item,index)=>{const element=root.querySelector(`[data-id="${index}"]`),card={...item,sourceUrl:item.url,video:element.querySelector('video'),cover:element.querySelector('.cover'),fill:element.querySelector('.progress-fill'),percent:element.querySelector('.percent'),status:element.querySelector('.status'),button:element.querySelector('.download'),blob:null,url:'',urlObject:'',coverLabel:element.querySelector('.cover')};card.cover.addEventListener('click',()=>fetchVideo(card,'play'));card.button.addEventListener('click',()=>fetchVideo(card,'download'));card.video.addEventListener('play',()=>{card.cover.hidden=true});card.video.addEventListener('ended',()=>{card.cover.hidden=false;card.coverLabel.setAttribute('aria-label','Assistir novamente')});return card}));
+      }catch{root.innerHTML='<p>Não foi possível carregar os vídeos agora.</p>'}
+    }
+    init();
+  </script>
+</body>
+</html>
