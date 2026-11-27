@@ -69,6 +69,21 @@
     try { await refreshMessages(id); setStatus(''); } catch (error) { setStatus(error.message, true); }
     input.focus({ preventScroll: true });
   }
+  function closeConversation(id) {
+    const conversation = conversations.get(Number(id));
+    if (!conversation && Number(selectedId) !== Number(id)) return;
+    conversations.delete(Number(id));
+    if (Number(selectedId) === Number(id)) {
+      selectedId = null; layout.classList.remove('show-conversation');
+      input.disabled = true; sendButton.disabled = true;
+      nameNode.textContent = 'Escolha uma conversa';
+      metaNode.textContent = 'As novas mensagens aparecem aqui em tempo real';
+      renderMessages([]);
+    }
+    renderPeople();
+    setStatus(`${conversation?.label || 'A pessoa'} saiu da lista de conversas.`);
+    setTimeout(() => setStatus(''), 3500);
+  }
   async function refreshConversations() {
     const response = await fetch('/api/downloads-kelly-chat/admin/conversations', { cache: 'no-store' });
     if (response.status === 401 || response.status === 403) { window.location.href = '/entrar?return=%2Fchat%2F'; return; }
@@ -98,15 +113,17 @@
         refreshConversations().catch(() => {});
         if (selectedId === id) refreshMessages(id).catch(() => {});
       }
+      if (payload.type === 'chat_closed') closeConversation(Number(payload.conversationId));
     });
   }
   $('#back').addEventListener('click', () => layout.classList.remove('show-conversation'));
   $('#composer').addEventListener('submit', async (event) => {
-    event.preventDefault(); const body = input.value.trim(); if (!body || !selectedId) return;
+    event.preventDefault(); const body = input.value.trim(), conversationId = selectedId; if (!body || !conversationId) return;
     sendButton.disabled = true; setStatus('Enviando…');
     try {
-      const response = await fetch(`/api/downloads-kelly-chat/admin/conversations/${selectedId}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body }) });
+      const response = await fetch(`/api/downloads-kelly-chat/admin/conversations/${conversationId}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body }) });
       const payload = await response.json(); if (!response.ok) throw new Error(payload.message || 'Não foi possível enviar.');
+      if (payload.closed) { input.value = ''; closeConversation(conversationId); return; }
       input.value = ''; await refreshMessages(selectedId); setStatus(''); refreshConversations().catch(() => {});
     } catch (error) { setStatus(error.message, true); }
     finally { sendButton.disabled = !selectedId; }

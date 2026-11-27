@@ -30912,9 +30912,11 @@ async function ensureDownloadsKellyChatSchema() {
           ip_address text NOT NULL DEFAULT 'unknown',
           visit_count integer NOT NULL DEFAULT 0,
           created_at timestamptz NOT NULL DEFAULT now(),
-          last_seen timestamptz NOT NULL DEFAULT now()
+          last_seen timestamptz NOT NULL DEFAULT now(),
+          closed_at timestamptz
         )
       `);
+      await pool.query('ALTER TABLE public.downloads_kelly_chat_sessions ADD COLUMN IF NOT EXISTS closed_at timestamptz');
       await pool.query(`
         CREATE TABLE IF NOT EXISTS public.downloads_kelly_chat_messages (
           id bigserial PRIMARY KEY,
@@ -30958,7 +30960,11 @@ function broadcastDownloadsKellyChat(event, conversationId = null) {
   for (const client of downloadsKellyChatClients) {
     if (client.readyState !== WebSocket.OPEN) continue;
     if (client.chatRole === 'admin' || (conversationId && Number(client.chatConversationId) === Number(conversationId))) {
-      client.send(message);
+      if (event.type === 'chat_closed' && client.chatRole === 'visitor') {
+        client.send(message, () => client.close(1000, 'chat closed'));
+      } else {
+        client.send(message);
+      }
     }
   }
 }
@@ -30971,12 +30977,13 @@ app.post('/api/downloads-kelly-chat/session', async (req, res) => {
     if (!/^[A-Za-z0-9_-]{40,64}$/.test(token)) token = crypto.randomBytes(32).toString('base64url');
     const ip = getClientIp(req).slice(0, 128) || 'unknown';
     const result = await pool.query(`
-      INSERT INTO public.downloads_kelly_chat_sessions (session_key_hash, ip_address, visit_count, last_seen)
-      VALUES ($1, $2, 1, now())
+      INSERT INTO public.downloads_kelly_chat_sessions (session_key_hash, ip_address, visit_count, last_seen, closed_at)
+      VALUES ($1, $2, 1, now(), NULL)
       ON CONFLICT (session_key_hash) DO UPDATE
         SET ip_address = EXCLUDED.ip_address,
             visit_count = public.downloads_kelly_chat_sessions.visit_count + 1,
-            last_seen = now()
+            last_seen = now(),
+            closed_at = NULL
       RETURNING id, visit_count
     `, [downloadsKellyChatHash(token), ip]);
     downloadsKellyChatCookie(res, token);
@@ -31003,7 +31010,7 @@ app.post('/api/downloads-kelly-chat/presence', async (req, res) => {
     await ensureDownloadsKellyChatSchema();
     const token = parseCookies(req).kelly_chat_session || '';
     if (!token) return res.status(401).json({ success: false });
-    await pool.query('UPDATE public.downloads_kelly_chat_sessions SET last_seen = now() WHERE session_key_hash = $1', [downloadsKellyChatHash(token)]);
+    await pool.query('UPDATE public.downloads_kelly_chat_sessions SET last_seen = now() WHERE session_key_hash = $1 AND closed_at IS NULL', [downloadsKellyChatHash(token)]);
     res.json({ success: true });
   } catch (error) {
     res.status(error.statusCode || 500).json({ success: false });
@@ -31014,11 +31021,12 @@ app.get('/api/downloads-kelly-chat/messages', async (req, res) => {
   try {
     await ensureDownloadsKellyChatSchema();
     const token = parseCookies(req).kelly_chat_session || '';
-    const session = await pool.query('SELECT id FROM public.downloads_kelly_chat_sessions WHERE session_key_hash = $1', [downloadsKellyChatHash(token)]);
+    const session = await pool.query('SELECT id, closed_at FROM public.downloads_kelly_chat_sessions WHERE session_key_hash = $1', [downloadsKellyChatHash(token)]);
     if (!session.rowCount) return res.status(401).json({ success: false });
     const conversationId = Number(session.rows[0].id);
+    if (session.rows[0].closed_at) return res.json({ success: true, closed: true, messages: [] });
     const messages = await pool.query(`
-      SELECT id, sender, body, created_at FROM public.downloads_kelly_chat_messages
+      SELECT id, sender, body, created_at, read_by_visitor FROM public.downloads_kelly_chat_messages
       WHERE session_id = $1 ORDER BY id ASC LIMIT 300
     `, [conversationId]);
     await pool.query(`UPDATE public.downloads_kelly_chat_messages SET read_by_visitor = true WHERE session_id = $1 AND sender = 'admin'`, [conversationId]);
@@ -31035,8 +31043,9 @@ app.post('/api/downloads-kelly-chat/messages', async (req, res) => {
     const token = parseCookies(req).kelly_chat_session || '';
     const body = String(req.body?.body || '').trim().slice(0, 2000);
     if (!body) return res.status(400).json({ success: false, message: 'Escreva uma mensagem.' });
-    const session = await pool.query('SELECT id FROM public.downloads_kelly_chat_sessions WHERE session_key_hash = $1', [downloadsKellyChatHash(token)]);
+    const session = await pool.query('SELECT id, closed_at FROM public.downloads_kelly_chat_sessions WHERE session_key_hash = $1', [downloadsKellyChatHash(token)]);
     if (!session.rowCount) return res.status(401).json({ success: false });
+    if (session.rows[0].closed_at) return res.status(409).json({ success: false, closed: true, message: 'Esta conversa foi encerrada.' });
     const conversationId = Number(session.rows[0].id);
     const result = await pool.query(`
       INSERT INTO public.downloads_kelly_chat_messages (session_id, sender, body)
@@ -31065,7 +31074,7 @@ app.get('/api/downloads-kelly-chat/admin/conversations', async (req, res) => {
       FROM public.downloads_kelly_chat_sessions s
       JOIN ip_labels labels ON labels.ip_address = s.ip_address
       LEFT JOIN public.downloads_kelly_chat_messages m ON m.session_id = s.id
-      WHERE s.last_seen > now() - interval '90 seconds'
+      WHERE s.closed_at IS NULL AND s.last_seen > now() - interval '90 seconds'
       GROUP BY s.id, labels.visitor_number ORDER BY COALESCE(MAX(m.created_at), s.last_seen) DESC
     `);
     res.json({ success: true, conversations: result.rows });
@@ -31098,6 +31107,16 @@ app.post('/api/downloads-kelly-chat/admin/conversations/:id/messages', async (re
     const conversationId = Number(req.params.id);
     const body = String(req.body?.body || '').trim().slice(0, 2000);
     if (!Number.isSafeInteger(conversationId) || conversationId <= 0 || !body) return res.status(400).json({ success: false });
+    if (body.toLocaleLowerCase('pt-BR') === 'exxit') {
+      const closed = await pool.query(`
+        UPDATE public.downloads_kelly_chat_sessions SET closed_at = now()
+        WHERE id = $1 AND closed_at IS NULL RETURNING id
+      `, [conversationId]);
+      if (!closed.rowCount) return res.status(404).json({ success: false, message: 'Conversa não encontrada ou já encerrada.' });
+      broadcastDownloadsKellyChat({ type: 'chat_closed', conversationId }, conversationId);
+      res.json({ success: true, closed: true });
+      return;
+    }
     const exists = await pool.query('SELECT id FROM public.downloads_kelly_chat_sessions WHERE id = $1', [conversationId]);
     if (!exists.rowCount) return res.status(404).json({ success: false });
     const result = await pool.query(`
@@ -36233,7 +36252,7 @@ if (require.main === module) {
         req.chatRole = 'admin';
       } else if (/^[A-Za-z0-9_-]{40,64}$/.test(token)) {
         await ensureDownloadsKellyChatSchema();
-        const result = await pool.query('SELECT id FROM public.downloads_kelly_chat_sessions WHERE session_key_hash = $1', [downloadsKellyChatHash(token)]);
+        const result = await pool.query('SELECT id FROM public.downloads_kelly_chat_sessions WHERE session_key_hash = $1 AND closed_at IS NULL', [downloadsKellyChatHash(token)]);
         if (!result.rowCount) { socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n'); socket.destroy(); return; }
         req.chatRole = 'visitor';
         req.chatConversationId = Number(result.rows[0].id);
