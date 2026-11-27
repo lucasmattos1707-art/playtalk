@@ -8,7 +8,6 @@
   const input = document.querySelector('#kelly-chat-input');
   const badge = document.querySelector('#kelly-chat-badge');
   const notice = document.querySelector('#kelly-chat-notice');
-  const attachment = document.querySelector('#kelly-chat-attachment');
   const attachButton = document.querySelector('#kelly-chat-attach');
   const imageFileInput = document.querySelector('#kelly-chat-image-file');
   const imageViewer = document.querySelector('#kelly-chat-image-viewer');
@@ -70,13 +69,13 @@
     if (!file || !file.type.startsWith('image/')) return;
     try {
       pendingImageData = await makeJpegDataUrl(file);
-      attachment.querySelector('img').src = pendingImageData; attachment.hidden = false;
+      input.value = 'Imagem'; input.classList.add('has-image');
       input.focus({ preventScroll: true });
     } catch (error) {
       const message = document.createElement('p'); message.className = 'chat-panel__welcome'; message.textContent = error.message || 'Não foi possível adicionar essa imagem.'; feed.append(message);
     }
   }
-  function clearAttachment() { pendingImageData = ''; attachment.querySelector('img').removeAttribute('src'); attachment.hidden = true; }
+  function clearAttachment() { pendingImageData = ''; input.value = ''; input.classList.remove('has-image'); }
   function hasFileDrag(event) { return Array.from(event.dataTransfer?.types || []).includes('Files'); }
   function acceptDroppedImage(dataTransfer) {
     const file = Array.from(dataTransfer?.files || []).find((item) => item.type.startsWith('image/'));
@@ -150,7 +149,7 @@
     if (opening) { unread = 0; updateBadge(); if (sessionReady) await loadMessages().catch(() => {}); input.focus({ preventScroll: true }); }
   });
   close.addEventListener('click', () => { panel.hidden = true; launcher.setAttribute('aria-expanded', 'false'); launcher.focus(); });
-  attachment.querySelector('button').addEventListener('click', clearAttachment);
+  input.addEventListener('input', () => { if (pendingImageData && input.value !== 'Imagem') clearAttachment(); });
   panel.addEventListener('paste', (event) => {
     const item = Array.from(event.clipboardData?.items || []).find((clipboardItem) => clipboardItem.type.startsWith('image/'));
     const file = item?.getAsFile();
@@ -179,7 +178,7 @@
   });
   notice.addEventListener('click', (event) => { if (event.target === notice) notice.close(); });
   form.addEventListener('submit', async (event) => {
-    event.preventDefault(); const body = input.value.trim(); if ((!body && !pendingImageData) || !sessionReady) return;
+    event.preventDefault(); const body = input.value === 'Imagem' ? '' : input.value.trim(); if ((!body && !pendingImageData) || !sessionReady) return;
     sendButton.disabled = true;
     try {
       const response = await fetch('/api/downloads-kelly-chat/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body, imageData: pendingImageData }) });
