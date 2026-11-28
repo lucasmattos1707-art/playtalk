@@ -30900,6 +30900,175 @@ app.use(async (req, res, next) => {
   next();
 });
 
+let downloadsKellyFilesSchemaPromise = null;
+async function ensureDownloadsKellyFilesSchema() {
+  if (!downloadsKellyFilesSchemaPromise) {
+    downloadsKellyFilesSchemaPromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.downloads_kelly_files (
+          id text PRIMARY KEY,
+          category text NOT NULL CHECK (category IN ('main', 'top', 'sides')),
+          file text NOT NULL,
+          size bigint NOT NULL DEFAULT 0,
+          url text NOT NULL,
+          object_key text NOT NULL DEFAULT '',
+          managed_by_admin boolean NOT NULL DEFAULT false,
+          sort_order integer NOT NULL DEFAULT 0,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )
+      `);
+      const count = await pool.query('SELECT COUNT(*)::int AS count FROM public.downloads_kelly_files');
+      if (Number(count.rows[0]?.count) === 0) {
+        const root = path.join(__dirname, 'www', 'downloads-kelly');
+        const mainItems = JSON.parse(await fs.promises.readFile(path.join(root, 'videos.json'), 'utf8'));
+        const specialItems = JSON.parse(await fs.promises.readFile(path.join(root, 'special-downloads.json'), 'utf8'));
+        const seeds = [
+          ...mainItems.map((item, index) => ({ ...item, category: 'main', sortOrder: index })),
+          ...specialItems.filter((item) => item.title === 'Testeira Superior').map((item, index) => ({ ...item, category: 'top', sortOrder: index })),
+          ...specialItems.filter((item) => item.title === 'Laterais' || item.title === 'Lateral esquerda' || item.title === 'Lateral direita').map((item, index) => ({ ...item, category: 'sides', sortOrder: index }))
+        ];
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          for (const item of seeds) {
+            const id = crypto.createHash('sha256').update(`${item.category}\0${item.url}`).digest('hex').slice(0, 32);
+            await client.query(`
+              INSERT INTO public.downloads_kelly_files(id, category, file, size, url, sort_order)
+              VALUES($1, $2, $3, $4, $5, $6) ON CONFLICT(id) DO NOTHING
+            `, [id, item.category, String(item.file || '').slice(0, 180), Math.max(0, Number(item.size) || 0), String(item.url || ''), item.sortOrder]);
+          }
+          await client.query('COMMIT');
+        } catch (error) {
+          await client.query('ROLLBACK').catch(() => {});
+          throw error;
+        } finally { client.release(); }
+      }
+    })().catch((error) => {
+      downloadsKellyFilesSchemaPromise = null;
+      throw error;
+    });
+  }
+  await downloadsKellyFilesSchemaPromise;
+}
+
+async function getDownloadsKellyFiles() {
+  await ensureDownloadsKellyFilesSchema();
+  const result = await pool.query(`
+    SELECT id, category, file, size, url, sort_order, updated_at
+    FROM public.downloads_kelly_files
+    ORDER BY CASE category WHEN 'main' THEN 0 WHEN 'top' THEN 1 ELSE 2 END, sort_order, created_at, id
+  `);
+  return result.rows.map((row) => ({ ...row, size: Number(row.size) || 0 }));
+}
+
+function requireDownloadsKellyAdmin(req, res, next) {
+  requireAdminUserFromRequest(req).then((user) => { req.downloadsKellyAdmin = user; next(); })
+    .catch((error) => res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Acesso negado.' }));
+}
+
+function normalizeDownloadsKellyFileName(value) {
+  const file = String(value || '').trim().replace(/[\u0000-\u001f]/g, '').slice(0, 180);
+  if (!file) throw Object.assign(new Error('Informe o nome que aparecerá no site.'), { statusCode: 400 });
+  return file;
+}
+
+function readDownloadsKellyVideoUpload(req) {
+  const buffer = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+  if (!buffer.length) throw Object.assign(new Error('Escolha um vídeo MP4.'), { statusCode: 400 });
+  if (buffer.length > 200 * 1024 * 1024) throw Object.assign(new Error('O vídeo deve ter no máximo 200 MB.'), { statusCode: 413 });
+  if (buffer.length < 12 || buffer.toString('ascii', 4, 8) !== 'ftyp') throw Object.assign(new Error('O arquivo escolhido não parece ser um vídeo MP4 válido.'), { statusCode: 400 });
+  return buffer;
+}
+
+function downloadsKellyVideoObjectKey(category) {
+  return `fluentlevelup/kelly-downloads/admin/${category}/${Date.now()}-${crypto.randomBytes(8).toString('hex')}.mp4`;
+}
+
+app.get('/api/downloads-kelly/files', async (_req, res) => {
+  try {
+    const files = await getDownloadsKellyFiles();
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, files });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível carregar os arquivos.' });
+  }
+});
+
+app.get('/api/downloads-kelly/admin/files', requireDownloadsKellyAdmin, async (_req, res) => {
+  try {
+    const files = await getDownloadsKellyFiles();
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, files });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: 'Não foi possível carregar os arquivos.' });
+  }
+});
+
+app.post('/api/downloads-kelly/admin/files', requireDownloadsKellyAdmin, express.raw({ type: 'video/mp4', limit: '200mb' }), async (req, res) => {
+  let objectKey = '';
+  try {
+    await ensureDownloadsKellyFilesSchema();
+    const category = String(req.query.category || '');
+    if (!['main', 'top', 'sides'].includes(category)) throw Object.assign(new Error('Escolha Telão principal, Testeira Superior ou Laterais.'), { statusCode: 400 });
+    const file = normalizeDownloadsKellyFileName(req.query.name);
+    const buffer = readDownloadsKellyVideoUpload(req);
+    objectKey = downloadsKellyVideoObjectKey(category);
+    await putR2Object(objectKey, buffer, 'video/mp4', { timeoutMs: 120000, retries: 1 });
+    const order = await pool.query('SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM public.downloads_kelly_files WHERE category = $1', [category]);
+    const id = crypto.randomUUID();
+    const result = await pool.query(`
+      INSERT INTO public.downloads_kelly_files(id, category, file, size, url, object_key, managed_by_admin, sort_order)
+      VALUES($1, $2, $3, $4, $5, $6, true, $7)
+      RETURNING id, category, file, size, url, sort_order, updated_at
+    `, [id, category, file, buffer.length, buildFlashcardsR2PublicUrl(objectKey), objectKey, Number(order.rows[0]?.next_order) || 0]);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(201).json({ success: true, file: { ...result.rows[0], size: Number(result.rows[0].size) || 0 } });
+  } catch (error) {
+    if (objectKey) await deleteR2Object(objectKey).catch(() => {});
+    res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Não foi possível enviar o vídeo.' });
+  }
+});
+
+app.post('/api/downloads-kelly/admin/files/:id/replace', requireDownloadsKellyAdmin, express.raw({ type: 'video/mp4', limit: '200mb' }), async (req, res) => {
+  let objectKey = '';
+  try {
+    await ensureDownloadsKellyFilesSchema();
+    const current = await pool.query('SELECT id, category, file, object_key, managed_by_admin FROM public.downloads_kelly_files WHERE id = $1', [String(req.params.id || '')]);
+    if (!current.rowCount) return res.status(404).json({ success: false, message: 'Arquivo não encontrado.' });
+    const buffer = readDownloadsKellyVideoUpload(req);
+    objectKey = downloadsKellyVideoObjectKey(current.rows[0].category);
+    await putR2Object(objectKey, buffer, 'video/mp4', { timeoutMs: 120000, retries: 1 });
+    const result = await pool.query(`
+      UPDATE public.downloads_kelly_files SET size = $2, url = $3, object_key = $4,
+        managed_by_admin = true, updated_at = now() WHERE id = $1
+      RETURNING id, category, file, size, url, sort_order, updated_at
+    `, [current.rows[0].id, buffer.length, buildFlashcardsR2PublicUrl(objectKey), objectKey]);
+    if (current.rows[0].managed_by_admin && current.rows[0].object_key) await deleteR2Object(current.rows[0].object_key).catch(() => {});
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, file: { ...result.rows[0], size: Number(result.rows[0].size) || 0 } });
+  } catch (error) {
+    if (objectKey) await deleteR2Object(objectKey).catch(() => {});
+    res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Não foi possível substituir o vídeo.' });
+  }
+});
+
+app.patch('/api/downloads-kelly/admin/files/:id', requireDownloadsKellyAdmin, async (req, res) => {
+  try {
+    await ensureDownloadsKellyFilesSchema();
+    const file = normalizeDownloadsKellyFileName(req.body?.file);
+    const result = await pool.query(`
+      UPDATE public.downloads_kelly_files SET file = $2, updated_at = now()
+      WHERE id = $1 RETURNING id, category, file, size, url, sort_order, updated_at
+    `, [String(req.params.id || ''), file]);
+    if (!result.rowCount) return res.status(404).json({ success: false, message: 'Arquivo não encontrado.' });
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, file: { ...result.rows[0], size: Number(result.rows[0].size) || 0 } });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Não foi possível renomear o arquivo.' });
+  }
+});
+
 let downloadsKellyChatSchemaPromise = null;
 async function ensureDownloadsKellyChatSchema() {
   if (!pool) throw Object.assign(new Error('Banco de dados indisponível.'), { statusCode: 503 });
